@@ -1,5 +1,8 @@
 ---@diagnostic disable
 -- luacheck: ignore 113
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local control = require("src.player.control")
 local item_use_flow = require("src.rules.items.use_flow")
 
@@ -16,8 +19,8 @@ local function _test_find_player_by_id_accepts_mixed_representation()
   local by_int = g:find_player_by_id(1)
   local by_string = g:find_player_by_id("1")
 
-  assert(by_int == p1, "find_player_by_id should match integer input to string player id")
-  assert(by_string == p1, "find_player_by_id should match string input to string player id")
+  luassert.truthy(by_int == p1, "find_player_by_id should match integer input to string player id")
+  luassert.truthy(by_string == p1, "find_player_by_id should match string input to string player id")
 end
 
 local function _test_owner_mine_other_player_triggers_immediately_after_placement()
@@ -25,68 +28,68 @@ local function _test_owner_mine_other_player_triggers_immediately_after_placemen
   local p1 = g.players[1]
   local p2 = g.players[2]
   local mine_index = p1.position
-  local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
+  local mine_tile = luassert.truthy(g.board:get_tile(mine_index), "missing owner tile")
 
   p1.inventory:add({ id = item_ids.mine })
   local use_res = item_use_flow.begin_item_use(g, p1.id, item_ids.mine, { is_computer_controlled = true })
-  assert(use_res ~= nil, "mine use should succeed")
-  assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
-  local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
-  assert(mine_state.armed == true, "freshly placed mine should be active immediately")
-  assert(
+  luassert.truthy(use_res ~= nil, "mine use should succeed")
+  luassert.truthy(g.board:has_mine(mine_index), "mine should be placed on owner tile")
+  local mine_state = luassert.truthy(g.board:get_mine(mine_index), "mine should keep placement payload")
+  luassert.truthy(mine_state.armed == true, "freshly placed mine should be active immediately")
+  luassert.truthy(
     mine_state.owner_turn_started_count_at_placement == g:player_own_turn_started_count(p1),
     "mine should record the owner's own-turn counter at placement"
   )
 
   local owner_res = _resolve_landing(g, p1, mine_tile, {})
-  assert(not owner_res, "owner landing on freshly placed mine should not trigger extra landing")
-  assert(g:detention_remaining(p1) == 0, "owner should stay immune on the placement turn")
-  assert(g.board:has_mine(mine_index), "mine should remain after owner ignores it")
+  luassert.truthy(not owner_res, "owner landing on freshly placed mine should not trigger extra landing")
+  luassert.truthy(g:detention_remaining(p1) == 0, "owner should stay immune on the placement turn")
+  luassert.truthy(g.board:has_mine(mine_index), "mine should remain after owner ignores it")
 
   g:update_player_position(p2, mine_index)
   local trigger_res = _resolve_landing(g, p2, mine_tile, {})
-  assert(not g.turn.pending_choice, "mine trigger should not open a pending choice")
-  assert(trigger_res and trigger_res.waiting == true, "other player should trigger the mine immediately")
-  assert(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
-  assert(trigger_res.next_args and trigger_res.next_args.log_entries and trigger_res.next_args.log_entries[1] == p2.name .. "触发地雷",
+  luassert.truthy(not g.turn.pending_choice, "mine trigger should not open a pending choice")
+  luassert.truthy(trigger_res and trigger_res.waiting == true, "other player should trigger the mine immediately")
+  luassert.truthy(trigger_res.next_state == "move_followup", "mine trigger should resume through move_followup")
+  luassert.truthy(trigger_res.next_args and trigger_res.next_args.log_entries and trigger_res.next_args.log_entries[1] == p2.name .. "触发地雷",
     "mine trigger should defer trigger log through move_followup")
-  assert(g:detention_remaining(p2) == 0, "hospital stay should be deferred until move followup")
+  luassert.truthy(g:detention_remaining(p2) == 0, "hospital stay should be deferred until move followup")
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
-  assert(resumed_state == "end_turn", "mine trigger should end the turn after hospital followup")
-  assert(g:detention_remaining(p2) > 0, "other player should be hospitalized by the fresh mine")
-  assert(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
+  luassert.truthy(resumed_state == "end_turn", "mine trigger should end the turn after hospital followup")
+  luassert.truthy(g:detention_remaining(p2) > 0, "other player should be hospitalized by the fresh mine")
+  luassert.truthy(g.board:has_mine(mine_index) == false, "mine should clear after detonation")
 end
 
 local function _test_owner_mine_stays_immune_for_next_own_turn_then_triggers_on_third()
   local g = _new_game()
   local p1 = g.players[1]
   local mine_index = p1.position
-  local mine_tile = assert(g.board:get_tile(mine_index), "missing owner tile")
+  local mine_tile = luassert.truthy(g.board:get_tile(mine_index), "missing owner tile")
 
   p1.inventory:add({ id = item_ids.mine })
   local use_res = item_use_flow.begin_item_use(g, p1.id, item_ids.mine, { is_computer_controlled = true })
-  assert(use_res ~= nil, "mine use should succeed")
-  assert(g.board:has_mine(mine_index), "mine should be placed on owner tile")
-  local mine_state = assert(g.board:get_mine(mine_index), "mine should keep placement payload")
+  luassert.truthy(use_res ~= nil, "mine use should succeed")
+  luassert.truthy(g.board:has_mine(mine_index), "mine should be placed on owner tile")
+  local mine_state = luassert.truthy(g.board:get_mine(mine_index), "mine should keep placement payload")
   local placement_turn_started_count = mine_state.owner_turn_started_count_at_placement
 
   g:set_player_status(p1, "own_turn_started_count", placement_turn_started_count + 1)
   local next_turn_res = _resolve_landing(g, p1, mine_tile, {})
-  assert(not next_turn_res, "owner should stay immune on the next own turn after placement")
-  assert(g:detention_remaining(p1) == 0, "owner should not be hospitalized on the next own turn")
-  assert(g.board:has_mine(mine_index), "mine should remain after the second immunity pass")
+  luassert.truthy(not next_turn_res, "owner should stay immune on the next own turn after placement")
+  luassert.truthy(g:detention_remaining(p1) == 0, "owner should not be hospitalized on the next own turn")
+  luassert.truthy(g.board:has_mine(mine_index), "mine should remain after the second immunity pass")
 
   g:set_player_status(p1, "own_turn_started_count", placement_turn_started_count + 2)
 
   local trigger_res = _resolve_landing(g, p1, mine_tile, {})
-  assert(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine on the third own turn")
-  assert(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
-  assert(g:detention_remaining(p1) == 0, "hospital stay should still be deferred until move followup")
+  luassert.truthy(trigger_res and trigger_res.waiting == true, "owner should be hit by own mine on the third own turn")
+  luassert.truthy(trigger_res.next_state == "move_followup", "owner mine trigger should resume through move_followup")
+  luassert.truthy(g:detention_remaining(p1) == 0, "hospital stay should still be deferred until move followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
-  assert(resumed_state == "end_turn", "owner mine trigger should end the turn after hospital followup")
-  assert(g:detention_remaining(p1) > 0, "owner should be hospitalized by own mine on the third own turn")
-  assert(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
+  luassert.truthy(resumed_state == "end_turn", "owner mine trigger should end the turn after hospital followup")
+  luassert.truthy(g:detention_remaining(p1) > 0, "owner should be hospitalized by own mine on the third own turn")
+  luassert.truthy(g.board:has_mine(mine_index) == false, "mine should clear after detonating on owner later turn")
 end
 
 local function _test_passing_armed_mine_stops_and_triggers_followup()
@@ -94,30 +97,30 @@ local function _test_passing_armed_mine_stops_and_triggers_followup()
   local p1 = g.players[1]
   local p2 = g.players[2]
   local mine_index = p1.position
-  local mine_tile = assert(g.board:get_tile(mine_index), "missing mine tile")
+  local mine_tile = luassert.truthy(g.board:get_tile(mine_index), "missing mine tile")
 
   p1.inventory:add({ id = item_ids.mine })
   local use_res = item_use_flow.begin_item_use(g, p1.id, item_ids.mine, { is_computer_controlled = true })
-  assert(use_res ~= nil, "mine use should succeed")
-  local mine_state = assert(g.board:get_mine(mine_index), "mine should still exist after placement")
-  assert(mine_state.armed == true, "mine should be active immediately for non-owners")
+  luassert.truthy(use_res ~= nil, "mine use should succeed")
+  local mine_state = luassert.truthy(g.board:get_mine(mine_index), "mine should still exist after placement")
+  luassert.truthy(mine_state.armed == true, "mine should be active immediately for non-owners")
 
-  local before_mine_index = assert(g.board:index_of_tile_id(24), "missing tile before start")
+  local before_mine_index = luassert.truthy(g.board:index_of_tile_id(24), "missing tile before start")
   g:update_player_position(p2, before_mine_index)
   local move_res = movement.move(g, p2, 2, { branch_parity = 2, skip_market_check = true })
-  assert(move_res and move_res.landing_tile, "passing player should still produce landing tile")
-  assert(p2.position == mine_index, "passing player should stop on mine tile instead of moving past it")
-  assert(#move_res.visited == 1, "passing player should consume movement only until mine tile")
+  luassert.truthy(move_res and move_res.landing_tile, "passing player should still produce landing tile")
+  luassert.truthy(p2.position == mine_index, "passing player should stop on mine tile instead of moving past it")
+  luassert.truthy(#move_res.visited == 1, "passing player should consume movement only until mine tile")
 
   local trigger_res = _resolve_landing(g, p2, mine_tile, move_res)
-  assert(trigger_res and trigger_res.waiting == true, "passing mine trigger should wait for move followup")
-  assert(trigger_res.next_state == "move_followup", "passing mine trigger should resume through move_followup")
-  assert(g:detention_remaining(p2) == 0, "hospital stay should be deferred until followup")
+  luassert.truthy(trigger_res and trigger_res.waiting == true, "passing mine trigger should wait for move followup")
+  luassert.truthy(trigger_res.next_state == "move_followup", "passing mine trigger should resume through move_followup")
+  luassert.truthy(g:detention_remaining(p2) == 0, "hospital stay should be deferred until followup")
 
   local resumed_state = move_followup.run({ game = g }, trigger_res.next_args)
-  assert(resumed_state == "end_turn", "passing mine trigger should end the turn after hospital followup")
-  assert(g:detention_remaining(p2) > 0, "passing player should be hospitalized after mine followup")
-  assert(g.board:has_mine(mine_index) == false, "mine should clear after passing detonation")
+  luassert.truthy(resumed_state == "end_turn", "passing mine trigger should end the turn after hospital followup")
+  luassert.truthy(g:detention_remaining(p2) > 0, "passing player should be hospitalized after mine followup")
+  luassert.truthy(g.board:has_mine(mine_index) == false, "mine should clear after passing detonation")
 end
 
 local function _test_turn_start_waits_for_pre_action_item_phase()
@@ -127,8 +130,8 @@ local function _test_turn_start_waits_for_pre_action_item_phase()
 
   support.with_patches({
     { target = item_phase, key = "run", value = function(_, phase_name, args)
-      assert(phase_name == "pre_action", "turn_start should run pre_action item phase")
-      assert(args and args.player == player, "turn_start should pass current player to item phase")
+      luassert.truthy(phase_name == "pre_action", "turn_start should run pre_action item phase")
+      luassert.truthy(args and args.player == player, "turn_start should pass current player to item phase")
       return {
         waiting = true,
         next_state = "roll",
@@ -137,10 +140,10 @@ local function _test_turn_start_waits_for_pre_action_item_phase()
     end },
   }, function()
     local next_state, next_args = turn_start({ game = g })
-    assert(next_state == "wait_action", "waiting pre_action item phase should route through wait_action")
-    assert(next_args and next_args.next_state == "wait_choice", "wait_action should forward to wait_choice")
-    assert(next_args.next_args and next_args.next_args.next_state == "roll", "wait_choice should preserve next state")
-    assert(next_args.next_args.next_args and next_args.next_args.next_args.source == "pre_action", "wait_choice should preserve next args")
+    luassert.truthy(next_state == "wait_action", "waiting pre_action item phase should route through wait_action")
+    luassert.truthy(next_args and next_args.next_state == "wait_choice", "wait_action should forward to wait_choice")
+    luassert.truthy(next_args.next_args and next_args.next_args.next_state == "roll", "wait_choice should preserve next state")
+    luassert.truthy(next_args.next_args.next_args and next_args.next_args.next_args.source == "pre_action", "wait_choice should preserve next args")
   end)
 end
 
@@ -160,10 +163,10 @@ local function _test_turn_start_waits_for_pre_action_item_phase_action_anim()
     end },
   }, function()
     local next_state, next_args = turn_start({ game = g })
-    assert(next_state == "wait_action", "wait_action_anim pre_action should route through wait_action")
-    assert(next_args and next_args.next_state == "wait_action_anim", "wait_action should forward to wait_action_anim")
-    assert(next_args.next_args and next_args.next_args.next_state == "roll", "wait_action_anim should preserve next state")
-    assert(next_args.next_args.next_args and next_args.next_args.next_args.source == "action_anim", "wait_action_anim should preserve next args")
+    luassert.truthy(next_state == "wait_action", "wait_action_anim pre_action should route through wait_action")
+    luassert.truthy(next_args and next_args.next_state == "wait_action_anim", "wait_action should forward to wait_action_anim")
+    luassert.truthy(next_args.next_args and next_args.next_args.next_state == "roll", "wait_action_anim should preserve next state")
+    luassert.truthy(next_args.next_args.next_args and next_args.next_args.next_args.source == "action_anim", "wait_action_anim should preserve next args")
   end)
 end
 
@@ -183,9 +186,9 @@ local function _test_phase_registry_post_action_routes_wait_variants()
     end },
   }, function()
     local next_state, next_args = phases.post_action({ game = g }, { player = player })
-    assert(next_state == "wait_choice", "post_action waiting without action anim should route to wait_choice")
-    assert(next_args and next_args.next_state == "post_action_done", "post_action wait_choice should preserve next state")
-    assert(next_args.next_args and next_args.next_args.source == "choice_wait", "post_action wait_choice should preserve next args")
+    luassert.truthy(next_state == "wait_choice", "post_action waiting without action anim should route to wait_choice")
+    luassert.truthy(next_args and next_args.next_state == "post_action_done", "post_action wait_choice should preserve next state")
+    luassert.truthy(next_args.next_args and next_args.next_args.source == "choice_wait", "post_action wait_choice should preserve next args")
   end)
 
   support.with_patches({
@@ -199,9 +202,9 @@ local function _test_phase_registry_post_action_routes_wait_variants()
     end },
   }, function()
     local next_state, next_args = phases.post_action({ game = g }, { player = player })
-    assert(next_state == "wait_action_anim", "post_action waiting with action anim should route to wait_action_anim")
-    assert(next_args and next_args.next_state == "post_action_done", "post_action wait_action_anim should preserve next state")
-    assert(next_args.next_args and next_args.next_args.source == "action_wait", "post_action wait_action_anim should preserve next args")
+    luassert.truthy(next_state == "wait_action_anim", "post_action waiting with action anim should route to wait_action_anim")
+    luassert.truthy(next_args and next_args.next_state == "post_action_done", "post_action wait_action_anim should preserve next state")
+    luassert.truthy(next_args.next_args and next_args.next_args.source == "action_wait", "post_action wait_action_anim should preserve next args")
   end)
 end
 
@@ -229,12 +232,12 @@ local function _test_turn_land_waits_for_move_followup_when_teleport_effect_queu
       player = player,
       move_result = move_result,
     })
-    assert(next_state == "wait_action_anim", "pending teleport_effect queue should defer landing followup behind wait_action_anim")
-    assert(next_args and next_args.next_state == "move_followup", "pending teleport_effect queue should resume through move_followup")
-    assert(next_args.next_args and next_args.next_args.mode == "resolve_landing", "move_followup should resume landing resolution mode")
-    assert(next_args.next_args.player_id == player.id, "move_followup should preserve target player id")
-    assert(next_args.next_args.move_result == move_result, "move_followup should preserve move result")
-    assert(g.turn.move_followup_pending == true, "pending teleport_effect queue should flag move_followup_pending")
+    luassert.truthy(next_state == "wait_action_anim", "pending teleport_effect queue should defer landing followup behind wait_action_anim")
+    luassert.truthy(next_args and next_args.next_state == "move_followup", "pending teleport_effect queue should resume through move_followup")
+    luassert.truthy(next_args.next_args and next_args.next_args.mode == "resolve_landing", "move_followup should resume landing resolution mode")
+    luassert.truthy(next_args.next_args.player_id == player.id, "move_followup should preserve target player id")
+    luassert.truthy(next_args.next_args.move_result == move_result, "move_followup should preserve move result")
+    luassert.truthy(g.turn.move_followup_pending == true, "pending teleport_effect queue should flag move_followup_pending")
   end)
 end
 
@@ -252,17 +255,17 @@ local function _test_roadblock_stop_does_not_detain_next_turn()
     },
   })
 
-  assert(next_state == "landing", "roadblock followup should still continue into landing")
-  assert(next_args and next_args.player == player, "roadblock followup should preserve landing player")
-  assert(g:detention_remaining(player) == 0, "roadblock should not write detained stay_turns")
-  assert(g.last_turn and g.last_turn.move_result and g.last_turn.move_result.stopped_on_roadblock == true,
+  luassert.truthy(next_state == "landing", "roadblock followup should still continue into landing")
+  luassert.truthy(next_args and next_args.player == player, "roadblock followup should preserve landing player")
+  luassert.truthy(g:detention_remaining(player) == 0, "roadblock should not write detained stay_turns")
+  luassert.truthy(g.last_turn and g.last_turn.move_result and g.last_turn.move_result.stopped_on_roadblock == true,
     "roadblock hit should remain visible through last_turn move_result")
 
   g.turn_runtime:reset()
   local start_state = g.turn_runtime:run_turn()
-  assert(start_state == "wait_action", "next turn start should not detain player after roadblock")
-  assert(g.turn.phase ~= "detained_wait", "roadblock should not route next turn into detained_wait")
-  assert(g.last_turn and g.last_turn.skipped == false, "next turn should not be marked as skipped")
+  luassert.truthy(start_state == "wait_action", "next turn start should not detain player after roadblock")
+  luassert.truthy(g.turn.phase ~= "detained_wait", "roadblock should not route next turn into detained_wait")
+  luassert.truthy(g.last_turn and g.last_turn.skipped == false, "next turn should not be marked as skipped")
 end
 
 local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
@@ -300,10 +303,10 @@ local function _test_auto_runner_choice_actor_falls_back_to_choice_owner()
     })
   end)
   auto_policy.decide = original_decide
-  assert(ok, err)
+  luassert.truthy(ok, err)
 
-  assert(action and action.type == "choice_select", "auto runner should resolve pending choice action")
-  assert(action.actor_role_id == ai_player.id, "auto runner should use pending choice owner as actor role")
+  luassert.truthy(action and action.type == "choice_select", "auto runner should resolve pending choice action")
+  luassert.truthy(action.actor_role_id == ai_player.id, "auto runner should use pending choice owner as actor role")
 end
 
 local function _test_auto_runner_modal_without_buttons_confirms()
@@ -318,7 +321,7 @@ local function _test_auto_runner_modal_without_buttons_confirms()
     current_player_id = 2,
   })
 
-  assert(action and action.type == "modal_confirm", "modal without buttons should fall back to modal_confirm")
+  luassert.truthy(action and action.type == "modal_confirm", "modal without buttons should fall back to modal_confirm")
 end
 
 local function _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invalid_payload()
@@ -338,9 +341,9 @@ local function _test_intent_dispatcher_dispatch_handles_popup_and_ignores_invali
   })
   local ignored = intent_dispatcher.dispatch(g, { intent = "invalid" })
 
-  assert(pushed_ok == true, "dispatch should route push_popup intents")
-  assert(#pushed == 1 and pushed[1].message == "popup", "dispatch should forward popup payload")
-  assert(ignored == nil, "dispatch should ignore invalid intent payloads")
+  luassert.truthy(pushed_ok == true, "dispatch should route push_popup intents")
+  luassert.truthy(#pushed == 1 and pushed[1].message == "popup", "dispatch should forward popup payload")
+  luassert.truthy(ignored == nil, "dispatch should ignore invalid intent payloads")
 end
 
 local function _test_ai_board_target_choice_falls_back_to_first_option()
@@ -363,9 +366,9 @@ local function _test_ai_board_target_choice_falls_back_to_first_option()
     end },
   }, function()
     local action = agent.auto_action_for_choice(g, choice)
-    assert(action and action.type == "choice_select", "AI roadblock target should produce choice_select")
-    assert(action.option_id == 8, "AI roadblock target should fall back to first option when probe returns nil")
-    assert(action.actor_role_id == ai_player.id, "AI roadblock target should preserve owner role")
+    luassert.truthy(action and action.type == "choice_select", "AI roadblock target should produce choice_select")
+    luassert.truthy(action.option_id == 8, "AI roadblock target should fall back to first option when probe returns nil")
+    luassert.truthy(action.actor_role_id == ai_player.id, "AI roadblock target should preserve owner role")
   end)
 end
 
@@ -385,11 +388,11 @@ local function _test_game_victory_finished_game_short_circuits_without_reemittin
     },
   }, function()
     local result = g:check_victory()
-    assert(result == true, "finished game should still report victory")
+    luassert.truthy(result == true, "finished game should still report victory")
   end)
 
-  assert(emitted == 0, "finished game should not emit duplicate finished events")
-  assert(g.winner_names == "existing winner", "finished game should preserve winner names")
+  luassert.truthy(emitted == 0, "finished game should not emit duplicate finished events")
+  luassert.truthy(g.winner_names == "existing winner", "finished game should preserve winner names")
 end
 
 local function _test_game_victory_turn_limit_tie_keeps_multiple_winners()
@@ -419,16 +422,16 @@ local function _test_game_victory_turn_limit_tie_keeps_multiple_winners()
     },
   }, function()
     local result = g:check_victory()
-    assert(result == true, "turn-limit tie should finish the game")
+    luassert.truthy(result == true, "turn-limit tie should finish the game")
   end)
 
-  assert(g.finished == true, "turn-limit tie should mark game finished")
-  assert(g.winner == nil, "turn-limit tie should not pick a single winner")
-  assert(g.winner_names == "P1、P2", "turn-limit tie should preserve winner name ordering")
-  assert(type(g.winners) == "table" and #g.winners == 2, "turn-limit tie should keep both winners")
-  assert(captured ~= nil and captured.event_name == monopoly_event.game.finished,
+  luassert.truthy(g.finished == true, "turn-limit tie should mark game finished")
+  luassert.truthy(g.winner == nil, "turn-limit tie should not pick a single winner")
+  luassert.truthy(g.winner_names == "P1、P2", "turn-limit tie should preserve winner name ordering")
+  luassert.truthy(type(g.winners) == "table" and #g.winners == 2, "turn-limit tie should keep both winners")
+  luassert.truthy(captured ~= nil and captured.event_name == monopoly_event.game.finished,
     "turn-limit tie should emit game.finished")
-  assert(captured.payload.winner_ids[1] == true and captured.payload.winner_ids[2] == true,
+  luassert.truthy(captured.payload.winner_ids[1] == true and captured.payload.winner_ids[2] == true,
     "turn-limit tie should expose both winner ids")
 end
 
@@ -455,16 +458,16 @@ local function _test_game_victory_turn_limit_with_no_survivors_reports_empty_win
     },
   }, function()
     local result = g:check_victory()
-    assert(result == true, "turn-limit elimination should finish the game")
+    luassert.truthy(result == true, "turn-limit elimination should finish the game")
   end)
 
-  assert(g.finished == true, "turn-limit elimination should mark game finished")
-  assert(g.winner == nil, "no-survivor finish should not expose a single winner")
-  assert(type(g.winners) == "table" and #g.winners == 0, "no-survivor finish should store empty winners")
-  assert(g.winner_names == "", "no-survivor finish should keep empty winner names")
-  assert(captured ~= nil and captured.event_name == monopoly_event.game.finished,
+  luassert.truthy(g.finished == true, "turn-limit elimination should mark game finished")
+  luassert.truthy(g.winner == nil, "no-survivor finish should not expose a single winner")
+  luassert.truthy(type(g.winners) == "table" and #g.winners == 0, "no-survivor finish should store empty winners")
+  luassert.truthy(g.winner_names == "", "no-survivor finish should keep empty winner names")
+  luassert.truthy(captured ~= nil and captured.event_name == monopoly_event.game.finished,
     "no-survivor finish should emit game.finished")
-  assert(captured.payload.message == "游戏结束，无人生还",
+  luassert.truthy(captured.payload.message == "游戏结束，无人生还",
     "no-survivor finish should preserve the no-survivor message")
 end
 
@@ -481,7 +484,7 @@ local function _test_camera_policy_follows_eliminated_then_skips_to_next()
     },
   }
   turn_camera_policy.sync_follow(g, {}, ports, true)
-  assert(followed == g.players[2].id, "should skip eliminated player and follow next")
+  luassert.truthy(followed == g.players[2].id, "should skip eliminated player and follow next")
 end
 
 local function _test_camera_policy_follows_current_when_not_eliminated()
@@ -496,7 +499,7 @@ local function _test_camera_policy_follows_current_when_not_eliminated()
     },
   }
   turn_camera_policy.sync_follow(g, {}, ports, true)
-  assert(followed == g.players[2].id, "should follow current player when not eliminated")
+  luassert.truthy(followed == g.players[2].id, "should follow current player when not eliminated")
 end
 
 local function _test_camera_policy_skips_all_eliminated_and_returns_nil()
@@ -514,7 +517,7 @@ local function _test_camera_policy_skips_all_eliminated_and_returns_nil()
     },
   }
   turn_camera_policy.sync_follow(g, {}, ports, true)
-  assert(followed == "not-called", "should not call follow when all eliminated")
+  luassert.truthy(followed == "not-called", "should not call follow when all eliminated")
 end
 
 local function _test_choice_auto_policy_tick_timeout_cancels_when_allowed()
@@ -529,7 +532,7 @@ local function _test_choice_auto_policy_tick_timeout_cancels_when_allowed()
     mode = "tick_timeout",
     is_auto_actor = true,
   })
-  assert(action and action.type == "choice_cancel", "tick_timeout should cancel when allowed")
+  luassert.truthy(action and action.type == "choice_cancel", "tick_timeout should cancel when allowed")
 end
 
 local function _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelable()
@@ -545,8 +548,8 @@ local function _test_choice_auto_policy_tick_timeout_fallback_when_not_cancelabl
     is_auto_actor = true,
     allow_first_option_fallback = true,
   })
-  assert(action and action.type == "choice_select", "tick_timeout should fallback to first option when not cancelable")
-  assert(action.option_id == "opt1", "should select first option")
+  luassert.truthy(action and action.type == "choice_select", "tick_timeout should fallback to first option when not cancelable")
+  luassert.truthy(action.option_id == "opt1", "should select first option")
 end
 
 local function _test_choice_auto_policy_generic_mode_uses_fallback_flag()
@@ -561,24 +564,24 @@ local function _test_choice_auto_policy_generic_mode_uses_fallback_flag()
     is_auto_actor = true,
     allow_first_option_fallback = true,
   })
-  assert(action and action.type == "choice_select", "generic mode should respect allow_first_option_fallback")
+  luassert.truthy(action and action.type == "choice_select", "generic mode should respect allow_first_option_fallback")
 end
 
 local function _test_initial_state_has_used_effect_groups()
   local g = _new_game({ install_ui_port = false })
-  assert(type(g.turn.used_effect_groups) == 'table', "used_effect_groups should be a table")
-  assert(next(g.turn.used_effect_groups) == nil, "used_effect_groups should start empty")
+  luassert.truthy(type(g.turn.used_effect_groups) == 'table', "used_effect_groups should be a table")
+  luassert.truthy(next(g.turn.used_effect_groups) == nil, "used_effect_groups should start empty")
 end
 
 local function _test_end_turn_clears_used_effect_groups()
   local g = _new_game({ install_ui_port = false })
   g.turn.used_effect_groups = {dice_control = true}
-  assert(next(g.turn.used_effect_groups) ~= nil, "used_effect_groups should have content before clearing")
+  luassert.truthy(next(g.turn.used_effect_groups) ~= nil, "used_effect_groups should have content before clearing")
   -- Simulate end-of-turn clearing by calling the registry clearing directly
   g.turn.item_phase = {}
   g.turn.used_effect_groups = {}
   g.turn.item_phase_active = ""
-  assert(next(g.turn.used_effect_groups) == nil, "used_effect_groups should be empty after clearing")
+  luassert.truthy(next(g.turn.used_effect_groups) == nil, "used_effect_groups should be empty after clearing")
 end
 
   return {
