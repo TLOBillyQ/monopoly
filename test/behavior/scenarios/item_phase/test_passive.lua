@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.same(expected, actual, message)
 end
@@ -39,9 +39,9 @@ local function _execute_passive_choice_direct(game, choice, option_id)
   return descriptor.execute(game, choice, { option_id = option_id })
 end
 
-TestGameplayItemPhasePassive = {}
+describe("TestGameplayItemPhasePassive", function()
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_happy_path_use_then_continue_finishes_phase()
+local function _test_item_phase_passive_happy_path_use_then_continue_finishes_phase()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   player.inventory:add({ id = item_ids.remote_dice })
@@ -81,7 +81,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_happy_path_use_the
     "continue action should finish pre_action phase")
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_effect_group_blocks_same_group_slots()
+local function _test_item_phase_passive_effect_group_blocks_same_group_slots()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   player.inventory:add({ id = item_ids.remote_dice })
@@ -130,7 +130,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_effect_group_block
   luassert.truthy(cancel_res and cancel_res.status == "resolved", "passive phase cancel should resolve")
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_auto_skips_with_empty_inventory()
+local function _test_item_phase_passive_auto_skips_with_empty_inventory()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   player.inventory.items = {}
@@ -146,7 +146,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_auto_skips_with_em
     "empty inventory should mark pre_action phase done")
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_followup_choice_roundtrip()
+local function _test_item_phase_passive_followup_choice_roundtrip()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   player.inventory:add({ id = item_ids.roadblock })
@@ -182,7 +182,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_followup_choice_ro
   end
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_ai_path_remains_auto()
+local function _test_item_phase_passive_ai_path_remains_auto()
   local g = _new_game({ ai = { [1] = true } })
   local player = g:current_player()
   control.initialize(player)
@@ -215,7 +215,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_ai_path_remains_au
   luassert.is_nil(g.turn.pending_choice, "AI path should not present item_phase_passive choice")
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_effect_group_persists_across_phases_and_clears_on_end_turn()
+local function _test_item_phase_passive_effect_group_persists_across_phases_and_clears_on_end_turn()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   local phases = phase_registry.build_default_phases()
@@ -291,7 +291,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_effect_group_persi
     "end_turn should clear used_effect_groups for next turn")
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_string_option_id_normalized_by_resolver()
+local function _test_item_phase_passive_string_option_id_normalized_by_resolver()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   player.inventory:add({ id = item_ids.mine })
@@ -313,7 +313,7 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_string_option_id_n
     "string option_id should resolve to the mine option and consume it")
 end
 
-function TestGameplayItemPhasePassive:test_item_phase_passive_rejected_use_skips_mark_effect_group_used()
+local function _test_item_phase_passive_rejected_use_skips_mark_effect_group_used()
   local g = _new_game({ ai = {} })
   local player = g:current_player()
   -- remote_dice 带 effect_group=dice_control,rejected 结果必须不能标记该组
@@ -346,4 +346,12 @@ function TestGameplayItemPhasePassive:test_item_phase_passive_rejected_use_skips
 end
 
 
-return TestGameplayItemPhasePassive
+it("test_item_phase_passive_happy_path_use_then_continue_finishes_phase", _test_item_phase_passive_happy_path_use_then_continue_finishes_phase)
+it("test_item_phase_passive_effect_group_blocks_same_group_slots", _test_item_phase_passive_effect_group_blocks_same_group_slots)
+it("test_item_phase_passive_auto_skips_with_empty_inventory", _test_item_phase_passive_auto_skips_with_empty_inventory)
+it("test_item_phase_passive_followup_choice_roundtrip", _test_item_phase_passive_followup_choice_roundtrip)
+it("test_item_phase_passive_ai_path_remains_auto", _test_item_phase_passive_ai_path_remains_auto)
+it("test_item_phase_passive_effect_group_persists_across_phases_and_clears_on_end_turn", _test_item_phase_passive_effect_group_persists_across_phases_and_clears_on_end_turn)
+it("test_item_phase_passive_string_option_id_normalized_by_resolver", _test_item_phase_passive_string_option_id_normalized_by_resolver)
+it("test_item_phase_passive_rejected_use_skips_mark_effect_group_used", _test_item_phase_passive_rejected_use_skips_mark_effect_group_used)
+end)
