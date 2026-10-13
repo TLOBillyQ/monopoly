@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- luacheck: ignore 211
 -- Item AI strategy + effect-pipeline characterization tests.
@@ -31,7 +32,7 @@ describe("TestItemStrategy", function()
     local player = g:current_player()
     local tile_ref = g.board:get_tile(player.position)
     local dispatched = nil
-  
+
     support.with_patches({
       {
         target = effect_runner,
@@ -79,7 +80,7 @@ describe("TestItemStrategy", function()
       _assert_eq(result.next_args.source, "effect_pipeline", "waiting result should inherit next_args")
       _assert_eq(result.intent, nil, "waiting result should not leak intent payload")
     end)
-  
+
     luassert.truthy(type(dispatched) == "table" and dispatched.waiting == true, "waiting payload should still dispatch")
   end)
 
@@ -88,7 +89,7 @@ describe("TestItemStrategy", function()
     local player = g:current_player()
     local tile_ref = g.board:get_tile(player.position)
     local open_choice_called = false
-  
+
     support.with_patches({
       {
         target = effect_runner,
@@ -139,7 +140,7 @@ describe("TestItemStrategy", function()
       })
       _assert_eq(result.marker, "stop_here", "stop_if should return current mandatory result")
     end)
-  
+
     _assert_eq(open_choice_called, false, "stop_if should skip optional choice building")
   end)
 
@@ -148,7 +149,7 @@ describe("TestItemStrategy", function()
     local player = g:current_player()
     local tile_ref = g.board:get_tile(player.position)
     local opened_choice = nil
-  
+
     support.with_patches({
       {
         target = effect_runner,
@@ -183,7 +184,7 @@ describe("TestItemStrategy", function()
       _assert_eq(result.next_state, "after_optional", "optional followup should preserve next_state")
       _assert_eq(result.next_args.source, "optional_effect", "optional followup should preserve next_args")
     end)
-  
+
     luassert.truthy(type(opened_choice) == "table", "single optional effect should open choice")
     _assert_eq(opened_choice.route_key, "secondary_confirm", "single optional effect should use secondary_confirm route")
     _assert_eq(opened_choice.requires_confirm, true, "single optional effect should require confirm")
@@ -195,7 +196,7 @@ describe("TestItemStrategy", function()
     local player = g:current_player()
     local tile_ref = g.board:get_tile(player.position)
     local opened_choice = nil
-  
+
     support.with_patches({
       {
         target = effect_runner,
@@ -224,7 +225,7 @@ describe("TestItemStrategy", function()
         end,
       })
     end)
-  
+
     luassert.truthy(type(opened_choice) == "table", "optional effects should open a choice")
     local buy, upgrade = opened_choice.options[1], opened_choice.options[2]
     _assert_eq(buy.confirm_title, "买地", "buy_land should carry its confirm title")
@@ -240,7 +241,7 @@ describe("TestItemStrategy", function()
     local player = g:current_player()
     local tile_ref = g.board:get_tile(player.position)
     local opened_choice = nil
-  
+
     support.with_patches({
       {
         target = effect_runner,
@@ -262,7 +263,7 @@ describe("TestItemStrategy", function()
     }, function()
       effect_pipeline.run({}, player, tile_ref, { game = g }, {})
     end)
-  
+
     luassert.truthy(type(opened_choice) == "table", "optional effects should open a choice")
     _assert_eq(opened_choice.options[1].confirm_title, nil, "an unknown effect gets no confirm title")
     _assert_eq(opened_choice.options[1].confirm_body, nil, "an unknown effect gets no confirm body")
@@ -276,7 +277,7 @@ describe("TestItemStrategy", function()
     local item_id = item_ids.mine
     local result_pre = item_strategy._ai_can_use_item(item_id, "pre_action")
     _assert_eq(result_pre, true, "mine should be usable in pre_action via declared offer window")
-  
+
     local result_post = item_strategy._ai_can_use_item(item_id, "post_action")
     _assert_eq(result_post, true, "mine should be usable in post_action via declared offer window")
   end)
@@ -286,7 +287,7 @@ describe("TestItemStrategy", function()
     local item_id = item_ids.clear_obstacles
     local result_pre = item_strategy._ai_can_use_item(item_id, "pre_action")
     _assert_eq(result_pre, true, "clear_obstacles should be usable in pre_action")
-  
+
     local result_post = item_strategy._ai_can_use_item(item_id, "post_action")
     _assert_eq(result_post, false, "clear_obstacles should not be usable in post_action")
   end)
@@ -299,7 +300,7 @@ describe("TestItemStrategy", function()
     local tile_ref = g.board:get_tile(idx)
     g:set_tile_owner(tile_ref, 2)
     g:set_tile_level(tile_ref, 1)
-  
+
     local result = item_strategy._has_demolish_target(g, p)
     _assert_eq(result, true, "should find demolish target when building exists")
   end)
@@ -317,7 +318,7 @@ describe("TestItemStrategy", function()
         end
       end
     end
-  
+
     local result = item_strategy._has_demolish_target(g, p)
     _assert_eq(result, false, "should not find demolish target when no buildings exist")
   end)
@@ -327,7 +328,7 @@ describe("TestItemStrategy", function()
     local p = g:current_player()
     -- exile card needs another player to target
     local item_id = item_ids.exile
-  
+
     -- Mock target_candidates to return valid candidates
     support.with_patches({
       {
@@ -347,7 +348,7 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     local item_id = item_ids.exile
-  
+
     -- Mock target_candidates to return empty candidates
     support.with_patches({
       {
@@ -367,7 +368,7 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     local item_id = item_ids.clear_obstacles
-  
+
     local result = item_strategy._try_use_item(g, p, item_id, function() return false end, false)
     _assert_eq(result, nil, "should return nil when condition fails")
   end)
@@ -376,14 +377,14 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     local item_id = item_ids.clear_obstacles
-  
+
     -- Ensure item is not in inventory by clearing all slots
     if p.inventory and p.inventory.slots then
       for i = 1, #p.inventory.slots do
         p.inventory.slots[i] = nil
       end
     end
-  
+
     local result = item_strategy._try_use_item(g, p, item_id, nil, false)
     _assert_eq(result, nil, "should return nil when item not in inventory")
   end)
@@ -392,11 +393,11 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.clear_obstacles })
-  
+
     -- Place a roadblock ahead
     local current_pos = p.position
     g.board:place_roadblock(current_pos + 1)
-  
+
     support.with_patches({
       {
         target = item_strategy,
@@ -418,12 +419,12 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.clear_obstacles })
-  
+
     -- Ensure no obstacles
     for i = 1, g.board:length() do
       g.board:clear_all(i)
     end
-  
+
     support.with_patches({
       {
         target = item_strategy,
@@ -442,7 +443,7 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.remote_dice })
-  
+
     local auto_play_port = require("src.rules.ports.auto_play")
     support.with_patches({
       {
@@ -462,7 +463,7 @@ describe("TestItemStrategy", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.roadblock })
-  
+
     local auto_play_port = require("src.rules.ports.auto_play")
     support.with_patches({
       {
@@ -487,7 +488,7 @@ describe("TestItemStrategy", function()
         p.inventory.slots[i] = nil
       end
     end
-  
+
     -- Should return nil when no target items in inventory
     local result = item_strategy._try_target_items(g, p, false)
     _assert_eq(result, nil, "should return nil when no target items in inventory")
@@ -502,7 +503,7 @@ describe("TestItemStrategy", function()
         p.inventory.slots[i] = nil
       end
     end
-  
+
     -- Should return nil when no deity items in inventory
     local result = item_strategy._try_deity_items(g, p, false)
     _assert_eq(result, nil, "should return nil when no deity items in inventory")

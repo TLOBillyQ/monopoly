@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit 迁移:三个 do 块 + describe 按钩子边界拍平为三个 Test* 类
 -- (crap_coverage 与 guard paths 带 before_each → setUp;mutation pins 无钩子
@@ -32,7 +33,7 @@ describe("TestItemPreconsumeCrapCoverage", function()
   it("test_decorate_followup_choice_spec_empty_spec_gets_meta_added", function()
     local choice_spec = {}
     local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec)
-  
+
     _assert_table(result, "result is table")
     _assert_table(result.meta, "meta added to spec")
     _assert_true(result.meta.item_preconsumed, "item_preconsumed set to true")
@@ -46,7 +47,7 @@ describe("TestItemPreconsumeCrapCoverage", function()
       }
     }
     local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec)
-  
+
     _assert_table(result.meta, "meta preserved")
     _assert_true(result.meta.item_preconsumed, "item_preconsumed set to true")
     _assert_eq(result.meta.custom_field, "custom_value", "custom field preserved")
@@ -58,7 +59,7 @@ describe("TestItemPreconsumeCrapCoverage", function()
       cancel_label = "Cancel Action"
     }
     local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec)
-  
+
     _assert_false(result.allow_cancel, "allow_cancel set to false")
     _assert_eq(result.cancel_label, nil, "cancel_label set to nil")
   end)
@@ -67,7 +68,7 @@ describe("TestItemPreconsumeCrapCoverage", function()
     local choice_spec = {}
     local context = { context_only = true }
     local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec, context)
-  
+
     _assert_table(result.meta, "meta created")
     _assert_true(result.meta.item_preconsumed, "item_preconsumed set despite extra context fields")
   end)
@@ -79,7 +80,7 @@ describe("TestItemPreconsumeCrapCoverage", function()
       player_id = "player_456"
     }
     local result = item_preconsume_policy.decorate_followup_choice_spec(choice_spec, context)
-  
+
     _assert_table(result.meta, "meta created")
     _assert_eq(result.meta.item_id, "item_123", "item_id merged from context")
     _assert_eq(result.meta.player_id, "player_456", "player_id merged from context")
@@ -102,9 +103,9 @@ describe("TestItemPreconsumeNormalizeCancelAction", function()
       options = { { id = "OPT_A" }, { id = "OPT_B" } },
     }
     local action = { type = "choice_cancel", actor_role_id = 7 }
-  
+
     local result = policy.normalize_cancel_action(choice, action)
-  
+
     _assert_eq(result.type, "choice_select", "rewritten action type must be 'choice_select' (L44)")
     _assert_eq(result.choice_id, "C1", "choice_id must be forwarded from choice.id (L45 'or')")
     _assert_eq(result.option_id, "OPT_A", "option_id must be the first option id (L46)")
@@ -122,29 +123,29 @@ describe("TestItemPreconsumeGuardPaths", function()
   it("test_keeps_the_cancel_action_when_a_preconsumed_choice_has_no_options_to_fall_back_to", function()
     local choice = { id = "C1", meta = { item_preconsumed = true }, options = {} }
     local action = { type = "choice_cancel", actor_role_id = 7 }
-  
+
     local result = policy.normalize_cancel_action(choice, action)
-  
+
     _assert_eq(result, action, "with no fallback option the cancel must pass through untouched")
   end)
 
   it("test_keeps_a_non_cancel_action_untouched", function()
     local choice = { id = "C1", meta = { item_preconsumed = true }, options = { { id = "A" } } }
     local action = { type = "choice_select", option_id = "A" }
-  
+
     _assert_eq(policy.normalize_cancel_action(choice, action), action, "non-cancel passes through")
   end)
 
   it("test_keeps_a_cancel_action_untouched_when_the_choice_is_not_preconsumed", function()
     local choice = { id = "C1", options = { { id = "A" } } }
     local action = { type = "choice_cancel" }
-  
+
     _assert_eq(policy.normalize_cancel_action(choice, action), action, "non-preconsumed passes through")
   end)
 
   it("test_reads_the_first_option_id_from_a_bare_id_option_list", function()
     local choice = { options = { "RAW_A", "RAW_B" } }
-  
+
     _assert_eq(policy.first_option_id(choice), "RAW_A", "bare string options expose themselves as the id")
   end)
 
@@ -167,18 +168,18 @@ describe("TestItemPreconsumeGuardPaths", function()
 
   it("test_does_not_overwrite_meta_fields_that_are_already_set", function()
     local meta = { item_id = "KEEP", player_id = "KEEP_P" }
-  
+
     policy.merge_preconsume_context(meta, { item_id = "NEW", player_id = "NEW_P" })
-  
+
     _assert_eq(meta.item_id, "KEEP", "existing item_id wins over context")
     _assert_eq(meta.player_id, "KEEP_P", "existing player_id wins over context")
   end)
 
   it("test_leaves_meta_fields_absent_when_the_context_carries_none", function()
     local meta = {}
-  
+
     policy.merge_preconsume_context(meta, {})
-  
+
     _assert_eq(meta.item_id, nil, "no item_id in context means none written")
     _assert_eq(meta.player_id, nil, "no player_id in context means none written")
   end)

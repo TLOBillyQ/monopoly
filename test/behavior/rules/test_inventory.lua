@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 嵌套按钩子边界拍平——外层
 -- describe(含无钩子的「clear toggles」「_notify_full」嵌套)合并进 TestInventory;
@@ -35,7 +36,6 @@ local function _make_player(items_list, opts)
 end
 
 do
-  local _config_reset = require("test.support.config_reset")
 
 
 
@@ -287,12 +287,12 @@ do
       local items_cfg = require("src.config.content.items")
       local last_item = items_cfg[#items_cfg]
       luassert.truthy(last_item.id ~= items_cfg[1].id, "fixture invariant: last cfg item differs from first")
-    
+
       local saved_rng = runtime_ports.rng_next_int
       runtime_ports.rng_next_int = function(_, max) return max end -- forces last bucket
       local picked = inventory.draw_random()
       runtime_ports.rng_next_int = saved_rng
-    
+
       luassert.truthy(picked.id == last_item.id, "draw_random must return picked[1] from weighted choice (last item under rng=max); " ..
         "L86 'or→and' or first '1→0' mutation returns items_cfg[1].id=" ..
         tostring(items_cfg[1].id) .. " instead. Got id=" .. tostring(picked.id))
@@ -308,7 +308,7 @@ do
       weighted_draw.pick = function() return {} end
       local picked = inventory.draw_random()
       weighted_draw.pick = saved_pick
-    
+
       luassert.truthy(picked ~= nil, "draw_random must fall back to a real config item when pick is empty; " ..
         "fallback '1→0' mutation returns items_cfg[0]=nil")
       luassert.truthy(picked == items_cfg[1], "empty-pick fallback must return items_cfg[1]; got " .. tostring(picked and picked.id))

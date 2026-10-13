@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- remote_dice.apply 直测:守卫(dice_count 非空且 ≥1)、values 长度与内容、
 -- event_feed 文案、action_anim 队列参数与时长回退链。

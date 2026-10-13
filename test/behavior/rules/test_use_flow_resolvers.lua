@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- use_flow_resolvers 直测:kind 描述表三件事(消耗时机 / 失败兜底 reason / apply 失败形状)。
 -- 集成 spec 跑通各 kind 的成功流程,但没钉描述表字段本身(变异清扫 #259 survivor
@@ -34,7 +35,7 @@ end
 describe("TestUseFlowResolvers", function()
   it("test_item_target_player_consumes_after_success_with_invalid_target_fallback", function()
     local opts = _capture_opts(nil, {}, { kind = "item_target_player" })
-  
+
     luassert.is_not_nil(opts, "descriptor should reach settlement.execute")
     luassert.is.equal("after_success", opts.consume)
     luassert.is.equal("invalid_target", opts.fallback_reason)
@@ -42,7 +43,7 @@ describe("TestUseFlowResolvers", function()
 
   it("test_remote_dice_value_consumes_before_apply_with_effect_rejected_fallback", function()
     local opts = _capture_opts(nil, {}, { kind = "remote_dice_value" })
-  
+
     luassert.is_not_nil(opts, "descriptor should reach settlement.execute")
     luassert.is.equal("before_apply", opts.consume)
     luassert.is.equal("effect_rejected", opts.fallback_reason)
@@ -54,7 +55,7 @@ describe("TestUseFlowResolvers", function()
         return true
       end },
     }, {}, { kind = "roadblock_target" })
-  
+
     luassert.is_not_nil(opts, "descriptor should reach settlement.execute")
     luassert.is.equal("before_apply", opts.consume)
     luassert.is.equal("effect_rejected", opts.fallback_reason)
@@ -62,7 +63,7 @@ describe("TestUseFlowResolvers", function()
 
   it("test_demolish_target_consumes_before_apply_with_effect_rejected_fallback", function()
     local opts = _capture_opts(nil, {}, { kind = "demolish_target" })
-  
+
     luassert.is_not_nil(opts, "descriptor should reach settlement.execute")
     luassert.is.equal("before_apply", opts.consume)
     luassert.is.equal("effect_rejected", opts.fallback_reason)
@@ -84,7 +85,7 @@ describe("TestUseFlowResolvers", function()
     }, function()
       resolvers.resolve(game, { kind = "item_target_player" }, { option_id = 99 }, {}, {}, _player, 2001)
     end)
-  
+
     luassert.is_false(apply_result, "apply must report failure (false) when the target does not resolve")
   end)
 
@@ -95,7 +96,7 @@ describe("TestUseFlowResolvers", function()
     local ok_registries, err_registries = pcall(resolvers.resolve, {}, { kind = "item_target_player" }, { option_id = 1 }, {}, {}, { id = 1 }, 2001)
     luassert.truthy(ok_registries == false, "missing registries should assert")
     luassert.truthy(tostring(err_registries):find("missing game.registries", 1, true) ~= nil, "registries assert should carry its message: " .. tostring(err_registries))
-  
+
     local ok_items, err_items = pcall(resolvers.resolve, { registries = {} }, { kind = "item_target_player" }, { option_id = 1 }, {}, {}, { id = 1 }, 2001)
     luassert.truthy(ok_items == false, "missing item registry should assert")
     luassert.truthy(tostring(err_items):find("missing item registry", 1, true) ~= nil, "item registry assert should carry its message: " .. tostring(err_items))

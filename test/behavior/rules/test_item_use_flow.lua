@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(busted → LuaUnit 迁移):文件原有两个 do 块各包一个带
 -- before_each 的 describe,各拍平成一个 Test* 类(item_use_flow 24 例 +
@@ -68,16 +69,16 @@ do
     end)
     it("test_begin_rejects_missing_game_before_item_checks", function()
       local result = use_flow.begin_item_use(nil, nil, item_ids.mine, {})
-    
+
       _assert_eq(result.ok, false, "missing game should reject")
       _assert_eq(result.reason, "missing_game", "missing game reason")
     end)
 
     it("test_begin_rejects_missing_actor_with_stable_reason", function()
       local g = _new_game()
-    
+
       local result = use_flow.begin_item_use(g, 9999, item_ids.mine, { phase = "pre_action" })
-    
+
       _assert_eq(result.ok, false, "missing actor should reject")
       _assert_eq(result.status, "rejected", "missing actor status")
       _assert_eq(result.reason, "missing_actor", "missing actor reason")
@@ -88,10 +89,10 @@ do
       local player = g:current_player()
       local missing_item_id = 999999
       player.inventory:add({ id = missing_item_id })
-    
+
       local missing_cfg = use_flow.begin_item_use(g, player.id, missing_item_id, {})
       local missing_inventory = use_flow.begin_item_use(g, player.id, item_ids.mine, { phase = "pre_action" })
-    
+
       _assert_eq(missing_cfg.ok, false, "missing cfg should reject")
       _assert_eq(missing_cfg.reason, "missing_item_cfg", "missing cfg reason")
       _assert_eq(missing_inventory.ok, false, "absent inventory item should reject")
@@ -102,9 +103,9 @@ do
       local g = _new_game()
       local player = g:current_player()
       player.inventory:add({ id = item_ids.remote_dice })
-    
+
       local result = use_flow.begin_item_use(g, player.id, item_ids.remote_dice, { phase = "post_action" })
-    
+
       _assert_eq(result.ok, false, "phase mismatch should reject")
       _assert_eq(result.reason, "offer_in_phases_not_allowed", "phase mismatch reason")
       _assert_eq(inventory.count(player), 1, "rejected item should remain")
@@ -115,7 +116,7 @@ do
       local player = g.players[1]
       player.inventory:add({ id = item_ids.mine })
       player.inventory:add({ id = item_ids.mine })
-    
+
       _with_item_handler(g, item_ids.mine, function()
         return { ok = true, action_anim = true }
       end, function()
@@ -127,7 +128,7 @@ do
           turn = g.turn,
         }
         local fallback_actor = use_flow.begin_item_use(fallback_game, player.id, item_ids.mine, { is_computer_controlled = false })
-    
+
         _assert_eq(table_actor.ok, true, "table actor should apply")
         _assert_eq(fallback_actor.ok, true, "fallback player scan should apply")
       end)
@@ -145,9 +146,9 @@ do
           return finder_player
         end,
       }
-    
+
       local resolved = flow_context.resolve_actor(game, 7)
-    
+
       _assert_eq(resolved, finder_player, "finder player should win")
       _assert_eq(calls, 1, "finder should be called once")
     end)
@@ -157,7 +158,7 @@ do
       local player = g.players[1]
       inventory.clear(player)
       player.inventory:add({ id = item_ids.roadblock })
-    
+
       _assert_eq(flow_context.count_item(player, item_ids.mine), 0, "absent item count")
       player.inventory:add({ id = item_ids.mine })
       _assert_eq(flow_context.count_item(player, item_ids.mine), 1, "single item count")
@@ -168,7 +169,7 @@ do
       local player = g.players[1]
       player.inventory:add({ id = item_ids.mine })
       player.inventory:add({ id = item_ids.mine })
-    
+
       _with_item_handler(g, item_ids.mine, function(_, _, _, context)
         if context.fail_bare then
           return { ok = false }
@@ -179,7 +180,7 @@ do
         local bare = use_flow.begin_item_use(g, player.id, item_ids.mine, {
           fail_bare = true,
         })
-    
+
         _assert_eq(reason.ok, false, "handler reason should reject")
         _assert_eq(reason.reason, "handler_blocked", "handler reason should be preserved")
         _assert_eq(reason.item_consumed, true, "explicit consumed marker should be preserved")
@@ -192,12 +193,12 @@ do
       local g = _new_game()
       local player = g.players[1]
       player.inventory:add({ id = item_ids.mine })
-    
+
       _with_item_handler(g, item_ids.mine, function()
         return false
       end, function()
         local result = use_flow.begin_item_use(g, player.id, item_ids.mine, {})
-    
+
         _assert_eq(result.ok, false, "false handler result should reject")
         _assert_eq(result.reason, "no_candidates", "false handler fallback reason")
       end)
@@ -207,7 +208,7 @@ do
       local g = _new_game()
       local player = g.players[1]
       player.inventory:add({ id = item_ids.mine })
-    
+
       _with_item_handler(g, item_ids.mine, function(_, _, _, context)
         if context.table_without_ok then
           return { action_anim = true }
@@ -218,7 +219,7 @@ do
         local table_without_ok = use_flow.begin_item_use(g, player.id, item_ids.mine, {
           table_without_ok = true,
         })
-    
+
         _assert_eq(plain_true.ok, true, "plain true result should apply")
         _assert_eq(plain_true.status, "applied", "plain true status")
         _assert_eq(table_without_ok.ok, true, "table without ok should apply")
@@ -234,13 +235,13 @@ do
         kind = "item_target_player",
         options = { { id = player.id, label = player.name } },
       }
-    
+
       local waiting = flow_result.normalize_effect({
         waiting = true,
         ok = false,
         intent = { choice_spec = choice_spec },
       }, player, item_ids.mine)
-    
+
       _assert_eq(waiting.status, "waiting_choice", "waiting result status")
       _assert_eq(waiting.actor_id, player.id, "waiting result actor id")
       _assert_eq(waiting.choice_spec, choice_spec, "waiting result choice spec")
@@ -253,7 +254,7 @@ do
       local settled = settlement.execute(g, player, item_ids.mine, function()
         return { ok = false, reason = "blocked" }
       end, { fallback_reason = "fallback", context_preconsumed = true })
-    
+
       _assert_eq(flow_result.normalize_effect(settled, player, item_ids.mine), settled,
         "settled results should pass through unchanged")
     end)
@@ -273,9 +274,9 @@ do
       local target = g.players[2]
       user.inventory:add({ id = item_ids.steal })
       target.inventory:add({ id = item_ids.roadblock })
-    
+
       local result = use_flow.begin_item_use(g, user.id, item_ids.steal, { phase = "pre_action" })
-    
+
       _assert_eq(result.ok, true, "steal begin should be accepted")
       _assert_eq(result.status, "waiting_choice", "steal should wait for target choice")
       _assert_eq(result.item_consumed, false, "waiting choice should not consume item")
@@ -290,17 +291,17 @@ do
       user.inventory:add({ id = item_ids.steal })
       target.inventory:add({ id = item_ids.roadblock })
       target.inventory:add({ id = item_ids.tax_free })
-    
+
       local begin = use_flow.begin_item_use(g, user.id, item_ids.steal, { phase = "pre_action" })
       local choice = support.open_choice(g, begin.choice_spec)
-    
+
       local result = use_flow.resolve_item_use_choice(g, choice, {
         type = "choice_select",
         choice_id = choice.id,
         option_id = target.id,
         actor_role_id = user.id,
       })
-    
+
       _assert_eq(result.ok, true, "target choice should apply")
       _assert_eq(result.status, "applied", "target choice status")
       _assert_eq(result.item_consumed, true, "steal card should be consumed")
@@ -321,7 +322,7 @@ do
           dice_count = 1,
         },
       })
-    
+
       local result = use_flow.resolve_item_use_choice(g, choice, {
         type = "choice_select",
         choice_id = choice.id,
@@ -330,7 +331,7 @@ do
       }, {
         item_id = item_ids.remote_dice,
       })
-    
+
       _assert_eq(result.ok, false, "wrong item metadata should reject")
       _assert_eq(result.reason, "item_mismatch", "wrong item reason")
       _assert_eq(support.count_item(user, item_ids.remote_dice), 1, "rejected choice should not consume item")
@@ -349,14 +350,14 @@ do
           dice_count = 1,
         },
       })
-    
+
       local result = use_flow.resolve_item_use_choice(g, choice, {
         type = "choice_select",
         choice_id = choice.id,
         option_id = 4,
         actor_role_id = user.id,
       })
-    
+
       _assert_eq(result.ok, true, "string option should accept numeric submission")
       _assert_eq(result.status, "applied", "string option numeric submission status")
       _assert_eq(support.count_item(user, item_ids.remote_dice), 0, "accepted string option should consume item")
@@ -375,14 +376,14 @@ do
           dice_count = 1,
         },
       })
-    
+
       local result = use_flow.resolve_item_use_choice(g, choice, {
         type = "choice_select",
         choice_id = choice.id,
         option_id = 4,
         actor_role_id = user.id,
       })
-    
+
       _assert_eq(result.ok, true, "table string option id should accept numeric submission")
       _assert_eq(result.status, "applied", "table string option numeric submission status")
       _assert_eq(support.count_item(user, item_ids.remote_dice), 0, "accepted table string option should consume item")
@@ -401,7 +402,7 @@ do
           dice_count = 1,
         },
       })
-    
+
       local result = use_flow.resolve_item_use_choice(g, choice, {
         type = "choice_select",
         choice_id = choice.id,
@@ -410,7 +411,7 @@ do
       }, {
         item_id = tostring(item_ids.remote_dice),
       })
-    
+
       _assert_eq(result.ok, true, "string context item id should match numeric choice metadata")
       _assert_eq(result.status, "applied", "string context item id status")
       _assert_eq(support.count_item(user, item_ids.remote_dice), 0, "matched string context item id should consume item")
@@ -425,7 +426,7 @@ do
         captured.dice_player = player
         return 2
       end
-    
+
       _with_patches({
         {
           target = remote_dice,
@@ -446,7 +447,7 @@ do
         }, {}, {
           item_id = item_ids.remote_dice,
         }, user, item_ids.remote_dice)
-    
+
         _assert_eq(result.ok, true, "remote dice resolver should apply")
         _assert_eq(captured.game, g, "remote dice game")
         _assert_eq(captured.player, user, "remote dice player")
@@ -461,7 +462,7 @@ do
       local g = _new_game()
       local user = g.players[1]
       user.inventory:add({ id = item_ids.roadblock })
-    
+
       _with_patches({
         {
           target = roadblock,
@@ -485,7 +486,7 @@ do
         }, {}, {
           item_id = item_ids.roadblock,
         }, user, item_ids.roadblock)
-    
+
         _assert_eq(result.ok, false, "invalid roadblock target should reject")
         _assert_eq(result.reason, "invalid_target", "invalid roadblock reason")
         _assert_eq(support.count_item(user, item_ids.roadblock), 1, "invalid roadblock should not consume item")
@@ -499,7 +500,7 @@ do
       local raw_intent = { kind = "push_popup", payload = { title = "done" } }
       local dispatches = {}
       local captured = {}
-    
+
       _with_patches({
         {
           target = demolish,
@@ -527,7 +528,7 @@ do
         }, {}, {
           item_id = item_ids.monster,
         }, user, item_ids.monster)
-    
+
         _assert_eq(result.ok, true, "demolish resolver should apply")
         _assert_eq(captured.game, g, "demolish game")
         _assert_eq(captured.player, user, "demolish player")
@@ -553,7 +554,7 @@ do
           dice_count = 1,
         },
       })
-    
+
       local missing_game = use_flow.resolve_item_use_choice(nil, choice, { option_id = 4 })
       local missing_choice = use_flow.resolve_item_use_choice(g, nil, { option_id = 4 })
       local missing_action = use_flow.resolve_item_use_choice(g, choice, nil)
@@ -572,7 +573,7 @@ do
         option_id = 7,
         actor_role_id = user.id,
       })
-    
+
       _assert_eq(missing_game.reason, "missing_game", "missing game reason")
       _assert_eq(missing_choice.reason, "missing_choice", "missing choice reason")
       _assert_eq(missing_action.reason, "missing_action", "missing action reason")
@@ -602,7 +603,7 @@ do
           item_id = item_ids.remote_dice,
         },
       })
-    
+
       local missing_actor = use_flow.resolve_item_use_choice(g, missing_actor_choice, {
         choice_id = missing_actor_choice.id,
         option_id = 4,
@@ -612,7 +613,7 @@ do
         option_id = "only",
         actor_role_id = user.id,
       })
-    
+
       _assert_eq(missing_actor.reason, "missing_actor", "missing actor reason")
       _assert_eq(unsupported.reason, "unsupported_choice_kind", "unsupported kind reason")
     end)
@@ -735,7 +736,7 @@ do
       local probes = _install_probes(g)
       player.inventory:add({ id = item_ids.free_rent })
       local count_at_apply = nil
-    
+
       _with_patches({
         {
           target = post_effects,
@@ -747,12 +748,12 @@ do
         },
       }, function()
         local result = use_flow.begin_item_use(g, player.id, item_ids.free_rent, {})
-    
+
         _assert_eq(result.ok, true, "post item should apply")
         _assert_eq(result.status, "applied", "post item status")
         _assert_eq(result.item_consumed, true, "post item should report consumed")
       end)
-    
+
       _assert_eq(count_at_apply, 0, "post item must be consumed before apply runs")
       _assert_eq(support.count_item(player, item_ids.free_rent), 0, "post item should leave inventory")
       _assert_eq(probes.item_card_popups, 0, "post item should not display a card popup")
@@ -771,7 +772,7 @@ do
         end,
       }
       local count_at_apply = nil
-    
+
       _with_patches({
         {
           target = remote_dice,
@@ -783,11 +784,11 @@ do
         },
       }, function()
         local result = use_flow.begin_item_use(g, player.id, item_ids.remote_dice, { is_computer_controlled = true })
-    
+
         _assert_eq(result.ok, true, "ai remote dice should apply")
         _assert_eq(result.status, "applied", "ai remote dice status")
       end)
-    
+
       _assert_eq(count_at_apply, 0, "ai remote dice must be consumed before apply runs")
       _assert_eq(probes.item_card_popups, 0, "ai remote dice should not display a card popup")
       _assert_eq(probes.item_used_events, 1, "ai remote dice should report telemetry exactly once")
@@ -801,9 +802,9 @@ do
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.steal })
       target.inventory:add({ id = item_ids.roadblock })
-    
+
       local result = use_flow.begin_item_use(g, user.id, item_ids.steal, { phase = "pre_action" })
-    
+
       _assert_eq(result.status, "waiting_choice", "steal begin should wait for target")
       _assert_eq(result.item_consumed, false, "waiting must not consume")
       _assert_eq(support.count_item(user, item_ids.steal), 1, "steal card should remain while waiting")
@@ -819,11 +820,11 @@ do
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.steal })
       target.inventory:add({ id = item_ids.roadblock })
-    
+
       local begin_result = use_flow.begin_item_use(g, user.id, item_ids.steal, { phase = "pre_action" })
       local choice = support.open_choice(g, begin_result.choice_spec)
       choice_resolver.resolve(g, choice, { type = "choice_cancel", choice_id = choice.id })
-    
+
       _assert_eq(support.count_item(user, item_ids.steal), 1, "cancelled choice should retain the item")
       _assert_eq(probes.item_card_popups, 0, "cancelled choice must not broadcast")
       _assert_eq(probes.item_used_events, 0, "cancelled choice must not report telemetry")
@@ -837,11 +838,11 @@ do
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.steal })
       target.inventory:add({ id = item_ids.roadblock })
-    
+
       local begin_result = use_flow.begin_item_use(g, user.id, item_ids.steal, { phase = "pre_action" })
       local choice = support.open_choice(g, begin_result.choice_spec)
       local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, target.id, user.id))
-    
+
       _assert_eq(result.ok, true, "steal resolve should apply")
       _assert_eq(result.item_consumed, true, "steal resolve should report consumed")
       _assert_eq(support.count_item(user, item_ids.steal), 0, "steal card should be consumed")
@@ -863,11 +864,11 @@ do
       end
       local slots_before = user.inventory:count()
       target.inventory:add({ id = item_ids.mine })
-    
+
       local begin_result = use_flow.begin_item_use(g, user.id, item_ids.steal, { phase = "pre_action" })
       local choice = support.open_choice(g, begin_result.choice_spec)
       local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, target.id, user.id))
-    
+
       _assert_eq(result.ok, true, "full bag steal should succeed")
       _assert_eq(support.count_item(user, item_ids.steal), 0, "steal card must be consumed to free its slot")
       _assert_eq(support.count_item(user, item_ids.mine), 1, "stolen item takes the freed slot")
@@ -885,7 +886,7 @@ do
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.exile })
       local count_at_apply = nil
-    
+
       _with_patches({
         {
           target = post_effects,
@@ -899,11 +900,11 @@ do
         local begin_result = use_flow.begin_item_use(g, user.id, item_ids.exile, { phase = "pre_action" })
         local choice = support.open_choice(g, begin_result.choice_spec)
         local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, target.id, user.id))
-    
+
         _assert_eq(result.ok, true, "target item resolve should apply")
         _assert_eq(result.item_consumed, true, "target item resolve should report consumed")
       end)
-    
+
       _assert_eq(count_at_apply, 1, "target item must still be held while apply runs")
       _assert_eq(support.count_item(user, item_ids.exile), 0, "target item should be consumed after apply")
       _assert_eq(probes.item_card_popups, 0, "target item resolve should not display a card popup")
@@ -917,7 +918,7 @@ do
       local target = g.players[2]
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.exile })
-    
+
       _with_patches({
         {
           target = post_effects,
@@ -930,12 +931,12 @@ do
         local begin_result = use_flow.begin_item_use(g, user.id, item_ids.exile, { phase = "pre_action" })
         local choice = support.open_choice(g, begin_result.choice_spec)
         local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, target.id, user.id))
-    
+
         _assert_eq(result.ok, false, "failed target apply should reject")
         _assert_eq(result.reason, "blocked", "failed target apply reason")
         _assert_eq(result.item_consumed, false, "failed target apply must not report consumed")
       end)
-    
+
       _assert_eq(support.count_item(user, item_ids.exile), 1, "failed target apply should retain the item")
       _assert_eq(probes.item_card_popups, 0, "failed target apply must not broadcast")
       _assert_eq(probes.item_used_events, 0, "failed target apply must not report telemetry")
@@ -947,12 +948,12 @@ do
       local user = g.players[1]
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.remote_dice })
-    
+
       local begin_result = use_flow.begin_item_use(g, user.id, item_ids.remote_dice, { phase = "pre_action" })
       _assert_eq(begin_result.status, "waiting_choice", "remote dice begin should wait")
       local choice = support.open_choice(g, begin_result.choice_spec)
       local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, 4, user.id))
-    
+
       _assert_eq(result.ok, true, "remote dice resolve should apply")
       _assert_eq(support.count_item(user, item_ids.remote_dice), 0, "remote dice should consume exactly one card")
       _assert_eq(probes.item_card_popups, 0, "remote dice resolve should not display a card popup")
@@ -965,14 +966,14 @@ do
       local user = g.players[1]
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.roadblock })
-    
+
       local begin_result = use_flow.begin_item_use(g, user.id, item_ids.roadblock, { phase = "pre_action" })
       _assert_eq(begin_result.status, "waiting_choice", "roadblock begin should wait")
       local choice = support.open_choice(g, begin_result.choice_spec)
       local first_option = choice.options[1]
       local result = use_flow.resolve_item_use_choice(g, choice,
         _select_action(choice, first_option.id or first_option, user.id))
-    
+
       _assert_eq(result.ok, true, "roadblock resolve should apply")
       _assert_eq(support.count_item(user, item_ids.roadblock), 0, "roadblock should consume exactly one card")
       _assert_eq(probes.item_card_popups, 0, "roadblock resolve should not display a card popup")
@@ -986,7 +987,7 @@ do
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.monster })
       local count_at_apply = nil
-    
+
       _with_patches({
         {
           target = demolish,
@@ -1003,10 +1004,10 @@ do
           meta = { player_id = user.id, item_id = item_ids.monster },
         })
         local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, 12, user.id))
-    
+
         _assert_eq(result.ok, true, "demolish resolve should apply")
       end)
-    
+
       _assert_eq(count_at_apply, 0, "demolish must be consumed before apply runs")
       _assert_eq(support.count_item(user, item_ids.monster), 0, "demolish should consume exactly one card")
       _assert_eq(probes.item_card_popups, 0, "demolish resolve should not display a card popup")
@@ -1018,11 +1019,11 @@ do
       local g = _new_game()
       local user = g.players[1]
       local probes = _install_probes(g)
-    
+
       local settled = settlement.execute(g, user, item_ids.mine, function()
         return { ok = false, reason = "blocked" }
       end, { fallback_reason = "fallback", context_preconsumed = true })
-    
+
       _assert_eq(settled.ok, false, "escrowed failure should reject")
       _assert_eq(settled.reason, "blocked", "effect reason passes through")
       _assert_eq(settled.item_consumed, true, "escrowed failure should stay consumed")
@@ -1036,7 +1037,7 @@ do
       local g = _new_game()
       local user = g.players[1]
       user.inventory:add({ id = item_ids.mine })
-    
+
       local choice = support.open_choice(g, settlement.escrow(user, item_ids.mine, {
         kind = "item_target_player",
         options = { { id = g.players[2].id } },
@@ -1044,7 +1045,7 @@ do
       _assert_eq(support.count_item(user, item_ids.mine), 0, "escrow must consume the card")
       _assert_eq(choice.meta.item_preconsumed, true, "escrow must write the public cross-layer boolean")
       _assert_eq(choice.allow_cancel, false, "escrow must disable cancel")
-    
+
       _assert_eq(settlement.abandon(g, choice, "test"), true, "first abandon should refund")
       _assert_eq(support.count_item(user, item_ids.mine), 1, "abandon must return the card to the bag")
       _assert_eq(settlement.abandon(g, choice, "test"), false, "second abandon must be a no-op")
@@ -1057,7 +1058,7 @@ do
       local choice = {
         meta = { item_preconsumed = true, item_id = item_ids.mine, player_id = user.id },
       }
-    
+
       _assert_eq(settlement.abandon(g, choice, "test"), true, "legacy boolean escrow should refund")
       _assert_eq(support.count_item(user, item_ids.mine), 1, "legacy refund must return the card")
       _assert_eq(choice.meta.item_preconsumed, false, "refund must flip the legacy boolean")
@@ -1067,7 +1068,7 @@ do
     it("test_abandon_rejects_unrefundable_shapes_without_crashing", function()
       local g = _new_game()
       local user = g.players[1]
-    
+
       _assert_eq(settlement.abandon(g, nil, "test"), false, "nil choice is not refundable")
       _assert_eq(settlement.abandon(g, { meta = {} }, "test"), false, "choice without escrow is not refundable")
       _assert_eq(settlement.abandon(g, {
@@ -1085,7 +1086,7 @@ do
       local target = g.players[2]
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.exile })
-    
+
       _with_patches({
         {
           target = post_effects,
@@ -1096,19 +1097,19 @@ do
         },
       }, function()
         local followup_spec = _open_preconsumed_followup(g, user, item_ids.exile, probes)
-    
+
         _assert_eq(support.count_item(user, item_ids.exile), 0, "non-repeatable phase item must preconsume at choice open")
         _assert_eq(followup_spec.meta.item_preconsumed, true, "followup must carry preconsumed marker")
         _assert_eq(followup_spec.allow_cancel, false, "preconsumed followup must disable cancel")
         _assert_eq(probes.item_card_popups, 0, "preconsume must not broadcast before resolve")
-    
+
         local choice = support.open_choice(g, followup_spec)
         local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, target.id, user.id))
-    
+
         _assert_eq(result.ok, true, "preconsumed followup resolve should apply")
         _assert_eq(result.item_consumed, true, "preconsumed followup should report consumed")
       end)
-    
+
       _assert_eq(support.count_item(user, item_ids.exile), 0, "resolve must not consume a second card")
       _assert_eq(probes.item_card_popups, 0, "preconsumed resolve should not display a card popup")
       _assert_eq(probes.item_used_events, 1, "preconsumed resolve should report telemetry exactly once")
@@ -1125,11 +1126,11 @@ do
       local probes = _install_probes(g)
       user.inventory:add({ id = item_ids.steal })
       target.inventory:add({ id = item_ids.mine })
-    
+
       local followup_spec = _open_preconsumed_followup(g, user, item_ids.steal, probes)
       local choice = support.open_choice(g, followup_spec)
       local result = use_flow.resolve_item_use_choice(g, choice, _select_action(choice, target.id, user.id))
-    
+
       _assert_eq(result.ok, true, "preconsumed steal resolve should apply")
       _assert_eq(support.count_item(user, item_ids.steal), 0, "steal must consume exactly one card in total")
       _assert_eq(support.count_item(user, item_ids.mine), 1, "stolen item should arrive")
@@ -1141,7 +1142,7 @@ do
       local player = g.players[1]
       player.inventory:add({ id = item_ids.mine })
       local queued = false
-    
+
       _with_patches({
         {
           target = action_anim_port,
@@ -1158,7 +1159,7 @@ do
           g.turn.action_anim_seq = (g.turn.action_anim_seq or 0) + 1
           return { ok = true }
         end, {})
-    
+
         _assert_eq(result.ok, true, "apply should succeed")
         _assert_eq(result.action_anim, nil, "fallback anim should be skipped when seq advanced")
         _assert_eq(queued, false, "anim should not be queued when seq advanced")
@@ -1169,11 +1170,11 @@ do
     it("test_marks_already_applied_item_consumed_when_count_drops_below_preapplied_count", function()
       local g = _new_game()
       local player = g.players[1]
-    
+
       local result = settlement.execute(g, player, item_ids.mine, function()
         return { ok = true }
       end, { consume = "already_applied", preapplied_count = 1 })
-    
+
       _assert_eq(result.ok, true, "apply should succeed")
       _assert_eq(result.item_consumed, true, "should report consumed when preapplied count dropped")
     end)
@@ -1186,14 +1187,14 @@ do
       while not user.inventory:is_full() do
         user.inventory:add({ id = item_ids.roadblock })
       end
-    
+
       local choice = support.open_choice(g, settlement.escrow(user, item_ids.mine, {
         kind = "item_target_player",
         options = { { id = g.players[2].id } },
       }))
       -- escrow 消耗了一张卡,腾出一个格子;重新填满后退还失败
       user.inventory:add({ id = item_ids.roadblock })
-    
+
       _assert_eq(settlement.abandon(g, choice, "test"), false, "abandon should fail when bag is full")
     end)
 
@@ -1203,7 +1204,7 @@ do
       local player = g.players[1]
       player.inventory:add({ id = item_ids.mine })
       local queued = false
-    
+
       _with_patches({
         {
           target = action_anim_port,
@@ -1219,7 +1220,7 @@ do
         local result = settlement.execute(g, player, item_ids.mine, function()
           return { ok = true, action_anim = false }
         end, {})
-    
+
         _assert_eq(result.ok, true, "apply should succeed")
         _assert_eq(result.action_anim, true, "fallback anim should be queued")
         _assert_eq(queued, true, "anim should be queued")
@@ -1231,13 +1232,13 @@ do
       local g = _new_game()
       local user = g.players[1]
       user.inventory:add({ id = item_ids.mine })
-    
+
       local choice = settlement.escrow(user, item_ids.mine, {
         kind = "item_target_player",
         options = { { id = g.players[2].id } },
         meta = { item_id = 9999, player_id = 8888 },
       })
-    
+
       _assert_eq(choice.meta.item_id, 9999, "escrow should preserve existing item_id")
       _assert_eq(choice.meta.player_id, 8888, "escrow should preserve existing player_id")
     end)
@@ -1246,11 +1247,11 @@ do
     it("test_applier_owned_accepts_escrowed_items_without_explicit_commit", function()
       local g = _new_game()
       local user = g.players[1]
-    
+
       local result = settlement.execute(g, user, item_ids.steal, function()
         return { ok = true }
       end, { consume = "applier_owned", context_preconsumed = true })
-    
+
       _assert_eq(result.ok, true, "escrowed applier-owned item should apply")
       _assert_eq(result.item_consumed, true, "escrowed item should report consumed")
     end)

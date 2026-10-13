@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- Closure pins for src/rules/choice_handlers/item_completions.lua.
 -- The three completion paths used to branch by phase (post_action early-finished).

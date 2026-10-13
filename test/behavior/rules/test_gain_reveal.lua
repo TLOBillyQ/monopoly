@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
 -- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(7 例)。
@@ -63,9 +64,9 @@ describe("TestGainReveal", function()
     local g = _new_game()
     local player = g.players[1]
     local captured = _capture_popup(g)
-  
+
     local queued = gain_reveal.queue(g, player, item_ids.free_rent, { source = "item_tile" })
-  
+
     _assert_eq(queued, true, "realtime gain should queue reveal anim")
     _assert_broadcast_anim(g, player, item_ids.free_rent, "item_tile")
     _assert_gain_popup_payload(captured, player, item_ids.free_rent)
@@ -78,9 +79,9 @@ describe("TestGainReveal", function()
     local g = _new_game()
     local player = g.players[1]
     local captured = _capture_popup(g)
-  
+
     local queued = gain_reveal.queue(g, player, item_ids.free_rent, { source = "steal" })
-  
+
     _assert_eq(queued, true, "steal gain should queue reveal anim")
     _assert_broadcast_anim(g, player, item_ids.free_rent, "steal")
     _assert_gain_popup_payload(captured, player, item_ids.free_rent)
@@ -91,9 +92,9 @@ describe("TestGainReveal", function()
     local g = _new_game()
     local player = g.players[1]
     local captured = _capture_popup(g)
-  
+
     local queued = gain_reveal.queue(g, player, item_ids.free_rent, { source = "chance" })
-  
+
     _assert_eq(queued, true, "chance gain should queue reveal anim")
     _assert_broadcast_anim(g, player, item_ids.free_rent, "chance")
     _assert_gain_popup_payload(captured, player, item_ids.free_rent)
@@ -107,9 +108,9 @@ describe("TestGainReveal", function()
     local g = _new_game()
     local player = g.players[1]
     local captured = _capture_popup(g)
-  
+
     local queued = gain_reveal.queue(g, player, item_ids.free_rent, { source = "market" })
-  
+
     _assert_eq(queued, true, "market gain should queue reveal anim")
     _assert_broadcast_anim(g, player, item_ids.free_rent, "market")
     _assert_gain_popup_payload(captured, player, item_ids.free_rent)
@@ -122,9 +123,9 @@ describe("TestGainReveal", function()
     local g = _new_game()
     local player = g.players[1]
     local captured = _capture_popup(g)
-  
+
     local queued = gain_reveal.queue(g, player, item_ids.free_rent)
-  
+
     _assert_eq(queued, true, "sourceless gain should queue reveal anim")
     local anim = luassert.truthy(g.turn.action_anim, "missing gain popup anim")
     _assert_eq(anim.kind, "item_gain_popup", "sourceless gain anim kind mismatch")
@@ -138,10 +139,10 @@ describe("TestGainReveal", function()
     local player = g.players[1]
     g.turn.action_anim = { seq = 9, kind = "chance", player_id = player.id }
     g.turn.action_anim_seq = 9
-  
+
     gain_reveal.queue(g, player, item_ids.free_rent, { source = "chance" })
     gain_reveal.queue(g, player, item_ids.roadblock, { source = "chance" })
-  
+
     local queue = g.turn.action_anim_queue or {}
     _assert_eq(#queue, 2, "two gained items should be queued")
     _assert_eq(queue[1].kind, "item_gain_popup", "first queued reveal kind mismatch")
@@ -154,10 +155,10 @@ describe("TestGainReveal", function()
     local player = g.players[1]
     g.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
     local captured = _capture_popup(g)
-  
+
     local queued = gain_reveal.queue(g, player, item_ids.free_rent)
     local queued_tile = gain_reveal.queue(g, player, item_ids.free_rent, { source = "item_tile" })
-  
+
     _assert_eq(queued, false, "disabled gate should skip reveal anim")
     _assert_eq(queued_tile, false, "disabled gate should skip item tile reveal anim")
     _assert_eq(g.turn.action_anim, nil, "disabled gate should not set current anim")
@@ -168,7 +169,7 @@ describe("TestGainReveal", function()
   it("test_does_not_queue_when_required_context_is_missing", function()
     local g = _new_game()
     local player = g.players[1]
-  
+
     _assert_eq(gain_reveal.queue(nil, player, item_ids.free_rent), false, "missing game should skip reveal")
     _assert_eq(gain_reveal.queue(g, nil, item_ids.free_rent), false, "missing player should skip reveal")
     _assert_eq(gain_reveal.queue(g, player, nil), false, "missing item should skip reveal")
@@ -179,9 +180,9 @@ describe("TestGainReveal", function()
   it("test_plain_inventory_give_with_game_context_does_not_trigger_reveal", function()
     local g = _new_game()
     local player = g.players[1]
-  
+
     local ok = inventory.give(player, item_ids.free_rent, { game = g })
-  
+
     _assert_eq(ok, true, "inventory give should still add item")
     _assert_eq(g.turn.action_anim, nil, "plain inventory give should not queue reveal")
     _assert_eq(#(g.turn.action_anim_queue or {}), 0, "plain inventory give should not enqueue reveal")

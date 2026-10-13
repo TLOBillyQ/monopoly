@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 local property = require("test.support.property")
 local board_query = require("src.rules.board.query")
@@ -77,12 +78,12 @@ describe("TestTargetQuery", function()
       local game = { board = board }
       local player = { position = case.position }
       local score_fn = function(_, idx) return case.scores[idx] + 1 end
-  
+
       local best_idx, best_value = target_query.find_best_tile(game, player, case.distance, {
         score_fn = score_fn,
         allow_self = case.allow_self,
       })
-  
+
       local candidates = _candidates(board, case)
       local expect_idx, expect_value = nil, nil
       for _, idx in ipairs(candidates) do
@@ -91,7 +92,7 @@ describe("TestTargetQuery", function()
           expect_idx, expect_value = idx, value
         end
       end
-  
+
       luassert.truthy(best_idx == expect_idx, "expected best index " .. tostring(expect_idx) .. ", got " .. tostring(best_idx))
       luassert.truthy(best_value == expect_value, "expected best value " .. tostring(expect_value) .. ", got " .. tostring(best_value))
       if best_idx ~= nil then
@@ -106,12 +107,12 @@ describe("TestTargetQuery", function()
       local game = { board = board }
       local player = { position = case.position }
       local score_fn = function(_, idx) return case.scores[idx] + 1 end
-  
+
       local best_idx = target_query.find_best_tile(game, player, case.distance, {
         score_fn = score_fn,
         allow_self = case.allow_self,
       })
-  
+
       local in_range = #board_query.indices_in_range(board, case.position, case.distance) > 0
       if not case.allow_self then
         luassert.truthy(best_idx ~= case.position, "must never select self when allow_self is unset")
@@ -131,7 +132,7 @@ describe("TestTargetQuery", function()
     local ok_score, err_score = pcall(target_query.find_best_tile, {}, {}, 3, {})
     luassert.truthy(ok_score == false, "missing score_fn should assert")
     luassert.truthy(tostring(err_score):find("missing score_fn", 1, true) ~= nil, "score assert should carry its message: " .. tostring(err_score))
-  
+
     local ok_board, err_board = pcall(target_query.find_best_tile, {}, {}, 3, { score_fn = function() return 1 end })
     luassert.truthy(ok_board == false, "missing game.board should assert")
     luassert.truthy(tostring(err_board):find("missing game.board", 1, true) ~= nil, "board assert should carry its message: " .. tostring(err_board))

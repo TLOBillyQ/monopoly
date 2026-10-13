@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- steal.lua 直测:steal_nth_occupied 的缺省序号、自耗、事件契约(blocks_
 -- inter_turn/source)、anim 参数与返回值;steal_random_item 的 rng 守卫。

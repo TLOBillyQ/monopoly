@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- item_normalize 直测:规范化/校验辅助的边界与错误路径。
 -- 这些纯函数被 choice_handlers 各 completion 复用,集成 spec 只覆盖成功路径;
@@ -35,7 +36,7 @@ describe("TestItemNormalize", function()
     local final = {}
     local merged = normalize.merge_after_action_anim({ after_action_anim = "not-a-table" }, final)
     luassert.is_nil(merged.after_action_anim)
-  
+
     local anim = { key = "x" }
     local merged2 = normalize.merge_after_action_anim({ after_action_anim = anim }, {})
     luassert.is.equal(anim, merged2.after_action_anim)

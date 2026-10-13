@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(busted → LuaUnit 迁移):两个 describe 各拍平成一个 Test* 类
 -- (coverage 47 例带 before_each → setUp;auto dispatch 6 例无钩子,describe 级

@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- Mutation-closure pins for src/rules/items/handlers.lua.
 -- The item-use handlers are registered into the item registry and exercised
@@ -217,7 +218,7 @@ describe("TestItemHandlersApplyOrchestration", function()
     _assert_eq(share_ctx.share_wealth_cash_receive_mode, "item_target_player_only",
       "share_wealth routes cash receive through the target-player anim")
     _assert_eq(share_ctx.suppress_cash_receive_anim, true, "share_wealth suppresses the default cash-receive anim")
-  
+
     local g2 = _game()
     local _, _, _, other_ctx = _run(g2, item_ids.exile, { ok = true })
     _assert_eq(other_ctx.share_wealth_cash_receive_mode, nil,

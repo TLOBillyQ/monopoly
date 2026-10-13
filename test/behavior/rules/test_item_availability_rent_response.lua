@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,断言词汇
 -- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
@@ -64,9 +65,9 @@ do
         local g = _new_game()
         local p = g:current_player()
         local start_index = support.first_tile_by_type(g.board, "start")
-    
+
         g:update_player_position(p, start_index)
-    
+
         local result = availability.analyze_offer(g, p, item_ids.free_rent, "post_action")
         _assert_eq(result.can_offer, false, "free_rent should stay unavailable on non-property tile")
         _assert_eq(result.deny_reason, "special_condition_failed", "free_rent non-property tile deny reason")
@@ -78,11 +79,11 @@ do
         local g = _new_game()
         local p = g:current_player()
         local land_index, land_tile = support.first_land_tile(g.board)
-    
+
         g:update_player_position(p, land_index)
         g:set_tile_owner(land_tile, p.id)
         g:set_player_property(p, land_tile.id, true)
-    
+
         local result = availability.analyze_offer(g, p, item_ids.free_rent, "post_action")
         _assert_eq(result.can_offer, false, "free_rent should stay unavailable on self-owned tile")
         _assert_eq(result.deny_reason, "special_condition_failed", "free_rent own-tile deny reason")
@@ -93,7 +94,7 @@ do
       _with_offer_phase_cfg({ [item_ids.free_rent] = true }, function()
         local g = _new_game()
         local p = _set_current_player_on_rival_land(g)
-    
+
         local result = availability.analyze_offer(g, p, item_ids.free_rent, "post_action")
         _assert_eq(result.can_offer, true, "free_rent should be offered on rival-owned tile")
         _assert_eq(result.can_execute_now, true, "free_rent should execute immediately when offered")
@@ -106,9 +107,9 @@ do
         local g = _new_game()
         local p, land_tile = _set_current_player_on_rival_land(g, 2)
         local total_invested = property_value.total_invested(land_tile, 2)
-    
+
         g:set_player_cash(p, total_invested - 1)
-    
+
         local result = availability.analyze_offer(g, p, item_ids.strong, "post_action")
         _assert_eq(result.can_offer, false, "strong should stay unavailable below total invested")
         -- #205:现金不足从 special_condition_failed 拆为独立拒绝原因。
@@ -121,9 +122,9 @@ do
         local g = _new_game()
         local p, land_tile = _set_current_player_on_rival_land(g, 2)
         local total_invested = property_value.total_invested(land_tile, 2)
-    
+
         g:set_player_cash(p, total_invested)
-    
+
         local result = availability.analyze_offer(g, p, item_ids.strong, "post_action")
         _assert_eq(result.can_offer, true, "strong should be offered when cash covers total invested")
         _assert_eq(result.can_execute_now, true, "strong should execute immediately when offered")

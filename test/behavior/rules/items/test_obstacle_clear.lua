@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- obstacle_clear 直测(#259 变异清扫 survivor 闭合):
 -- 模块级 `timing.action_anim_default_seconds or 1.0` 的 or -> and

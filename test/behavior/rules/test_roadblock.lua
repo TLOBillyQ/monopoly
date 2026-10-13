@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 拍平为文件级 Test* 类,
 -- 嵌套 describe 均无钩子,直接合并进 TestRoadblock,用例数与改写前一一对应(16 例)。
@@ -84,7 +85,7 @@ describe("TestRoadblock", function()
       place_roadblock = function() end,
     }
     local player = _make_player(1, 3)
-  
+
     local event_calls = {}
     _with_patches({
       { target = event_feed, key = "publish", value = function(_, evt)
@@ -121,7 +122,7 @@ describe("TestRoadblock", function()
     })
     local game = { board = board }
     local player = _make_player(1, 3)
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return {} end },
     }, function()
@@ -134,7 +135,7 @@ describe("TestRoadblock", function()
     local board = _make_board({})
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return {} end },
     }, function()
@@ -150,7 +151,7 @@ describe("TestRoadblock", function()
     })
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return { 2 } end },
     }, function()
@@ -165,7 +166,7 @@ describe("TestRoadblock", function()
     })
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return {} end },
     }, function()
@@ -180,7 +181,7 @@ describe("TestRoadblock", function()
     })
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return {} end },
     }, function()
@@ -198,10 +199,10 @@ describe("TestRoadblock", function()
     local board = _make_board(tiles)
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     local indices = {}
     for i = 2, 20 do indices[#indices + 1] = i end
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return indices end },
     }, function()
@@ -217,7 +218,7 @@ describe("TestRoadblock", function()
     })
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = board_query, key = "indices_in_range", value = function() return { 1, 2, 1 } end },
     }, function()
@@ -240,7 +241,7 @@ describe("TestRoadblock", function()
     local board = _make_board(tiles)
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = facing_policy, key = "resolve_initial_facing", value = function() return "north" end },
     }, function()
@@ -257,7 +258,7 @@ describe("TestRoadblock", function()
     local board = _make_board(tiles, { 2 })
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = facing_policy, key = "resolve_initial_facing", value = function() return "north" end },
     }, function()
@@ -276,7 +277,7 @@ describe("TestRoadblock", function()
     local board = _make_board(tiles, {}, { 3 })
     local game = { board = board }
     local player = _make_player(1, 1)
-  
+
     _with_patches({
       { target = facing_policy, key = "resolve_initial_facing", value = function() return "north" end },
     }, function()

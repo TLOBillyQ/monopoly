@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 请神卡候选面规约(deities_008/009/010):请神卡只请正面神灵。
 -- 走真实 registry:target_candidates —— availability / 无目标提示 / 托管选靶都读这条候选面。

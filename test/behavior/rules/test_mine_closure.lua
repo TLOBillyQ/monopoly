@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- Mutation-closure pins for src/rules/effects/mine.lua.
 -- mine_effect_spec already pins _find_pending_roadblock_trigger; this file
@@ -139,9 +140,9 @@ do -- describe("mine_effect.apply closure")
       g:set_player_deity(p, "angel", 3)
       g:place_mine(3, { armed = true })
       local position_before = p.position
-    
+
       local res = mine_effect.apply(g, p, 3)
-    
+
       _assert_eq(res.detonated, true, "the mine still counts as detonated")
       _assert_eq(res.protected, true, "the angel protection flag is set")
       _assert_eq(res.hospitalized, nil, "a protected victim is not hospitalized")
@@ -155,9 +156,9 @@ do -- describe("mine_effect.apply closure")
       local p = g.players[1]
       g:place_mine(3, { armed = true })
       local hospital = g.board:find_first_by_type("hospital")
-    
+
       local res = mine_effect.apply(g, p, 3)
-    
+
       _assert_eq(g.board:has_mine(3), false, "the mine is cleared")
       _assert_eq(res.detonated, true, "result is detonated")
       _assert_eq(res.hospitalized, true, "result is hospitalized")
@@ -169,10 +170,10 @@ do -- describe("mine_effect.apply closure")
       _assert_eq(res.next_args.effects[1].player_id, p.id, "the location effect targets the victim")
       _assert_eq(res.next_args.effects[1].effect, "hospital", "the location effect is a hospital stay")
       _assert_eq(res.next_args.log_entries[1], p.name .. "触发地雷", "the log entry names the victim")
-    
+
       _assert_eq(p.position, hospital, "the victim is relocated to the hospital")
       _assert_eq(p.status.pending_location_effect, "hospital", "a pending hospital effect is flagged")
-    
+
       local anim = _find_action_anim(g, "mine_trigger")
       luassert.truthy(anim ~= nil, "a mine_trigger anim is queued")
       _assert_eq(anim.player_id, p.id, "the anim carries the victim id")
@@ -196,9 +197,9 @@ do -- describe("mine_effect.apply closure")
       g.turn.turn_count = 5
       g.turn.action_anim = { kind = "roadblock_trigger", player_id = p.id, tile_index = 3 }
       local tile = g.board:get_tile(3)
-    
+
       mine_effect.apply(g, p, 3)
-    
+
       local anim = _find_action_anim(g, "mine_trigger")
       luassert.truthy(anim ~= nil, "the chained blast is queued behind the roadblock trigger")
       _assert_eq(anim.tip_policy, "user", "a chained blast surfaces a user tip")
@@ -218,9 +219,9 @@ do -- describe("mine_effect.apply closure")
       g:place_mine(3, { armed = true })
       g.turn.turn_count = nil
       g.turn.action_anim = { kind = "roadblock_trigger", player_id = p.id, tile_index = 3 }
-    
+
       mine_effect.apply(g, p, 3)
-    
+
       local anim = _find_action_anim(g, "mine_trigger")
       luassert.truthy(anim ~= nil, "the chained blast is queued")
       _assert_eq(anim.dedupe_key, "obstacle_chain:0:" .. tostring(p.id) .. ":3",
@@ -234,9 +235,9 @@ do -- describe("mine_effect.apply closure")
       g:set_player_status(p, "move_dir", "up")
       g:set_player_status(p, "skip_next_inner_entry", true)
       g:place_mine(3, { armed = true })
-    
+
       mine_effect.apply(g, p, 3)
-    
+
       _assert_eq(p.status.move_dir, nil, "the hospital relocation clears the victim's move_dir")
       _assert_eq(p.status.skip_next_inner_entry, false,
         "the hospital relocation clears the skip-next-inner-entry flag (clear mode; forced_move would leave it)")
@@ -245,23 +246,23 @@ do -- describe("mine_effect.apply closure")
     it("test_apply errors on nil game/board/player/position preconditions", function()
       local g = _game()
       local p = g.players[1]
-    
+
       local function _apply_err(...)
         return pcall(mine_effect.apply, ...)
       end
-    
+
       local ok_nil_game, err_nil_game = _apply_err(nil, p, 3)
       _assert_eq(ok_nil_game, false, "nil game should error")
       luassert.truthy(type(err_nil_game) == "string" and err_nil_game:find("missing game", 1, true), "nil game error should mention missing game, got: " .. tostring(err_nil_game))
-    
+
       local ok_nil_board, err_nil_board = _apply_err({}, p, 3)
       _assert_eq(ok_nil_board, false, "missing board should error")
       luassert.truthy(type(err_nil_board) == "string" and err_nil_board:find("missing board", 1, true), "missing board error should mention missing board, got: " .. tostring(err_nil_board))
-    
+
       local ok_nil_player, err_nil_player = _apply_err(g, nil, 3)
       _assert_eq(ok_nil_player, false, "nil player should error")
       luassert.truthy(type(err_nil_player) == "string" and err_nil_player:find("missing player", 1, true), "nil player error should mention missing player, got: " .. tostring(err_nil_player))
-    
+
       local ok_nil_pos, err_nil_pos = _apply_err(g, p, nil)
       _assert_eq(ok_nil_pos, false, "nil position should error")
       luassert.truthy(type(err_nil_pos) == "string" and err_nil_pos:find("missing position", 1, true), "nil position error should mention missing position, got: " .. tostring(err_nil_pos))

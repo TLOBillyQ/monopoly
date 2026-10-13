@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- luacheck: ignore 211
 -- Manual roadblock / demolish target-selection tests.
@@ -33,14 +34,14 @@ describe("TestItemRoadblockAndDemolish", function()
     local item_id = item_ids.roadblock
     local expected = roadblock.manual_candidates(g, p, 3)
     p.inventory:add({ id = item_id })
-  
+
     local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
     luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should open choice")
-  
+
     local pending = res.intent.choice_spec
     luassert.truthy(pending and pending.kind == "roadblock_target", "roadblock should open target choice")
     _assert_eq(#pending.options, 7, "manual roadblock should expose seven nearest unique options")
-  
+
     local expected_ids = {}
     for _, cand in ipairs(expected) do
       expected_ids[cand.idx] = cand.tile.name
@@ -49,7 +50,7 @@ describe("TestItemRoadblockAndDemolish", function()
       luassert.truthy(expected_ids[opt.id] ~= nil, "roadblock option at " .. i .. " should be a valid candidate")
       _assert_eq(opt.label, expected_ids[opt.id], "roadblock option should show tile name only at " .. i)
     end
-  
+
     luassert.truthy(pending.target_slot_layout ~= nil, "roadblock choice should include target_slot_layout")
     _assert_eq(#pending.target_slot_layout, 7, "target_slot_layout should map all seven options")
   end)
@@ -60,11 +61,11 @@ describe("TestItemRoadblockAndDemolish", function()
     local item_id = item_ids.roadblock
     local current_idx = p.position
     p.inventory:add({ id = item_id })
-  
+
     local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
     luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice")
     local pending = _open_choice(g, res.intent.choice_spec)
-  
+
     local center_slot = 4
     local self_option = nil
     for i, slot in ipairs(pending.target_slot_layout) do
@@ -75,7 +76,7 @@ describe("TestItemRoadblockAndDemolish", function()
     end
     luassert.truthy(self_option ~= nil, "center slot should have an option")
     _assert_eq(self_option.id, current_idx, "center slot should target current tile")
-  
+
     choice_resolver.resolve(g, pending, { option_id = current_idx })
     _assert_eq(g.board:has_roadblock(current_idx), true, "manual roadblock should allow current tile placement")
   end)
@@ -86,7 +87,7 @@ describe("TestItemRoadblockAndDemolish", function()
     local item_id = item_ids.roadblock
     g:update_player_position(p, 7)
     p.inventory:add({ id = item_id })
-  
+
     local candidate_names = {
       "香港路",
       "广州路",
@@ -96,13 +97,13 @@ describe("TestItemRoadblockAndDemolish", function()
       "海口路",
       "南宁路",
     }
-  
+
     local candidates = roadblock.manual_candidates(g, p, 3)
     _assert_eq(#candidates, 7, "hongkong roadblock candidates should still expose seven slots")
     for index, expected_name in ipairs(candidate_names) do
       _assert_eq(candidates[index].tile.name, expected_name, "hongkong candidate name mismatch at slot " .. index)
     end
-  
+
     local arranged_names = {
       "海口路",
       "道具卡",
@@ -112,7 +113,7 @@ describe("TestItemRoadblockAndDemolish", function()
       "医院",
       "南宁路",
     }
-  
+
     local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
     luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should open choice at hongkong")
     local pending = _open_choice(g, res.intent.choice_spec)
@@ -128,14 +129,14 @@ describe("TestItemRoadblockAndDemolish", function()
     local item_id = item_ids.roadblock
     g:update_player_position(p, 7)
     p.inventory:add({ id = item_id })
-  
+
     local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
     luassert.truthy(type(res) == "table" and res.waiting, "manual roadblock should wait for target choice at hongkong")
     local pending = _open_choice(g, res.intent.choice_spec)
-  
+
     _assert_eq(pending.options[1].id, 4, "haikou should be at backward-far slot")
     choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
-  
+
     _assert_eq(g.board:has_roadblock(4), true, "haikou slot should place roadblock on haikou")
     _assert_eq(g.board:has_roadblock(10), false, "haikou slot should not incorrectly place roadblock on nanning")
   end)
@@ -145,7 +146,7 @@ describe("TestItemRoadblockAndDemolish", function()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(45))
     g:set_player_status(p, "move_dir", nil)
-  
+
     local candidates = roadblock.manual_candidates(g, p, 3)
     local expected_names = {
       "机会卡",
@@ -156,7 +157,7 @@ describe("TestItemRoadblockAndDemolish", function()
       "天津路",
       "台北路",
     }
-  
+
     _assert_eq(#candidates, #expected_names, "intersection roadblock ui should expose seven nearest unique target tiles")
     for index, expected_name in ipairs(expected_names) do
       _assert_eq(candidates[index].tile.name, expected_name, "intersection candidate name mismatch at slot " .. index)
@@ -167,10 +168,10 @@ describe("TestItemRoadblockAndDemolish", function()
     local g = _new_game()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(42))
-  
+
     local candidates = roadblock.manual_candidates(g, p, 3)
     local expected_ids = { 42, 3, 4, 45, 2, 5, 31 }
-  
+
     _assert_tile_id_sequence(candidates, expected_ids, "branch roadblock candidate sequence mismatch")
   end)
 
@@ -180,7 +181,7 @@ describe("TestItemRoadblockAndDemolish", function()
     local item_id = item_ids.monster
     g:update_player_position(p, g.board:index_of_tile_id(42))
     p.inventory:add({ id = item_id })
-  
+
     local target_ids = { 3, 4, 31, 5, 2, 1 }
     local target_indices = {}
     for _, tile_id in ipairs(target_ids) do
@@ -189,12 +190,12 @@ describe("TestItemRoadblockAndDemolish", function()
       g:set_tile_level(tile_ref, 1)
       target_indices[#target_indices + 1] = g.board:index_of_tile_id(tile_id)
     end
-  
+
     local res = executor.use_item(g, p, item_id, { is_computer_controlled = false })
     luassert.truthy(type(res) == "table" and res.waiting == true, "monster manual use should open choice")
     local pending = res.intent.choice_spec
     luassert.truthy(pending and pending.kind == "demolish_target", "monster manual use should expose demolish target choice")
-  
+
     local option_ids = {}
     for _, option in ipairs(pending.options or {}) do
       option_ids[#option_ids + 1] = option.id
@@ -209,7 +210,7 @@ describe("TestItemRoadblockAndDemolish", function()
     local p = g:current_player()
     local item_id = item_ids.roadblock
     p.inventory:add({ id = item_id })
-  
+
     local res = executor.use_item(g, p, item_id, { is_computer_controlled = true })
     local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
     _assert_eq(ok, true, "ai roadblock should apply immediately")

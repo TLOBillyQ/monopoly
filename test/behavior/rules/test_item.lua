@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- luacheck: ignore 211
 -- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestItem 类,before_each
@@ -135,7 +136,7 @@ describe("TestItem", function()
       "missile should defer main strike log until move followup"
     )
     _assert_eq(g:detention_remaining(g.players[2]), 0, "missile should defer hospital stay until move followup")
-  
+
     local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
     _assert_eq(next_state, nil, "missile move followup should return caller continuation")
     luassert.truthy(g:detention_remaining(g.players[2]) > 0, "missile target should enter hospital after move followup")
@@ -147,18 +148,18 @@ describe("TestItem", function()
     local idx = 4
     local tile_ref = g.board:get_tile(idx)
     local occupant = g.players[2]
-  
+
     g:set_tile_owner(tile_ref, p.id)
     g:set_player_property(p, tile_ref.id, true)
     g:set_tile_level(tile_ref, 2)
     g:update_player_position(occupant, idx)
-  
+
     local res = demolish.apply(g, p, idx, {
       item_id = item_ids.missile,
       injure = true,
       title = "导弹卡",
     })
-  
+
     _assert_eq(res.ok, true, "direct missile apply should succeed")
     _assert_eq(_tile_state(g, tile_ref).level, 0, "missile should destroy own land building")
     _assert_eq(occupant.position, g.board:find_first_by_type("hospital"), "occupant should relocate to hospital")
@@ -168,7 +169,7 @@ describe("TestItem", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = 2008 })
-  
+
     local res = executor.use_item(g, p, 2008, { is_computer_controlled = false })
     _assert_eq(type(res), "table", "demolish without target should return a structured rejection")
     _assert_eq(res.ok, false, "demolish without target should reject instead of crashing")
@@ -182,7 +183,7 @@ describe("TestItem", function()
     p.inventory:add({ id = 2008 }) -- 怪兽卡（无可拆目标）
     p.inventory:add({ id = 2011 }) -- 均富卡（目标玩家已出局）
     g.players[2].eliminated = true
-  
+
     local spec = item_phase.build_passive_choice_spec(g, p, "post_action")
     _assert_eq(spec, nil, "item_phase should not expose unusable target items")
   end)
@@ -195,7 +196,7 @@ describe("TestItem", function()
     g:set_tile_owner(tile_ref, 2)
     g:set_tile_level(tile_ref, 1)
     p.inventory:add({ id = 2008 })
-  
+
     local spec = item_phase.build_passive_choice_spec(g, p, "post_action")
     luassert.truthy(spec and spec.options and #spec.options > 0, "item_phase should include demolish when target exists")
     _assert_eq(spec.options[1].id, 2008, "demolish item should be selectable when target exists")
@@ -211,7 +212,7 @@ describe("TestItem", function()
     g:set_player_property(p, tile_ref.id, true)
     p.inventory:add({ id = item_ids.strong })
     p.inventory:add({ id = item_ids.free_rent })
-  
+
     local spec = item_phase.build_passive_choice_spec(g, p, "post_action")
     _assert_eq(spec, nil, "owned land should not expose reactive cards in active windows")
   end)
@@ -225,7 +226,7 @@ describe("TestItem", function()
     g:set_tile_owner(tile_ref, g.players[2].id)
     p.inventory:add({ id = item_ids.strong })
     p.inventory:add({ id = item_ids.free_rent })
-  
+
     local spec = item_phase.build_passive_choice_spec(g, p, "post_action")
     _assert_eq(spec, nil, "other player land should still hide reactive cards in active windows")
   end)
@@ -242,7 +243,7 @@ describe("TestItem", function()
     p.inventory:add({ id = item_ids.send_poor })
     p.inventory:add({ id = item_ids.remote_dice })
     p.inventory:add({ id = item_ids.mine })
-  
+
     local spec = item_phase.build_passive_choice_spec(g, p, "post_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -252,7 +253,7 @@ describe("TestItem", function()
     _assert_eq(spec.route_key, "item_phase_passive", "passive spec route key mismatch")
     luassert.truthy(type(spec.slot_states) == "table", "passive spec should expose slot_states")
     luassert.truthy(type(spec.options) == "table", "passive spec should expose options")
-  
+
     local slot1 = spec.slot_states[1]
     local slot2 = spec.slot_states[2]
     local slot3 = spec.slot_states[3]
@@ -301,7 +302,7 @@ describe("TestItem", function()
     local p = g:current_player()
     inventory.clear(p)
     p.inventory:add({ id = item_ids.mine })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -312,7 +313,7 @@ describe("TestItem", function()
       option_id = item_ids.mine,
       actor_role_id = p.id,
     })
-  
+
     _assert_eq(res and res.stay, false, "direct execute should finish passive phase when no more options")
     _assert_eq(inventory.count(p), 0, "mine should be consumed after direct passive execute")
   end)
@@ -322,18 +323,18 @@ describe("TestItem", function()
     local p = g:current_player()
     inventory.clear(p)
     p.inventory:add({ id = item_ids.mine })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
     }), "passive pre_action choice should open"))
-  
+
     local res = choice_resolver.resolve(g, pending, {
       type = "choice_cancel",
       choice_id = pending.id,
       actor_role_id = p.id,
     })
-  
+
     _assert_eq(res and res.stay, false, "cancel should finish passive phase")
     luassert.truthy(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true, "cancel should mark phase finished")
     _assert_eq(g.turn.item_phase_active, "", "cancel should clear active item phase")
@@ -344,7 +345,7 @@ describe("TestItem", function()
     local p = g:current_player()
     inventory.clear(p)
     p.inventory:add({ id = item_ids.dice_multiplier })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_move", {
       next_state = "roll",
       next_args = { player = p },
@@ -355,7 +356,7 @@ describe("TestItem", function()
       option_id = item_ids.dice_multiplier,
       actor_role_id = p.id,
     })
-  
+
     _assert_eq(res and res.stay, false, "effect-group item execute should finish passive phase when no options remain")
     luassert.truthy(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_multiply == true, "dice_double execute should mark dice_multiply effect group used")
   end)
@@ -365,7 +366,7 @@ describe("TestItem", function()
     local p = g:current_player()
     inventory.clear(p)
     p.inventory:add({ id = item_ids.remote_dice })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -376,7 +377,7 @@ describe("TestItem", function()
       option_id = item_ids.remote_dice,
       actor_role_id = p.id,
     })
-  
+
     luassert.truthy(res and res.stay == true, "remote dice passive execute should open follow-up choice")
     _assert_eq(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control, nil,
       "waiting follow-up should not mark dice_control effect group")
@@ -388,7 +389,7 @@ describe("TestItem", function()
     inventory.clear(p)
     p.inventory:add({ id = item_ids.mine })
     p.inventory:add({ id = item_ids.remote_dice })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -399,7 +400,7 @@ describe("TestItem", function()
       option_id = item_ids.mine,
       actor_role_id = p.id,
     })
-  
+
     luassert.truthy(type(res) == "table", "passive handler resolve should return table when phase reopens")
     _assert_eq(res.stay, true, "passive handler resolve should return stay=true when phase reopens")
   end)
@@ -409,7 +410,7 @@ describe("TestItem", function()
     local p = g:current_player()
     inventory.clear(p)
     p.inventory:add({ id = item_ids.remote_dice })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -423,7 +424,7 @@ describe("TestItem", function()
     luassert.truthy(select_res and select_res.stay == true, "remote dice passive execute should open follow-up choice")
     _assert_eq(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control, nil,
       "effect group should stay unmarked before follow-up completion")
-  
+
     local followup = luassert.truthy(g.turn.pending_choice, "remote dice should open follow-up choice")
     _assert_eq(followup.kind, "remote_dice_value", "remote dice follow-up kind mismatch")
     local option = luassert.truthy(followup.options and followup.options[1], "remote dice follow-up should expose options")
@@ -433,7 +434,7 @@ describe("TestItem", function()
       option_id = option.id,
       actor_role_id = p.id,
     })
-  
+
     luassert.truthy(type(followup_res) == "table", "remote dice follow-up completion should return table")
     luassert.truthy(g.turn.used_effect_groups and g.turn.used_effect_groups.dice_control == true, "passive-origin follow-up completion should mark dice_control effect group")
   end)
@@ -471,7 +472,7 @@ describe("TestItem", function()
       resume_next_state = "move_followup",
       resume_next_args = resume_next_args,
     })
-  
+
     _assert_eq(result.next_state, "move_followup", "build_wait_choice_args should forward resume_next_state")
     luassert.truthy(result.next_args == resume_next_args, "build_wait_choice_args should forward the original next_args table")
   end)
@@ -507,13 +508,13 @@ describe("TestItem", function()
     g:set_player_cash(user, 1000)
     g:set_player_cash(target, 9000)
     user.inventory:add({ id = 2011 })
-  
+
     local res = executor.use_item(g, user, 2011, {})
     luassert.truthy(type(res) == "table" and res.waiting, "target item should open choice first")
     _open_choice(g, res.intent.choice_spec)
     local pending = _get_choice(g)
     luassert.truthy(pending and pending.kind == "item_target_player", "pending choice kind")
-  
+
     choice_resolver.resolve(g, pending, { option_id = target.id })
     _assert_eq(_get_choice(g), nil, "choice should be resolved directly without reopening")
     _assert_eq(g:player_cash(user), 5000, "manual target item should apply to user")
@@ -533,14 +534,14 @@ describe("TestItem", function()
     user.inventory:add({ id = item_ids.steal })
     target.inventory:add({ id = item_ids.tax_free })
     target.inventory:add({ id = item_ids.roadblock })
-  
+
     local res = executor.use_item(g, user, item_ids.steal, {})
     luassert.truthy(type(res) == "table" and res.waiting, "steal should open choice first")
     local pending = res.intent.choice_spec
     luassert.truthy(pending and pending.kind == "item_target_player", "steal should use shared player target choice")
     _assert_eq(#pending.options, 1, "only players with items should be selectable")
     _assert_eq(pending.options[1].id, target.id, "target with items should be selectable")
-  
+
     res = choice_resolver.resolve(g, _open_choice(g, pending), { option_id = target.id })
     _assert_eq(res.status, "resolved", "steal target choice should resolve")
     _assert_eq(user.inventory:count(), 1, "stealer should spend steal card and receive one item")
@@ -565,7 +566,7 @@ describe("TestItem", function()
     protected.inventory:add({ id = item_ids.tax_free })
     valid.inventory:add({ id = item_ids.roadblock })
     g:set_player_deity(protected, "angel", 3)
-  
+
     local candidates = g.registries.items:target_candidates(g, user, item_ids.steal)
     _assert_eq(#candidates, 1, "only valid steal target should remain")
     _assert_eq(candidates[1].id, valid.id, "candidate should be player with items and no angel")
@@ -583,7 +584,7 @@ describe("TestItem", function()
     local valid = g.players[3]
     user.inventory:add({ id = item_ids.missile })
     g:set_player_deity(protected, "angel", 3)
-  
+
     local candidates = g.registries.items:target_candidates(g, user, item_ids.missile)
     _assert_eq(#candidates, 2, "missile should target unprotected other players")
     for _, candidate in ipairs(candidates) do
@@ -607,7 +608,7 @@ describe("TestItem", function()
     g:set_player_cash(g.players[3], 9000)
     g:set_player_cash(g.players[4], 9000)
     user.inventory:add({ id = 2011 })
-  
+
     local res = executor.use_item(g, user, 2011, {})
     luassert.truthy(type(res) == "table" and res.waiting, "equalize on p1 should open choice")
     local pending = res.intent.choice_spec
@@ -617,7 +618,7 @@ describe("TestItem", function()
     _assert_eq(pending.target_slot_layout[1], 2, "candidate 1 (p2) → slot 2")
     _assert_eq(pending.target_slot_layout[2], 3, "candidate 2 (p3) → slot 3")
     _assert_eq(pending.target_slot_layout[3], 4, "candidate 3 (p4) → slot 4")
-  
+
     -- Seat-aware: when p2 is current, layout for [p1,p3,p4] is {1,3,4}.
     local g2 = support.new_game({
       map = default_map,
@@ -644,12 +645,12 @@ describe("TestItem", function()
     local user = g.players[1]
     local target = g.players[2]
     user.inventory:add({ id = item_ids.exile })
-  
+
     local res = executor.use_item(g, user, item_ids.exile, {
       is_computer_controlled = true,
       target_id = target.id,
     })
-  
+
     _assert_eq(type(res), "table", "exile should return result payload")
     _assert_eq(res.ok, true, "exile should succeed")
     luassert.truthy(type(res.after_action_anim) == "table", "exile should expose move followup continuation")
@@ -660,7 +661,7 @@ describe("TestItem", function()
       user.name .. " 使用流放卡，将 " .. target.name .. " 送往深山，停留 2 回合",
       "exile should defer main log entry until move followup"
     )
-  
+
     local next_state, _ = move_followup.run({ game = g }, res.after_action_anim.next_args)
     _assert_eq(next_state, nil, "exile move followup should return to caller continuation")
     luassert.truthy(g:detention_remaining(target) > 0, "exile should apply mountain stay after move followup")
@@ -670,7 +671,7 @@ describe("TestItem", function()
     local g = _setup_world_with_anim()
     local p = g:current_player()
     p.inventory:add({ id = 2003 })
-  
+
     local res = executor.use_item(g, p, 2003, { is_computer_controlled = true })
     luassert.truthy(type(res) == "table" and res.action_anim, "fallback item anim should be marked")
     luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_use", "fallback should queue item_use anim")
@@ -685,7 +686,7 @@ describe("TestItem", function()
     local g = _setup_world_with_anim()
     local p = g:current_player()
     p.inventory:add({ id = 2005 })
-  
+
     local res = executor.use_item(g, p, 2005, { is_computer_controlled = true })
     luassert.truthy(type(res) == "table" and res.action_anim, "mine should return action anim marker")
     luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "mine", "specific mine anim should not be replaced")
@@ -700,7 +701,7 @@ describe("TestItem", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.mine })
-  
+
     local spec = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action"), "mine should be offered in pre_action")
     _assert_eq(spec.uses_item_slots, true, "item_phase choice should expose uses_item_slots flag")
     _assert_eq(spec.pre_confirm_before_slot_pick, false,
@@ -722,7 +723,7 @@ describe("TestItem", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.mine })
-  
+
     local spec = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "post_action"), "mine should be offered in post_action")
     local found = nil
     for _, option in ipairs(spec.options) do
@@ -740,7 +741,7 @@ describe("TestItem", function()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.send_poor })
     g:set_player_deity(p, "poor", 2)
-  
+
     local pre_action = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action"), "send_poor should be offered in pre_action")
     local pre_action_found = nil
     for _, option in ipairs(pre_action.options) do
@@ -751,7 +752,7 @@ describe("TestItem", function()
     end
     luassert.truthy(pre_action_found ~= nil, "pre_action choice should include send_poor")
     _assert_eq(pre_action_found.confirm_title, "送神卡", "pre_action option should expose the card name as confirm title")
-  
+
     local post_action = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "post_action"), "send_poor should be offered in post_action")
     local post_action_found = nil
     for _, option in ipairs(post_action.options) do
@@ -769,7 +770,7 @@ describe("TestItem", function()
     local p = g:current_player()
     local auto_play_port = require("src.rules.ports.auto_play")
     local calls = 0
-  
+
     support.with_patches({
       {
         target = auto_play_port,
@@ -798,7 +799,7 @@ describe("TestItem", function()
       })
       _assert_eq(result, nil, "auto repeatable phase should resolve immediately when no waits/anim are produced")
     end)
-  
+
     _assert_eq(calls, 3, "auto repeatable phase should keep probing until no further action is returned")
     luassert.truthy(g.turn.item_phase and g.turn.item_phase.pre_action and g.turn.item_phase.pre_action.done == true, "auto repeatable phase should mark done only after the final no-op probe")
   end)
@@ -812,7 +813,7 @@ describe("TestItem", function()
     p.inventory:add({ id = item_ids.strong })
     p.inventory:add({ id = item_ids.free_rent })
     p.inventory:add({ id = item_ids.roadblock })
-  
+
     g:set_tile_owner(tile_ref, p.id)
     g:set_player_property(p, tile_ref.id, true)
     luassert.truthy(item_strategy.can_offer_in_phase(g, p, item_ids.strong, "post_action") == false, "strong card should stay hidden in active windows")
@@ -836,7 +837,7 @@ describe("TestItem", function()
         },
       }
     end
-  
+
     local ok, res = pcall(function()
       return item_phase.run({ game = g }, "pre_action", {
         player = player,
@@ -845,7 +846,7 @@ describe("TestItem", function()
       })
     end)
     item_strategy.auto_pre_action = original_auto_pre_action
-  
+
     luassert.truthy(ok, res)
     luassert.truthy(type(res) == "table" and res.waiting == true, "auto item phase should wait for action anim when item queued anim")
     luassert.truthy(res.wait_action_anim == true, "auto item phase should route through wait_action_anim")
@@ -881,12 +882,12 @@ describe("TestItem", function()
     local current = 1
     local branch = board.branches[current]
     luassert.truthy(branch and branch.odd and branch.even, "selected branch entry should expose odd/even targets")
-  
+
     local odd_index = select(1, board:advance(current, 1, 1))
     local even_index = select(1, board:advance(current, 1, 2))
     _assert_eq(odd_index, branch.odd, "advance should use odd branch when parity is odd")
     _assert_eq(even_index, branch.even, "advance should use even branch when parity is even")
-  
+
     local last = board:length()
     local wrapped_index, passed_start = board:advance(last, 2)
     _assert_eq(wrapped_index, 2, "advance should wrap around board length")
@@ -942,7 +943,7 @@ describe("TestItem", function()
       end,
     }
     cash_handlers.register(handlers, common)
-  
+
     local balances = {
       [1] = 1000,
       [2] = 50,
@@ -982,12 +983,12 @@ describe("TestItem", function()
         end,
       },
     }
-  
+
     handlers.collect_from_others(game, game.players[1], {
       amount = 100,
       effect = "collect_from_others",
     })
-  
+
     _assert_eq(game:player_cash(game.players[1]), 1250, "collector should receive each payer's actual liquid only")
     _assert_eq(game:player_cash(game.players[2]), 0, "broke payer cash should be capped at zero")
     _assert_eq(game.players[2].eliminated, true, "broke payer should be marked eliminated")
@@ -1004,7 +1005,7 @@ describe("TestItem", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.remote_dice })
-  
+
     local spec = luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -1012,7 +1013,7 @@ describe("TestItem", function()
     local pending = _open_choice(g, spec)
     local before_count = inventory.count(p)
     _assert_eq(before_count, 1, "precondition inventory count")
-  
+
     local res = choice_resolver.resolve(g, pending, {
       type = "choice_select",
       choice_id = pending.id,
@@ -1020,7 +1021,7 @@ describe("TestItem", function()
       actor_role_id = p.id,
     })
     luassert.truthy(res and res.stay == true, "selecting remote dice should open follow-up choice")
-  
+
     local after_pending = _get_choice(g)
     luassert.truthy(after_pending and after_pending.kind == "remote_dice_value", "follow-up choice kind should be remote_dice_value")
     _assert_eq(inventory.count(p), 1, "repeatable pre_action should defer consume until follow-up confirm")
@@ -1033,7 +1034,7 @@ describe("TestItem", function()
     local g = _new_game()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.remote_dice })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -1045,7 +1046,7 @@ describe("TestItem", function()
       actor_role_id = p.id,
     })
     luassert.truthy(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
-  
+
     local followup = _get_choice(g)
     local cancel_res = choice_resolver.resolve(g, followup, {
       type = "choice_cancel",
@@ -1053,7 +1054,7 @@ describe("TestItem", function()
       actor_role_id = p.id,
     })
     luassert.truthy(cancel_res and cancel_res.stay == true, "canceling repeatable follow-up should keep phase active")
-  
+
     local reopened = _get_choice(g)
     luassert.truthy(reopened and reopened.kind == "item_phase_passive", "cancel should reopen item phase passive choice")
     _assert_eq(inventory.count(p), 1, "cancel should not consume remote dice")
@@ -1065,7 +1066,7 @@ describe("TestItem", function()
     local p = g:current_player()
     p.inventory:add({ id = item_ids.remote_dice })
     p.inventory:add({ id = item_ids.mine })
-  
+
     local pending = _open_choice(g, luassert.truthy(item_phase.build_passive_choice_spec(g, p, "pre_action", {
       next_state = "roll",
       next_args = { player = p },
@@ -1077,7 +1078,7 @@ describe("TestItem", function()
       actor_role_id = p.id,
     })
     luassert.truthy(select_res and select_res.stay == true, "selecting remote dice should enter follow-up choice")
-  
+
     local followup = _get_choice(g)
     local confirm_res = choice_resolver.resolve(g, followup, {
       type = "choice_select",
@@ -1089,7 +1090,7 @@ describe("TestItem", function()
     _assert_eq(inventory.count(p), 1, "confirming follow-up should consume exactly one item")
     local remote_values = g:peek_pending_remote_dice(p)
     luassert.truthy(remote_values and remote_values[1] == 4, "confirming follow-up should apply selected remote dice value")
-  
+
     local reopened = _get_choice(g)
     luassert.truthy(reopened and reopened.kind == "item_phase_passive", "confirming repeatable follow-up should reopen item phase")
     luassert.truthy(_find_option_id_by_label(reopened, "地雷卡") ~= nil, "reopened phase should expose remaining pre_action item")
@@ -1112,7 +1113,7 @@ describe("TestItem", function()
         item_preconsumed = true,
       },
     })
-  
+
     local res = choice_resolver.resolve(g, pending, {
       type = "choice_cancel",
       choice_id = pending.id,
@@ -1142,13 +1143,13 @@ describe("TestItem", function()
         player_id = p.id,
       },
     })
-  
+
     local res = choice_resolver.resolve(g, pending, {
       type = "choice_cancel",
       choice_id = pending.id,
       actor_role_id = p.id,
     })
-  
+
     _assert_eq(res and res.stay, false, "tax prompt cancel should resolve immediately")
     _assert_eq(g.turn.pending_choice, nil, "tax prompt cancel should clear pending choice")
     _assert_eq(g:player_cash(p), 500, "tax prompt cancel should pay tax through skip path")
@@ -1181,7 +1182,7 @@ describe("TestItem", function()
       end,
     })
     p.inventory:add({ id = item_ids.tax_free })
-  
+
     local res = executor.use_item(g, p, item_ids.tax_free, { is_computer_controlled = true })
     local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
     _assert_eq(ok, true, "tax_free use ok")
@@ -1201,7 +1202,7 @@ describe("TestItem", function()
     g:set_player_cash(user, 1000)
     g:set_player_cash(target, 9000)
     user.inventory:add({ id = item_ids.share_wealth })
-  
+
     local res = executor.use_item(g, user, item_ids.share_wealth, {
       is_computer_controlled = true,
       target_id = target.id,
@@ -1235,14 +1236,14 @@ describe("TestItem", function()
         item_preconsumed = false,
       },
     })
-  
+
     local res = choice_resolver.resolve(g, pending, {
       type = "choice_select",
       choice_id = pending.id,
       option_id = 4,
       actor_role_id = p.id,
     })
-  
+
     _assert_eq(res and res.stay, false, "remote dice follow-up should resolve immediately")
     _assert_eq(#popups, 0, "remote dice follow-up should not push a card popup")
   end)
@@ -1255,7 +1256,7 @@ describe("TestItem", function()
     local target = g.players[2]
     stealer.inventory:add({ id = item_ids.steal })
     target.inventory:add({ id = item_ids.tax_free })
-  
+
     support.with_patches({
       {
         key = "GlobalAPI",
@@ -1272,12 +1273,12 @@ describe("TestItem", function()
           popups[#popups + 1] = payload
         end,
       })
-  
+
       local res = steal.steal_nth_occupied(g, stealer, target, 1)
       _assert_eq(res and res.ok, true, "steal should succeed")
       _assert_eq(res and res.intent, nil, "steal success should not return popup intent")
     end)
-  
+
     _assert_eq(#popups, 0, "steal success should not push popup")
     luassert.truthy(#tips >= 1, "steal success should show tip")
     luassert.truthy(string.find(tips[1], stealer.name, 1, true), "steal success tip should include stealer name")
@@ -1291,9 +1292,9 @@ describe("TestItem", function()
     local target = g.players[2]
     stealer.inventory:add({ id = item_ids.steal })
     target.inventory:add({ id = item_ids.tax_free })
-  
+
     local res = steal.steal_nth_occupied(g, stealer, target, 1)
-  
+
     _assert_eq(res and res.ok, true, "steal should succeed")
     _assert_eq(res and res.action_anim, true, "steal should report queued action anim")
     luassert.truthy(g.turn.action_anim ~= nil, "steal should queue an action anim")
@@ -1315,7 +1316,7 @@ describe("TestItem", function()
     local stealer = g.players[1]
     local target = g.players[2]
     stealer.inventory:add({ id = item_ids.steal })
-  
+
     support.with_patches({
       {
         key = "GlobalAPI",
@@ -1332,12 +1333,12 @@ describe("TestItem", function()
           popups[#popups + 1] = payload
         end,
       })
-  
+
       local res = steal.steal_nth_occupied(g, stealer, target, 1)
       _assert_eq(res and res.ok, false, "steal should fail when target has no items")
       _assert_eq(res and res.intent, nil, "steal failure should not return popup intent")
     end)
-  
+
     _assert_eq(stealer.inventory:count(), 1, "steal failure should NOT consume steal card")
     _assert_eq(#popups, 0, "steal failure should not push popup")
     luassert.truthy(#tips >= 1, "steal failure should show tip")
@@ -1356,9 +1357,9 @@ describe("TestItem", function()
         error("empty steal target must fail before random selection")
       end,
     }
-  
+
     local res = steal.steal_random_item(g, stealer, target)
-  
+
     _assert_eq(res and res.ok, false, "empty random steal should fail")
     _assert_eq(stealer.inventory:count(), 1, "empty random steal should not consume steal card")
     _assert_eq(target.inventory:count(), 0, "empty random steal target should stay empty")
@@ -1376,9 +1377,9 @@ describe("TestItem", function()
       luassert.truthy(ok == true, "preload stealer inventory failed")
     end
     target.inventory:add({ id = item_ids.roadblock })
-  
+
     local res = steal.steal_nth_occupied(g, stealer, target, 1)
-  
+
     _assert_eq(res and res.ok, true, "full-bag steal must succeed")
     _assert_eq(stealer.inventory:count(), 5, "bag stays full: steal card out, stolen item in")
     luassert.truthy(stealer.inventory:find_index(function(it)
@@ -1394,7 +1395,7 @@ describe("TestItem", function()
     local g = _new_game()
     local p = g:current_player()
     local emitted = {}
-  
+
     support.with_patches({
       {
         target = monopoly_event,
@@ -1410,7 +1411,7 @@ describe("TestItem", function()
       local ok = (type(res) == "table" and type(res.ok) ~= "nil") and res.ok or res
       _assert_eq(ok, true, "rich item use ok")
     end)
-  
+
     luassert.truthy(#emitted >= 1, "rich item should emit at least one event")
     _assert_eq(emitted[1].kind, monopoly_event.feedback.deity_applied, "rich item should emit deity feedback event")
     _assert_eq(emitted[1].payload.deity_type, "rich", "rich item should emit rich deity type")
@@ -1424,7 +1425,7 @@ describe("TestItem", function()
     g:set_player_cash(target, 1)    -- fee = floor(1*0.5) = 0 → 扣 0,cash 仍 1,不淘汰
     target_cash_effects.tax.apply(g, user, target)
     luassert.truthy(target.eliminated ~= true, "fee floors to 0 at cash=1, no bankruptcy")
-  
+
     g:set_player_cash(target, 2)    -- fee = floor(2*0.5) = 1 → cash 1,不淘汰
     target_cash_effects.tax.apply(g, user, target)
     luassert.truthy(g:player_cash(target) == 1, "cash 2 → pays 1 → left with 1")
@@ -1438,9 +1439,9 @@ describe("TestItem", function()
     local target = g.players[1]
     actor.inventory:add({ id = item_ids.steal })
     target.inventory:add({ id = item_ids.roadblock })
-  
+
     local result = item_strategy.auto_pre_action(g, actor, "pre_action")
-  
+
     luassert.truthy(type(result) == "table", "auto target item should return a use-flow result")
     luassert.truthy(result.ok == true, "auto target item should apply successfully")
     luassert.truthy(result.status == "applied", "auto target item should be normalized as applied")
@@ -1500,7 +1501,7 @@ describe("TestItem", function()
       luassert.truthy(opts.auto_play == true, "expected auto_play flag")
       return { ok = true, waiting = true, status = "waiting_choice", source = "test" }
     end
-  
+
     local ok, err = pcall(function()
       local game = { turn = { phase = "pre_action" } }
       local player = { id = 1 }
@@ -1508,7 +1509,7 @@ describe("TestItem", function()
       luassert.truthy(type(result) == "table", "should return waiting table")
       luassert.truthy(result.source == "test", "should preserve use-flow payload")
     end)
-  
+
     inventory_module.cfg = original_cfg
     use_flow.begin_item_use = original_begin_item_use
     if not ok then
@@ -1527,14 +1528,14 @@ describe("TestItem", function()
     use_flow.begin_item_use = function()
       return { ok = false, status = "rejected", reason = "item_not_in_inventory" }
     end
-  
+
     local ok, err = pcall(function()
       local game = { turn = { phase = "pre_action" } }
       local player = { id = 1 }
       local result = item_strategy._try_use_item(game, player, item_ids.dice_multiplier, nil, false)
       luassert.truthy(result == nil, "should ignore rejected use-flow result")
     end)
-  
+
     inventory_module.cfg = original_cfg
     use_flow.begin_item_use = original_begin_item_use
     if not ok then

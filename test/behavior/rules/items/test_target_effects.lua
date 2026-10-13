@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- target_effects 直测(#259 变异清扫 survivor 闭合):
 -- exile apply 的 queued 初值 false -> true(无深山格时变异体伪装成已排队)

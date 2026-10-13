@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- Merged demolish tests (expand phase target).
 -- Sources:
@@ -115,9 +116,9 @@ describe("TestDemolishFacade", function()
     local p = g:current_player()
     local tile = _enemy_building(g, 2, 2)
     local recorded = _capture_events(g)
-  
+
     local res = demolish.apply(g, p, 2, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(_tile_state(g, tile).level, 0, "building destroyed")
     local event = _first_event(recorded, event_kinds.demolish)
@@ -136,9 +137,9 @@ describe("TestDemolishFacade", function()
     g:set_player_deity(g.players[2], "angel", 3) -- owner immune -> building survives
     g:update_player_position(g.players[3], 3) -- a non-immune occupant gets hit
     local recorded = _capture_events(g)
-  
+
     local res = demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(_tile_state(g, tile).level, 2, "angel-protected building is not destroyed")
     local event = _first_event(recorded, event_kinds.demolish)
@@ -157,9 +158,9 @@ describe("TestDemolishFacade", function()
     local occupant = g.players[2]
     g:update_player_position(occupant, 3)
     _capture_events(g)
-  
+
     local res = demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(res.after_action_anim, nil, "no anim gate means no deferred followup")
     _assert_eq(occupant.position, g.board:find_first_by_type("hospital"), "occupant relocates to hospital now")
@@ -174,9 +175,9 @@ describe("TestDemolishFacade", function()
     g:update_player_position(occupant, 11)
     local recorded = _capture_events(g)
     local hospital = g.board:find_first_by_type("hospital")
-  
+
     local res = demolish.apply(g, p, 11, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(_tile_state(g, tile).level, 0, "occupied enemy building is destroyed")
     _assert_eq(occupant.position, hospital, "occupant relocates to hospital")
@@ -191,9 +192,9 @@ describe("TestDemolishFacade", function()
     local p = g:current_player()
     _enemy_building(g, 3, 2)
     g:update_player_position(g.players[2], 3)
-  
+
     local res = demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     local anim = g.turn.action_anim
     luassert.truthy(anim and anim.kind == "missile", "missile queues a missile anim")
     _assert_eq(#(anim.target_player_ids or {}), 1, "exactly one casualty is carried on the anim")
@@ -209,9 +210,9 @@ describe("TestDemolishFacade", function()
     local p = g:current_player()
     local tile = _enemy_building(g, 3, 2)
     local recorded = _capture_events(g)
-  
+
     demolish.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     _assert_eq(_tile_state(g, tile).level, 0, "building destroyed")
     local event = _first_event(recorded, event_kinds.demolish)
     luassert.truthy(event ~= nil, "monster should publish a demolish event")
@@ -224,9 +225,9 @@ describe("TestDemolishFacade", function()
     local tile = _enemy_building(g, 3, 2)
     g:set_player_deity(g.players[2], "angel", 3)
     local recorded = _capture_events(g)
-  
+
     demolish.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     _assert_eq(_tile_state(g, tile).level, 2, "angel-protected building survives")
     _assert_eq(_first_event(recorded, event_kinds.demolish), nil, "fully blocked: no demolish text published")
   end)
@@ -237,9 +238,9 @@ describe("TestDemolishFacade", function()
     local tile = _enemy_building(g, 3, 0)
     g:set_player_deity(g.players[2], "angel", 3) -- immune, but must be bypassed
     local recorded = _capture_events(g)
-  
+
     demolish.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     local event = _first_event(recorded, event_kinds.demolish)
     luassert.truthy(event ~= nil, "empty owned land is destroyed without an immunity check")
     _assert_eq(event.text, p.name .. " 释放怪兽拆毁 " .. tile.name .. " 的建筑", "monster destroy text")
@@ -353,13 +354,13 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     end
     luassert.truthy(#lands == 3, "map must expose three land tiles")
     local self_idx, empty_idx, target_idx = lands[1], lands[2], lands[3]
-  
+
     local own = g.board:get_tile(self_idx)
     g:set_tile_owner(own, p.id)
     g:set_tile_level(own, 3) -- owned by the acting player
     _enemy_building(g, empty_idx, 0) -- enemy land with no building
     _enemy_building(g, target_idx, 2) -- valid target
-  
+
     local choice = demolish.use(g, p, 60, nil, { item_id = item_ids.monster, injure = false })
     local ids = {}
     for _, option in ipairs(choice.intent.choice_spec.options) do ids[option.id] = true end
@@ -379,9 +380,9 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     g:set_player_deity(immune, "angel", 3) -- occupant immune to the missile
     _capture_events(g)
     local hospital = g.board:find_first_by_type("hospital")
-  
+
     demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(immune.position, 3, "immune occupant is filtered out and not relocated")
     _assert_eq(casualty.position, hospital, "the non-immune occupant is relocated to hospital")
   end)
@@ -394,9 +395,9 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     _enemy_building(g, 3, 2)
     g:update_player_position(g.players[2], 3)
     local hospital = g.board:find_first_by_type("hospital")
-  
+
     demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     local anim = g.turn.action_anim
     luassert.truthy(anim and anim.kind == "missile", "missile anim is queued")
     _assert_eq(anim.to_index, hospital, "the matching queued anim is patched to the hospital index")
@@ -414,9 +415,9 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     end
     luassert.truthy(non_land_idx, "map must have a non-land tile")
     local recorded = _capture_events(g)
-  
+
     local res = demolish.apply(g, p, non_land_idx, { item_id = item_ids.monster, injure = false })
-  
+
     _assert_eq(res.ok, true, "apply still reports ok on a non-land target")
     _assert_eq(
       _first_event(recorded, event_kinds.demolish),
@@ -433,9 +434,9 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     local p = g:current_player()
     _enemy_building(g, 3, 2) -- destroyable, but nobody is standing on it
     _capture_events(g)
-  
+
     local res = demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(res.after_action_anim, nil, "hit == 0 means no relocation and no deferred followup")
   end)
@@ -446,9 +447,9 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     local tile = _enemy_building(g, 3, 2)
     g:set_player_deity(g.players[2], "angel", 3) -- owner immune -> building survives
     local recorded = _capture_events(g) -- nobody stands on tile 3 -> hit == 0
-  
+
     local res = demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
-  
+
     _assert_eq(res.ok, true, "missile apply succeeds")
     _assert_eq(_tile_state(g, tile).level, 2, "angel-protected building survives")
     _assert_eq(
@@ -464,9 +465,9 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     local tile = _enemy_building(g, 3, 1) -- exactly level 1
     g:set_player_deity(g.players[2], "angel", 3)
     local recorded = _capture_events(g)
-  
+
     demolish.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     _assert_eq(_tile_state(g, tile).level, 1, "level-1 building is protected by immunity, not destroyed")
     _assert_eq(_first_event(recorded, event_kinds.demolish), nil, "fully blocked, no demolish text")
   end)
@@ -478,7 +479,7 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     g:update_player_position(g.players[2], 3)
     _capture_events(g)
     g.turn = nil -- no active turn context
-  
+
     local ok = pcall(function()
       return demolish.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
     end)
@@ -489,7 +490,7 @@ describe("TestDemolishFacadeHumanChoiceImmuneFilterAnimPatch", function()
     local g = _game({ "P1", "P2" })
     local p = g:current_player()
     _enemy_building(g, 3, 2) -- the only enemy building in range
-  
+
     local choice = demolish.use(g, p, 3, nil, { item_id = item_ids.monster, injure = false })
     local count = 0
     for _, option in ipairs(choice.intent.choice_spec.options) do
@@ -516,9 +517,9 @@ describe("TestDemolishApplyMutationPins", function()
     local p = g:current_player()
     local tile = _enemy_building(g, 3, 2)
     local recorded = _capture_events(g)
-  
+
     demolish_apply.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     _assert_eq(_tile_state(g, tile).level, 0, "building destroyed")
     local event = _first_event(recorded, event_kinds.demolish)
     luassert.truthy(event ~= nil, "monster destroy must publish a demolish event; L93 'not' removal suppresses it")
@@ -531,9 +532,9 @@ describe("TestDemolishApplyMutationPins", function()
     local tile = _enemy_building(g, 3, 1)
     g:set_player_deity(g.players[2], "angel", 3)
     local recorded = _capture_events(g)
-  
+
     demolish_apply.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     _assert_eq(_tile_state(g, tile).level, 1, "level-1 building is protected by immunity, not destroyed")
     _assert_eq(_first_event(recorded, event_kinds.demolish), nil,
       "fully blocked: no demolish text; the '<= 1' mutant would destroy and publish")
@@ -544,15 +545,15 @@ describe("TestDemolishApplyMutationPins", function()
     local p = g:current_player()
     _enemy_building(g, 3, 2) -- owner (player 2) is not immune -> destroyed, owner returned
     _capture_events(g)
-  
+
     local saved = achievement_progress.monster_demolished_building
     local calls = 0
     achievement_progress.monster_demolished_building = function() calls = calls + 1 end
-  
+
     local ok, err = pcall(function()
       demolish_apply.apply(g, p, 3, { item_id = item_ids.missile, injure = true, title = "导弹卡" })
     end)
-  
+
     achievement_progress.monster_demolished_building = saved
     luassert.truthy(ok, "apply must not error: " .. tostring(err))
     _assert_eq(calls, 0,
@@ -564,13 +565,13 @@ describe("TestDemolishApplyMutationPins", function()
     local p = g:current_player()
     _enemy_building(g, 3, 2)
     _capture_events(g)
-  
+
     local saved = achievement_progress.monster_demolished_building
     local calls = 0
     achievement_progress.monster_demolished_building = function() calls = calls + 1 end
-  
+
     demolish_apply.apply(g, p, 3, { item_id = item_ids.monster, injure = false })
-  
+
     achievement_progress.monster_demolished_building = saved
     _assert_eq(calls, 1, "monster destroying an owned building records exactly one achievement")
   end)
@@ -580,16 +581,16 @@ describe("TestDemolishApplyMutationPins", function()
     local apply_name = "src.rules.items.demolish_apply"
     local saved_timing = package.loaded[timing_name]
     local saved_apply = package.loaded[apply_name]
-  
+
     local real_timing = require(timing_name)
     local mock = {}
     for k, v in pairs(real_timing) do mock[k] = v end
     mock.action_anim_default_seconds = nil -- force the `or` fallback
-  
+
     package.loaded[timing_name] = mock
     package.loaded[apply_name] = nil
     local reloaded = require(apply_name)
-  
+
     local ok, err = pcall(function()
       local g = _game()
       local p = g:current_player()
@@ -600,7 +601,7 @@ describe("TestDemolishApplyMutationPins", function()
       _assert_eq(g.turn.action_anim.duration, 1.0,
         "nil config seconds must fall back to 1.0 via `or`; the `and` mutant yields nil")
     end)
-  
+
     package.loaded[apply_name] = saved_apply
     package.loaded[timing_name] = saved_timing
     if not ok then error(err) end
@@ -629,7 +630,7 @@ describe("TestDemolishChoiceMutationPins", function()
     local g = _game({ "P1", "P2" })
     local p = g:current_player()
     luassert.truthy(p.id ~= 2, "acting player must differ from the enemy owner id 2")
-  
+
     local target_idx = nil
     for idx = 1, 60 do
       local tile = g.board:get_tile(idx)
@@ -640,7 +641,7 @@ describe("TestDemolishChoiceMutationPins", function()
     end
     luassert.truthy(target_idx, "map must expose a land tile away from the player")
     _zero_value_enemy(g, target_idx)
-  
+
     local picked = demolish_choice.find_target(g, p, 60)
     _assert_eq(picked, target_idx,
       "value == 0 must be kept (0 < 0 is false); '<= 0' and '< 1' mutants would return nil")
@@ -656,7 +657,7 @@ describe("TestDemolishChoiceMutationPins", function()
     local g = _game({ "P1", "P2" })
     local p = g:current_player()
     luassert.truthy(p.id ~= 2, "acting player must differ from the enemy owner id 2")
-  
+
     local pos_idx = nil
     for idx = 1, 60 do
       local tile = g.board:get_tile(idx)
@@ -668,10 +669,10 @@ describe("TestDemolishChoiceMutationPins", function()
     luassert.truthy(pos_idx, "map must expose a land tile")
     g:update_player_position(p, pos_idx)
     _enemy_building(g, pos_idx, 2) -- enemy building directly under the player
-  
+
     local choice = demolish_choice.build_human_choice(g, p, 60, pos_idx,
       { item_id = item_ids.monster, injure = false, title = "怪兽卡" })
-  
+
     _assert_eq(choice, nil,
       "the player's own tile must never become an option; the 'and' mutant accepts it and returns a choice")
   end)
@@ -719,35 +720,35 @@ describe("TestClearObstaclesBranchWalk", function()
   it("test_linear_path_produces_single_branch_with_12_entries", function()
     local g = _new_game()
     local p = g:current_player()
-  
+
     g:update_player_position(p, 1)
     g:set_player_status(p, "move_dir", "left")
-  
+
     g.board:place_roadblock(3)
     g.board:place_roadblock(7)
     g.board:place_roadblock(10)
-  
+
     local context = {}
     local payload = _capture_anim_payload(g, function()
       post_effects.apply_post(g, p, item_ids.clear_obstacles, context)
     end)
-  
+
     luassert.truthy(type(payload) == "table", "payload should be a table")
     luassert.truthy(type(payload.branches) == "table", "payload must have 'branches' field (new contract) — got " .. tostring(payload.branches))
     _assert_eq(#payload.branches, 1, "linear path should produce exactly 1 branch")
-  
+
     local branch = payload.branches[1]
     luassert.truthy(type(branch) == "table", "branch should be a table")
     _assert_eq(#branch, 12, "linear branch should have exactly 12 entries (full distance)")
-  
+
     local obstacle_relative_positions = { 2, 6, 9 }
     for _, rel_pos in ipairs(obstacle_relative_positions) do
       luassert.truthy(type(branch[rel_pos]) == "table", "branch entry at position " .. rel_pos .. " should be a table")
       luassert.truthy(branch[rel_pos].has_obstacle == true, "branch entry at relative position " .. rel_pos .. " should have has_obstacle=true")
     end
-  
+
     luassert.truthy(branch[1].has_obstacle == false, "branch[1] (index 2, no obstacle) should have has_obstacle=false")
-  
+
     for i, entry in ipairs(branch) do
       luassert.truthy(type(entry) == "table" and entry.tile_index ~= nil, "branch entry " .. i .. " must have tile_index field")
     end
@@ -756,20 +757,20 @@ describe("TestClearObstaclesBranchWalk", function()
   it("test_forked_path_produces_two_branches", function()
     local g = _new_game()
     local p = g:current_player()
-  
+
     local fork_approach_index = 4
     g:update_player_position(p, fork_approach_index)
     g:set_player_status(p, "move_dir", "left")
-  
+
     local context = {}
     local payload = _capture_anim_payload(g, function()
       post_effects.apply_post(g, p, item_ids.clear_obstacles, context)
     end)
-  
+
     luassert.truthy(type(payload) == "table", "payload should be a table")
     luassert.truthy(type(payload.branches) == "table", "payload must have 'branches' field (new contract) — got " .. tostring(payload.branches))
     luassert.truthy(#payload.branches >= 2, "forked path should produce at least 2 branches, got " .. tostring(#payload.branches))
-  
+
     for b_idx, branch in ipairs(payload.branches) do
       luassert.truthy(type(branch) == "table", "branch " .. b_idx .. " should be a table")
       luassert.truthy(#branch > 0, "branch " .. b_idx .. " should be non-empty")
@@ -784,7 +785,7 @@ describe("TestClearObstaclesBranchWalk", function()
   it("test_dead_end_stops_at_board_edge", function()
     local g = _new_game()
     local p = g:current_player()
-  
+
     local tiles = {}
     local tile_lookup = {}
     local neighbors_map = {}
@@ -799,7 +800,7 @@ describe("TestClearObstaclesBranchWalk", function()
       neighbors_map[ids[i]]["right"] = ids[i + 1]
       neighbors_map[ids[i + 1]]["left"] = ids[i]
     end
-  
+
     local synthetic_board = Board:new({
       tile_lookup = tile_lookup,
       path = tiles,
@@ -825,24 +826,24 @@ describe("TestClearObstaclesBranchWalk", function()
         mines = {},
       },
     })
-  
+
     local original_board = g.board
     g.board = synthetic_board
-  
+
     p.position = 1
     g:set_player_status(p, "move_dir", "right")
-  
+
     local context = {}
     local payload = _capture_anim_payload(g, function()
       post_effects.apply_post(g, p, item_ids.clear_obstacles, context)
     end)
-  
+
     g.board = original_board
-  
+
     luassert.truthy(type(payload) == "table", "payload should be a table")
     luassert.truthy(type(payload.branches) == "table", "payload must have 'branches' field (new contract) — got " .. tostring(payload.branches))
     _assert_eq(#payload.branches, 1, "dead-end path should produce exactly 1 branch")
-  
+
     local branch = payload.branches[1]
     luassert.truthy(type(branch) == "table", "branch should be a table")
     _assert_eq(#branch, 5,
@@ -852,15 +853,15 @@ describe("TestClearObstaclesBranchWalk", function()
   it("test_duration_is_positive_number_in_payload", function()
     local g = _new_game()
     local p = g:current_player()
-  
+
     g:update_player_position(p, 1)
     g:set_player_status(p, "move_dir", "left")
-  
+
     local context = {}
     local payload = _capture_anim_payload(g, function()
       post_effects.apply_post(g, p, item_ids.clear_obstacles, context)
     end)
-  
+
     luassert.truthy(type(payload) == "table", "payload should be a table")
     luassert.truthy(type(payload.branches) == "table", "payload must have 'branches' field (new contract) — got " .. tostring(payload.branches))
     luassert.truthy(type(payload.duration) == "number", "payload.duration must be a number, got " .. type(payload.duration))
@@ -960,9 +961,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     board:place_roadblock(4)
     board:place_mine(3)
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     luassert.truthy(type(payload) == "table", "handle should queue a payload")
     _assert_eq(payload.roadblock_cleared, 2, "two roadblocks on the path must be counted exactly")
     _assert_eq(payload.mine_cleared, 1, "one mine on the path must be counted exactly")
@@ -973,9 +974,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local events = _install_event_capture(g)
     local board = _build_board({ 80, 81, 82 }, _chain({ 80, 81, 82 }))
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(payload.roadblock_cleared, 0, "no roadblocks means zero roadblock_cleared")
     _assert_eq(payload.mine_cleared, 0, "no mines means zero mine_cleared")
     _assert_eq(_has_cleared_event(events), false,
@@ -988,9 +989,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local board = _build_board({ 70, 71, 72 }, _chain({ 70, 71, 72 }))
     board:place_roadblock(2)
     local p = _seat_player(g, board, "right")
-  
+
     _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(_has_cleared_event(events), true,
       "clearing exactly one obstacle must publish an obstacle_cleared event")
   end)
@@ -999,9 +1000,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local g = _new_game()
     local board = _build_board({ 90 }, { [90] = {} })
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(#payload.branches, 0, "no reachable tiles yields no branches")
     _assert_eq(payload.duration, 1.0,
       "empty branches must fall back to the default action-anim duration")
@@ -1011,9 +1012,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local g = _new_game()
     local board = _build_board({ 100, 101, 102, 103 }, _chain({ 100, 101, 102, 103 }))
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     local expected = 3 * (3.0 / runtime_constants.robot_speed)
     luassert.truthy(payload.duration <= 1.0, "a 3-tile branch must compute a duration at or below the 1.0s default, got " .. tostring(payload.duration))
     luassert.truthy(math.abs(payload.duration - expected) < 1e-6, "duration should equal longest_branch * step_time, got " .. tostring(payload.duration))
@@ -1024,9 +1025,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local ids = { 110, 111, 112, 113, 114 }
     local board = _build_board(ids, _chain(ids))
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 2 }, true)
-  
+
     _assert_eq(#payload.branches, 1, "linear board yields a single branch")
     _assert_eq(#payload.branches[1], 2, "cfg.distance=2 must cap the branch at two tiles")
   end)
@@ -1036,9 +1037,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local ids = { 200, 201, 202 }
     local board = _build_board(ids, _chain(ids))
     local p = _seat_player(g, board, "right")
-  
+
     local _, result = _run_handle(g, p, { distance = 12 }, true)
-  
+
     luassert.truthy(type(result) == "table", "queued handle should return a table result")
     _assert_eq(result.ok, true, "queued handle result must report ok=true")
     _assert_eq(result.action_anim, true, "queued handle result must report action_anim=true")
@@ -1049,9 +1050,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local ids = { 210, 211, 212 }
     local board = _build_board(ids, _chain(ids))
     local p = _seat_player(g, board, "right")
-  
+
     local _, result = _run_handle(g, p, { distance = 12 }, false)
-  
+
     _assert_eq(result, true, "when queue returns falsy, handle must return the bare true value")
   end)
 
@@ -1059,9 +1060,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local g = _new_game()
     local board = _build_board({ 10, 11 }, { [10] = { right = 11 } })
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(#payload.branches, 1, "an immediate dead end must still append exactly one branch")
     _assert_eq(#payload.branches[1], 1, "the branch holds the single reachable tile")
   end)
@@ -1070,9 +1071,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
     local g = _new_game()
     local board = _build_board({ 20, 21 }, { [20] = { right = 21 }, [21] = { left = 20 } })
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(#payload.branches, 1, "a back-only first tile must append exactly one branch")
     _assert_eq(#payload.branches[1], 1, "the branch holds the single reachable tile")
   end)
@@ -1085,9 +1086,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
       [32] = { left = 31, right = 999 },
     })
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(#payload.branches, 1, "a mid-walk dangling edge must append exactly one branch")
     _assert_eq(#payload.branches[1], 2, "the branch holds the two reachable tiles before the edge")
   end)
@@ -1101,9 +1102,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
       [43] = { up = 41 },
     })
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(#payload.branches, 2, "a first-tile fork must yield two branches")
     local endpoints = {}
     for _, branch in ipairs(payload.branches) do
@@ -1123,9 +1124,9 @@ describe("TestClearObstaclesMutationSurvivors", function()
       [54] = { up = 52 },
     })
     local p = _seat_player(g, board, "right")
-  
+
     local payload = _run_handle(g, p, { distance = 12 }, true)
-  
+
     _assert_eq(#payload.branches, 2, "a mid-walk fork must yield two branches")
     local endpoints = {}
     for _, branch in ipairs(payload.branches) do
@@ -1137,7 +1138,7 @@ describe("TestClearObstaclesMutationSurvivors", function()
 
   it("test_resolve_initial_dirs_turns_around_via_opposite_when_facing_blocked", function()
     local result = obstacle_clear_tiles.resolve_initial_dirs({ up = 5, down = 6 }, "left")
-  
+
     luassert.truthy(type(result) == "table", "blocked facing must still return a forward-dir table")
     _assert_eq(#result, 2, "both non-back neighbors must be exposed")
     _assert_eq(result[1], "down", "forward dirs must be sorted ascending")

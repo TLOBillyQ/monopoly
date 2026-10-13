@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个平级 describe 合并为文件级 Test* 类,
 -- 均无钩子,直接合并进 TestTargetLayout,用例数与改写前一一对应(12 例)。
@@ -78,15 +79,15 @@ describe("TestTargetLayout", function()
     local g = _new_game()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(42))
-  
+
     local options = {}
     for _, tile_id in ipairs({ 42, 3, 4, 31, 45, 2, 5, 1 }) do
       options[#options + 1] = _option(g, tile_id)
     end
-  
+
     local dense_options, slot_layout = target_layout.arrange_target_options(g.board, p, options)
     local by_slot = _slot_tile_ids(dense_options, slot_layout)
-  
+
     luassert.truthy(#dense_options == 7, "seven UI slots should be filled (one candidate overflows)")
     luassert.truthy(by_slot[4] == 42, "player's own tile should occupy the center slot")
     luassert.truthy(by_slot[3] == 3 and by_slot[2] == 2 and by_slot[1] == 1, "backward neighbors should fill outward from center in distance order")
@@ -98,11 +99,11 @@ describe("TestTargetLayout", function()
     local g = _new_game()
     local p = g:current_player()
     g:update_player_position(p, g.board:index_of_tile_id(42))
-  
+
     local options = { _option(g, 3), _option(g, 4) }
     local dense_options, slot_layout = target_layout.arrange_target_options(g.board, p, options)
     local by_slot = _slot_tile_ids(dense_options, slot_layout)
-  
+
     luassert.truthy(#dense_options == 2, "only the two supplied candidates should be arranged")
     luassert.truthy(by_slot[4] == nil, "center slot should stay empty when the player's tile is not offered")
     luassert.truthy(by_slot[3] == 3, "sole backward candidate should sit closest to center")

@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
 -- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(19 例)。
@@ -91,7 +92,7 @@ describe("TestItemPostEffects", function()
   it("test_apply_target_rejects_self", function()
     local game = {}
     local user = { id = 1, name = "User", status = {} }
-  
+
     local ok, err = pcall(function()
       post_effects.apply_target(game, user, item_ids.share_wealth, user, {})
     end)
@@ -108,9 +109,9 @@ describe("TestItemPostEffects", function()
     }
     local user = { id = 1, name = "User" }
     local target = { id = 2, name = "Target", status = {}, deity_duration_turns = 99 }
-  
+
     local result = post_effects.apply_target(game, user, item_ids.poor, target, {})
-  
+
     luassert.is.same(true, result, "should return true")
     luassert.is.same(constants.deity_duration_turns, target.status.deity.remaining, "poor card should use constants duration")
   end)
@@ -164,11 +165,11 @@ describe("TestItemPostEffects", function()
   it("test_apply_target_exile", function()
     local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
     game.anim_gate_port = { wait_action_anim = false, wait_move_anim = false }
-  
+
     local user = game.players[1]
     local target = game.players[2]
     target.position = 1
-  
+
     local result = post_effects.apply_target(game, user, item_ids.exile, target, {})
     luassert.is.same(true, result, "should return true")
     -- Target should be moved to mountain tile
@@ -209,18 +210,18 @@ describe("TestItemPostEffects", function()
   it("test_post_effects_apply_sets_status", function()
     local g = _new_game()
     local p = g:current_player()
-  
+
     post_effects.apply_post(g, p, item_ids.free_rent, {})
-  
+
     luassert.is.same(true, g:has_pending_free_rent(p), "post_effects apply should set pending_free_rent status")
   end)
 
   it("test_post_effects_apply_deity_sets_deity", function()
     local g = _new_game()
     local p = g:current_player()
-  
+
     post_effects.apply_post(g, p, item_ids.rich, {})
-  
+
     luassert.is_not_nil(p.status.deity, "post_effects apply deity should set player deity")
     luassert.is.same("rich", p.status.deity.type, "post_effects apply deity should set correct deity type")
   end)
@@ -230,7 +231,7 @@ describe("TestItemPostEffects", function()
     local p = g:current_player()
     local events = {}
     local event_feed = require("src.rules.ports.event_feed")
-  
+
     _with_patches({
       { target = event_feed, key = "publish", value = function(_, event)
         events[#events + 1] = event and event.text or nil
@@ -239,7 +240,7 @@ describe("TestItemPostEffects", function()
     }, function()
       post_effects.apply_post(g, p, item_ids.strong, {})
     end)
-  
+
     luassert.is.same(1, #events, "post_effects log type should emit one event")
     luassert.truthy(events[1]:find("强征"), "post_effects log type should emit strong card preparation message")
   end)
@@ -250,9 +251,9 @@ describe("TestItemPostEffects", function()
     local idx = g.board:index_of_tile_id(2)
     g:update_player_position(p, idx)
     local tile_idx = p.position
-  
+
     post_effects.apply_post(g, p, item_ids.mine, {})
-  
+
     luassert.is_true(g.board:has_mine(tile_idx), "post_effects place_mine_here should place a mine at player position")
     local mine = luassert.truthy(g.board:get_mine(tile_idx), "post_effects place_mine_here should keep mine payload")
     luassert.is.same(true, mine.armed, "post_effects place_mine_here should arm normal mines immediately")
@@ -266,11 +267,11 @@ describe("TestItemPostEffects", function()
     local idx = g.board:index_of_tile_id(2)
     g:update_player_position(p, idx)
     g:place_roadblock(idx + 1, { owner_id = p.id })
-  
+
     luassert.is_true(g.board:has_roadblock(idx + 1), "precondition: roadblock should exist")
-  
+
     post_effects.apply_post(g, p, item_ids.clear_obstacles, { branch_parity = 12 })
-  
+
     luassert.is_false(g.board:has_roadblock(idx + 1), "post_effects clear_obstacles_ahead should clear roadblocks")
   end)
 
@@ -302,9 +303,9 @@ describe("TestItemPostEffects", function()
     g:set_player_cash(user, 1000)
     g:set_player_cash(target, 3000)
     g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
-  
+
     post_effects.apply_target(g, user, item_ids.share_wealth, target, {})
-  
+
     luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "cash_receive", "share_wealth should queue cash_receive anim")
     _assert_eq(_action_anim_count(g), 2, "share_wealth should queue one cash anim per affected player")
   end)
@@ -316,11 +317,11 @@ describe("TestItemPostEffects", function()
     g:set_player_cash(user, 1000)
     g:set_player_cash(target, 3000)
     g.anim_gate_port = { wait_action_anim = true, wait_move_anim = false }
-  
+
     post_effects.apply_target(g, user, item_ids.share_wealth, target, {
       share_wealth_cash_receive_mode = "item_target_player_only",
     })
-  
+
     luassert.is_nil(g.turn.action_anim, "item target path should suppress post-effect cash_receive anim")
   end)
 

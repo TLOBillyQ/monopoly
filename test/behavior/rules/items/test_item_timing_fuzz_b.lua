@@ -1,5 +1,4 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
 -- 道具时机 fuzz（规则 + 调度层）分片 2/2。驱动器与设计注释见
 -- test/support/fuzz/item_timing.lua（#190 分片让 LPT 并行吸收，总 seed 数不变）。
 local fuzz = require("test.support.fuzz.item_timing")

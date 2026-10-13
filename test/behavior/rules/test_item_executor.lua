@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- executor.use_item 的分发臂。handler 路径上有两条臂此前没有任何 spec 驱动:
 -- 「handler 返回 waiting 时原样放行」和「apply 前后计数差回填消耗事实」。
@@ -47,13 +48,13 @@ describe("TestItemExecutor", function()
     local player = game.players[1]
     player.inventory:add({ id = TEST_ITEM_ID })
     local waiting = { waiting = true, marker = "handler-owned" }
-  
+
     local result = _with_item_handler(game, TEST_ITEM_ID, function()
       return waiting
     end, function()
       return executor.use_item(game, player, TEST_ITEM_ID, {})
     end)
-  
+
     -- 同一张表原样返回,而不是被 settlement 冻结成结算结果:
     -- waiting 表示 handler 还持有这次使用,结算此刻插手会提前落账。
     luassert.is.equal(waiting, result, "a waiting handler result must be returned untouched")
@@ -66,13 +67,13 @@ describe("TestItemExecutor", function()
     local game = _new_game()
     local player = game.players[1]
     player.inventory:add({ id = TEST_ITEM_ID })
-  
+
     local result = _with_item_handler(game, TEST_ITEM_ID, function()
       return { ok = true }
     end, function()
       return executor.use_item(game, player, TEST_ITEM_ID, {})
     end)
-  
+
     -- waiting 臂的对照组:非 waiting 结果必须经结算冻结,
     -- 否则「waiting 原样放行」那条断言分不清是放行还是根本没结算。
     luassert.is.same(true, result._settled_item_use, "a non-waiting handler result must be settled")
@@ -83,7 +84,7 @@ describe("TestItemExecutor", function()
     local game = _new_game()
     local player = game.players[1]
     player.inventory:add({ id = TEST_ITEM_ID })
-  
+
     local result = _with_item_handler(game, TEST_ITEM_ID, function(_, handler_player, handler_item_id)
       -- 历史 handler 契约:效果连同消耗都在 handler 内部生效,
       -- 结算只能靠 apply 前后的计数差把「已自耗」这个事实回填进台账。
@@ -92,7 +93,7 @@ describe("TestItemExecutor", function()
     end, function()
       return executor.use_item(game, player, TEST_ITEM_ID, {})
     end)
-  
+
     _assert_eq(result.item_consumed, true,
       "a self-consuming handler must be recorded as consumed via the count diff")
     _assert_eq(inventory.find_index(player, TEST_ITEM_ID), nil,
@@ -103,13 +104,13 @@ describe("TestItemExecutor", function()
     local game = _new_game()
     local player = game.players[1]
     player.inventory:add({ id = TEST_ITEM_ID })
-  
+
     local result = _with_item_handler(game, TEST_ITEM_ID, function()
       return { ok = true }
     end, function()
       return executor.use_item(game, player, TEST_ITEM_ID, {})
     end)
-  
+
     -- 计数差的另一侧:handler 没自耗就不能记成已消耗,
     -- 否则台账会凭空扣掉一张仍在背包里的卡。
     _assert_eq(result.item_consumed, false,
@@ -124,7 +125,7 @@ describe("TestItemExecutor", function()
     local ok_registries, err_registries = pcall(executor.use_item, bare, bare.players[1], TEST_ITEM_ID, {})
     luassert.truthy(ok_registries == false, "use_item without registries should assert")
     luassert.truthy(tostring(err_registries):find("missing game.registries", 1, true) ~= nil, "registries assert should carry its message: " .. tostring(err_registries))
-  
+
     local no_items = _new_game()
     no_items.registries = { items = nil }
     local ok_items, err_items = pcall(executor.use_item, no_items, no_items.players[1], TEST_ITEM_ID, {})
@@ -140,14 +141,14 @@ describe("TestItemExecutor", function()
     -- 2017 无注册 handler(2008 怪兽卡有 handler 且有目标需求,会先被目标解析拒绝),
     -- executor 走 _use_post_effect → settlement(consume="before_apply")
     player.inventory:add({ id = 2017 })
-  
+
     support.with_patches({
       { target = post_effects, key = "apply_post", value = function(_, _, item_id, _)
         return { ok = true, item_used_id = item_id }
       end },
     }, function()
       local result = executor.use_item(game, player, 2017, {})
-  
+
       _assert_eq(result.ok, true, "no-handler item use should succeed via post effect")
       -- before_apply 模式:道具在 applier 执行前被消耗
       _assert_eq(result.item_consumed, true, "item must be consumed by before_apply mode")
@@ -158,14 +159,14 @@ describe("TestItemExecutor", function()
     local game = _new_game()
     local player = game.players[1]
     player.inventory:add({ id = TEST_ITEM_ID })
-  
+
     local result = _with_item_handler(game, TEST_ITEM_ID, function()
       -- handler 不自耗，但 context.item_preconsumed=true 告知结算道具已被预消耗
       return { ok = true }
     end, function()
       return executor.use_item(game, player, TEST_ITEM_ID, { item_preconsumed = true })
     end)
-  
+
     _assert_eq(result.ok, true, "item use should succeed")
     -- context.item_preconsumed==true 经 settlement 的 _init_escrow 将 ledger.escrowed 置 true
     _assert_eq(result.item_consumed, true,

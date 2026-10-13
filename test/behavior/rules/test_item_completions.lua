@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- item_completions 直测:completion 组装与 item_target_handler 描述表的边界契约。
 -- 集成 spec(item_completions_closure 等)覆盖成功路径;本 spec 补 helper 桩直驱的
@@ -32,7 +33,7 @@ describe("TestItemCompletions", function()
       finish_active_item_phase = function() end,
     })
     local game = _make_game()
-  
+
     luassert.is_nil(complete.settle_choice_window(game, nil))
     luassert.truthy(#calls == 1 and calls[1].game == game, "nil completion settles the window")
     luassert.is.same(false, calls[1].flag, "finish_choice receives an explicit false, not true")
@@ -47,7 +48,7 @@ describe("TestItemCompletions", function()
       finish_active_item_phase = function() end,
     })
     local game = _make_game()
-  
+
     local stay = { stay = true }
     local stay_result = complete.settle_choice_window(game, stay)
     luassert.is.equal(stay, stay_result)
@@ -63,7 +64,7 @@ describe("TestItemCompletions", function()
       finish_active_item_phase = function() end,
     })
     local game = _make_game()
-  
+
     local captured = nil
     with_patches({
       { target = item_phase, key = "reopen_or_finish", value = function(_, _, _, open_opts)
@@ -77,7 +78,7 @@ describe("TestItemCompletions", function()
       })
       luassert.truthy(result and result.stay == true, "reopened phase asks the flow to stay")
     end)
-  
+
     luassert.is_not_nil(captured, "reopen_or_finish should be consulted")
     luassert.is.same(0, captured.elapsed_seconds, "absent choice_elapsed_seconds falls back to 0")
   end)
@@ -85,7 +86,7 @@ describe("TestItemCompletions", function()
   it("test_item_target_handler_pins_required_meta_and_default_seams", function()
     local execute_fn = function() end
     local handler = completions.item_target_handler("k", execute_fn, {})
-  
+
     luassert.truthy(#handler.required_meta == 2
       and handler.required_meta[1] == "player_id"
       and handler.required_meta[2] == "item_id", "required_meta declares player_id and item_id")
@@ -97,9 +98,9 @@ describe("TestItemCompletions", function()
   it("test_item_target_handler_normalize_action_normalizes_option_id_through_the_kind", function()
     local handler = completions.item_target_handler("k", function() end, {})
     local action = { option_id = 7 }
-  
+
     local normalized = handler.normalize_action(nil, nil, action)
-  
+
     luassert.truthy(normalized ~= nil and normalized.option_id == 7, "option_id survives normalization")
     luassert.is_not.equal(action, normalized, "normalization returns a copy, not the original")
     luassert.has_error(function()

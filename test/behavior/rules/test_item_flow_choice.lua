@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- item 流程 choice 的 actor 解析与失败/等待结果:#293 复核——_handle_flow_choice
 -- 的 actor-or-validate 回落、失败 reason、等待 stay 均未测,4 个变异存活。

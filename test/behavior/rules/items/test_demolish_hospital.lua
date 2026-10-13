@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- demolish_hospital 直测(#259 变异清扫 survivor 闭合):
 -- _relocate_to_hospital 的 move_dir_mode "clear" 字面值,与
@@ -55,7 +56,7 @@ describe("TestDemolishHospital", function()
     }, function()
       demolish_hospital.handle_result(game, { id = 1 }, 3, "missile", { { id = 2 } }, nil, "msg", {})
     end)
-  
+
     _assert_eq(queued.to_index, 9, "the matching queued anim should be patched to the hospital")
     _assert_eq(unrelated.to_index, nil, "non-matching queued anim should be left untouched")
   end)

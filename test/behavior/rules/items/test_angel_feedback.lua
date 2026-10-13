@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- angel_feedback.publish 直测:守卫(target 非空/item_label 非空串)、
 -- event_feed 发布契约(tip 标志/source)与 emit 的 tile_index 透传。

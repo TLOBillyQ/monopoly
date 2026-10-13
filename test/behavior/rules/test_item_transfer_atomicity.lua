@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- 原生 LuaUnit(busted → LuaUnit 迁移):两个无钩子 describe 各拍平成一个 Test*
 -- 类(invite_deity 4 例 + send_poor 4 例),describe 级 local _send_poor_apply 留在
@@ -22,9 +23,9 @@ describe("TestItemTransferAtomicity", function()
     local game = support.new_game({ players = { "A", "B" }, auto_all = true })
     local a = game.players[1]
     local b = game.players[2]
-  
+
     b.status.deity = { type = "", remaining = 0 }
-  
+
     luassert.is.equal(false, support.list_contains(_invite_deity_candidates(game, a), b), "empty placeholder should not be a candidate")
   end)
 
@@ -32,9 +33,9 @@ describe("TestItemTransferAtomicity", function()
     local game = support.new_game({ players = { "A", "B" }, auto_all = true })
     local a = game.players[1]
     local b = game.players[2]
-  
+
     b.status = nil
-  
+
     luassert.is.equal(false, support.list_contains(_invite_deity_candidates(game, a), b), "no-deity player should not be a candidate")
   end)
 
@@ -43,10 +44,10 @@ describe("TestItemTransferAtomicity", function()
     local a = game.players[1]
     local b = game.players[2]
     local c = game.players[3]
-  
+
     a.status.deity = { type = "poor", remaining = 3 }
     luassert.is.equal(true, post_effects.apply_target(game, a, item_ids.send_poor, b, {}), "send_poor should apply")
-  
+
     luassert.is.equal("", a.status.deity.type, "sender deity type should be cleared")
     luassert.is.equal(0, a.status.deity.remaining, "sender deity remaining should be cleared")
     luassert.is.equal(false, support.list_contains(_invite_deity_candidates(game, c), a), "cleared sender should not be an invite candidate")
@@ -60,7 +61,7 @@ describe("TestItemTransferAtomicity", function()
     local target = game.players[2]
     game:set_player_deity(user, "rich", 8)
     game:set_player_deity(target, "rich", 2)
-  
+
     luassert.is.equal(true, post_effects.apply_target(game, user, item_ids.invite_deity, target, {}), "invite_deity should apply")
     luassert.is.equal("rich", user.status.deity.type, "user keeps rich deity")
     luassert.is.equal(constants.deity_duration_turns + 1, user.status.deity.remaining, "remaining resets to full duration(+1 内部约定)")
@@ -74,7 +75,7 @@ describe("TestItemTransferAtomicity", function()
     local user = game.players[1]
     local target = game.players[2]
     game:set_player_deity(target, "rich", 2)
-  
+
     luassert.is.equal(true, post_effects.apply_target(game, user, item_ids.invite_deity, target, {}), "invite_deity should apply")
     luassert.is.equal("rich", user.status.deity.type, "user receives rich deity")
     luassert.is.equal(constants.deity_duration_turns + 1, user.status.deity.remaining, "remaining resets to full duration(+1 内部约定)")
@@ -94,7 +95,7 @@ do
       local user = game.players[1]
       local target = game.players[2]
       user.status.deity = { type = "rich", remaining = 3 }
-    
+
       luassert.has_error(function()
         _send_poor_apply()(game, user, target, {})
       end, "send_poor.apply: user must have effective poor deity")
@@ -105,7 +106,7 @@ do
       local user = game.players[1]
       local target = game.players[2]
       user.status.deity = { type = "angel", remaining = 3 }
-    
+
       luassert.has_error(function()
         _send_poor_apply()(game, user, target, {})
       end, "send_poor.apply: user must have effective poor deity")
@@ -116,7 +117,7 @@ do
       local user = game.players[1]
       local target = game.players[2]
       user.status.deity = { type = "poor", remaining = 0 }
-    
+
       luassert.has_error(function()
         _send_poor_apply()(game, user, target, {})
       end, "send_poor.apply: user must have effective poor deity")
@@ -129,7 +130,7 @@ do
       local target = game.players[2]
       game:set_player_deity(user, "poor", 3)
       game:set_player_deity(target, "poor", 5)
-    
+
       luassert.is.equal(true, _send_poor_apply()(game, user, target, {}), "send_poor should apply")
       luassert.is.equal("poor", target.status.deity.type, "target keeps poor deity")
       luassert.is.equal(constants.deity_duration_turns + 1, target.status.deity.remaining, "target remaining resets to full duration(+1 内部约定)")
@@ -142,7 +143,7 @@ do
       local user = game.players[1]
       local target = game.players[2]
       game:set_player_deity(user, "poor", 3)
-    
+
       luassert.is.equal(true, _send_poor_apply()(game, user, target, {}), "send_poor should apply")
       luassert.is.equal("poor", target.status.deity.type, "target receives poor deity")
       luassert.is.equal(constants.deity_duration_turns + 1, target.status.deity.remaining, "target remaining resets to full duration(+1 内部约定)")

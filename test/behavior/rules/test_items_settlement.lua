@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- items/settlement 直测:道具结算深模块的消耗时机(默认 before_apply / 偷窃卡
 -- applier_owned 例外 / already_applied 绕行)、escrow 种子三来源、commit 契约、
@@ -81,7 +82,7 @@ describe("TestItemsSettlement", function()
         mark_apply()
         return use_result.applied()
       end, {})
-  
+
       luassert.truthy(#calls.consume == 1 and calls.consume[1].item_id == _ITEM, "item consumed once")
       luassert.truthy(calls.consume[1].at < calls.apply_at, "consumption happens before apply")
       luassert.truthy(result.ok == true and result.status == "applied" and result.item_consumed == true, "settled applied with consumption recorded")
@@ -97,7 +98,7 @@ describe("TestItemsSettlement", function()
         luassert.truthy(commit() == true, "commit reports success")
         return use_result.applied()
       end, {})
-  
+
       luassert.truthy(#calls.consume == 1 and calls.consume[1].at > calls.apply_at, "steal is consumed by commit inside apply, never before it")
       luassert.truthy(result.ok == true and result.item_consumed == true, "consumption recorded")
     end)
@@ -109,7 +110,7 @@ describe("TestItemsSettlement", function()
       local result = settlement.execute(_make_game(), _player, item_ids.steal, function()
         return use_result.applied()
       end, { consume = "already_applied", preapplied_count = 1 })
-  
+
       luassert.truthy(#calls.consume == 0, "already_applied never consumes through the ledger")
       luassert.truthy(result.item_consumed == true, "positive count diff marks the item consumed")
     end)
@@ -121,7 +122,7 @@ describe("TestItemsSettlement", function()
       local result = settlement.execute(_make_game(), _player, _ITEM, function()
         return use_result.applied()
       end, { consume = "already_applied" })
-  
+
       luassert.truthy(#calls.consume == 0, "no consumption without a baseline count")
       luassert.truthy(result.item_consumed == false, "nothing reconciled")
     end)
@@ -137,7 +138,7 @@ describe("TestItemsSettlement", function()
           consumed = true, item_id = _ITEM, player_id = 1,
         } } },
       })
-  
+
       luassert.truthy(#calls.consume == 0, "escrowed item is not consumed again")
       luassert.truthy(result.item_consumed == true, "escrow counts as consumed")
     end)
@@ -153,7 +154,7 @@ describe("TestItemsSettlement", function()
           consumed = true, refunded = true, item_id = _ITEM, player_id = 1,
         } } },
       })
-  
+
       luassert.truthy(#calls.consume == 1, "refunded escrow falls back to before_apply consumption")
       luassert.truthy(result.item_consumed == true, "consumption recorded")
     end)
@@ -169,7 +170,7 @@ describe("TestItemsSettlement", function()
         local result = settlement.execute(_make_game(), _player, _ITEM, function()
           return use_result.applied()
         end, opts)
-  
+
         luassert.truthy(#calls.consume == 0, "preconsumed markers skip before_apply consumption")
         luassert.truthy(result.item_consumed == true, "escrow counts as consumed")
       end)
@@ -190,7 +191,7 @@ describe("TestItemsSettlement", function()
       end, {})
       luassert.truthy(commit_returns[1] == true, "consuming commit returns true")
     end)
-  
+
     -- escrow 分支:已托管时 commit 短路返回 true,不再消耗。
     local calls2, patches2 = _make_patches()
     with_patches(patches2, function()
@@ -223,7 +224,7 @@ describe("TestItemsSettlement", function()
       local result = settlement.execute(_make_game(), _player, _ITEM, function()
         return use_result.applied()
       end, {})
-  
+
       luassert.truthy(result.action_anim == true, "fallback anim flagged on the frozen result")
       luassert.truthy(#calls.queued == 1, "exactly one fallback anim queued")
       local anim = calls.queued[1]
@@ -242,7 +243,7 @@ describe("TestItemsSettlement", function()
         action_anim_port.queue(game, { kind = "custom" })
         return use_result.applied()
       end, {})
-  
+
       luassert.truthy(#calls.queued == 1, "only the applier's own anim is queued")
       luassert.truthy(calls.queued[1].kind == "custom", "no fallback follows an applier anim")
       luassert.truthy(result.action_anim == nil, "no fallback flagged")
@@ -261,12 +262,12 @@ describe("TestItemsSettlement", function()
       local token = { consumed = true, item_id = 100, player_id = 1 }
       local meta = { [settlement.ESCROW_META_KEY] = token, item_id = 200, item_preconsumed = true }
       local choice = { meta = meta, owner_role_id = 1 }
-  
+
       luassert.truthy(settlement.abandon(_make_game(), choice) == true, "refund succeeds")
       luassert.truthy(#calls.add == 1 and calls.add[1].id == 100, "token item_id wins over meta.item_id")
       luassert.truthy(token.refunded == true, "token marked refunded")
       luassert.truthy(meta.item_preconsumed == false, "public flag cleared")
-  
+
       luassert.truthy(settlement.abandon(_make_game(), choice) == false, "refund is one-shot")
       luassert.truthy(#calls.add == 1, "no second refund")
     end)

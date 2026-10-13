@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- Mutation-pinning specs for src/rules/items/availability.lua.
 -- Per [[reference_mutate4lua_test_corpus]]: closure via busted spec, not Gherkin.

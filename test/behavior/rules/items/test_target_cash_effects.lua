@@ -1,4 +1,5 @@
 require("test.bootstrap").install_package_paths()
+-- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
 -- target_cash_effects.share_wealth 直测:均富结算的三种现金形态
 -- (transfer / add / set 兜底)、emit 抑制模式、成就正差额判定与天使免疫。
