@@ -1,10 +1,13 @@
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local action_dispatcher = require("src.turn.actions.action_dispatcher")
 local control = require("src.player.control")
-
-TestAutoButtonShare = {}
 
 local function _state()
   return {
@@ -49,67 +52,67 @@ local function _toggle(player, role)
   return result, shown
 end
 
-function TestAutoButtonShare:setUp()
-  runtime_ports.reset_for_tests()
-end
+describe("TestAutoButtonShare", function()
+  before_each(function()
+    runtime_ports.reset_for_tests()
+  end)
 
-function TestAutoButtonShare:tearDown()
-  support.restore_runtime_services()
-end
+  after_each(function()
+    support.restore_runtime_services()
+  end)
 
-function TestAutoButtonShare:test_first_auto_on_toggle_shows_and_latches_share_panel()
-  local player = { id = 1, auto_share_panel_shown = false }
-  control.initialize(player)
+  it("test_first_auto_on_toggle_shows_and_latches_share_panel", function()
+    local player = { id = 1, auto_share_panel_shown = false }
+    control.initialize(player)
 
-  local result, shown = _toggle(player, true)
+    local result, shown = _toggle(player, true)
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertTrue(control.is_delegated(player))
-  lu.assertFalse(control.is_afk_delegated(player))
-  lu.assertTrue(shown)
-  lu.assertTrue(player.auto_share_panel_shown)
-end
+    _assert_same(result, { status = "applied" })
+    luassert.is_true(control.is_delegated(player))
+    luassert.is_false(control.is_afk_delegated(player))
+    luassert.is_true(shown)
+    luassert.is_true(player.auto_share_panel_shown)
+  end)
 
-function TestAutoButtonShare:test_auto_off_never_shows_or_latches_share_panel()
-  local player = { id = 1, auto_share_panel_shown = false }
-  control.initialize(player)
-  control.toggle_manual_delegation(player)
+  it("test_auto_off_never_shows_or_latches_share_panel", function()
+    local player = { id = 1, auto_share_panel_shown = false }
+    control.initialize(player)
+    control.toggle_manual_delegation(player)
 
-  local result, shown = _toggle(player, true)
+    local result, shown = _toggle(player, true)
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertFalse(control.is_delegated(player))
-  lu.assertFalse(shown)
-  lu.assertFalse(player.auto_share_panel_shown)
-end
+    _assert_same(result, { status = "applied" })
+    luassert.is_false(control.is_delegated(player))
+    luassert.is_false(shown)
+    luassert.is_false(player.auto_share_panel_shown)
+  end)
 
-function TestAutoButtonShare:test_unresolved_role_does_not_latch_share_panel()
-  local player = { id = 1, auto_share_panel_shown = false }
-  control.initialize(player)
+  it("test_unresolved_role_does_not_latch_share_panel", function()
+    local player = { id = 1, auto_share_panel_shown = false }
+    control.initialize(player)
 
-  local result, shown = _toggle(player, nil)
+    local result, shown = _toggle(player, nil)
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertTrue(control.is_delegated(player))
-  lu.assertFalse(shown)
-  lu.assertFalse(player.auto_share_panel_shown)
-end
+    _assert_same(result, { status = "applied" })
+    luassert.is_true(control.is_delegated(player))
+    luassert.is_false(shown)
+    luassert.is_false(player.auto_share_panel_shown)
+  end)
 
-function TestAutoButtonShare:test_host_error_does_not_escape_or_latch_share_panel()
-  local player = { id = 1, auto_share_panel_shown = false }
-  control.initialize(player)
-  local role = {
-    show_map_share_panel = function()
-      error("host exploded")
-    end,
-  }
+  it("test_host_error_does_not_escape_or_latch_share_panel", function()
+    local player = { id = 1, auto_share_panel_shown = false }
+    control.initialize(player)
+    local role = {
+      show_map_share_panel = function()
+        error("host exploded")
+      end,
+    }
 
-  local result, shown = _toggle(player, role)
+    local result, shown = _toggle(player, role)
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertTrue(control.is_delegated(player))
-  lu.assertFalse(shown)
-  lu.assertFalse(player.auto_share_panel_shown)
-end
-
-return TestAutoButtonShare
+    _assert_same(result, { status = "applied" })
+    luassert.is_true(control.is_delegated(player))
+    luassert.is_false(shown)
+    luassert.is_false(player.auto_share_panel_shown)
+  end)
+end)

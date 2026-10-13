@@ -6,6 +6,9 @@
 -- 2. force_skip 曾只传 state._game(生产从未赋值)→ refund 收到 nil game;
 --    现 api.force_skip 把自持的 game 下传。
 -- 本 pin 用生产形状 state(不设 _game)+ 真实 escrow 预消耗写入口构造 fixture。
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local availability = require("src.rules.items.availability")
@@ -17,7 +20,7 @@ local DeadlineService = require("src.turn.deadlines")
 local config_reset = require("test.support.config_reset")
 
 local function _assert_eq(actual, expected, msg)
-  assert(actual == expected, tostring(msg) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.is.equal(expected, actual, msg)
 end
 
 local function _with_patches(patches, fn)
@@ -69,13 +72,13 @@ local function _open_preconsumed_followup_choice(game, player, item_id)
   return support.open_choice(game, followup_spec)
 end
 
-TestForceSkipRefundPin = {}
+describe("TestForceSkipRefundPin", function()
 
-function TestForceSkipRefundPin:setUp()
+before_each(function()
   config_reset.reset_all()
-end
+end)
 
-function TestForceSkipRefundPin:test_force_skip_refunds_the_preconsumed_item_to_the_bag()
+it("test_force_skip_refunds_the_preconsumed_item_to_the_bag", function()
   local g = support.new_game({ map = default_map })
   local player = g.players[1]
   g.players[2].inventory:add({ id = item_ids.mine })
@@ -92,7 +95,7 @@ function TestForceSkipRefundPin:test_force_skip_refunds_the_preconsumed_item_to_
 
   _assert_eq(support.count_item(player, item_ids.steal), 1, "force-skip must refund the preconsumed card")
   _assert_eq(g.turn.pending_choice, nil, "force-skip should clear the pending choice")
-end
+end)
 
 
-return TestForceSkipRefundPin
+end)

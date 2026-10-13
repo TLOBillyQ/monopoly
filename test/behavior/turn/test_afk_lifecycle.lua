@@ -1,4 +1,9 @@
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local afk_signal = require("src.turn.policies.afk_signal")
@@ -116,27 +121,27 @@ local function _choice_output(choice, elapsed)
   return output
 end
 
-TestAfkLifecycle = {}
+describe("TestAfkLifecycle", function()
 
 -- mutate 内建 runner 不加载 test/helper.lua，没有 per-case reseed 兜底；
 -- 本类用例走完整 tick 链会消费全局 RNG，入例必须显式重播默认种子，
 -- 否则单进程全量跑时序列位置随此前用例消耗漂移（见 test_rng_reset_isolation）。
-function TestAfkLifecycle:setUp()
+before_each(function()
   test_env.reseed_defaults()
-end
+end)
 
-function TestAfkLifecycle:test_prune_tolerates_a_missing_state()
-  lu.assertNil(afk_signal.prune(_new_game(), nil))
-end
+it("test_prune_tolerates_a_missing_state", function()
+  luassert.is_nil(afk_signal.prune(_new_game(), nil))
+end)
 
-function TestAfkLifecycle:test_tick_clears_a_partial_count_when_eliminated_during_the_tick()
+it("test_tick_clears_a_partial_count_when_eliminated_during_the_tick", function()
   local game = _new_game()
   local state = _build_tick_state()
   local player = game.players[1]
 
   afk_signal.reset(state)
-  lu.assertFalse(afk_signal.on_timeout_fallback(game, state, player.id, "action_button"))
-  lu.assertEquals(_afk_count(state, player.id), 1)
+  luassert.is_false(afk_signal.on_timeout_fallback(game, state, player.id, "action_button"))
+  _assert_same(_afk_count(state, player.id), 1)
 
   state.auto_runner.next_action = function()
     game.players[1].eliminated = true
@@ -144,17 +149,17 @@ function TestAfkLifecycle:test_tick_clears_a_partial_count_when_eliminated_durin
   end
   gameplay_loop.tick(game, state, 0)
 
-  lu.assertNil(_afk_count(state, player.id), "elimination during a tick must clear the seat count immediately")
-end
+  luassert.is_nil(_afk_count(state, player.id), "elimination during a tick must clear the seat count immediately")
+end)
 
-function TestAfkLifecycle:test_tick_clears_all_counts_once_the_game_finishes_during_the_tick()
+it("test_tick_clears_all_counts_once_the_game_finishes_during_the_tick", function()
   local game = _new_game()
   local state = _build_tick_state()
   local player = game.players[1]
 
   afk_signal.reset(state)
-  lu.assertFalse(afk_signal.on_timeout_fallback(game, state, player.id, "action_button"))
-  lu.assertEquals(_afk_count(state, player.id), 1)
+  luassert.is_false(afk_signal.on_timeout_fallback(game, state, player.id, "action_button"))
+  _assert_same(_afk_count(state, player.id), 1)
 
   state.auto_runner.next_action = function()
     game.finished = true
@@ -162,10 +167,10 @@ function TestAfkLifecycle:test_tick_clears_all_counts_once_the_game_finishes_dur
   end
   gameplay_loop.tick(game, state, 1)
 
-  lu.assertNil(_afk_count(state, player.id), "game finish during a tick must clear AFK detection state")
-end
+  luassert.is_nil(_afk_count(state, player.id), "game finish during a tick must clear AFK detection state")
+end)
 
-function TestAfkLifecycle:test_residual_choice_timeout_for_an_eliminated_owner_never_signals_afk()
+it("test_residual_choice_timeout_for_an_eliminated_owner_never_signals_afk", function()
   local player = { id = 7, name = "P7", is_ai = false, eliminated = true }
   control.initialize(player)
   local choice = { id = 1, kind = "choice", route_key = "r", owner_role_id = player.id }
@@ -205,11 +210,11 @@ function TestAfkLifecycle:test_residual_choice_timeout_for_an_eliminated_owner_n
     }).step(game, state, 0)
   end)
 
-  lu.assertEquals(calls, 0, "an eliminated choice owner must never emit an AFK timeout signal")
-  lu.assertEquals(resolved, 1, "the residual choice must still be force-skipped through the existing safety net")
-end
+  _assert_same(calls, 0, "an eliminated choice owner must never emit an AFK timeout signal")
+  _assert_same(resolved, 1, "the residual choice must still be force-skipped through the existing safety net")
+end)
 
-function TestAfkLifecycle:test_finished_game_tick_cancels_stale_wait_deadlines_after_finish()
+it("test_finished_game_tick_cancels_stale_wait_deadlines_after_finish", function()
   local game = _new_game()
   local state = _build_tick_state()
   local deadline_fired = false
@@ -221,7 +226,7 @@ function TestAfkLifecycle:test_finished_game_tick_cancels_stale_wait_deadlines_a
       deadline_fired = true
     end,
   })
-  lu.assertTrue(deadlines.is_active(state, "target_select"))
+  luassert.is_true(deadlines.is_active(state, "target_select"))
 
   state.auto_runner.next_action = function()
     game.finished = true
@@ -229,12 +234,12 @@ function TestAfkLifecycle:test_finished_game_tick_cancels_stale_wait_deadlines_a
   end
   gameplay_loop.tick(game, state, 0)
 
-  lu.assertFalse(deadlines.is_active(state, "target_select"), "finishing the game must cancel residual wait deadlines")
+  luassert.is_false(deadlines.is_active(state, "target_select"), "finishing the game must cancel residual wait deadlines")
   deadlines.tick(state, 2)
-  lu.assertFalse(deadline_fired, "a cancelled deadline must not fire after the game has finished")
-end
+  luassert.is_false(deadline_fired, "a cancelled deadline must not fire after the game has finished")
+end)
 
-function TestAfkLifecycle:test_post_finish_timeout_input_and_auto_runner_never_emit_afk_effects()
+it("test_post_finish_timeout_input_and_auto_runner_never_emit_afk_effects", function()
   local auto_runner = require("src.turn.policies.auto_runner")
   local event_feed = require("src.rules.ports.event_feed")
   local tips = 0
@@ -267,22 +272,22 @@ function TestAfkLifecycle:test_post_finish_timeout_input_and_auto_runner_never_e
     { target = event_feed, key = "publish", value = function() published = published + 1 end },
     { target = logger, key = "info_unlimited", value = function() logs = logs + 1 end },
   }, function()
-    lu.assertFalse(afk_signal.on_timeout_fallback(game, state, player.id, "action_button"))
-    lu.assertFalse(afk_signal.on_timeout_fallback(game, state, player.id, "choice"))
+    luassert.is_false(afk_signal.on_timeout_fallback(game, state, player.id, "action_button"))
+    luassert.is_false(afk_signal.on_timeout_fallback(game, state, player.id, "choice"))
     afk_signal.on_real_input(game, state, player.id)
-    lu.assertNil(gameplay_loop.step_auto_runner(game, state, 1, {
+    luassert.is_nil(gameplay_loop.step_auto_runner(game, state, 1, {
       current_player_id = player.id,
       current_player_computer_controlled = true,
     }))
   end)
 
-  lu.assertTrue(control.is_afk_delegated(player))
-  lu.assertEquals(published, 0, "post-finish timeout or input must not publish AFK placement")
-  lu.assertEquals(logs, 0, "post-finish timeout or input must not write AFK placement logs")
-  lu.assertEquals(tips, 0, "post-finish AutoRunner must not emit the private recovery hint")
-end
+  luassert.is_true(control.is_afk_delegated(player))
+  _assert_same(published, 0, "post-finish timeout or input must not publish AFK placement")
+  _assert_same(logs, 0, "post-finish timeout or input must not write AFK placement logs")
+  _assert_same(tips, 0, "post-finish AutoRunner must not emit the private recovery hint")
+end)
 
-function TestAfkLifecycle:test_finished_game_tick_never_revives_an_afk_timeout_count()
+it("test_finished_game_tick_never_revives_an_afk_timeout_count", function()
   local game = _new_game()
   local state = _build_tick_state()
   local player = game.players[1]
@@ -295,19 +300,19 @@ function TestAfkLifecycle:test_finished_game_tick_never_revives_an_afk_timeout_c
 
   _tick(game, state, 1)
 
-  lu.assertNil(_afk_count(state, player.id), "a finished-game tick must not count an action-button timeout")
-  lu.assertFalse(control.is_delegated(player))
-  lu.assertFalse(control.is_afk_delegated(player))
-end
+  luassert.is_nil(_afk_count(state, player.id), "a finished-game tick must not count an action-button timeout")
+  luassert.is_false(control.is_delegated(player))
+  luassert.is_false(control.is_afk_delegated(player))
+end)
 
-function TestAfkLifecycle:test_set_game_clears_afk_progress_action_timer_and_stale_wait_deadlines_for_the_same_role()
+it("test_set_game_clears_afk_progress_action_timer_and_stale_wait_deadlines_for_the_same_role", function()
   local old_game = _new_game()
   local state = _build_tick_state()
   local old_player = old_game.players[1]
   local deadline_fired = false
 
   gameplay_loop.set_game(state, old_game)
-  lu.assertFalse(afk_signal.on_timeout_fallback(old_game, state, old_player.id, "action_button"))
+  luassert.is_false(afk_signal.on_timeout_fallback(old_game, state, old_player.id, "action_button"))
   state.action_button_active = true
   state.action_button_elapsed = 99
   state.action_button_player_id = old_player.id
@@ -320,30 +325,30 @@ function TestAfkLifecycle:test_set_game_clears_afk_progress_action_timer_and_sta
       deadline_fired = true
     end,
   })
-  lu.assertTrue(deadlines.is_active(state, "target_select"))
+  luassert.is_true(deadlines.is_active(state, "target_select"))
 
   local new_game = _new_game()
   gameplay_loop.set_game(state, new_game)
 
-  lu.assertNil(_afk_count(state, old_player.id), "same role_id must not inherit the previous game's AFK progress")
-  lu.assertEquals(state.action_button_elapsed, 0)
-  lu.assertFalse(state.action_button_active)
-  lu.assertNil(state.action_button_player_id)
-  lu.assertNil(state._target_select_deadline_choice_id)
-  lu.assertNil(state._target_select_timeout_choice_id)
-  lu.assertFalse(deadlines.is_active(state, "target_select"), "set_game must cancel the previous game's wait deadlines")
+  luassert.is_nil(_afk_count(state, old_player.id), "same role_id must not inherit the previous game's AFK progress")
+  _assert_same(state.action_button_elapsed, 0)
+  luassert.is_false(state.action_button_active)
+  luassert.is_nil(state.action_button_player_id)
+  luassert.is_nil(state._target_select_deadline_choice_id)
+  luassert.is_nil(state._target_select_timeout_choice_id)
+  luassert.is_false(deadlines.is_active(state, "target_select"), "set_game must cancel the previous game's wait deadlines")
 
   deadlines.tick(state, 2)
-  lu.assertFalse(deadline_fired, "a cancelled old-game deadline must never fire in the new game")
-end
+  luassert.is_false(deadline_fired, "a cancelled old-game deadline must never fire in the new game")
+end)
 
-function TestAfkLifecycle:test_first_tick_of_a_new_game_does_not_count_same_role_stale_action_elapsed()
+it("test_first_tick_of_a_new_game_does_not_count_same_role_stale_action_elapsed", function()
   local old_game = _new_game()
   local state = _build_tick_state()
   local old_player = old_game.players[1]
 
   gameplay_loop.set_game(state, old_game)
-  lu.assertFalse(afk_signal.on_timeout_fallback(old_game, state, old_player.id, "action_button"))
+  luassert.is_false(afk_signal.on_timeout_fallback(old_game, state, old_player.id, "action_button"))
   state.action_button_active = true
   state.action_button_elapsed = 99
   state.action_button_player_id = old_player.id
@@ -354,12 +359,12 @@ function TestAfkLifecycle:test_first_tick_of_a_new_game_does_not_count_same_role
 
   _tick(new_game, state, 0.1)
 
-  lu.assertNil(_afk_count(state, old_player.id), "the new game's first tick must not inherit the same role's timeout elapsed")
-  lu.assertFalse(control.is_delegated(new_game.players[1]))
-  lu.assertFalse(control.is_afk_delegated(new_game.players[1]))
-end
+  luassert.is_nil(_afk_count(state, old_player.id), "the new game's first tick must not inherit the same role's timeout elapsed")
+  luassert.is_false(control.is_delegated(new_game.players[1]))
+  luassert.is_false(control.is_afk_delegated(new_game.players[1]))
+end)
 
-function TestAfkLifecycle:test_ai_never_signals_for_action_button_choice_or_target_select_timeouts()
+it("test_ai_never_signals_for_action_button_choice_or_target_select_timeouts", function()
   local ai = { id = 9, name = "AI", is_ai = true }
   control.initialize(ai)
   local choice = { id = 2, kind = "choice", route_key = "r", owner_role_id = ai.id }
@@ -408,12 +413,12 @@ function TestAfkLifecycle:test_ai_never_signals_for_action_button_choice_or_targ
     deadlines.tick(target_state, 16)
   end)
 
-  lu.assertEquals(calls, 0, "AI seats must be exempt from every AFK timeout signal")
-  lu.assertFalse(control.is_delegated(ai))
-  lu.assertFalse(control.is_afk_delegated(ai))
-end
+  _assert_same(calls, 0, "AI seats must be exempt from every AFK timeout signal")
+  luassert.is_false(control.is_delegated(ai))
+  luassert.is_false(control.is_afk_delegated(ai))
+end)
 
-function TestAfkLifecycle:test_timeout_placement_waits_for_the_next_auto_runner_interval_before_takeover()
+it("test_timeout_placement_waits_for_the_next_auto_runner_interval_before_takeover", function()
   local game = _new_game()
   local state = _build_tick_state()
   state.auto_runner.interval = 0.5
@@ -427,35 +432,35 @@ function TestAfkLifecycle:test_timeout_placement_waits_for_the_next_auto_runner_
   _tick(game, state, 15.1, function(action)
     dispatched[#dispatched + 1] = action
   end)
-  lu.assertEquals(#dispatched, 1, "the first timeout dispatches exactly one fallback action")
-  lu.assertFalse(control.is_delegated(player))
-  lu.assertEquals(_afk_count(state, player.id), 1)
+  _assert_same(#dispatched, 1, "the first timeout dispatches exactly one fallback action")
+  luassert.is_false(control.is_delegated(player))
+  _assert_same(_afk_count(state, player.id), 1)
 
   _tick(game, state, 15.1, function(action)
     dispatched[#dispatched + 1] = action
   end)
-  lu.assertEquals(#dispatched, 2, "the AFK-placement timeout tick must not also auto-answer in the same tick")
-  lu.assertTrue(control.is_delegated(player))
-  lu.assertTrue(control.is_afk_delegated(player))
-  lu.assertNil(_afk_count(state, player.id))
-  lu.assertEquals(#tips, 1)
-  lu.assertEquals(tips[1].text, "P1 已进入托管")
-  lu.assertNil(tips[1].role_id)
-  lu.assertEquals(tips[1].source, "afk")
+  _assert_same(#dispatched, 2, "the AFK-placement timeout tick must not also auto-answer in the same tick")
+  luassert.is_true(control.is_delegated(player))
+  luassert.is_true(control.is_afk_delegated(player))
+  luassert.is_nil(_afk_count(state, player.id))
+  _assert_same(#tips, 1)
+  _assert_same(tips[1].text, "P1 已进入托管")
+  luassert.is_nil(tips[1].role_id)
+  _assert_same(tips[1].source, "afk")
 
   _tick(game, state, 0.1, function(action)
     dispatched[#dispatched + 1] = action
   end)
-  lu.assertEquals(#dispatched, 2, "AutoRunner must keep its interval and not answer before it elapses")
+  _assert_same(#dispatched, 2, "AutoRunner must keep its interval and not answer before it elapses")
 
   _tick(game, state, 0.5, function(action)
     dispatched[#dispatched + 1] = action
   end)
-  lu.assertEquals(#dispatched, 3, "AutoRunner takes over on the first normal tick after its interval")
-  lu.assertEquals(#tips, 2)
-  lu.assertEquals(tips[2].role_id, player.id)
-  lu.assertEquals(tips[2].source, "afk.auto_runner")
-  lu.assertEquals(tips[2].text, "你正在托管中，点击托管按钮恢复")
+  _assert_same(#dispatched, 3, "AutoRunner takes over on the first normal tick after its interval")
+  _assert_same(#tips, 2)
+  _assert_same(tips[2].role_id, player.id)
+  _assert_same(tips[2].source, "afk.auto_runner")
+  _assert_same(tips[2].text, "你正在托管中，点击托管按钮恢复")
 
   local tips_before_restore = #tips
   local result = turn_dispatch.dispatch_action(game, state, {
@@ -463,13 +468,13 @@ function TestAfkLifecycle:test_timeout_placement_waits_for_the_next_auto_runner_
     id = "auto",
     actor_role_id = player.id,
   })
-  lu.assertEquals(result.status, "applied")
-  lu.assertFalse(control.is_delegated(player))
-  lu.assertFalse(control.is_afk_delegated(player))
-  lu.assertEquals(#tips, tips_before_restore, "manual recovery must stay silent")
-end
+  _assert_same(result.status, "applied")
+  luassert.is_false(control.is_delegated(player))
+  luassert.is_false(control.is_afk_delegated(player))
+  _assert_same(#tips, tips_before_restore, "manual recovery must stay silent")
+end)
 
-function TestAfkLifecycle:test_all_human_seats_afk_still_finish_with_the_existing_auto_runner_and_endgame_semantics()
+it("test_all_human_seats_afk_still_finish_with_the_existing_auto_runner_and_endgame_semantics", function()
   local game = _new_game()
   local state = _build_tick_state()
 
@@ -483,23 +488,23 @@ function TestAfkLifecycle:test_all_human_seats_afk_still_finish_with_the_existin
   }, function()
     _tick(game, state, 15.1)
     _tick(game, state, 15.1)
-    lu.assertTrue(control.is_afk_delegated(game.players[1]))
+    luassert.is_true(control.is_afk_delegated(game.players[1]))
 
     _tick(game, state, 15.1)
     _tick(game, state, 15.1)
-    lu.assertTrue(control.is_afk_delegated(game.players[2]))
+    luassert.is_true(control.is_afk_delegated(game.players[2]))
 
     local ticks = 0
     while not game.finished and ticks < 400 do
       _tick(game, state, 0.02)
       ticks = ticks + 1
     end
-    lu.assertTrue(game.finished, "all-human AFK must still reach game.finished through the existing safety nets")
+    luassert.is_true(game.finished, "all-human AFK must still reach game.finished through the existing safety nets")
   end)
 
-  lu.assertEquals(game.winner_names, "P1、P2", "turn-limit tie must keep the existing winner semantics")
-  lu.assertEquals(#game.winners, 2)
-  lu.assertNil(game.winner)
+  _assert_same(game.winner_names, "P1、P2", "turn-limit tie must keep the existing winner semantics")
+  _assert_same(#game.winners, 2)
+  luassert.is_nil(game.winner)
 
   local global_tips = 0
   for _, tip in ipairs(tips) do
@@ -507,7 +512,7 @@ function TestAfkLifecycle:test_all_human_seats_afk_still_finish_with_the_existin
       global_tips = global_tips + 1
     end
   end
-  lu.assertEquals(global_tips, 2, "each AFK placement broadcasts exactly once")
+  _assert_same(global_tips, 2, "each AFK placement broadcasts exactly once")
 
   local afk_entries = 0
   for _, entry in ipairs(event_log.get_entries(game.state.event_log)) do
@@ -515,20 +520,19 @@ function TestAfkLifecycle:test_all_human_seats_afk_still_finish_with_the_existin
       afk_entries = afk_entries + 1
     end
   end
-  lu.assertEquals(afk_entries, 2, "the event log must contain exactly one AFK placement per human seat")
+  _assert_same(afk_entries, 2, "the event log must contain exactly one AFK placement per human seat")
 
   local tips_after_finish = #tips
   local entries_after_finish = afk_entries
   _tick(game, state, 0.1)
   _tick(game, state, 0.1)
-  lu.assertEquals(#tips, tips_after_finish, "post-finish ticks must not produce AFK broadcasts or recovery hints")
+  _assert_same(#tips, tips_after_finish, "post-finish ticks must not produce AFK broadcasts or recovery hints")
   local final_afk_entries = 0
   for _, entry in ipairs(event_log.get_entries(game.state.event_log)) do
     if entry.kind == event_kinds.afk_auto_enabled then
       final_afk_entries = final_afk_entries + 1
     end
   end
-  lu.assertEquals(final_afk_entries, entries_after_finish, "post-finish ticks must not duplicate AFK placement events")
-end
-
-return TestAfkLifecycle
+  _assert_same(final_afk_entries, entries_after_finish, "post-finish ticks must not duplicate AFK placement events")
+end)
+end)
