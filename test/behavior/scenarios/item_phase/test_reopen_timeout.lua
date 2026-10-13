@@ -2,7 +2,7 @@
 -- 累计超过 action_timeout_seconds,最后一张查税的窗口被立即超时关闭)。
 -- 语义:成功用卡后续开刷新倒计时;followup 取消(返回)路径仍保留累计防挂机。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -49,9 +49,8 @@ local function _install_choice_seed_bridge(game, state)
   end
 end
 
-TestGameplayItemPhaseReopenTimeout = {}
-
-function TestGameplayItemPhaseReopenTimeout:test_window_reopened_by_active_card_use_gets_fresh_countdown()
+describe("TestGameplayItemPhaseReopenTimeout", function()
+  it("test_window_reopened_by_active_card_use_gets_fresh_countdown", function()
   local g = _new_game()
   local player = g:current_player()
   player.inventory:add({ id = item_ids.tax })
@@ -111,7 +110,5 @@ function TestGameplayItemPhaseReopenTimeout:test_window_reopened_by_active_card_
     "reopened item window must not time out from cross-window accumulated elapsed; " ..
     "last tax card would be locked out until end of turn")
   luassert.truthy(_choice_has_option(still_open, item_ids.tax), "last tax should remain selectable")
-end
-
-
-return TestGameplayItemPhaseReopenTimeout
+  end)
+end)
