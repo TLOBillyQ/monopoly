@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local path_planner = require("src.computer.agent.path")
 
 local function _assert_eq(actual, expected, message)
@@ -30,34 +30,31 @@ local function _call_remote_priority(player, tile_ref, steps)
   })
 end
 
-TestRemotePriority = {}
+local _config_reset = require("test.support.config_reset")
 
-do
-  local _config_reset = require("test.support.config_reset")
-  function TestRemotePriority:setUp()
-    _config_reset.reset_all()
-  end
+local function set_up()
+  _config_reset.reset_all()
 end
 
-function TestRemotePriority:test_remote_priority_returns_nil_for_missing_tile()
+local function test_remote_priority_returns_nil_for_missing_tile()
   local rank, score = _call_remote_priority({ id = 7 }, nil, 3)
   _assert_eq(rank, nil, "missing tile should not produce rank")
   _assert_eq(score, nil, "missing tile should not produce score")
 end
 
-function TestRemotePriority:test_remote_priority_ranks_item_tile()
+local function test_remote_priority_ranks_item_tile()
   local rank, score = _call_remote_priority({ id = 7 }, { type = "item" }, 2)
   _assert_eq(rank, 1, "item tile should keep item rank")
   _assert_eq(score, 2, "item tile should keep step score")
 end
 
-function TestRemotePriority:test_remote_priority_ranks_chance_tile()
+local function test_remote_priority_ranks_chance_tile()
   local rank, score = _call_remote_priority({ id = 7 }, { type = "chance" }, 3)
   _assert_eq(rank, 2, "chance tile should keep chance rank")
   _assert_eq(score, 3, "chance tile should keep step score")
 end
 
-function TestRemotePriority:test_remote_priority_ranks_empty_land_tile()
+local function test_remote_priority_ranks_empty_land_tile()
   local rank, score = _call_remote_priority({ id = 7 }, {
     type = "land",
     owner_id = nil,
@@ -68,7 +65,7 @@ function TestRemotePriority:test_remote_priority_ranks_empty_land_tile()
   _assert_eq(score, 4, "unowned land should keep step score")
 end
 
-function TestRemotePriority:test_remote_priority_ranks_self_owned_land_tile()
+local function test_remote_priority_ranks_self_owned_land_tile()
   local player = { id = 7 }
   local rank, score = _call_remote_priority(player, {
     type = "land",
@@ -80,7 +77,7 @@ function TestRemotePriority:test_remote_priority_ranks_self_owned_land_tile()
   _assert_eq(score, 5, "self-owned land should keep step score")
 end
 
-function TestRemotePriority:test_remote_priority_ranks_enemy_owned_land_tile()
+local function test_remote_priority_ranks_enemy_owned_land_tile()
   local rank, score = _call_remote_priority({ id = 7 }, {
     type = "land",
     owner_id = 2,
@@ -91,7 +88,7 @@ function TestRemotePriority:test_remote_priority_ranks_enemy_owned_land_tile()
   _assert_eq(score, -300, "enemy-owned land should score negative rent")
 end
 
-function TestRemotePriority:test_remote_priority_ranks_market_tile()
+local function test_remote_priority_ranks_market_tile()
   local rank, score = _call_remote_priority({ id = 7 }, { type = "market" }, 6)
   _assert_eq(rank, 6, "market tile should keep market rank")
   _assert_eq(score, 6, "market tile should keep step score")
@@ -127,7 +124,7 @@ end
 -- 批3 击杀 L122(or->and 崩) / L132(or->and 分数全变 0) / L140(两处 or 兜底)：
 -- 不传 dice_count 走默认 1，item 板子上步数即分数，实码应选最大步数 6；
 -- L122/L140-or 变异在 best==nil 或 dice_count==nil 时直接崩。
-function TestRemotePriority:test_pick_remote_dice_value_defaults_to_single_dice()
+local function test_pick_remote_dice_value_defaults_to_single_dice()
   local tiles = {}
   for index = 0, 6 do
     tiles[index] = _item_tile()
@@ -141,7 +138,7 @@ end
 
 -- 批3 击杀 L143(*->/)：dice_count=2 时步数翻倍，12 步位(item)应胜过 6 步内的
 -- land；除法变异会产出小数步、让 0 步位(item)反胜。
-function TestRemotePriority:test_pick_remote_dice_value_uses_dice_count_multiplier()
+local function test_pick_remote_dice_value_uses_dice_count_multiplier()
   local tiles = {}
   tiles[0] = _item_tile()
   for index = 1, 11 do
@@ -157,7 +154,7 @@ end
 -- 批3 击杀 L142(1->0)：0 步候选不该参与竞争——0 位放 item 时实码必须仍选
 -- 6 步的 land（rank 3 胜过 0 步 item 也无用？否——0 变异会让 0 位 item rank 1 反杀）。
 -- 真实语义:for 从 1 起,最小骰值 1。
-function TestRemotePriority:test_pick_remote_dice_value_never_considers_zero_dice_value()
+local function test_pick_remote_dice_value_never_considers_zero_dice_value()
   local tiles = {}
   tiles[0] = _item_tile()
   for index = 1, 6 do
@@ -170,7 +167,7 @@ function TestRemotePriority:test_pick_remote_dice_value_never_considers_zero_dic
 end
 
 -- 批3 击杀 L124(>->=)：同 rank 同 score 平局必须保留先到者(更小骰值)。
-function TestRemotePriority:test_pick_remote_dice_value_tie_keeps_lower_value()
+local function test_pick_remote_dice_value_tie_keeps_lower_value()
   local tiles = {}
   for index = 1, 6 do
     tiles[index] = { type = "land", owner_id = 2, level = 1, rents = { 120, 300 } }
@@ -185,7 +182,7 @@ local function _simulate_landing()
   return _require_upvalue(path_planner.pick_remote_dice_value, "_simulate_landing")
 end
 
-function TestRemotePriority:test_simulate_landing_reads_tile_when_no_obstacle_interrupts()
+local function test_simulate_landing_reads_tile_when_no_obstacle_interrupts()
   local board = {
     has_roadblock = function()
       return false
@@ -208,7 +205,7 @@ function TestRemotePriority:test_simulate_landing_reads_tile_when_no_obstacle_in
   _assert_eq(sim.steps, 2, "simulation should keep the requested step count")
 end
 
-function TestRemotePriority:test_simulate_landing_stops_on_a_mine_tile()
+local function test_simulate_landing_stops_on_a_mine_tile()
   local board = {
     has_roadblock = function()
       return false
@@ -231,7 +228,7 @@ function TestRemotePriority:test_simulate_landing_stops_on_a_mine_tile()
 end
 
 -- 批3 击杀 L65：路障位必须停走。
-function TestRemotePriority:test_simulate_landing_stops_on_a_roadblock_tile()
+local function test_simulate_landing_stops_on_a_roadblock_tile()
   local board = {
     has_roadblock = function(_, index)
       return index == 1
@@ -253,7 +250,7 @@ function TestRemotePriority:test_simulate_landing_stops_on_a_roadblock_tile()
 end
 
 -- 批3 击杀 L71 两处：market 位且非末步必须停走；无 type 的瓷砖则必须继续走。
-function TestRemotePriority:test_simulate_landing_stops_on_market_only_before_the_final_step()
+local function test_simulate_landing_stops_on_market_only_before_the_final_step()
   local board = {
     has_roadblock = function()
       return false
@@ -297,7 +294,7 @@ function TestRemotePriority:test_simulate_landing_stops_on_market_only_before_th
 end
 
 -- 批3 击杀 L78/L87：entered_inner 首步必须 false（初始值），跨步后保持置位。
-function TestRemotePriority:test_simulate_landing_forwards_entered_inner_progress()
+local function test_simulate_landing_forwards_entered_inner_progress()
   local received = {}
   local board = {
     has_roadblock = function()
@@ -323,7 +320,7 @@ function TestRemotePriority:test_simulate_landing_forwards_entered_inner_progres
 end
 
 -- 批3 击杀 L16：敌方地块缺 level 时按 0 级收租（or 0 兜底），不能按 1 级收。
-function TestRemotePriority:test_enemy_land_without_level_rents_at_zero()
+local function test_enemy_land_without_level_rents_at_zero()
   local rank, score = _call_remote_priority({ id = 7 }, {
     type = "land",
     owner_id = 2,
@@ -334,4 +331,23 @@ function TestRemotePriority:test_enemy_land_without_level_rents_at_zero()
 end
 
 
-return TestRemotePriority
+describe("TestRemotePriority", function()
+  before_each(set_up)
+  it("test_remote_priority_returns_nil_for_missing_tile", test_remote_priority_returns_nil_for_missing_tile)
+  it("test_remote_priority_ranks_item_tile", test_remote_priority_ranks_item_tile)
+  it("test_remote_priority_ranks_chance_tile", test_remote_priority_ranks_chance_tile)
+  it("test_remote_priority_ranks_empty_land_tile", test_remote_priority_ranks_empty_land_tile)
+  it("test_remote_priority_ranks_self_owned_land_tile", test_remote_priority_ranks_self_owned_land_tile)
+  it("test_remote_priority_ranks_enemy_owned_land_tile", test_remote_priority_ranks_enemy_owned_land_tile)
+  it("test_remote_priority_ranks_market_tile", test_remote_priority_ranks_market_tile)
+  it("test_pick_remote_dice_value_defaults_to_single_dice", test_pick_remote_dice_value_defaults_to_single_dice)
+  it("test_pick_remote_dice_value_uses_dice_count_multiplier", test_pick_remote_dice_value_uses_dice_count_multiplier)
+  it("test_pick_remote_dice_value_never_considers_zero_dice_value", test_pick_remote_dice_value_never_considers_zero_dice_value)
+  it("test_pick_remote_dice_value_tie_keeps_lower_value", test_pick_remote_dice_value_tie_keeps_lower_value)
+  it("test_simulate_landing_reads_tile_when_no_obstacle_interrupts", test_simulate_landing_reads_tile_when_no_obstacle_interrupts)
+  it("test_simulate_landing_stops_on_a_mine_tile", test_simulate_landing_stops_on_a_mine_tile)
+  it("test_simulate_landing_stops_on_a_roadblock_tile", test_simulate_landing_stops_on_a_roadblock_tile)
+  it("test_simulate_landing_stops_on_market_only_before_the_final_step", test_simulate_landing_stops_on_market_only_before_the_final_step)
+  it("test_simulate_landing_forwards_entered_inner_progress", test_simulate_landing_forwards_entered_inner_progress)
+  it("test_enemy_land_without_level_rents_at_zero", test_enemy_land_without_level_rents_at_zero)
+end)
