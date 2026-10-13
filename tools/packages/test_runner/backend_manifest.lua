@@ -2,7 +2,6 @@
 return {
   legacy = {
     "test/behavior/app/cosmetics/test_transaction_read_model_mutation.lua",
-    "test/behavior/app/host_integrations/test_achievement_mutation.lua",
     "test/behavior/app/test_cosmetics_transaction.lua",
     "test/behavior/app/test_cosmetics_transaction_paid_entry_pin.lua",
     "test/behavior/app/test_cosmetics_transaction_state_pin.lua",
@@ -382,6 +381,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/host_integrations/test_achievement_mutation.lua",
     "test/behavior/app/host_integrations/test_leaderboard_settlement.lua",
     "test/behavior/app/cosmetics/test_request_shape.lua",
     "test/behavior/app/test_leaderboard.lua",
