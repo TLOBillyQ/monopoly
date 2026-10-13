@@ -1,7 +1,11 @@
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 
 local force_resolve = require("src.turn.deadlines")
@@ -9,13 +13,13 @@ local choice_auto_policy = require("src.turn.policies.choice_auto")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
 
-TestForceResolveDispatch = {}
+describe("TestForceResolveDispatch", function()
 
-function TestForceResolveDispatch:setUp()
+before_each(function()
   fallback_registry.reset()
-end
+end)
 
-function TestForceResolveDispatch:test_auto_choice_action_receives_owner_role_and_clears_modal_output_ports()
+it("test_auto_choice_action_receives_owner_role_and_clears_modal_output_ports", function()
   local calls = {}
   local state = {}
   state._resolved_gameplay_loop_ports = {
@@ -69,9 +73,9 @@ function TestForceResolveDispatch:test_auto_choice_action_receives_owner_role_an
   _assert_eq(dispatched.actor_role_id, 42, "force resolve should fill actor from choice owner")
   _assert_eq(game.turn.pending_choice, nil, "stale pending choice should be cleared")
   _assert_eq(table.concat(calls, ","), "close_modal,clear_output", "modal and output ports should be closed")
-end
+end)
 
-function TestForceResolveDispatch:test_auto_choice_action_inherits_missing_choice_id_from_choice()
+it("test_auto_choice_action_inherits_missing_choice_id_from_choice", function()
   local state = {}
   runtime_state.ensure_all(state)
   local dispatched = nil
@@ -108,9 +112,9 @@ function TestForceResolveDispatch:test_auto_choice_action_inherits_missing_choic
 
   _assert_eq(dispatched.choice_id, "choice_from_timeout", "missing auto action choice_id should be filled")
   _assert_eq(dispatched.actor_role_id, 42, "missing auto action actor should still be filled")
-end
+end)
 
-function TestForceResolveDispatch:test_auto_choice_action_fills_actor_from_current_player_when_choice_has_no_owner()
+it("test_auto_choice_action_fills_actor_from_current_player_when_choice_has_no_owner", function()
   local state = {}
   runtime_state.ensure_all(state)
   local dispatched = nil
@@ -145,9 +149,9 @@ function TestForceResolveDispatch:test_auto_choice_action_fills_actor_from_curre
 
   _assert_eq(dispatched.choice_id, "choice_current_player", "missing auto action choice_id should be filled")
   _assert_eq(dispatched.actor_role_id, 7, "missing actor should fall back to current player")
-end
+end)
 
-function TestForceResolveDispatch:test_force_skip_auto_action_can_dispatch_registered_fallback_choice_action()
+it("test_force_skip_auto_action_can_dispatch_registered_fallback_choice_action", function()
   local state = {}
   runtime_state.ensure_all(state)
   local dispatched = nil
@@ -189,9 +193,9 @@ function TestForceResolveDispatch:test_force_skip_auto_action_can_dispatch_regis
   _assert_eq(dispatched.type, "choice_cancel", "force-skip auto result should allow registered fallback")
   _assert_eq(dispatched.choice_id, "choice_fallback", "fallback action should dispatch")
   _assert_eq(dispatched.actor_role_id, 42, "fallback action actor should be filled")
-end
+end)
 
-function TestForceResolveDispatch:test_non_force_skip_auto_action_does_not_use_registered_fallback()
+it("test_non_force_skip_auto_action_does_not_use_registered_fallback", function()
   local state = {}
   runtime_state.ensure_all(state)
   local dispatched = nil
@@ -235,9 +239,9 @@ function TestForceResolveDispatch:test_non_force_skip_auto_action_does_not_use_r
     force_resolve.resolve_choice(game, state, choice, "tick_timeout")
   end)
 
-  lu.assertNil(dispatched)
+  luassert.is_nil(dispatched)
   _assert_eq(advanced, 1, "non force-skip auto result should force skip instead of fallback")
-end
+end)
 
 
-return TestForceResolveDispatch
+end)

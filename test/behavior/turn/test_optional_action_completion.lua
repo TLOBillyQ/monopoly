@@ -1,5 +1,9 @@
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local optional_completion = require("src.turn.optional_action_completion")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
@@ -29,9 +33,9 @@ local function _new_game(choice)
   }
 end
 
-TestOptionalActionCompletion = {}
+describe("TestOptionalActionCompletion", function()
 
-function TestOptionalActionCompletion:test_allows_the_current_player_to_complete_a_cancelable_optional_action_phase()
+it("test_allows_the_current_player_to_complete_a_cancelable_optional_action_phase", function()
   local choice = {
     id = "optional_1",
     kind = "item_phase_passive",
@@ -42,9 +46,9 @@ function TestOptionalActionCompletion:test_allows_the_current_player_to_complete
   _assert_eq(result.ok, true, "current player should be allowed to complete optional action phase")
   _assert_eq(result.choice, choice, "result should expose the pending optional action choice")
   _assert_eq(result.reason, nil, "allowed result should not carry a rejection reason")
-end
+end)
 
-function TestOptionalActionCompletion:test_uses_explicit_choices_and_indexed_current_player_lookup_when_completing_optional_phases()
+it("test_uses_explicit_choices_and_indexed_current_player_lookup_when_completing_optional_phases", function()
   local pending_choice = {
     id = "required_choice",
     kind = "market_buy",
@@ -70,9 +74,9 @@ function TestOptionalActionCompletion:test_uses_explicit_choices_and_indexed_cur
   })
   _assert_eq(wrong_actor.ok, false, "indexed current-player lookup should reject other actors")
   _assert_eq(wrong_actor.reason, "not_current_player", "indexed current-player rejection reason")
-end
+end)
 
-function TestOptionalActionCompletion:test_prefers_an_explicit_current_player_method_over_indexed_fallback()
+it("test_prefers_an_explicit_current_player_method_over_indexed_fallback", function()
   local choice = {
     id = "optional_method_actor",
     kind = "item_phase_passive",
@@ -90,9 +94,9 @@ function TestOptionalActionCompletion:test_prefers_an_explicit_current_player_me
 
   local method_actor = optional_completion.can_complete_optional_action_phase(game, 2)
   _assert_eq(method_actor.ok, true, "method current player should be allowed")
-end
+end)
 
-function TestOptionalActionCompletion:test_does_not_reject_actors_when_the_current_player_cannot_be_resolved()
+it("test_does_not_reject_actors_when_the_current_player_cannot_be_resolved", function()
   local choice = {
     id = "optional_missing_current",
     kind = "item_phase_passive",
@@ -108,9 +112,9 @@ function TestOptionalActionCompletion:test_does_not_reject_actors_when_the_curre
   local result = optional_completion.can_complete_optional_action_phase(game, 1)
   _assert_eq(result.ok, true, "missing player list should leave actor ownership to caller")
   _assert_eq(result.choice, choice, "missing player list should preserve the optional choice")
-end
+end)
 
-function TestOptionalActionCompletion:test_returns_stable_reasons_for_actors_and_non_optional_choices()
+it("test_returns_stable_reasons_for_actors_and_non_optional_choices", function()
   local actor_result = optional_completion.can_complete_optional_action_phase(_new_game({
     id = "optional_2",
     kind = "landing_optional_effect",
@@ -131,9 +135,9 @@ function TestOptionalActionCompletion:test_returns_stable_reasons_for_actors_and
   _assert_eq(required_choice_result.ok, false, "required choices should not use optional completion")
   _assert_eq(required_choice_result.reason, "no_optional_action", "required choice reason")
   _assert_eq(required_choice_result.choice, nil, "required choices should not leak through no-optional results")
-end
+end)
 
-function TestOptionalActionCompletion:test_handles_missing_actors_and_caller_owned_actor_checks_distinctly()
+it("test_handles_missing_actors_and_caller_owned_actor_checks_distinctly", function()
   local choice = {
     id = "optional_actor",
     kind = "item_phase_passive",
@@ -149,9 +153,9 @@ function TestOptionalActionCompletion:test_handles_missing_actors_and_caller_own
   })
   _assert_eq(unchecked_actor.ok, true, "callers can take ownership of actor validation")
   _assert_eq(unchecked_actor.choice, choice, "unchecked actor result should keep the optional choice")
-end
+end)
 
-function TestOptionalActionCompletion:test_rejects_non_cancelable_optional_choices_and_blocked_gates_with_stable_reasons()
+it("test_rejects_non_cancelable_optional_choices_and_blocked_gates_with_stable_reasons", function()
   local non_cancelable = optional_completion.can_complete_optional_action_phase(_new_game({
     id = "optional_3",
     kind = "item_phase_passive",
@@ -171,9 +175,9 @@ function TestOptionalActionCompletion:test_rejects_non_cancelable_optional_choic
   })
   _assert_eq(blocked.ok, false, "blocked input should reject optional completion")
   _assert_eq(blocked.reason, "blocked", "blocked reason")
-end
+end)
 
-function TestOptionalActionCompletion:test_dispatches_the_completion_through_one_structured_choice_cancel_action()
+it("test_dispatches_the_completion_through_one_structured_choice_cancel_action", function()
   local choice = {
     id = "optional_5",
     kind = "item_phase_passive",
@@ -195,9 +199,9 @@ function TestOptionalActionCompletion:test_dispatches_the_completion_through_one
   _assert_eq(dispatched.choice_id, "optional_5", "completion should target the pending choice")
   _assert_eq(dispatched.actor_role_id, 1, "completion should carry the current actor")
   _assert_eq(dispatched.input_source, "timer", "completion should preserve the input source")
-end
+end)
 
-function TestOptionalActionCompletion:test_falls_back_to_the_game_dispatcher_when_no_direct_completion_dispatcher_is_supplied()
+it("test_falls_back_to_the_game_dispatcher_when_no_direct_completion_dispatcher_is_supplied", function()
   local choice = {
     id = "optional_dispatch",
     kind = "item_phase_passive",
@@ -215,9 +219,9 @@ function TestOptionalActionCompletion:test_falls_back_to_the_game_dispatcher_whe
   _assert_eq(result.reason, nil, "game dispatcher fallback should not report a rejection reason")
   _assert_eq(game.dispatched.type, "choice_cancel", "fallback dispatcher should receive choice cancel")
   _assert_eq(game.dispatched.choice_id, "optional_dispatch", "fallback dispatcher should target the choice")
-end
+end)
 
-function TestOptionalActionCompletion:test_reports_dispatch_rejection_when_no_completion_dispatcher_is_available()
+it("test_reports_dispatch_rejection_when_no_completion_dispatcher_is_available", function()
   local choice = {
     id = "optional_rejected",
     kind = "item_phase_passive",
@@ -229,16 +233,16 @@ function TestOptionalActionCompletion:test_reports_dispatch_rejection_when_no_co
   _assert_eq(result.status, "rejected", "missing dispatcher status")
   _assert_eq(result.reason, "dispatch_rejected", "missing dispatcher reason")
   _assert_eq(result.action.choice_id, "optional_rejected", "rejected completion should expose attempted action")
-end
+end)
 
-function TestOptionalActionCompletion:test_complete_returns_the_rejection_when_no_optional_action_is_open()
+it("test_complete_returns_the_rejection_when_no_optional_action_is_open", function()
   local result = optional_completion.complete_optional_action_phase(_new_game(nil), 1)
 
   _assert_eq(result.ok, false, "completion without an optional action must reject")
   _assert_eq(result.reason, "no_optional_action", "completion preserves the eligibility rejection")
-end
+end)
 
-function TestOptionalActionCompletion:test_turn_dispatcher_owns_the_completion_action_and_converts_it_to_choice_cancel()
+it("test_turn_dispatcher_owns_the_completion_action_and_converts_it_to_choice_cancel", function()
   local choice = {
     id = "optional_6",
     kind = "landing_optional_effect",
@@ -259,9 +263,9 @@ function TestOptionalActionCompletion:test_turn_dispatcher_owns_the_completion_a
   _assert_eq(game.dispatched.type, "choice_cancel", "turn dispatcher should dispatch choice cancel internally")
   _assert_eq(game.dispatched.choice_id, "optional_6", "turn dispatcher should target the pending optional choice")
   _assert_eq(game.turn.pending_choice, nil, "turn dispatcher should clear the completed choice")
-end
+end)
 
-function TestOptionalActionCompletion:test_timeout_policy_emits_the_same_optional_completion_intent_instead_of_raw_choice_cancel()
+it("test_timeout_policy_emits_the_same_optional_completion_intent_instead_of_raw_choice_cancel", function()
   local choice = {
     id = "optional_7",
     kind = "item_phase_passive",
@@ -272,7 +276,5 @@ function TestOptionalActionCompletion:test_timeout_policy_emits_the_same_optiona
   _assert_eq(result.type, "complete_optional_action_phase",
     "optional action timeout should emit optional completion intent")
   _assert_eq(result.choice_id, nil, "optional timeout intent should not expose the pending choice id")
-end
-
-
-return TestOptionalActionCompletion
+end)
+end)

@@ -2,9 +2,9 @@
 -- Baseline: 掷骰前的可选行动窗口里，玩家可连续使用任意数量合法道具；
 -- 唯一数量限制是同组道具单回合一次（used_effect_groups）。用完一张
 -- 非掷骰道具后窗口必须重新开放，直到玩家主动结束或超时才推进。
--- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp，
--- 中文 it 名按「test_原名」字符串 key 保留。
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local turn_runtime = require("src.turn.scheduler")
 local inventory = require("src.rules.items.inventory")
@@ -12,11 +12,11 @@ local item_ids = require("src.config.gameplay.item_ids")
 local item_phase = require("src.rules.items.phase")
 local config_reset = require("test.support.config_reset")
 
-TestItemWindowMultiUse = {}
+describe("TestItemWindowMultiUse", function()
 
-function TestItemWindowMultiUse:setUp()
+before_each(function()
   config_reset.reset_all()
-end
+end)
 
 -- 动画门打开（宿主口径 wait_action_anim = true）：带动画的道具（天使/地雷/导弹…）
 -- 用掉后 action_anim 正在播，重开的道具窗口一度被 finish_choice 连带清掉，
@@ -48,10 +48,12 @@ local function _assert_window_survives_anim_item(phase, used_item_id, kept_item_
   p.inventory:add({ id = used_item_id })
   p.inventory:add({ id = kept_item_id })
 
-  local window = support.open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, phase, {
+  local spec = item_phase.build_passive_choice_spec(g, p, phase, {
     next_state = "after_items",
     next_args = {},
-  }), phase .. " item window should open with two usable items"))
+  })
+  luassert.truthy(spec, phase .. " item window should open with two usable items")
+  local window = support.open_choice(g, spec)
   g:advance_turn()
 
   g:dispatch_action({
@@ -61,12 +63,12 @@ local function _assert_window_survives_anim_item(phase, used_item_id, kept_item_
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(g.turn.action_anim ~= nil, label .. " should queue an action anim (fixture precondition)")
-  lu.assertEvalToTrue(flow.resumed == false, label .. " must not advance the turn while a legal item remains")
+  luassert.truthy(g.turn.action_anim ~= nil, label .. " should queue an action anim (fixture precondition)")
+  luassert.truthy(flow.resumed == false, label .. " must not advance the turn while a legal item remains")
   local reopened = g.turn.pending_choice
-  lu.assertEvalToTrue(reopened ~= nil and reopened.kind == "item_phase_passive",
+  luassert.truthy(reopened ~= nil and reopened.kind == "item_phase_passive",
     label .. " item window must survive the action anim, not be finished away")
-  lu.assertEvalToTrue(inventory.count(p) == 1, label .. " should leave the second item usable")
+  luassert.truthy(inventory.count(p) == 1, label .. " should leave the second item usable")
 end
 
 -- 主用例 real turn machine 掷骰 → 移动 → 落地走 game.rng（→ 全局 math.random）。
@@ -78,7 +80,7 @@ end
 -- band-aid(#45/#46)。守卫见 test/behavior/foundation/test_rng_reset_isolation.lua。
 -- 全真实回合机：phase start 自己打开 pre_action 窗口（wait_action 挂起），
 -- 与实际游戏同一条链路。这是钉症状的主用例。
-function TestItemWindowMultiUse:test_real_turn_machine_keeps_the_item_window_open_across_consecutive_item_uses()
+it("test_real_turn_machine_keeps_the_item_window_open_across_consecutive_item_uses", function()
   local g = support.new_game()
   local p = g:current_player()
   inventory.clear(p)
@@ -88,7 +90,7 @@ function TestItemWindowMultiUse:test_real_turn_machine_keeps_the_item_window_ope
   g:advance_turn()
 
   local window = g.turn.pending_choice
-  lu.assertEvalToTrue(window ~= nil and window.kind == "item_phase_passive",
+  luassert.truthy(window ~= nil and window.kind == "item_phase_passive",
     "turn start should open the pre_action item window")
 
   g:dispatch_action({
@@ -99,8 +101,8 @@ function TestItemWindowMultiUse:test_real_turn_machine_keeps_the_item_window_ope
   })
 
   local reopened = g.turn.pending_choice
-  lu.assertEvalToTrue(reopened ~= nil, "item window should reopen after a non-dice item use, not advance the turn")
-  lu.assertEvalToTrue(reopened.kind == "item_phase_passive", "reopened window should still be the passive item window")
+  luassert.truthy(reopened ~= nil, "item window should reopen after a non-dice item use, not advance the turn")
+  luassert.truthy(reopened.kind == "item_phase_passive", "reopened window should still be the passive item window")
 
   g:dispatch_action({
     type = "choice_select",
@@ -109,13 +111,13 @@ function TestItemWindowMultiUse:test_real_turn_machine_keeps_the_item_window_ope
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(inventory.count(p) == 0, "both items should be consumed within the same turn")
-end
+  luassert.truthy(inventory.count(p) == 0, "both items should be consumed within the same turn")
+end)
 
 -- followup 道具是本阶段最后一张可用牌：阶段落定（无窗可重开）时，已结算的
 -- 跟随选择必须被清掉。残留的 pending_choice 会把 choice 门控带进后续流程/
 -- 下一位玩家的回合——行动按钮被拦、只能干等倒计时（偶现"没询问直接跳过"报障）。
-function TestItemWindowMultiUse:test_followup_item_as_the_last_card_clears_the_resolved_followup_choice()
+it("test_followup_item_as_the_last_card_clears_the_resolved_followup_choice", function()
   local g = support.new_game()
   local flow = { resumed = false }
   g.turn_runtime = turn_runtime:new(g, {
@@ -131,10 +133,12 @@ function TestItemWindowMultiUse:test_followup_item_as_the_last_card_clears_the_r
   inventory.clear(p)
   p.inventory:add({ id = item_ids.roadblock })
 
-  local window = support.open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "post_action", {
+  local spec = item_phase.build_passive_choice_spec(g, p, "post_action", {
     next_state = "after_items",
     next_args = {},
-  }), "post_action item window should open with the roadblock"))
+  })
+  luassert.truthy(spec, "post_action item window should open with the roadblock")
+  local window = support.open_choice(g, spec)
   g:advance_turn()
 
   g:dispatch_action({
@@ -144,25 +148,27 @@ function TestItemWindowMultiUse:test_followup_item_as_the_last_card_clears_the_r
     actor_role_id = p.id,
   })
   local followup = g.turn.pending_choice
-  lu.assertEvalToTrue(followup ~= nil and followup.kind == "roadblock_target",
+  luassert.truthy(followup ~= nil and followup.kind == "roadblock_target",
     "roadblock should open its target follow-up choice")
 
+  local option = followup.options[1]
+  luassert.truthy(option, "roadblock follow-up should offer tiles")
   g:dispatch_action({
     type = "choice_select",
     choice_id = followup.id,
-    option_id = assert(followup.options[1], "roadblock follow-up should offer tiles").id,
+    option_id = option.id,
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(inventory.count(p) == 0, "roadblock should be consumed")
-  lu.assertEvalToTrue(flow.resumed == true, "phase with no remaining cards should let the turn resume")
-  lu.assertEvalToTrue(g.turn.pending_choice == nil,
+  luassert.truthy(inventory.count(p) == 0, "roadblock should be consumed")
+  luassert.truthy(flow.resumed == true, "phase with no remaining cards should let the turn resume")
+  luassert.truthy(g.turn.pending_choice == nil,
     "resolved roadblock_target must not linger as pending_choice after the phase finishes")
-end
+end)
 
 -- followup 链路：路障需要跟随选格子，走 item_completions 完成链
 -- （与地雷/天使的立即执行链不同）。完成后窗口同样必须重开。
-function TestItemWindowMultiUse:test_real_turn_machine_reopens_the_window_after_a_followup_item_completes()
+it("test_real_turn_machine_reopens_the_window_after_a_followup_item_completes", function()
   local g = support.new_game()
   local p = g:current_player()
   inventory.clear(p)
@@ -171,7 +177,7 @@ function TestItemWindowMultiUse:test_real_turn_machine_reopens_the_window_after_
 
   g:advance_turn()
   local window = g.turn.pending_choice
-  lu.assertEvalToTrue(window ~= nil and window.kind == "item_phase_passive",
+  luassert.truthy(window ~= nil and window.kind == "item_phase_passive",
     "turn start should open the pre_action item window")
 
   g:dispatch_action({
@@ -182,27 +188,29 @@ function TestItemWindowMultiUse:test_real_turn_machine_reopens_the_window_after_
   })
 
   local followup = g.turn.pending_choice
-  lu.assertEvalToTrue(followup ~= nil and followup.kind == "roadblock_target",
+  luassert.truthy(followup ~= nil and followup.kind == "roadblock_target",
     "roadblock should open its target follow-up choice")
 
+  local option = followup.options[1]
+  luassert.truthy(option, "roadblock follow-up should offer tiles")
   g:dispatch_action({
     type = "choice_select",
     choice_id = followup.id,
-    option_id = assert(followup.options[1], "roadblock follow-up should offer tiles").id,
+    option_id = option.id,
     actor_role_id = p.id,
   })
 
   local reopened = g.turn.pending_choice
-  lu.assertEvalToTrue(reopened ~= nil and reopened.kind == "item_phase_passive",
+  luassert.truthy(reopened ~= nil and reopened.kind == "item_phase_passive",
     "item window should reopen after the follow-up completes, not advance the turn")
-  lu.assertEvalToTrue(inventory.count(p) == 1, "mine should remain usable after the roadblock was consumed")
-end
+  luassert.truthy(inventory.count(p) == 1, "mine should remain usable after the roadblock was consumed")
+end)
 
 -- RED（已知缺陷，修复票的红灯）：post_action 窗口 + followup/target 道具
 -- 用完后窗口应重开（地雷仍可用），当前被 item_completions.lua 的
 -- phase=="post_action" 早退分支直接 finish，回合推进（flow.resumed==true 处红）。
 -- 修复时把 pending 换回 it。
-function TestItemWindowMultiUse:test_post_action_window_reopens_after_a_followup_item_completes()
+it("test_post_action_window_reopens_after_a_followup_item_completes", function()
   local g = support.new_game()
   local flow = { resumed = false }
   g.turn_runtime = turn_runtime:new(g, {
@@ -219,10 +227,12 @@ function TestItemWindowMultiUse:test_post_action_window_reopens_after_a_followup
   p.inventory:add({ id = item_ids.roadblock })
   p.inventory:add({ id = item_ids.mine })
 
-  local window = support.open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "post_action", {
+  local spec = item_phase.build_passive_choice_spec(g, p, "post_action", {
     next_state = "after_items",
     next_args = {},
-  }), "post_action item window should open with two usable items"))
+  })
+  luassert.truthy(spec, "post_action item window should open with two usable items")
+  local window = support.open_choice(g, spec)
   g:advance_turn()
 
   g:dispatch_action({
@@ -232,35 +242,37 @@ function TestItemWindowMultiUse:test_post_action_window_reopens_after_a_followup
     actor_role_id = p.id,
   })
   local followup = g.turn.pending_choice
-  lu.assertEvalToTrue(followup ~= nil and followup.kind == "roadblock_target",
+  luassert.truthy(followup ~= nil and followup.kind == "roadblock_target",
     "roadblock should open its target follow-up choice")
 
+  local option = followup.options[1]
+  luassert.truthy(option, "roadblock follow-up should offer tiles")
   g:dispatch_action({
     type = "choice_select",
     choice_id = followup.id,
-    option_id = assert(followup.options[1], "roadblock follow-up should offer tiles").id,
+    option_id = option.id,
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(flow.resumed == false,
+  luassert.truthy(flow.resumed == false,
     "post_action followup completion must not advance the turn while legal items remain")
   local reopened = g.turn.pending_choice
-  lu.assertEvalToTrue(reopened ~= nil and reopened.kind == "item_phase_passive",
+  luassert.truthy(reopened ~= nil and reopened.kind == "item_phase_passive",
     "post_action item window should reopen after the follow-up completes")
-  lu.assertEvalToTrue(inventory.count(p) == 1, "mine should remain usable after the roadblock was consumed")
-end
+  luassert.truthy(inventory.count(p) == 1, "mine should remain usable after the roadblock was consumed")
+end)
 
-TestItemWindowMultiUse["test_post_action window survives 天使卡 while its action anim plays"] = function(self)
+it("test_post_action window survives 天使卡 while its action anim plays", function()
   _assert_window_survives_anim_item("post_action", item_ids.angel, item_ids.mine, "天使卡 (post_action)")
-end
+end)
 
-TestItemWindowMultiUse["test_pre_action window survives 地雷卡 while its action anim plays"] = function(self)
+it("test_pre_action window survives 地雷卡 while its action anim plays", function()
   _assert_window_survives_anim_item("pre_action", item_ids.mine, item_ids.angel, "地雷卡 (pre_action)")
-end
+end)
 
 -- 缩窄用例：合成 turn_runtime 直接挂 wait_choice，只覆盖 dispatch→resolve→reopen
 -- 子链路。真实用例红、这条绿时，断裂点在两者的差集（wait_action 转移 / decide 策略）。
-function TestItemWindowMultiUse:test_wait_choice_sub_chain_reopens_the_window_after_a_non_dice_item()
+it("test_wait_choice_sub_chain_reopens_the_window_after_a_non_dice_item", function()
   local g = support.new_game()
   local flow = { resumed = false }
   g.turn_runtime = turn_runtime:new(g, {
@@ -277,13 +289,15 @@ function TestItemWindowMultiUse:test_wait_choice_sub_chain_reopens_the_window_af
   p.inventory:add({ id = item_ids.mine })
   p.inventory:add({ id = item_ids.angel })
 
-  local choice = support.open_choice(g, assert(item_phase.build_passive_choice_spec(g, p, "pre_action", {
+  local spec = item_phase.build_passive_choice_spec(g, p, "pre_action", {
     next_state = "after_items",
     next_args = {},
-  }), "pre_action item window should open with two usable items"))
+  })
+  luassert.truthy(spec, "pre_action item window should open with two usable items")
+  local choice = support.open_choice(g, spec)
 
   g:advance_turn()
-  lu.assertEvalToTrue(g.turn.phase == "wait_choice", "turn should wait on the item window")
+  luassert.truthy(g.turn.phase == "wait_choice", "turn should wait on the item window")
 
   g:dispatch_action({
     type = "choice_select",
@@ -292,10 +306,10 @@ function TestItemWindowMultiUse:test_wait_choice_sub_chain_reopens_the_window_af
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(flow.resumed == false, "using one item must not advance the turn past the item window")
+  luassert.truthy(flow.resumed == false, "using one item must not advance the turn past the item window")
   local reopened = g.turn.pending_choice
-  lu.assertEvalToTrue(reopened ~= nil, "item window should reopen after a non-dice item use")
-  lu.assertEvalToTrue(reopened.kind == "item_phase_passive", "reopened window should still be the passive item window")
+  luassert.truthy(reopened ~= nil, "item window should reopen after a non-dice item use")
+  luassert.truthy(reopened.kind == "item_phase_passive", "reopened window should still be the passive item window")
 
   g:dispatch_action({
     type = "choice_select",
@@ -304,8 +318,8 @@ function TestItemWindowMultiUse:test_wait_choice_sub_chain_reopens_the_window_af
     actor_role_id = p.id,
   })
 
-  lu.assertEvalToTrue(inventory.count(p) == 0, "both items should be consumed within the same turn")
-end
+  luassert.truthy(inventory.count(p) == 0, "both items should be consumed within the same turn")
+end)
 
 
-return TestItemWindowMultiUse
+end)
