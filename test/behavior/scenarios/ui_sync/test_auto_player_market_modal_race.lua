@@ -1,4 +1,8 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_identity(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local _config_reset = require("test.support.config_reset")
@@ -62,9 +66,9 @@ local function _run_market_modal_race_case(game_opts, expect_open, case_name)
   end)
 
   if expect_open then
-    lu.assertTrue(called, case_name)
+    luassert.is_true(called, case_name)
   else
-    lu.assertFalse(called, case_name)
+    luassert.is_false(called, case_name)
   end
 end
 
@@ -124,11 +128,11 @@ function TestAutoPlayerMarketModalRace:test_market_navigation_dirty_forces_modal
     }
     -- 不带 dirty.market：market 已开 + should_reconcile 短路 → 不应再开
     ui_model_sync.refresh_from_dirty(game, state, { any = true, ui = true }, common)
-    lu.assertIs(call_count, 0,
+    _assert_identity(call_count, 0,
       "should NOT reopen market modal when market_active=true and dirty.market is unset")
     -- 带 dirty.market：navigation 改写了 options，必须强制 reconcile
     ui_model_sync.refresh_from_dirty(game, state, { any = true, ui = true, market = true }, common)
-    lu.assertIs(call_count, 1,
+    _assert_identity(call_count, 1,
       "MUST reopen market modal when dirty.market=true even if market_active=true")
   end)
 end
@@ -178,27 +182,27 @@ end
 -- #583:黑市购买后「卡牌展示屏」广播弹窗与 dirty.market 重建竞争——弹窗存活期
 -- 跳过重建;收屏回屏按关闭时刻 market_active 把买家带回黑市屏,无需补发。
 function TestAutoPlayerMarketModalRace:test_market_dirty_reopen_skipped_while_popup_active()
-  lu.assertIs(_run_dirty_market_reopen(true, true), 0,
+  _assert_identity(_run_dirty_market_reopen(true, true), 0,
     "dirty.market rebuild must be skipped while a popup is alive (popup close returns buyer to market)")
 end
 
 -- 弹窗门只拦「重建」:无弹窗时 dirty.market 仍强制重开(与上例同路径的对照钉)。
 function TestAutoPlayerMarketModalRace:test_market_dirty_reopen_runs_without_popup()
-  lu.assertIs(_run_dirty_market_reopen(false, true), 1,
+  _assert_identity(_run_dirty_market_reopen(false, true), 1,
     "dirty.market rebuild must still run when no popup is alive")
 end
 
 -- 弹窗门只拦「已开黑市的重建」:黑市未开(market_active=false,机会卡传送流)
 -- 时弹窗存活不挡首开——否则收屏回屏解析不到 market_active,黑市永不补开。
 function TestAutoPlayerMarketModalRace:test_market_dirty_first_open_not_blocked_by_popup()
-  lu.assertIs(_run_dirty_market_reopen(true, false), 1,
+  _assert_identity(_run_dirty_market_reopen(true, false), 1,
     "dirty.market first open during popup must proceed when market is not active yet")
 end
 
 -- 2026-08-25 买家免展示口径:存活弹窗排除买家本人时(黑市购买展示不占买家屏),
 -- dirty.market 重建照常放行——买家即时看到库存刷新,不必等收屏。
 function TestAutoPlayerMarketModalRace:test_market_dirty_reopen_runs_when_popup_excludes_operator()
-  lu.assertIs(_run_dirty_market_reopen(true, true, 1), 1,
+  _assert_identity(_run_dirty_market_reopen(true, true, 1), 1,
     "dirty.market rebuild must run when the alive popup excludes the market operator")
 end
 
