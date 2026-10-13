@@ -1,8 +1,10 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- Mutation-pinning specs for src/ui/render/widgets/panel_action_controls.lua.
 -- Drives the public apply_base_action_controls with a capturing ui stub so the
 -- private _resolve_base_action_visibility decision table is observable.
 
-local lu = require("luaunit")
 local panel_action_controls = require("src.ui.render.widgets.panel_action_controls")
 local base_nodes = require("src.ui.schema.base")
 
@@ -15,17 +17,17 @@ local function _capture_ui()
   }
 end
 
-TestPanelActionControlsMutation = {}
+describe("TestPanelActionControlsMutation", function()
 
-function TestPanelActionControlsMutation:test_hides_all_three_base_buttons_when_base_visible_is_not_true_l28_false()
-  -- base_visible=false must hide action/end/cancel together. Any 'false'->'true'
-  -- mutation in the guard's return would leak one button visible.
-  local ui = _capture_ui()
-  panel_action_controls.apply_base_action_controls(ui, {}, false)
-  lu.assertEvalToTrue(ui.visible[base_nodes.action_button] == false, "action must be hidden when base not visible")
-  lu.assertEvalToTrue(ui.visible[base_nodes.end_button] == false, "end must be hidden when base not visible")
-  lu.assertEvalToTrue(ui.visible[base_nodes.cancel_button] == false, "cancel must be hidden when base not visible")
-end
+  it("test_hides_all_three_base_buttons_when_base_visible_is_not_true_l28_false", function()
+    -- base_visible=false must hide action/end/cancel together. Any 'false'->'true'
+    -- mutation in the guard's return would leak one button visible.
+    local ui = _capture_ui()
+    panel_action_controls.apply_base_action_controls(ui, {}, false)
+    luassert.truthy(ui.visible[base_nodes.action_button] == false, "action must be hidden when base not visible")
+    luassert.truthy(ui.visible[base_nodes.end_button] == false, "end must be hidden when base not visible")
+    luassert.truthy(ui.visible[base_nodes.cancel_button] == false, "cancel must be hidden when base not visible")
+  end)
 
 
-return TestPanelActionControlsMutation
+end)

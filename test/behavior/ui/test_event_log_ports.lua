@@ -1,7 +1,11 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- luacheck: ignore 211
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 local event_log_ports_module = require("src.ui.ports.event_log")
 local runtime_port = require("src.ui.render.support.runtime_ui")
@@ -29,9 +33,9 @@ local function _append(patches, extra)
   return patches
 end
 
-TestEventLogPorts = {}
+describe("TestEventLogPorts", function()
 
-function TestEventLogPorts:test_sync_enables_role_and_pushes_event_log_text()
+it("test_sync_enables_role_and_pushes_event_log_text", function()
   -- Pins the enable transition + content push: L1 (event_log require), L13 get_text/or, L34
   -- get_seq, L41 `seq ~= stored`, L52 resolve, L53 `~=`, L62 normalize, L63 `role_id == nil`.
   local role = { id = 1 }
@@ -58,9 +62,9 @@ function TestEventLogPorts:test_sync_enables_role_and_pushes_event_log_text()
   _assert_eq(visible_calls[1].enabled, true, "the role event log should become visible")
   _assert_eq(#text_calls, 1, "event log text should be pushed once")
   _assert_eq(text_calls[1].text, "第一行\n第二行", "pushed text should be the joined event log content")
-end
+end)
 
-function TestEventLogPorts:test_sync_skips_redundant_updates_when_nothing_changed()
+it("test_sync_skips_redundant_updates_when_nothing_changed", function()
   -- Pins the no-op paths: L36 `return 0`, L40 `_read_current_seq`, L41 `read(...)`, L53 `read(...)`.
   local role = { id = 1 }
   local visible_count = 0
@@ -82,9 +86,9 @@ function TestEventLogPorts:test_sync_skips_redundant_updates_when_nothing_change
 
   _assert_eq(visible_count, 0, "no visibility toggle when the enabled state is unchanged")
   _assert_eq(text_count, 0, "no text push when the event log sequence is unchanged")
-end
+end)
 
-function TestEventLogPorts:test_sync_pushes_empty_text_when_no_event_log_present()
+it("test_sync_pushes_empty_text_when_no_event_log_present", function()
   -- Pins L15 `_resolve_event_text` fallback `return ""`: a `return nil` mutant pushes nil.
   local role = { id = 1 }
   local text_calls = {}
@@ -103,9 +107,9 @@ function TestEventLogPorts:test_sync_pushes_empty_text_when_no_event_log_present
 
   _assert_eq(#text_calls, 1, "content sync should still push text on the enable transition")
   _assert_eq(text_calls[1], "", "a missing event log should push an empty string, not nil")
-end
+end)
 
-function TestEventLogPorts:test_sync_pushes_the_complete_retained_event_log()
+it("test_sync_pushes_the_complete_retained_event_log", function()
   local role = { id = 1 }
   local text_calls = {}
   local log = {
@@ -126,9 +130,9 @@ function TestEventLogPorts:test_sync_pushes_the_complete_retained_event_log()
   end)
 
   _assert_eq(text_calls[1], "a\nb\nc\nd\ne", "the UI must show the complete retained event log")
-end
+end)
 
-function TestEventLogPorts:test_sync_pushes_the_latest_display_window_after_the_log_overflows()
+it("test_sync_pushes_the_latest_display_window_after_the_log_overflows", function()
   local role = { id = 1 }
   local text_calls = {}
   local entries = {}
@@ -155,11 +159,11 @@ function TestEventLogPorts:test_sync_pushes_the_latest_display_window_after_the_
   end)
 
   _assert_eq(text_calls[1]:match("^行动41"), "行动41", "the first visible line should move forward after overflow")
-  lu.assertNotNil(text_calls[1]:match("行动60$"), "the newest action should remain visible at the bottom")
-  lu.assertNil(text_calls[1]:match("行动40"), "the entry just outside the display window should not pin the viewport")
-end
+  luassert.is_not_nil(text_calls[1]:match("行动60$"), "the newest action should remain visible at the bottom")
+  luassert.is_nil(text_calls[1]:match("行动40"), "the entry just outside the display window should not pin the viewport")
+end)
 
-function TestEventLogPorts:test_sync_display_window_boundary_at_exact_limit()
+it("test_sync_display_window_boundary_at_exact_limit", function()
   -- Pins DISPLAY_LINE_LIMIT = 20：恰好 20 条全量上屏，第 21 条把窗口整体后移一格。
   local function _push_with_entries(count)
     local role = { id = 1 }
@@ -183,14 +187,14 @@ function TestEventLogPorts:test_sync_display_window_boundary_at_exact_limit()
 
   local at_limit = _push_with_entries(20)
   _assert_eq(at_limit:match("^行动1\n"), "行动1\n", "exactly 20 entries should all stay visible")
-  lu.assertNotNil(at_limit:match("行动20$"), "the 20th entry should be the last visible line")
+  luassert.is_not_nil(at_limit:match("行动20$"), "the 20th entry should be the last visible line")
 
   local over_limit = _push_with_entries(21)
   _assert_eq(over_limit:match("^行动2\n"), "行动2\n", "the 21st entry should slide the window past the first line")
-  lu.assertNotNil(over_limit:match("行动21$"), "the newest entry should remain at the bottom")
-end
+  luassert.is_not_nil(over_limit:match("行动21$"), "the newest entry should remain at the bottom")
+end)
 
-function TestEventLogPorts:test_sync_initializes_role_maps_when_absent()
+it("test_sync_initializes_role_maps_when_absent", function()
   -- Pins L77 / L78 `state.<map> or {}`: an `and` mutant leaves the map nil so nothing persists.
   local role = { id = 1 }
   local state = { game = { state = {} } }
@@ -204,13 +208,13 @@ function TestEventLogPorts:test_sync_initializes_role_maps_when_absent()
     ports.sync_event_log(state)
   end)
 
-  lu.assertEvalToTrue(type(state._debug_log_enabled_by_role) == "table", "enabled-by-role map must be initialized")
-  lu.assertEvalToTrue(type(state._debug_log_seq_by_role) == "table", "seq-by-role map must be initialized")
+  luassert.truthy(type(state._debug_log_enabled_by_role) == "table", "enabled-by-role map must be initialized")
+  luassert.truthy(type(state._debug_log_seq_by_role) == "table", "seq-by-role map must be initialized")
   _assert_eq(state._debug_log_enabled_by_role[1], true,
     "the enable transition must persist through the initialized map")
-end
+end)
 
-function TestEventLogPorts:test_sync_pushes_empty_text_on_the_disable_transition_262()
+it("test_sync_pushes_empty_text_on_the_disable_transition_262", function()
   -- kills _apply_enabled_change 关闭臂 set_event_log_for_role(state, role, "")
   -- 的 "" -> nil:关闭时必须用空串清内容,不是 nil。
   local role = { id = 1 }
@@ -239,9 +243,9 @@ function TestEventLogPorts:test_sync_pushes_empty_text_on_the_disable_transition
   _assert_eq(visible_calls[1], false, "the role event log should become invisible")
   _assert_eq(#text_calls, 1, "the disable transition should clear the content once")
   _assert_eq(text_calls[1], "", "the disable transition must clear content with an empty string, not nil")
-end
+end)
 
-function TestEventLogPorts:test_resolve_event_log_enabled_delegates_to_event_state()
+it("test_resolve_event_log_enabled_delegates_to_event_state", function()
   -- Pins L84 exposed `resolve_event_log_enabled`: a nil mutant drops the delegated result.
   local ports = event_log_ports_module.build()
   local result
@@ -255,9 +259,9 @@ function TestEventLogPorts:test_resolve_event_log_enabled_delegates_to_event_sta
   end)
 
   _assert_eq(result, true, "the port must return the event-state resolution, not a constant")
-end
+end)
 
-function TestEventLogPorts:test_toggle_action_log_syncs_current_content_when_opening()
+it("test_toggle_action_log_syncs_current_content_when_opening", function()
   local warnings = {}
   local text_calls = {}
   local role = { id = 9 }
@@ -291,12 +295,12 @@ function TestEventLogPorts:test_toggle_action_log_syncs_current_content_when_ope
       "toggle action log command should be handled")
   end)
 
-  lu.assertEvalToTrue((warnings[1] or ""):find("toggle_action_log missing role event channel", 1, true),
+  luassert.truthy((warnings[1] or ""):find("toggle_action_log missing role event channel", 1, true),
     "toggle should warn when active role cannot receive UI events")
   _assert_eq(text_calls[1], "已有结果", "opening the action log should push its current content")
-end
+end)
 
-function TestEventLogPorts:test_resolve_event_log_enabled_resolves_explicit_and_current_role_flags()
+it("test_resolve_event_log_enabled_resolves_explicit_and_current_role_flags", function()
   local role = { id = "role-a" }
   local state = {
     ui = {
@@ -322,9 +326,9 @@ function TestEventLogPorts:test_resolve_event_log_enabled_resolves_explicit_and_
     _assert_eq(ui_event_state.resolve_event_log_enabled(state, nil), true,
       "current role should remain enabled")
   end)
-end
+end)
 
-function TestEventLogPorts:test_resolve_event_log_enabled_returns_false_when_role_unresolvable_or_flag_map_missing_262()
+it("test_resolve_event_log_enabled_returns_false_when_role_unresolvable_or_flag_map_missing_262", function()
   -- kills 两个 false->true:role_id 解析不出时短路 false,以及
   -- debug_log_enabled_by_role 不是 table 时读 false。
   _assert_eq(ui_event_state.resolve_event_log_enabled({ ui = {} }, 7), false,
@@ -340,9 +344,9 @@ function TestEventLogPorts:test_resolve_event_log_enabled_returns_false_when_rol
     _assert_eq(ui_event_state.resolve_event_log_enabled({ ui = {} }, nil), false,
       "unresolvable role must read as disabled")
   end)
-end
+end)
 
-function TestEventLogPorts:test_open_close_is_open_guard_ui_role_id_and_record_visibility()
+it("test_open_close_is_open_guard_ui_role_id_and_record_visibility", function()
   local recorded = {}
   local ui = { set_event_log_visible = function(_, value) recorded[#recorded + 1] = value end }
   local state = { ui = ui }
@@ -369,7 +373,7 @@ function TestEventLogPorts:test_open_close_is_open_guard_ui_role_id_and_record_v
 
   -- is_open guards a missing visibility table.
   _assert_eq(event_log_view.is_open({ ui = {} }, 9), false, "no visibility table reads as not open")
-end
+end)
 
 
-return TestEventLogPorts
+end)
