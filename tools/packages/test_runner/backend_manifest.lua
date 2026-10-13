@@ -559,7 +559,6 @@ return {
     "test/guards/test_root_whitelist_guard.lua",
     "test/guards/test_same_name_pair_guard.lua",
     "test/guards/test_steps_budget_guard.lua",
-    "tools/foundation/test/test_windows_primitives.lua",
     "tools/packages/acceptance/test/test_cli_entrypoints.lua",
     "tools/packages/acceptance/test/test_feature_stamp.lua",
     "tools/packages/acceptance/test/test_game_driver.lua",
@@ -584,6 +583,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/foundation/test/test_windows_primitives.lua",
     "tools/foundation/test/test_parallel_lanes.lua",
     "tools/packages/data_sync/test/test_sync_data.lua",
     "tools/foundation/test/test_script_tools_contract.lua",
