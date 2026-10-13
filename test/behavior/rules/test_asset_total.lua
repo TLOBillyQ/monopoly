@@ -1,8 +1,8 @@
--- 原生 LuaUnit(自研 busted → LuaUnit 迁移):describe 与迁自 property 车道的
 -- 内层 describe 均无钩子,不拆类直接合并进 TestAssetTotal,辅助函数提升到
--- 文件级,裸 assert(语句位)切 lu.assertEvalToTrue,用例数与改写前一一对应
+-- 文件级,裸 assert(语句位)切 luassert.truthy,用例数与改写前一一对应
 -- (4 + 3 = 7 例)。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local _assert_eq = support.assert_eq
 local asset_total = require("src.rules.land.asset_total")
@@ -74,15 +74,14 @@ local function _invested(tile)
   return pricing.total_invested(tile, tile.level)
 end
 
-TestAssetTotal = {}
-
-function TestAssetTotal:test_returns_cash_when_player_owns_no_tiles()
+describe("TestAssetTotal", function()
+it("test_returns_cash_when_player_owns_no_tiles", function()
   local game = _game(50000, nil)
   local player = { id = 1, properties = {} }
   _assert_eq(asset_total.player_total(game, player), 50000, "asset total should equal cash without tiles")
-end
+end)
 
-function TestAssetTotal:test_adds_total_invested_for_owned_land_tiles()
+it("test_adds_total_invested_for_owned_land_tiles", function()
   local tile = {
     id = 7,
     type = "land",
@@ -95,34 +94,34 @@ function TestAssetTotal:test_adds_total_invested_for_owned_land_tiles()
 
   -- cash 2000 + purchase 1000 + upgrades for level 2 (500 + 800) = 4300
   _assert_eq(asset_total.player_total(game, player), 4300, "asset total should add purchase and per-level upgrades")
-end
+end)
 
-function TestAssetTotal:test_tolerates_player_without_properties_table()
+it("test_tolerates_player_without_properties_table", function()
   local game = _game(300, nil)
   local player = { id = 1 }
   _assert_eq(asset_total.player_total(game, player), 300, "asset total should treat missing properties as none")
-end
+end)
 
-function TestAssetTotal:test_asserts_when_cash_balance_is_missing()
+it("test_asserts_when_cash_balance_is_missing", function()
   local game = _game(nil, nil)
   local player = { id = 1, properties = {} }
   local ok = pcall(asset_total.player_total, game, player)
   _assert_eq(ok, false, "asset total should reject a nil cash balance")
-end
+end)
 
-function TestAssetTotal:test_conserves_cash_plus_invested_value_of_every_owned_tile()
+it("test_conserves_cash_plus_invested_value_of_every_owned_tile", function()
   property.for_all(_gen_holding, function(holding)
     local expected = holding.cash
     for id in pairs(holding.owned) do
       expected = expected + _invested(holding.tiles[id])
     end
     local total = asset_total.player_total(_prop_game(holding.cash, holding.tiles), _player(holding.owned))
-    lu.assertEvalToTrue(total == expected,
+    luassert.truthy(total == expected,
       "total must equal cash plus summed tile investment; got " .. tostring(total) .. " want " .. tostring(expected))
   end)
-end
+end)
 
-function TestAssetTotal:test_adds_exactly_one_tiles_investment_when_tile_added()
+it("test_adds_exactly_one_tiles_investment_when_tile_added", function()
   property.for_all(_gen_holding, function(holding, rng)
     local ids = {}
     for id in pairs(holding.owned) do
@@ -141,44 +140,44 @@ function TestAssetTotal:test_adds_exactly_one_tiles_investment_when_tile_added()
     local game = _prop_game(holding.cash, holding.tiles)
     local with_total = asset_total.player_total(game, _player(holding.owned))
     local without_total = asset_total.player_total(game, _player(without))
-    lu.assertEvalToTrue(with_total - without_total == _invested(holding.tiles[dropped]),
+    luassert.truthy(with_total - without_total == _invested(holding.tiles[dropped]),
       "adding a tile must raise the total by exactly that tile's invested value")
   end)
-end
+end)
 
-function TestAssetTotal:test_shifts_total_by_exactly_the_change_in_cash()
+it("test_shifts_total_by_exactly_the_change_in_cash", function()
   property.for_all(_gen_holding, function(holding, rng)
     local delta = rng:int(0, 50000)
     local base = asset_total.player_total(_prop_game(holding.cash, holding.tiles), _player(holding.owned))
     local shifted = asset_total.player_total(_prop_game(holding.cash + delta, holding.tiles), _player(holding.owned))
-    lu.assertEvalToTrue(shifted - base == delta, "raising cash by d must raise the total by exactly d")
+    luassert.truthy(shifted - base == delta, "raising cash by d must raise the total by exactly d")
   end)
-end
+end)
 
 
 
-function TestAssetTotal:test_asserts_missing_player_cash_with_message()
+it("test_asserts_missing_player_cash_with_message", function()
   -- #293:player_total 的 missing player cash 断言消息未测。
   local game = {
     player_cash = function() return nil end,
     board = { get_tile_by_id = function() return nil end },
   }
   local ok, err = pcall(asset_total.player_total, game, { properties = {} })
-  lu.assertEvalToTrue(ok == false, "nil player cash should assert")
-  lu.assertEvalToTrue(tostring(err):find("missing player cash", 1, true) ~= nil,
+  luassert.truthy(ok == false, "nil player cash should assert")
+  luassert.truthy(tostring(err):find("missing player cash", 1, true) ~= nil,
     "assert should carry its message: " .. tostring(err))
-end
+end)
 
-function TestAssetTotal:test_asserts_invalid_property_tile_with_message()
+it("test_asserts_invalid_property_tile_with_message", function()
   -- #293:无效地产断言消息未测。
   local game = {
     player_cash = function() return 100 end,
     board = { get_tile_by_id = function() return nil end },
   }
   local ok, err = pcall(asset_total.player_total, game, { properties = { t1 = true } })
-  lu.assertEvalToTrue(ok == false, "invalid property tile should assert")
-  lu.assertEvalToTrue(tostring(err):find("invalid property tile", 1, true) ~= nil,
+  luassert.truthy(ok == false, "invalid property tile should assert")
+  luassert.truthy(tostring(err):find("invalid property tile", 1, true) ~= nil,
     "assert should carry its message: " .. tostring(err))
-end
+end)
 
-return TestAssetTotal
+end)

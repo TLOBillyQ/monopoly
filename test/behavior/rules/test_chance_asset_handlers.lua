@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local asset_handlers = require("src.rules.chance.handlers")._asset
 local monopoly_event = require("src.foundation.events")
 local number_utils = require("src.foundation.number")
@@ -42,9 +43,8 @@ local function _board_with_named_tiles()
   }
 end
 
-TestChanceAssetHandlers = {}
-
-function TestChanceAssetHandlers:test_destroy_buildings_on_path_emits_chance_applied_for_tile_with_buildings()
+describe("TestChanceAssetHandlers", function()
+it("test_destroy_buildings_on_path_emits_chance_applied_for_tile_with_buildings", function()
   local events = {}
   local common = {
     emit_event = function(_, _, payload)
@@ -71,11 +71,11 @@ function TestChanceAssetHandlers:test_destroy_buildings_on_path_emits_chance_app
 
   handlers.destroy_buildings_on_path(game, {}, {}, { visited = { 1, 2, 3 } })
 
-  lu.assertEquals(#events, 1, "only the land tile with buildings should emit")
-  lu.assertEquals(events[1].effect, "destroy_buildings_on_path", "event effect mismatch")
-end
+  luassert.is.equal(1, #events, "only the land tile with buildings should emit")
+  luassert.is.equal("destroy_buildings_on_path", events[1].effect, "event effect mismatch")
+end)
 
-function TestChanceAssetHandlers:test_destroy_buildings_on_path_credits_owner_resolved_from_tile_state()
+it("test_destroy_buildings_on_path_credits_owner_resolved_from_tile_state", function()
   local events = {}
   local credited_owner = nil
   local common = {
@@ -117,12 +117,12 @@ function TestChanceAssetHandlers:test_destroy_buildings_on_path_credits_owner_re
   end)
   achievement_progress.typhoon_demolished_building = original
 
-  lu.assertEvalToTrue(ok, err)
-  lu.assertIs(credited_owner, owner, "destroyed building should credit owner from tile_state")
-  lu.assertEquals(#events, 1, "destroying owned building should still emit event")
-end
+  luassert.truthy(ok, err)
+  luassert.is.equal(owner, credited_owner, "destroyed building should credit owner from tile_state")
+  luassert.is.equal(1, #events, "destroying owned building should still emit event")
+end)
 
-function TestChanceAssetHandlers:test_reset_tiles_on_path_resets_owned_and_unowned_land_tiles_skips_non_land()
+it("test_reset_tiles_on_path_resets_owned_and_unowned_land_tiles_skips_non_land", function()
   local events = {}
   local reset_tiles = {}
   local owner_writes = {}
@@ -162,13 +162,13 @@ function TestChanceAssetHandlers:test_reset_tiles_on_path_resets_owned_and_unown
 
   handlers.reset_tiles_on_path(game, {}, {}, { visited = { 1, 2, 3 } })
 
-  lu.assertEquals(#events, 2, "only the two land tiles should emit")
-  lu.assertEquals(events[1].effect, "reset_tiles_on_path", "event effect mismatch")
-  lu.assertTrue(reset_tiles[1] == "t1" and reset_tiles[2] == "t2", "both land tiles should reset in order")
-  lu.assertEquals(owner_writes["t1"], false, "owned land should clear its owner")
-end
+  luassert.is.equal(2, #events, "only the two land tiles should emit")
+  luassert.is.equal("reset_tiles_on_path", events[1].effect, "event effect mismatch")
+  luassert.is_true(reset_tiles[1] == "t1" and reset_tiles[2] == "t2", "both land tiles should reset in order")
+  luassert.is.equal(false, owner_writes["t1"], "owned land should clear its owner")
+end)
 
-function TestChanceAssetHandlers:test_discard_properties_with_count_0_drops_every_property_the_player_owns()
+it("test_discard_properties_with_count_0_drops_every_property_the_player_owns", function()
   local events = {}
   local reset_tiles = {}
   local common, reset_tile = _common_with_collectors(events, reset_tiles)
@@ -183,11 +183,11 @@ function TestChanceAssetHandlers:test_discard_properties_with_count_0_drops_ever
 
   handlers.discard_properties(game, player, card)
 
-  lu.assertEquals(#reset_tiles, 3, "count=0 should drop all three properties")
-  lu.assertEquals(#events, 3, "one chance.applied event per dropped tile")
-end
+  luassert.is.equal(3, #reset_tiles, "count=0 should drop all three properties")
+  luassert.is.equal(3, #events, "one chance.applied event per dropped tile")
+end)
 
-function TestChanceAssetHandlers:test_discard_properties_stops_when_properties_run_out_before_count()
+it("test_discard_properties_stops_when_properties_run_out_before_count", function()
   local events = {}
   local reset_tiles = {}
   local common, reset_tile = _common_with_collectors(events, reset_tiles)
@@ -202,11 +202,11 @@ function TestChanceAssetHandlers:test_discard_properties_stops_when_properties_r
 
   handlers.discard_properties(game, player, card)
 
-  lu.assertEquals(#reset_tiles, 1, "loop should break after the only property is dropped")
-  lu.assertEquals(#events, 1, "only one event when only one property exists")
-end
+  luassert.is.equal(1, #reset_tiles, "loop should break after the only property is dropped")
+  luassert.is.equal(1, #events, "only one event when only one property exists")
+end)
 
-function TestChanceAssetHandlers:test_discard_properties_is_a_no_op_when_the_player_owns_nothing()
+it("test_discard_properties_is_a_no_op_when_the_player_owns_nothing", function()
   local events = {}
   local reset_tiles = {}
   local common, reset_tile = _common_with_collectors(events, reset_tiles)
@@ -221,11 +221,11 @@ function TestChanceAssetHandlers:test_discard_properties_is_a_no_op_when_the_pla
 
   handlers.discard_properties(game, player, card)
 
-  lu.assertEquals(#reset_tiles, 0, "no properties means no resets")
-  lu.assertEquals(#events, 0, "no events should fire")
-end
+  luassert.is.equal(0, #reset_tiles, "no properties means no resets")
+  luassert.is.equal(0, #events, "no events should fire")
+end)
 
-function TestChanceAssetHandlers:test_discard_properties_sorts_numeric_ids_numerically()
+it("test_discard_properties_sorts_numeric_ids_numerically", function()
   -- 数字键属性 id 必须按数字序丢弃(1,2,10),不能退化成字符串序(1,10,2)。
   -- L130/L131 `to_integer(a|b)` -> nil 与 L132 `~=`->`==` 变异会把数字
   -- 比较路径压回字符串比较,排序结果随之改变。
@@ -247,13 +247,13 @@ function TestChanceAssetHandlers:test_discard_properties_sorts_numeric_ids_numer
 
   handlers.discard_properties(game, player, card)
 
-  lu.assertEquals(#reset_tiles, 3, "count=0 should drop all three numeric properties")
-  lu.assertEvalToTrue(reset_tiles[1] == 1 and reset_tiles[2] == 2 and reset_tiles[3] == 10,
+  luassert.is.equal(3, #reset_tiles, "count=0 should drop all three numeric properties")
+  luassert.truthy(reset_tiles[1] == 1 and reset_tiles[2] == 2 and reset_tiles[3] == 10,
     "numeric ids must be dropped in numeric order; got "
     .. tostring(reset_tiles[1]) .. "," .. tostring(reset_tiles[2]) .. "," .. tostring(reset_tiles[3]))
-end
+end)
 
-function TestChanceAssetHandlers:test_discard_properties_mixed_numeric_and_string_ids_uses_string_fallback()
+it("test_discard_properties_mixed_numeric_and_string_ids_uses_string_fallback", function()
   -- L132 `and`->`or`:数字 id + 字符串 id 混合时,原代码走字符串比较兜底
   -- (数字非 nil 短路后 `ai < bi` 对 nil 比较会崩)。
   local events = {}
@@ -276,9 +276,9 @@ function TestChanceAssetHandlers:test_discard_properties_mixed_numeric_and_strin
     handlers.discard_properties(game, player, card)
   end)
 
-  lu.assertEvalToTrue(ok, "mixed ids must not crash the sort comparator; " .. tostring(err))
-  lu.assertEquals(#reset_tiles, 2, "both mixed properties should be dropped")
-end
+  luassert.truthy(ok, "mixed ids must not crash the sort comparator; " .. tostring(err))
+  luassert.is.equal(2, #reset_tiles, "both mixed properties should be dropped")
+end)
 
 
-return TestChanceAssetHandlers
+end)

@@ -4,15 +4,14 @@
 -- surviving mutant. Timing config is patched (save/restore) so the private
 -- _positive_limit / _game_time_reached / _turn_limit_reached branches become
 -- reachable through the public check_victory entry point.
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个 do 块各自携带同名的 local 辅助函数
 -- (_make_player 返回值不同:单值 vs 双值),不能合并,原地保留 do 块;Test*
 -- 类在文件顶部声明,两个 do 块里的方法分别挂在同一类上。用例数与改写前
 -- 一一对应(4 + 2 + 1 + 1 = 8 例 + 6 例 = 12 例)。
 
-TestEndgameVictory = {}
-
+describe("TestEndgameVictory", function()
 do
 local endgame = require("src.rules.endgame")
 local timing = require("src.config.gameplay.timing")
@@ -43,7 +42,7 @@ local function _with_timing(field, value, fn)
   if not ok then error(err) end
 end
 
-function TestEndgameVictory:test_game_time_limit_nil_short_circuits_at_value_nil()
+it("test_game_time_limit_nil_short_circuits_at_value_nil", function()
   -- Original _positive_limit(nil): 'nil == nil' short-circuits -> return nil ->
   --   _game_time_reached L94 returns false -> two survivors -> check_victory false.
   -- Mut 'or'->'and': 'nil == nil and nil <= 0' evaluates nil<=0 -> runtime error.
@@ -53,13 +52,13 @@ function TestEndgameVictory:test_game_time_limit_nil_short_circuits_at_value_nil
   local game = _make_game({ p1, p2 }, { [p1] = 1000, [p2] = 500 })
   _with_timing("game_time_limit_seconds", nil, function()
     local result = endgame.check_victory(game)
-    lu.assertEvalToTrue(result == false,
+    luassert.truthy(result == false,
       "nil game_time_limit must yield no game-time victory with 2 survivors; got " .. tostring(result))
   end)
-  lu.assertEvalToTrue(game.finished == false, "game must not be marked finished")
-end
+  luassert.truthy(game.finished == false, "game must not be marked finished")
+end)
 
-function TestEndgameVictory:test_game_time_limit_zero_rejects_zero_as_a_limit()
+it("test_game_time_limit_zero_rejects_zero_as_a_limit", function()
   -- Original _positive_limit(0): '0 <= 0' true -> return nil -> no time limit ->
   --   check_victory false (2 survivors, turn not reached).
   -- Mut '<=' -> '<': '0 < 0' false -> return 0 -> limit 0, elapsed 100 >= 0 ->
@@ -70,13 +69,13 @@ function TestEndgameVictory:test_game_time_limit_zero_rejects_zero_as_a_limit()
   game.game_time_seconds = 100
   _with_timing("game_time_limit_seconds", 0, function()
     local result = endgame.check_victory(game)
-    lu.assertEvalToTrue(result == false,
+    luassert.truthy(result == false,
       "zero game_time_limit must not count as an active limit; got " .. tostring(result))
   end)
-  lu.assertEvalToTrue(game.finished == false, "game must not be marked finished")
-end
+  luassert.truthy(game.finished == false, "game must not be marked finished")
+end)
 
-function TestEndgameVictory:test_elapsed_game_seconds_fallback_when_game_time_seconds_absent()
+it("test_elapsed_game_seconds_fallback_when_game_time_seconds_absent", function()
   -- game_time_seconds nil -> L85 skips; elapsed_game_seconds=900 -> L86 returns it.
   -- Original: elapsed 900 >= limit 900 -> game time reached -> check_victory true.
   -- Mut L86 '~='->'==': skips 900, elapsed_seconds nil, current_time nil ->
@@ -89,13 +88,13 @@ function TestEndgameVictory:test_elapsed_game_seconds_fallback_when_game_time_se
   game.elapsed_seconds = nil
   game.current_time = nil
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true,
+  luassert.truthy(result == true,
     "elapsed_game_seconds at limit must end the game; got " .. tostring(result))
-  lu.assertEvalToTrue(game.finished == true, "game must be finished")
-  lu.assertEvalToTrue(game.winner == p1, "richest survivor wins on time")
-end
+  luassert.truthy(game.finished == true, "game must be finished")
+  luassert.truthy(game.winner == p1, "richest survivor wins on time")
+end)
 
-function TestEndgameVictory:test_elapsed_seconds_fallback_when_earlier_fields_absent()
+it("test_elapsed_seconds_fallback_when_earlier_fields_absent", function()
   -- game_time_seconds nil, elapsed_game_seconds nil -> L85/L86 skip;
   -- elapsed_seconds=900 -> L87 returns it. Original: reached -> true.
   -- Mut L87 '~='->'==': skips 900 -> current_time nil -> not reached -> false.
@@ -107,12 +106,12 @@ function TestEndgameVictory:test_elapsed_seconds_fallback_when_earlier_fields_ab
   game.elapsed_seconds = timing.game_time_limit_seconds
   game.current_time = nil
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true,
+  luassert.truthy(result == true,
     "elapsed_seconds at limit must end the game; got " .. tostring(result))
-  lu.assertEvalToTrue(game.finished == true, "game must be finished")
-end
+  luassert.truthy(game.finished == true, "game must be finished")
+end)
 
-function TestEndgameVictory:test_turn_limit_nil_yields_no_turn_based_victory()
+it("test_turn_limit_nil_yields_no_turn_based_victory", function()
   -- turn_limit nil -> _positive_limit(nil) returns nil -> L103 returns false ->
   --   with 2 survivors and no game-time limit reached -> check_victory false.
   -- Mut L103 'false'->'true': _turn_limit_reached true -> asset winners -> true.
@@ -122,26 +121,26 @@ function TestEndgameVictory:test_turn_limit_nil_yields_no_turn_based_victory()
   game.turn.turn_count = 5
   _with_timing("turn_limit", nil, function()
     local result = endgame.check_victory(game)
-    lu.assertEvalToTrue(result == false,
+    luassert.truthy(result == false,
       "nil turn_limit must not force a turn victory; got " .. tostring(result))
   end)
-  lu.assertEvalToTrue(game.finished == false, "game must not be marked finished")
-end
+  luassert.truthy(game.finished == false, "game must not be marked finished")
+end)
 
-function TestEndgameVictory:test_zero_survivors_still_ends_the_game()
+it("test_zero_survivors_still_ends_the_game", function()
   -- Not time/turn reached, #alive == 0 -> #alive <= 1 true, #alive == 1 false ->
   --   L139 _apply_winners(self, {}, "游戏结束，无人生还") -> returns true, finished=true.
   -- Mut L139 replaced with nil: returns nil, game.finished stays false.
   local game = _make_game({}, {})
   game.turn.turn_count = 0
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true,
+  luassert.truthy(result == true,
     "no survivors must resolve the game via _apply_winners; got " .. tostring(result))
-  lu.assertEvalToTrue(game.finished == true, "no-survivor endgame must mark game finished")
-  lu.assertEvalToTrue(#game.winners == 0, "no survivors means empty winner list")
-end
+  luassert.truthy(game.finished == true, "no-survivor endgame must mark game finished")
+  luassert.truthy(#game.winners == 0, "no survivors means empty winner list")
+end)
 
-function TestEndgameVictory:test_tied_asset_winners_join_names_with_comma_separator()
+it("test_tied_asset_winners_join_names_with_comma_separator", function()
   -- #293:_winner_names 的 "、" separator 变异(→ nil)未测。
   local p1 = _make_player(1, "阿甲")
   local p2 = _make_player(2, "阿乙")
@@ -155,15 +154,15 @@ function TestEndgameVictory:test_tied_asset_winners_join_names_with_comma_separa
   end
   _with_timing("game_time_limit_seconds", 1, function()
     local result = endgame.check_victory(game)
-    lu.assertEvalToTrue(result == true, "tied assets at time limit should finish the game")
+    luassert.truthy(result == true, "tied assets at time limit should finish the game")
   end)
   events.emit = saved_emit
-  lu.assertEvalToTrue(#emitted >= 1, "victory should emit the finished event")
+  luassert.truthy(#emitted >= 1, "victory should emit the finished event")
   local names = emitted[1] and emitted[1].winner_names or ""
-  lu.assertEvalToTrue(names:find("、", 1, true) ~= nil and names:find("阿甲", 1, true) ~= nil
+  luassert.truthy(names:find("、", 1, true) ~= nil and names:find("阿甲", 1, true) ~= nil
     and names:find("阿乙", 1, true) ~= nil,
     "tied winners should join names with 、; got " .. tostring(names))
-end
+end)
 
 end
 -- ===== merged from test_endgame_turn_limit.lua =====
@@ -202,61 +201,61 @@ local function _make_time_game(players, cash_map)
   return game
 end
 
-function TestEndgameVictory:test_single_winner_by_total_assets_at_game_time_limit()
+it("test_single_winner_by_total_assets_at_game_time_limit", function()
   local p1, c1 = _make_player(1, "Alice", 1000)
   local p2, c2 = _make_player(2, "Bob", 500)
   local game = _make_time_game({ p1, p2 }, { [p1] = c1, [p2] = c2 })
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true, "check_victory should return true at game time limit")
-  lu.assertEvalToTrue(game.winner == p1, "player with most assets should win when time expires")
-end
+  luassert.truthy(result == true, "check_victory should return true at game time limit")
+  luassert.truthy(game.winner == p1, "player with most assets should win when time expires")
+end)
 
-function TestEndgameVictory:test_not_yet_at_game_time_limit_returns_false()
+it("test_not_yet_at_game_time_limit_returns_false", function()
   local p1, c1 = _make_player(1, "Alice", 1000)
   local p2, c2 = _make_player(2, "Bob", 500)
   local game = _make_time_game({ p1, p2 }, { [p1] = c1, [p2] = c2 })
   game.game_time_seconds = timing.game_time_limit_seconds - 1
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == false, "should return false before game time limit with multiple survivors")
-end
+  luassert.truthy(result == false, "should return false before game time limit with multiple survivors")
+end)
 
-function TestEndgameVictory:test_single_winner_by_total_assets()
+it("test_single_winner_by_total_assets", function()
   local p1, c1 = _make_player(1, "Alice", 1000)
   local p2, c2 = _make_player(2, "Bob", 500)
   local game = _make_game({ p1, p2 }, { [p1] = c1, [p2] = c2 })
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true, "check_victory should return true at turn limit")
-  lu.assertEvalToTrue(game.winner == p1, "player with most assets should win")
-  lu.assertEvalToTrue(#game.winners == 1, "only one winner")
-end
+  luassert.truthy(result == true, "check_victory should return true at turn limit")
+  luassert.truthy(game.winner == p1, "player with most assets should win")
+  luassert.truthy(#game.winners == 1, "only one winner")
+end)
 
-function TestEndgameVictory:test_tied_winners_at_turn_limit()
+it("test_tied_winners_at_turn_limit", function()
   local p1, c1 = _make_player(1, "Alice", 800)
   local p2, c2 = _make_player(2, "Bob", 800)
   local game = _make_game({ p1, p2 }, { [p1] = c1, [p2] = c2 })
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true, "check_victory should return true at turn limit")
-  lu.assertEvalToTrue(game.winner == nil, "tie should set winner to nil")
-  lu.assertEvalToTrue(#game.winners == 2, "both players should be winners in a tie")
-end
+  luassert.truthy(result == true, "check_victory should return true at turn limit")
+  luassert.truthy(game.winner == nil, "tie should set winner to nil")
+  luassert.truthy(#game.winners == 2, "both players should be winners in a tie")
+end)
 
-function TestEndgameVictory:test_not_yet_at_turn_limit_returns_false()
+it("test_not_yet_at_turn_limit_returns_false", function()
   local p1, c1 = _make_player(1, "Alice", 1000)
   local p2, c2 = _make_player(2, "Bob", 500)
   local game = _make_game({ p1, p2 }, { [p1] = c1, [p2] = c2 })
   game.turn.turn_count = timing.turn_limit - 1
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == false, "should return false when not at turn limit with multiple survivors")
-end
+  luassert.truthy(result == false, "should return false when not at turn limit with multiple survivors")
+end)
 
-function TestEndgameVictory:test_no_survivors_at_turn_limit()
+it("test_no_survivors_at_turn_limit", function()
   local game = _make_game({}, {})
   local result = endgame.check_victory(game)
-  lu.assertEvalToTrue(result == true, "should return true with empty winners")
-  lu.assertEvalToTrue(#game.winners == 0, "no survivors means no winners")
-end
+  luassert.truthy(result == true, "should return true with empty winners")
+  luassert.truthy(#game.winners == 0, "no survivors means no winners")
+end)
 
 end
 
 
-return TestEndgameVictory
+end)

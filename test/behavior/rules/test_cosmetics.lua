@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
@@ -63,9 +64,8 @@ local function _unit_with_reset_and_model_recorder(calls)
   return unit
 end
 
-TestCosmetics = {}
-
-function TestCosmetics:test_applies_creature_key_to_resolved_role_unit()
+describe("TestCosmetics", function()
+it("test_applies_creature_key_to_resolved_role_unit", function()
   local calls = {}
 
   _with_unit(_unit_with_model_recorder(calls), function()
@@ -74,9 +74,9 @@ function TestCosmetics:test_applies_creature_key_to_resolved_role_unit()
 
   _assert_eq(#calls, 1, "skin equip should call unit model setter")
   _assert_eq(calls[1][1], "skin_key", "skin equip should pass creature key")
-end
+end)
 
-function TestCosmetics:test_tries_the_host_model_setter_with_self_when_the_direct_call_fails()
+it("test_tries_the_host_model_setter_with_self_when_the_direct_call_fails", function()
   local unit
   local calls = {}
   unit = {
@@ -99,9 +99,9 @@ function TestCosmetics:test_tries_the_host_model_setter_with_self_when_the_direc
 
   _assert_eq(#calls, 2, "skin equip should try direct setter before self fallback")
   _assert_eq(calls[2].self, unit, "skin equip should pass unit as self on fallback")
-end
+end)
 
-function TestCosmetics:test_falls_back_to_short_host_model_setter_signatures()
+it("test_falls_back_to_short_host_model_setter_signatures", function()
   local calls = {}
   local unit = {
     set_model_by_creature_key = function(...)
@@ -120,9 +120,9 @@ function TestCosmetics:test_falls_back_to_short_host_model_setter_signatures()
   end)
 
   _assert_eq(#calls, 3, "skin equip should reach the short direct setter fallback")
-end
+end)
 
-function TestCosmetics:test_falls_back_to_short_host_model_setter_signatures_with_self()
+it("test_falls_back_to_short_host_model_setter_signatures_with_self", function()
   local unit
   local calls = {}
   unit = {
@@ -142,9 +142,9 @@ function TestCosmetics:test_falls_back_to_short_host_model_setter_signatures_wit
   end)
 
   _assert_eq(#calls, 4, "skin equip should try all setter signatures in order")
-end
+end)
 
-function TestCosmetics:test_reports_false_when_the_role_cannot_be_resolved_or_the_model_setter_is_missing()
+it("test_reports_false_when_the_role_cannot_be_resolved_or_the_model_setter_is_missing", function()
   _with_warn_capture(function(warns)
     _with_patches({
       {
@@ -169,9 +169,9 @@ function TestCosmetics:test_reports_false_when_the_role_cannot_be_resolved_or_th
 
     _assert_eq(#warns >= 1, true, "missing setter should warn")
   end)
-end
+end)
 
-function TestCosmetics:test_rejects_nil_creature_keys_before_resolving_the_role()
+it("test_rejects_nil_creature_keys_before_resolving_the_role", function()
   local resolves = 0
   _with_warn_capture(function(warns)
     _with_patches({
@@ -190,9 +190,9 @@ function TestCosmetics:test_rejects_nil_creature_keys_before_resolving_the_role(
     _assert_eq(resolves, 0, "nil creature key should short-circuit before role lookup")
     _assert_eq(#warns, 1, "nil creature key should warn once")
   end)
-end
+end)
 
-function TestCosmetics:test_unequip_prefers_the_host_model_reset_api()
+it("test_unequip_prefers_the_host_model_reset_api", function()
   local calls = {}
 
   _with_unit(_unit_with_reset_and_model_recorder(calls), function()
@@ -201,9 +201,9 @@ function TestCosmetics:test_unequip_prefers_the_host_model_reset_api()
 
   _assert_eq(#calls, 1, "skin unequip should call one host restore method")
   _assert_eq(calls[1].op, "reset_model", "skin unequip should restore through reset_model")
-end
+end)
 
-function TestCosmetics:test_tries_the_host_model_reset_with_self_when_the_direct_call_fails()
+it("test_tries_the_host_model_reset_with_self_when_the_direct_call_fails", function()
   local unit
   local calls = {}
   unit = {
@@ -222,9 +222,9 @@ function TestCosmetics:test_tries_the_host_model_reset_with_self_when_the_direct
 
   _assert_eq(#calls, 2, "skin unequip should try direct reset before self fallback")
   _assert_eq(calls[2].self, unit, "skin unequip should pass unit as self on reset fallback")
-end
+end)
 
-function TestCosmetics:test_unequip_falls_back_to_default_creature_when_reset_model_is_unavailable()
+it("test_unequip_falls_back_to_default_creature_when_reset_model_is_unavailable", function()
   local calls = {}
 
   _with_unit(_unit_with_model_recorder(calls), function()
@@ -234,9 +234,9 @@ function TestCosmetics:test_unequip_falls_back_to_default_creature_when_reset_mo
 
   _assert_eq(#calls, 1, "fallback should call unit model setter once")
   _assert_eq(calls[1][1], "default_key", "fallback should pass default creature key")
-end
+end)
 
-function TestCosmetics:test_reports_false_when_unequip_cannot_reset_and_has_no_default_fallback()
+it("test_reports_false_when_unequip_cannot_reset_and_has_no_default_fallback", function()
   _with_warn_capture(function(warns)
     _with_unit({}, function()
       _assert_eq(skin_equip.unequip(11, nil), false,
@@ -245,9 +245,9 @@ function TestCosmetics:test_reports_false_when_unequip_cannot_reset_and_has_no_d
 
     _assert_eq(#warns >= 1, true, "missing unequip fallback should warn")
   end)
-end
+end)
 
-function TestCosmetics:test_warns_when_the_default_creature_fallback_cannot_be_applied()
+it("test_warns_when_the_default_creature_fallback_cannot_be_applied", function()
   local unit = {
     set_model_by_creature_key = function()
       error("setter failed")
@@ -263,9 +263,9 @@ function TestCosmetics:test_warns_when_the_default_creature_fallback_cannot_be_a
     _assert_eq(warns[#warns], "skin_equip: default creature fallback failed for player 11",
       "skin unequip should warn when the default fallback setter fails")
   end)
-end
+end)
 
-function TestCosmetics:test_warns_and_falls_back_to_the_default_creature_when_reset_model_itself_fails()
+it("test_warns_and_falls_back_to_the_default_creature_when_reset_model_itself_fails", function()
   local calls = {}
   local unit = {
     reset_model = function()
@@ -288,7 +288,7 @@ function TestCosmetics:test_warns_and_falls_back_to_the_default_creature_when_re
   end)
 
   _assert_eq(calls[1][1], "default_key", "fallback should apply the default creature key")
-end
+end)
 
 -- ===== 迁自 test/property/test_cosmetics_unequip.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
 do
@@ -355,7 +355,7 @@ do
     end
   end
 
-  function TestCosmetics:test_unequip_restores_through_reset_model_instead_of_setting_a_fallback_creature_key()
+  it("test_unequip_restores_through_reset_model_instead_of_setting_a_fallback_creature_key", function()
     local calls, resolves = {}, {}
     _patched(calls, resolves, function()
       property.for_all(function(rng)
@@ -377,18 +377,18 @@ do
         local unequip_call_count = #calls
         local unequip_op = calls[1] and calls[1].op
 
-        lu.assertEvalToTrue(unequip_result == equip_result, "unequip must mirror equip's success result")
-        lu.assertEvalToTrue(equip_call_count == 1 and unequip_call_count == 1,
+        luassert.truthy(unequip_result == equip_result, "unequip must mirror equip's success result")
+        luassert.truthy(equip_call_count == 1 and unequip_call_count == 1,
           "equip and unequip must each invoke one host model operation")
-        lu.assertEvalToTrue(equip_op == "set_model_by_creature_key" and equip_key == key,
+        luassert.truthy(equip_op == "set_model_by_creature_key" and equip_key == key,
           "equip must forward the selected creature key to the host setter")
-        lu.assertEvalToTrue(unequip_op == "reset_model",
+        luassert.truthy(unequip_op == "reset_model",
           "unequip must use the host reset API instead of reapplying a default creature")
       end)
     end)
-  end
+  end)
 
-  function TestCosmetics:test_equip_rejects_nil_before_lookup_while_unequip_can_reset_without_a_fallback_key()
+  it("test_equip_rejects_nil_before_lookup_while_unequip_can_reset_without_a_fallback_key", function()
     local calls, resolves = {}, {}
     _patched(calls, resolves, function()
       property.for_all(function(rng)
@@ -396,21 +396,21 @@ do
       end, function(role_id)
         _clear(calls)
         _clear(resolves)
-        lu.assertEvalToTrue(skin_equip.equip(role_id, nil) == false, "equip must reject a nil creature key")
-        lu.assertEvalToTrue(#calls == 0, "a nil equip creature key must never reach the host model setter")
-        lu.assertEvalToTrue(#resolves == 0, "the equip nil guard must short-circuit before resolving the role")
+        luassert.truthy(skin_equip.equip(role_id, nil) == false, "equip must reject a nil creature key")
+        luassert.truthy(#calls == 0, "a nil equip creature key must never reach the host model setter")
+        luassert.truthy(#resolves == 0, "the equip nil guard must short-circuit before resolving the role")
 
         _clear(calls)
         _clear(resolves)
-        lu.assertEvalToTrue(skin_equip.unequip(role_id, nil) == true,
+        luassert.truthy(skin_equip.unequip(role_id, nil) == true,
           "unequip should use reset_model even when no fallback creature key is configured")
-        lu.assertEvalToTrue(#calls == 1 and calls[1].op == "reset_model",
+        luassert.truthy(#calls == 1 and calls[1].op == "reset_model",
           "unequip without fallback should restore through reset_model")
       end)
     end)
-  end
+  end)
 
-  function TestCosmetics:test_unequip_fallback_forwards_any_configured_default_key_when_reset_model_is_unavailable()
+  it("test_unequip_fallback_forwards_any_configured_default_key_when_reset_model_is_unavailable", function()
     local calls = {}
     _patched_without_reset(calls, function()
       property.for_all(function(rng)
@@ -421,17 +421,17 @@ do
       end, function(default_key)
         _clear(calls)
 
-        lu.assertEvalToTrue(skin_equip.unequip(7, default_key) == true,
+        luassert.truthy(skin_equip.unequip(7, default_key) == true,
           "unequip fallback should succeed through the host model setter")
-        lu.assertEvalToTrue(#calls == 1, "unequip fallback must call the host model setter exactly once")
-        lu.assertEvalToTrue(calls[1][1] == default_key,
+        luassert.truthy(#calls == 1, "unequip fallback must call the host model setter exactly once")
+        luassert.truthy(calls[1][1] == default_key,
           "unequip fallback must forward the configured default key unchanged")
       end)
     end)
-  end
+  end)
 end
 
-function TestCosmetics:test_first_model_setter_attempt_carries_full_boolean_flags()
+it("test_first_model_setter_attempt_carries_full_boolean_flags", function()
   -- #293:_try_set_model 首臂的 3 个 true 字面值(→ false 变异)未测。
   local captured
   local unit = {
@@ -444,12 +444,12 @@ function TestCosmetics:test_first_model_setter_attempt_carries_full_boolean_flag
     _assert_eq(skin_equip.equip(11, "skin_key"), true,
       "equip should succeed via the first setter arm")
   end)
-  lu.assertEvalToTrue(captured ~= nil and captured[1] == "skin_key"
+  luassert.truthy(captured ~= nil and captured[1] == "skin_key"
     and captured[2] == true and captured[3] == true and captured[4] == true,
     "first setter attempt should be (creature_key, true, true, true)")
-end
+end)
 
-function TestCosmetics:test_get_ctrl_unit_failure_logs_warn_with_role_id()
+it("test_get_ctrl_unit_failure_logs_warn_with_role_id", function()
   -- #293:get_ctrl_unit 抛错路径的 warn 文案与 role_id 序列化未测。
   local log_capture = require("test.support.log_capture")
   _with_patches({
@@ -467,13 +467,13 @@ function TestCosmetics:test_get_ctrl_unit_failure_logs_warn_with_role_id()
       _assert_eq(skin_equip.equip(11, "skin_key"), false,
         "failed ctrl unit should report no model change")
     end)
-    lu.assertEvalToTrue(ok == true, "equip should swallow the ctrl unit error")
+    luassert.truthy(ok == true, "equip should swallow the ctrl unit error")
     local joined = table.concat(captured.lines, "\n")
-    lu.assertEvalToTrue(joined:find("get_ctrl_unit failed", 1, true) ~= nil
+    luassert.truthy(joined:find("get_ctrl_unit failed", 1, true) ~= nil
       and joined:find("11", 1, true) ~= nil,
       "warn should carry the failure text and role id; got " .. joined)
   end)
-end
+end)
 
 
-return TestCosmetics
+end)
