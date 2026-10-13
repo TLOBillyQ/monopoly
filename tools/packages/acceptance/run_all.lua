@@ -63,7 +63,7 @@ function run_all.run(options)
   local base_opts = spawn_env.runner_opts(env, acceptance_tool)
   base_opts.cwd = env.repo_root
 
-  local entries = registry.entries
+  local entries, excluded = registry.select(function(line) io.write(line .. "\n") end)
 
   -- workers ≤ 1:严格串行回退(不依赖并行调度,行为与原逐个 spawn 等价)。
   if options.serial or _resolve_workers(#entries) <= 1 then
@@ -100,7 +100,7 @@ function run_all.run(options)
     end
     io.write(string.format("[acceptance] COUNTS: files=%d cases=%d passed=%d failed=%d\n",
       #entries, cases, case_passed, case_failed))
-    return { passed = passed, failed = failed, total = #entries }
+    return { passed = passed, failed = failed, total = #entries, excluded = excluded, registered = #registry.entries }
   end
 
   -- 原生并行命令与串行共享 cwd/LUA_PATH,按注册顺序汇总。
@@ -145,7 +145,7 @@ function run_all.run(options)
   end
   io.write(string.format("[acceptance] COUNTS: files=%d cases=%d passed=%d failed=%d\n", #entries, cases, case_passed, case_failed))
   io.flush()
-  return { passed = passed, failed = failed, total = #entries }
+  return { passed = passed, failed = failed, total = #entries, excluded = excluded, registered = #registry.entries }
 end
 
 function run_all.main()

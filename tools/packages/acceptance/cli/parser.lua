@@ -1,4 +1,4 @@
-local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../../../foundation/bootstrap.lua")
+local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")):match("^(.*)/[^/]+$") .. "/../../../foundation/bootstrap.lua")
 local env = bootstrap.install(debug.getinfo(1, "S").source)
 assert(bootstrap.ensure_tool("acceptance4lua", env))
 

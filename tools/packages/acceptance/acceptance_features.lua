@@ -25,20 +25,42 @@ local function _load_manifest()
   local path = _repo_root() .. "/features/manifest.lua"
   local probe = io.open(path, "r")
   if probe == nil then
-    return {}
+    error("acceptance manifest unavailable: " .. path)
   end
   probe:close()
 
   local loaded = dofile(path)
-  if type(loaded) ~= "table" then
-    return {}
+  if type(loaded) ~= "table" or type(loaded.entries) ~= "table" or #loaded.entries == 0 then
+    error("acceptance manifest invalid or empty: " .. path)
   end
   return loaded
 end
 
 local manifest = _load_manifest()
 
-return {
+local registry = {
   generated_dir = manifest.generated_dir or DEFAULT_GENERATED_DIR,
   entries = manifest.entries or {},
 }
+
+function registry.select(report)
+  assert(type(registry.entries) == "table" and #registry.entries > 0, "no acceptance entries registered")
+  local selected, excluded = {}, {}
+  local boundary = require("foundation.platform_boundary")
+  for _, entry in ipairs(registry.entries) do
+    local verdict = entry.capability and boundary.evaluate(entry.capability, {}) or {}
+    if verdict.status then
+      excluded[#excluded + 1] = entry
+      if report then report("[acceptance] excluded status=" .. verdict.status
+        .. " feature=" .. entry.feature .. " generated=" .. entry.generated
+        .. " capability=" .. entry.capability .. " reason=" .. verdict.entry.reason) end
+    else
+      selected[#selected + 1] = entry
+    end
+  end
+  if report then report(string.format("[acceptance] registered=%d selected=%d excluded=%d",
+    #registry.entries, #selected, #excluded)) end
+  return selected, excluded
+end
+
+return registry

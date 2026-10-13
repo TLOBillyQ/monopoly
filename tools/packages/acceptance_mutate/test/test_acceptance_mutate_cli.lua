@@ -67,6 +67,25 @@ function TestAcceptanceMutateCli:test_an_explicit_skip_exits_zero_with_a_skipped
 end
 
 -- 脚本形态入口(cli 以子进程转发的真实入口)与 CLI 同口径:旁门不许假绿。
+function TestAcceptanceMutateCli:test_native_absolute_lane_help_and_actual_request()
+  local root = require("foundation.bootstrap").resolve("tools/packages/acceptance_mutate/mutate_lane.lua").repo_root
+  local entry = (root .. "/" .. LANE):gsub("/", "\\")
+  local help = proc_lib.run_command({ "lua", entry, "--help" })
+  lu.assertEquals(help.code, 0, help.output)
+  local actual = proc_lib.run_command({ "lua", entry, "--feature", "ignored.feature" })
+  lu.assertEquals(actual.code, 3, actual.output)
+  lu.assertStrContains(actual.output, "status=unavailable")
+end
+
+function TestAcceptanceMutateCli:test_explicit_retained_engine_test_request_is_unavailable()
+  for _, identity in ipairs({ "test_mutator_level.lua", "test_mutator_status.lua" }) do
+    local result = proc_lib.run_command({ "lua", "tools/packages/luaunit_runner/runner.lua", "--",
+      "tools/packages/acceptance_mutate/test/" .. identity })
+    lu.assertEquals(result.code, 3, result.output)
+    lu.assertStrContains(result.output, "status=unavailable")
+  end
+end
+
 function TestAcceptanceMutateCli:test_the_lane_script_form_reports_the_same_boundary()
   local result = proc_lib.run_command({ "lua", LANE, "--level", "soft" })
 

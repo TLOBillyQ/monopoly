@@ -98,7 +98,11 @@ end
 local function _assert_status_tokens(line, tokens)
   for _, token in ipairs(tokens) do
     local expected = token[1] .. "=" .. tostring(token[2])
-    if not line:find(expected, 1, true) then
+    local actual
+    for key, value in tostring(line):gmatch("([%w_]+)=([^%s]+)") do
+      if key == token[1] then actual = value end
+    end
+    if actual ~= tostring(token[2]) then
       return nil, "status line missing " .. expected .. ": " .. line
     end
   end

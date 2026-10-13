@@ -56,6 +56,8 @@ local function _write(path, content)
 end
 
 local function _run(entry, args)
+  local root = require("foundation.bootstrap").resolve("tools/packages/acceptance/cli/parser.lua").repo_root
+  entry = (root .. "/" .. entry):gsub("/", "\\")
   local command = { APS_LUA, entry }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
@@ -85,6 +87,63 @@ local function _decoded(path)
 end
 
 TestApsCliEntrypoints = {}
+
+function TestApsCliEntrypoints:test_direct_mutator_actual_request_is_unavailable_before_work_is_created()
+  _with_sandbox("mutator_unavailable", function(root)
+    local work = path_lib.join_path(root, "must_not_exist")
+    local result = _run(MUTATOR, { "--feature", _sandbox_feature(root), "--work-dir", work })
+    lu.assertEquals(result.code, 3, result.output)
+    lu.assertStrContains(result.output, "status=unavailable")
+    lu.assertFalse(fs_lib.path_exists(work))
+  end)
+end
+
+function TestApsCliEntrypoints:test_public_mutator_status_steps_accept_captured_protocol()
+  local handlers = require("packages.acceptance.steps").handlers()
+  local world = {
+    mutator_status_result = { ok = true, code = 0 },
+    mutator_status_stderr_text = "status total=4 completed=4 running=0 skipped_scenarios=1 skipped_mutations=2 elapsed=0.5s\n",
+    mutator_status_stdout_text = '{"summary":{"Total":4,"Killed":4,"Survived":0,"Errors":0}}',
+  }
+  local example = { ["变异总数"] = "4", ["跳过场景数"] = "1", ["跳过变异数"] = "2", ["报告格式"] = "JSON" }
+  for _, step in ipairs({ "mutator 命令成功完成", "标准错误输出包含状态行",
+    "状态行包含总数<变异总数>和完成数<变异总数>",
+    "状态行包含跳过场景数<跳过场景数>和跳过变异数<跳过变异数>",
+    "状态行包含已耗时", "标准输出保持为<报告格式>报告", "标准输出不包含状态行" }) do
+    local ok, err = handlers[step](world, example)
+    lu.assertTrue(ok, tostring(err))
+  end
+end
+
+function TestApsCliEntrypoints:test_public_mutator_status_steps_reject_invalid_protocol()
+  local handlers = require("packages.acceptance.steps").handlers()
+  local samples = {
+    { "mutator 命令成功完成", { mutator_status_result = { ok = false, code = 3 } } },
+    { "标准错误输出包含状态行", { mutator_status_stderr_text = "unavailable\n" } },
+    { "状态行包含总数<变异总数>和完成数<变异总数>", { last_status_line = "status total=40 completed=40 running=0" } },
+    { "状态行包含已耗时", { last_status_line = "status elapsed=unknown" } },
+    { "标准输出保持为<报告格式>报告", { mutator_status_stdout_text = "{}" } },
+    { "标准输出不包含状态行", { mutator_status_stdout_text = "{}\nstatus total=4\n" } },
+  }
+  for _, sample in ipairs(samples) do
+    local ok, err = handlers[sample[1]](sample[2], { ["变异总数"] = "4", ["报告格式"] = "JSON" })
+    lu.assertNil(ok, sample[1])
+    lu.assertIsString(err)
+  end
+end
+
+function TestApsCliEntrypoints:test_acceptance_capabilities_reconciles_retained_mutator_feature()
+  local result = _run("tools/cli.lua", { "acceptance", "--capabilities" })
+  lu.assertEquals(result.code, 0, result.output)
+  lu.assertStrContains(result.output, "features/tooling/acceptance_mutator_status.feature")
+  lu.assertStrContains(result.output, "test_acceptance_mutator_status_acceptance.lua")
+  lu.assertStrContains(result.output, "status=unavailable")
+  lu.assertStrContains(result.output, "capability=acceptance-mutate")
+  lu.assertStrContains(result.output, "registered=35 selected=34 excluded=1")
+  local explicit = _run("tools/cli.lua", { "acceptance", "--feature", "features/tooling/acceptance_mutator_status.feature" })
+  lu.assertEquals(explicit.code, 3, explicit.output)
+  lu.assertStrContains(explicit.output, "status=unavailable")
+end
 
 function TestApsCliEntrypoints:test_parser_translates_a_zh_cn_feature_into_json_ir()
   _with_sandbox("parser", function(root)
@@ -118,17 +177,49 @@ end
 
 function TestApsCliEntrypoints:test_generator_binds_the_ir_into_a_runnable_entrypoint_module()
   _with_sandbox("generator", function(root)
-    local ir_path = _sandbox_ir(root, _sandbox_feature(root))
+    local feature_path = path_lib.join_path(root, "中文 空格完整身份_" .. string.rep("full_identity_", 4) .. ".feature")
+    _write(feature_path, ZH_FEATURE)
+    local ir_path = _sandbox_ir(root, feature_path)
     local spec_path = path_lib.join_path(root, "test_probe_acceptance.lua")
+    lu.assertTrue(#require("acceptance4lua.generator").metadata_path_for(spec_path, feature_path) > 270,
+      "fixture must retain the full absolute identity that exceeds native metadata path limits")
     local result = _run(GENERATOR, { ir_path, spec_path })
     lu.assertEquals(result.code, 0, tostring(result.output))
 
+    local metadata = _decoded(require("packages.acceptance.entrypoint").metadata_path_for(
+      spec_path, feature_path))
+    lu.assertEquals(metadata.feature_path, feature_path)
+    lu.assertEquals(metadata.ir_path, ir_path)
+    lu.assertEquals(metadata.generated_files, { spec_path })
+    lu.assertEquals(metadata.implementation_hash,
+      require("acceptance4lua.spec_hash").compute_generated_files_hash({ spec_path }))
     local generated = fs_lib.read_raw(spec_path)
     lu.assertNotNil(generated)
     lu.assertTrue(generated:find('require("packages.acceptance.runtime")', 1, true) ~= nil,
       "生成件要绑本仓 runtime,而不是自带平行实现")
     lu.assertTrue(generated:find("中文入口探针", 1, true) ~= nil,
       "生成件内嵌 IR,可独立执行")
+    local metadata_path = require("packages.acceptance.entrypoint").metadata_path_for(spec_path, feature_path)
+    local before = fs_lib.read_raw(metadata_path)
+    local again = _run(GENERATOR, { ir_path, spec_path })
+    lu.assertEquals(again.code, 0, again.output)
+    lu.assertEquals(fs_lib.read_raw(spec_path), generated)
+    lu.assertEquals(fs_lib.read_raw(metadata_path), before)
+  end)
+end
+
+function TestApsCliEntrypoints:test_generator_rejects_metadata_identity_conflict_without_overwriting_entry()
+  _with_sandbox("generator_conflict", function(root)
+    local feature = _sandbox_feature(root)
+    local ir = _sandbox_ir(root, feature)
+    local output = path_lib.join_path(root, "entry.lua")
+    local metadata = require("packages.acceptance.entrypoint").metadata_path_for(output, feature)
+    _write(output, "original entry")
+    _write(metadata, json.encode({ feature_path = "different/full/identity.feature" }))
+    local result = _run(GENERATOR, { ir, output })
+    lu.assertEquals(result.code, 1, result.output)
+    lu.assertStrContains(result.output, "metadata identity conflict")
+    lu.assertEquals(fs_lib.read_raw(output), "original entry")
   end)
 end
 
@@ -165,6 +256,9 @@ end
 -- mutator 只做「必填校验 + usage」这一段契约:真变异跑属 acceptance-mutate 软车道,
 -- 由 status 行为用例与车道覆盖,coder 不在此发起变异跑(#606 验收同口径)。
 function TestApsCliEntrypoints:test_mutator_exits_2_and_prints_the_aps_flags_without_a_feature()
+  local help = _run(MUTATOR, { "--help" })
+  lu.assertEquals(help.code, 0, help.output)
+  lu.assertStrContains(help.output, "--status-interval")
   local usage = _run(MUTATOR, {})
   lu.assertEquals(usage.code, 2, usage.output)
   lu.assertTrue(usage.output:find("--feature", 1, true) ~= nil, usage.output)

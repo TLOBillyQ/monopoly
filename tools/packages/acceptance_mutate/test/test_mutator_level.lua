@@ -5,7 +5,8 @@ local mutator = require("acceptance4lua.mutator")
 
 -- 原生 LuaUnit 迁移:三个顶层 describe(level validation / feature stamp interaction /
 -- scenario manifest interaction)均无钩子、无共享 local,全部拍平进 TestMutatorLevel,
--- 用例数与改写前一致(6 + 3 + 5 = 14 例);第三组的 _two_scenario_body 提升为文件级 helper。
+-- 12 个实际引擎用例;两个纯level参数验证已移入selected test_mutator_status_format.lua。
+-- 第三组的 _two_scenario_body 提升为文件级 helper。
 
 local function _with_tmp_feature(body, fn)
   local tmp_root = env_lib.make_temp_path("acceptance_mutator_level_", "")
@@ -96,27 +97,6 @@ function TestMutatorLevel:test_accepts_level_soft()
     lu.assertNil(err)
     lu.assertNotNil(report)
   end)
-end
-
-function TestMutatorLevel:test_rejects_an_unknown_level_value_before_touching_the_filesystem()
-  local report, err = mutator.run({
-    feature = "/nonexistent/path/intentionally-bad.feature",
-    work_dir = "/tmp/will-not-be-created",
-    level = "nonsense",
-  })
-  lu.assertNil(report)
-  lu.assertNotNil(err)
-  lu.assertEvalToTrue(tostring(err):match("invalid level"))
-end
-
-function TestMutatorLevel:test_rejects_non_string_level_values()
-  local report, err = mutator.run({
-    feature = "/dev/null",
-    work_dir = "/tmp",
-    level = 42,
-  })
-  lu.assertNil(report)
-  lu.assertEvalToTrue(tostring(err):match("invalid level"))
 end
 
 -- -------------------------------------------------- feature stamp interaction

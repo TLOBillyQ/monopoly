@@ -85,4 +85,24 @@ function TestPlatformBoundary:test_exit_codes_separate_unavailable_from_usage_an
   lu.assertNotEquals(boundary.UNAVAILABLE_EXIT_CODE, 2)
 end
 
+function TestPlatformBoundary:test_retained_test_capabilities_partition_only_the_named_engine_files()
+  local excluded, selected = {}, {}
+  local files = require("foundation.proc").collect_files("tools/packages/acceptance_mutate/test", ".lua")
+  for _, file in ipairs(files) do
+    local verdict = boundary.test_verdict(file)
+    if verdict then excluded[#excluded + 1] = verdict else selected[#selected + 1] = file end
+  end
+  lu.assertEquals(#excluded, 2)
+  lu.assertEquals(#selected + #excluded, #files)
+  local cases = 0
+  for _, verdict in ipairs(excluded) do
+    lu.assertEquals(verdict.exit_code, 3)
+    lu.assertEquals(boundary.test_capabilities[verdict.identity], "acceptance-mutate")
+    cases = cases + verdict.cases
+  end
+  lu.assertEquals(cases, 14)
+  lu.assertNil(boundary.test_verdict("tools/packages/acceptance_mutate/test/test_mutator_status_format.lua"))
+  lu.assertNil(boundary.test_verdict("tools/packages/acceptance_mutate/test/test_mutator_report_skipped.lua"))
+end
+
 return TestPlatformBoundary

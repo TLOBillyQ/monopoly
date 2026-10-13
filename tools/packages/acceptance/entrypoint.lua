@@ -16,6 +16,13 @@ entrypoint.runtime_module = "packages.acceptance.runtime"
 
 -- Same contract as acceptance4lua's generator.generate_file: read the JSON IR,
 -- write the generated spec plus its metadata. Returns true or (nil, error).
+function entrypoint.metadata_path_for(output_path, feature_path)
+  local path = require("foundation.path")
+  -- Full SHA-256 bounds the filename while preserving identity in the document.
+  return path.join_path(path.parent_dir(output_path), "metadata",
+    require("acceptance4lua.spec_hash").sha256(tostring(feature_path)) .. ".json")
+end
+
 function entrypoint.generate_file(ir_path, output_path)
   local content, err = fs_lib.read_file(ir_path)
   if content == nil then
@@ -27,13 +34,29 @@ function entrypoint.generate_file(ir_path, output_path)
     return nil, ir_or_err
   end
 
-  return generator.write_generated(ir_or_err, output_path, {
-    ir_path = ir_path,
+  local feature_path = require("acceptance4lua.source").path_from_ir(ir_or_err) or "feature"
+  local metadata_path = entrypoint.metadata_path_for(output_path, feature_path)
+  local existing = fs_lib.read_raw(metadata_path)
+  if existing then
+    local decoded_ok, metadata = pcall(json.decode, existing)
+    if not decoded_ok or type(metadata) ~= "table" or metadata.feature_path ~= feature_path then
+      return nil, "metadata identity conflict: " .. metadata_path
+    end
+  end
+  local generated = generator.generate(ir_or_err, {
     runtime_module = entrypoint.runtime_module,
-    -- acceptance4lua 的 generator 默认 step 模块名是中性的 "steps";本项目的
-    -- step handlers 在 packages.acceptance.steps,必须显式绑定保持生成物不变。
     steps_module = "packages.acceptance.steps",
   })
+  local written, write_err = fs_lib.write_file(output_path, generated)
+  if not written then return nil, write_err end
+  return fs_lib.write_file(metadata_path, json.encode({
+    schema_version = 1,
+    feature_path = feature_path,
+    ir_path = ir_path,
+    implementation_hash = require("acceptance4lua.spec_hash").compute_generated_files_hash({ output_path }),
+    hash_scope = "generated_files",
+    generated_files = { output_path },
+  }))
 end
 
 return entrypoint

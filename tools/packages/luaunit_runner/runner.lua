@@ -26,6 +26,11 @@
 
 local _self = ((arg and arg[0]) or debug.getinfo(1, "S").source:gsub("^@", "")):gsub("\\", "/")
 local _script_dir = _self:match("^(.*)/[^/]+$") or "."
+local early_boundary = dofile(_script_dir .. "/../../foundation/platform_boundary.lua")
+for _, value in ipairs(arg or {}) do
+  local verdict = early_boundary.test_verdict(value)
+  if verdict then os.exit(early_boundary.emit(verdict)) end
+end
 local _repo_root = _script_dir:gsub("/tools/packages/luaunit_runner$", "")
 if _repo_root == _script_dir then
   _repo_root = _script_dir .. "/../../.."
@@ -261,6 +266,22 @@ for _, target in ipairs(targets) do
     end
   end
 end
+
+local boundary = require("foundation.platform_boundary")
+local supported_files = {}
+for _, file in ipairs(spec_files) do
+  local verdict = boundary.test_verdict(file)
+  if verdict then
+    if profile ~= cfg.tooling then os.exit(boundary.emit(verdict)) end
+    io.write("[tooling] excluded status=unavailable file=" .. verdict.identity
+      .. " cases=" .. verdict.cases .. " capability=acceptance-mutate reason=" .. verdict.entry.reason .. "\n")
+  else supported_files[#supported_files + 1] = file end
+end
+if #supported_files ~= #spec_files then
+  io.write(string.format("[tooling] registered=%d selected=%d excluded=%d\n",
+    #spec_files, #supported_files, #spec_files - #supported_files))
+end
+spec_files = supported_files
 
 if #spec_files == 0 then
   io.stderr:write("luaunit_runner: no spec files found (pattern=" .. pattern .. ")\n")

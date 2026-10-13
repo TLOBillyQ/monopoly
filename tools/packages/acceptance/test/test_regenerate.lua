@@ -28,6 +28,53 @@ function TestRegenerate:test_lists_features_with_unique_well_formed_generated_sp
   end
 end
 
+function TestRegenerate:test_empty_explicit_entries_are_an_infrastructure_failure()
+  local ok, err = regenerate.run({ entries = {} })
+  lu.assertNil(ok)
+  lu.assertStrContains(err, "no acceptance entries")
+end
+
+function TestRegenerate:test_manifest_missing_or_invalid_never_becomes_an_empty_success()
+  local original_open = io.open
+  local original_dofile = dofile
+  for _, value in ipairs({ false, { entries = {} } }) do
+    _G.dofile = function(path)
+      if tostring(path):match("features/manifest%.lua$") then return value end
+      return original_dofile(path)
+    end
+    local ok, err = pcall(original_dofile, "tools/packages/acceptance/acceptance_features.lua")
+    _G.dofile = original_dofile
+    lu.assertFalse(ok)
+    lu.assertStrContains(tostring(err), "manifest invalid or empty")
+  end
+  rawset(io, "open", function(path, mode)
+    if tostring(path):match("features/manifest%.lua$") then return nil end
+    return original_open(path, mode)
+  end)
+  local ok, err = pcall(original_dofile, "tools/packages/acceptance/acceptance_features.lua")
+  rawset(io, "open", original_open)
+  lu.assertFalse(ok)
+  lu.assertStrContains(tostring(err), "manifest unavailable")
+end
+
+function TestRegenerate:test_native_selection_and_exclusion_partition_the_complete_manifest()
+  local selected, excluded = registry.select()
+  lu.assertEquals(#selected + #excluded, #registry.entries)
+  local seen = {}
+  for _, entries in ipairs({ selected, excluded }) do
+    for _, entry in ipairs(entries) do
+      lu.assertNil(seen[entry.feature], "identity appears in both sets")
+      seen[entry.feature] = entry.generated
+    end
+  end
+  for _, entry in ipairs(registry.entries) do
+    lu.assertEquals(seen[entry.feature], entry.generated)
+  end
+  lu.assertEquals(#excluded, 1)
+  lu.assertEquals(excluded[1].feature, "features/tooling/acceptance_mutator_status.feature")
+  lu.assertEquals(excluded[1].capability, "acceptance-mutate")
+end
+
 function TestRegenerate:test_points_every_entry_at_a_readable_feature_file()
   for _, entry in ipairs(registry.entries) do
     lu.assertEvalToTrue(fs_lib.path_exists(entry.feature), "missing feature: " .. entry.feature)
