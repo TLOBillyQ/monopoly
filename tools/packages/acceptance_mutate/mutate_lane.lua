@@ -19,6 +19,12 @@ local env = bootstrap.install(debug.getinfo(1, "S").source)
 -- 发生在 ensure_tool 之前 —— 否则会先装一遍工具,再让探针链给出「runner_worker
 -- 没吐出可解析的 job 响应」这条假诊断,把原生 Windows 的边界故障报成变异结论。
 local platform_boundary = require("foundation.platform_boundary")
+for _, value in ipairs(arg or {}) do
+  if value == "--help" or value == "-h" then
+    io.write(require("packages.acceptance_mutate.cli").usage())
+    os.exit(0)
+  end
+end
 local verdict = platform_boundary.evaluate("acceptance-mutate", arg or {})
 if verdict.status ~= nil then
   os.exit(platform_boundary.emit(verdict))
