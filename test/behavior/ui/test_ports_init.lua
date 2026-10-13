@@ -1,5 +1,4 @@
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -7,15 +6,15 @@ local function assert_equal(actual, expected, message)
   luassert.is.same(expected, actual, message)
 end
 
-TestPortsInit = {}
+describe("TestPortsInit", function()
 
-function TestPortsInit:test_loads_all_sub_port_modules_under_debug_hook()
+it("test_loads_all_sub_port_modules_under_debug_hook", function()
   package.loaded["src.ui.ports.init"] = nil
   local ports = require("src.ui.ports.init")
   luassert.truthy(type(ports) == "table", "expected table")
-end
+end)
 
-function TestPortsInit:test_ui_sync_facade_forwards_gate_and_dirty_refresh_results()
+it("test_ui_sync_facade_forwards_gate_and_dirty_refresh_results", function()
   local ui_sync = require("src.ui.ports.ui_sync")
   local state = {
     ui = {
@@ -49,15 +48,15 @@ function TestPortsInit:test_ui_sync_facade_forwards_gate_and_dirty_refresh_resul
   assert_identity(ports.set_input_blocked(state, true), true)
   assert_identity(state.ui.input_blocked, true)
   assert_identity(ports.set_input_blocked(state, true), false)
-end
+end)
 
-function TestPortsInit:test_set_input_blocked_returns_false_when_ui_state_is_nil()
+it("test_set_input_blocked_returns_false_when_ui_state_is_nil", function()
   local ui_sync = require("src.ui.ports.ui_sync")
   local ports = ui_sync.build({ get_ui_state = function() return nil end })
   assert_identity(ports.set_input_blocked({}, true), false)
-end
+end)
 
-function TestPortsInit:test_resolve_choice_ui_state_forwards_the_choice_gate_state_result()
+it("test_resolve_choice_ui_state_forwards_the_choice_gate_state_result", function()
   local ui_sync = require("src.ui.ports.ui_sync")
   local choice_state = ui_sync._choice_state
   local ports = ui_sync.build({ get_ui_state = function() return nil end })
@@ -68,7 +67,7 @@ function TestPortsInit:test_resolve_choice_ui_state_forwards_the_choice_gate_sta
   local through = ports.resolve_choice_ui_state(game, state, choice)
   assert_identity(through, direct)
   luassert.is_not_nil(through)
-end
+end)
 
 local function _probe_subject(ui)
   local ui_sync = require("src.ui.ports.ui_sync")
@@ -94,7 +93,7 @@ local function _with_served_owner(fn)
   }, fn)
 end
 
-function TestPortsInit:test_probe_choice_ui_missing_warns_with_full_gate_fields_when_the_screen_is_missing()
+it("test_probe_choice_ui_missing_warns_with_full_gate_fields_when_the_screen_is_missing", function()
   -- #523 验收 pin（真缺屏仍告警）：expects_ui=true 且 open=false 时 probe
   -- 必须刷出带取证全字段的 warn。
   local core_runtime = require("src.state.runtime")
@@ -115,9 +114,9 @@ function TestPortsInit:test_probe_choice_ui_missing_warns_with_full_gate_fields_
   assert_equal(captured[11], "owner_computer_controlled=false")
   assert_equal(captured[12], "expects_ui=true")
   assert_equal(captured[13], "open=false")
-end
+end)
 
-function TestPortsInit:test_probe_choice_ui_missing_stays_silent_when_the_screen_is_open()
+it("test_probe_choice_ui_missing_stays_silent_when_the_screen_is_open", function()
   -- #523 同帧误报回归 pin（生产链路）：屏已开（choice_active + 同
   -- screen_key）时 probe 不告警。
   local core_runtime = require("src.state.runtime")
@@ -135,7 +134,6 @@ function TestPortsInit:test_probe_choice_ui_missing_stays_silent_when_the_screen
     end)
   end)
   luassert.truthy(captured == nil, "an opened screen never warns")
-end
+end)
 
-
-return TestPortsInit
+end)
