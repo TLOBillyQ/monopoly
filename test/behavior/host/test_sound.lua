@@ -2,7 +2,11 @@
 -- paths for src.host.sound. These boundary branches are only reachable by
 -- driving the module directly with a patched host API surface.
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 local sound = require("src.host.sound")
 local logger = require("src.foundation.log")
