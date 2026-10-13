@@ -3,7 +3,7 @@
 -- 用例数与改写前一一对应(5 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local roster_debug = require("src.app.roster_debug")
 local debug_flags = require("src.config.gameplay.debug_flags")
 
@@ -15,13 +15,12 @@ local function _count(map)
   return n
 end
 
-TestRosterDebug = {}
+describe("TestRosterDebug", function()
+  after_each(function()
+    debug_flags.reset()
+  end)
 
-function TestRosterDebug:tearDown()
-  debug_flags.reset()
-end
-
-function TestRosterDebug:test_returns_nil_by_default_because_debug_auto_all_roles_defaults_off()
+local function _test_returns_nil_by_default_because_debug_auto_all_roles_defaults_off()
   debug_flags.reset()
   local result = roster_debug.build_auto_players(
     { { role_id = 1 }, { role_id = 2 }, { role_id = 3 } }
@@ -29,7 +28,7 @@ function TestRosterDebug:test_returns_nil_by_default_because_debug_auto_all_role
   luassert.truthy(result == nil, "default flags must never auto-drive any seat")
 end
 
-function TestRosterDebug:test_returns_nil_when_debug_auto_all_roles_is_disabled()
+local function _test_returns_nil_when_debug_auto_all_roles_is_disabled()
   debug_flags.debug_auto_all_roles = false
   local result = roster_debug.build_auto_players(
     { { role_id = 1 }, { role_id = 2 } }
@@ -37,7 +36,7 @@ function TestRosterDebug:test_returns_nil_when_debug_auto_all_roles_is_disabled(
   luassert.truthy(result == nil, "disabled debug flag must not produce an auto map")
 end
 
-function TestRosterDebug:test_marks_every_seat_including_the_primary_one_when_the_flag_is_on()
+local function _test_marks_every_seat_including_the_primary_one_when_the_flag_is_on()
   debug_flags.debug_auto_all_roles = true
   local result = roster_debug.build_auto_players(
     { { role_id = 11 }, { role_id = 22 }, { role_id = 33 } }
@@ -49,7 +48,7 @@ function TestRosterDebug:test_marks_every_seat_including_the_primary_one_when_th
   luassert.truthy(_count(result) == 3, "every seat should be marked")
 end
 
-function TestRosterDebug:test_skips_entries_without_a_role_id_but_keeps_later_valid_seats()
+local function _test_skips_entries_without_a_role_id_but_keeps_later_valid_seats()
   debug_flags.debug_auto_all_roles = true
   local result = roster_debug.build_auto_players(
     { { role_id = 1 }, { role_id = nil }, { role_id = 7 } }
@@ -60,7 +59,7 @@ function TestRosterDebug:test_skips_entries_without_a_role_id_but_keeps_later_va
   luassert.truthy(_count(result) == 2, "the role_id-less seat should contribute no entry")
 end
 
-function TestRosterDebug:test_marks_the_lone_primary_seat_when_all_roles_debug_is_on()
+local function _test_marks_the_lone_primary_seat_when_all_roles_debug_is_on()
   debug_flags.debug_auto_all_roles = true
   local result = roster_debug.build_auto_players({ { role_id = 5 } })
   luassert.truthy(result ~= nil, "all-roles debug should mark even a single-seat roster")
@@ -68,7 +67,7 @@ function TestRosterDebug:test_marks_the_lone_primary_seat_when_all_roles_debug_i
   luassert.truthy(_count(result) == 1, "only the present seat should be marked")
 end
 
-function TestRosterDebug:test_all_roles_debug_starts_from_slot_one_not_zero()
+local function _test_all_roles_debug_starts_from_slot_one_not_zero()
   -- #293:L17 `1` -> `0` 只在 0 号槽有内容时可分——钉住「从 1 号位开始」的边界。
   debug_flags.debug_auto_all_roles = true
   local result = roster_debug.build_auto_players({
@@ -79,4 +78,10 @@ function TestRosterDebug:test_all_roles_debug_starts_from_slot_one_not_zero()
 end
 
 
-return TestRosterDebug
+it("test_returns_nil_by_default_because_debug_auto_all_roles_defaults_off", _test_returns_nil_by_default_because_debug_auto_all_roles_defaults_off)
+it("test_returns_nil_when_debug_auto_all_roles_is_disabled", _test_returns_nil_when_debug_auto_all_roles_is_disabled)
+it("test_marks_every_seat_including_the_primary_one_when_the_flag_is_on", _test_marks_every_seat_including_the_primary_one_when_the_flag_is_on)
+it("test_skips_entries_without_a_role_id_but_keeps_later_valid_seats", _test_skips_entries_without_a_role_id_but_keeps_later_valid_seats)
+it("test_marks_the_lone_primary_seat_when_all_roles_debug_is_on", _test_marks_the_lone_primary_seat_when_all_roles_debug_is_on)
+it("test_all_roles_debug_starts_from_slot_one_not_zero", _test_all_roles_debug_starts_from_slot_one_not_zero)
+end)

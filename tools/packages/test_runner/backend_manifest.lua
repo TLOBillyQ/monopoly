@@ -14,7 +14,6 @@ return {
     "test/behavior/app/test_host_install.lua",
     "test/behavior/app/test_init_runtime.lua",
     "test/behavior/app/test_leaderboard.lua",
-    "test/behavior/app/test_roster_debug.lua",
     "test/behavior/app/test_roster_fallback.lua",
     "test/behavior/app/test_roster_roles.lua",
     "test/behavior/app/test_share_task.lua",
@@ -581,6 +580,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/test_roster_debug.lua",
     "test/behavior/host/test_units.lua",
     "test/behavior/host/test_scene_ui.lua",
     "test/behavior/host/test_like_collect_subscribe.lua",
