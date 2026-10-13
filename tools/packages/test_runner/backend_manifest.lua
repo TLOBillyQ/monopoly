@@ -565,8 +565,6 @@ return {
     "tools/foundation/test/test_parallel_lanes.lua",
     "tools/foundation/test/test_script_tools_contract.lua",
     "tools/foundation/test/test_script_tools_contract_common.lua",
-    "tools/foundation/test/test_tool_cli.lua",
-    "tools/foundation/test/test_tool_resolver.lua",
     "tools/foundation/test/test_windows_primitives.lua",
     "tools/packages/acceptance/test/test_cli_entrypoints.lua",
     "tools/packages/acceptance/test/test_feature_stamp.lua",
@@ -602,6 +600,8 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/foundation/test/test_tool_cli.lua",
+    "tools/foundation/test/test_tool_resolver.lua",
     "tools/packages/luaunit_runner/test/test_chunk_cache.lua",
     "tools/packages/luaunit_runner/test/test_dual_backend.lua",
     "test/support/harness/test/test_harness_fail_fast.lua",
