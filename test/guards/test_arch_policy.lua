@@ -190,7 +190,7 @@ it("test_complex_scc_path_waivers_match_legacy_public_analyzer", function()
   local fs = require("foundation.fs")
   local json = require("foundation.json_writer")
   local legacy = require("arch_view")
-  local root = "tmp/arch_policy_cycle_compare"
+  local root = require("foundation.env").make_temp_path("monopoly_76_arch_policy_cycle")
   pending_root = root
   local graph = {
     modules = { "src.rules.a", "src.rules.b", "src.rules.c" },
@@ -241,7 +241,7 @@ end)
 it("test_large_scc_greedy_paths_match_legacy_public_analyzer", function()
   local fs = require("foundation.fs")
   local json = require("foundation.json_writer")
-  local root = "tmp/arch_policy_greedy_compare"
+  local root = require("foundation.env").make_temp_path("monopoly_76_arch_policy_greedy")
   pending_root = root
   local graph = { modules = {}, edges = {} }
   for index = 1, 9 do
