@@ -1,4 +1,7 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local entity_pool = require("src.host.entity_pool")
 local unit_lifecycle = require("src.host.units")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
@@ -9,9 +12,7 @@ local PARK_POS = runtime_constants.entity_pool_park_pos
 local MAX_IDLE = runtime_constants.entity_pool_max_idle
 
 local function _assert_eq(actual, expected, message)
-  assert(actual == expected, (message or "assertion failed")
-    .. " expected=" .. tostring(expected)
-    .. " actual=" .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
 end
 
 -- Handles in this pool are invoked positionally (handle.method(arg)), never as
@@ -27,25 +28,24 @@ local function make_handle(tag, log)
   }
 end
 
-TestEntityPool = {}
+describe("TestEntityPool", function()
+  after_each(function()
+    entity_pool.reset()
+  end)
 
-function TestEntityPool:tearDown()
-  entity_pool.reset()
+local function _test_returns_nil_when_unit_key_is_nil()
+  luassert.truthy(entity_pool.acquire(nil, {}) == nil, "expected nil with nil unit_key")
 end
 
-function TestEntityPool:test_returns_nil_when_unit_key_is_nil()
-  lu.assertEvalToTrue(entity_pool.acquire(nil, {}) == nil, "expected nil with nil unit_key")
+local function _test_returns_nil_when_pos_is_nil()
+  luassert.truthy(entity_pool.acquire("k", nil) == nil, "expected nil with nil pos")
 end
 
-function TestEntityPool:test_returns_nil_when_pos_is_nil()
-  lu.assertEvalToTrue(entity_pool.acquire("k", nil) == nil, "expected nil with nil pos")
+local function _test_returns_nil_when_gameapi_absent_and_no_idle_handles()
+  luassert.truthy(entity_pool.acquire("miss_key", { x = 0 }) == nil, "expected nil without GameAPI")
 end
 
-function TestEntityPool:test_returns_nil_when_gameapi_absent_and_no_idle_handles()
-  lu.assertEvalToTrue(entity_pool.acquire("miss_key", { x = 0 }) == nil, "expected nil without GameAPI")
-end
-
-function TestEntityPool:test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility()
+local function _test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility()
   local log = {}
   local handle = make_handle("h", log)
   entity_pool.release("reuse_key", handle)
@@ -57,21 +57,21 @@ function TestEntityPool:test_pulls_a_parked_handle_and_re_applies_position_orien
   local scale = { z = 3 }
   local got = entity_pool.acquire("reuse_key", pos, rotation, scale)
 
-  lu.assertEvalToTrue(got == handle, "acquire should reuse the parked handle instead of creating a new one")
+  luassert.truthy(got == handle, "acquire should reuse the parked handle instead of creating a new one")
   local by_method = {}
   for _, call in ipairs(log) do by_method[call.m] = call.arg end
-  lu.assertEvalToTrue(by_method.set_position == pos, "reused handle should be moved to the requested pos")
-  lu.assertEvalToTrue(by_method.set_orientation == rotation, "reused handle should take the requested orientation")
-  lu.assertEvalToTrue(by_method.set_world_scale == scale, "reused handle should take the requested scale")
-  lu.assertEvalToTrue(by_method.set_model_visible == true, "reused handle should be made visible")
+  luassert.truthy(by_method.set_position == pos, "reused handle should be moved to the requested pos")
+  luassert.truthy(by_method.set_orientation == rotation, "reused handle should take the requested orientation")
+  luassert.truthy(by_method.set_world_scale == scale, "reused handle should take the requested scale")
+  luassert.truthy(by_method.set_model_visible == true, "reused handle should be made visible")
 
   local stats = entity_pool.stats()["reuse_key"]
-  lu.assertEvalToTrue(stats.idle == 0, "reused handle should leave the idle list")
-  lu.assertEvalToTrue(stats.live == 1, "reusing a handle should increment the live count")
-  lu.assertEvalToTrue(stats.miss == 0, "reusing an idle handle should not count as a miss")
+  luassert.truthy(stats.idle == 0, "reused handle should leave the idle list")
+  luassert.truthy(stats.live == 1, "reusing a handle should increment the live count")
+  luassert.truthy(stats.miss == 0, "reusing an idle handle should not count as a miss")
 end
 
-function TestEntityPool:test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss()
+local function _test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss()
   local seen
   local created = make_handle("created", {})
   with_patches({
@@ -84,20 +84,20 @@ function TestEntityPool:test_forwards_key_pos_rotation_scale_to_the_host_and_cou
     local rotation = { y = 8 }
     local scale = { z = 9 }
     local got = entity_pool.acquire("mk", pos, rotation, scale)
-    lu.assertEvalToTrue(got == created, "acquire should return the freshly created handle")
-    lu.assertEvalToTrue(seen.unit_key == "mk", "create should receive the unit_key")
-    lu.assertEvalToTrue(seen.pos == pos, "create should receive the pos")
-    lu.assertEvalToTrue(seen.rotation == rotation, "create should receive the rotation")
-    lu.assertEvalToTrue(seen.scale == scale, "create should receive the scale")
+    luassert.truthy(got == created, "acquire should return the freshly created handle")
+    luassert.truthy(seen.unit_key == "mk", "create should receive the unit_key")
+    luassert.truthy(seen.pos == pos, "create should receive the pos")
+    luassert.truthy(seen.rotation == rotation, "create should receive the rotation")
+    luassert.truthy(seen.scale == scale, "create should receive the scale")
   end)
 
   local stats = entity_pool.stats()["mk"]
-  lu.assertEvalToTrue(stats.miss == 1, "a create should be counted as one miss")
-  lu.assertEvalToTrue(stats.live == 1, "a successful create should increment live")
-  lu.assertEvalToTrue(stats.peak == 1, "peak should track the first live handle")
+  luassert.truthy(stats.miss == 1, "a create should be counted as one miss")
+  luassert.truthy(stats.live == 1, "a successful create should increment live")
+  luassert.truthy(stats.peak == 1, "peak should track the first live handle")
 end
 
-function TestEntityPool:test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil()
+local function _test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil()
   -- kills the warn call's "[entity_pool]" -> nil.
   local logger = require("src.foundation.log")
   local warns = {}
@@ -107,25 +107,25 @@ function TestEntityPool:test_logs_the_entity_pool_prefix_when_the_host_create_yi
       warns[#warns + 1] = { ... }
     end },
   }, function()
-    lu.assertEvalToTrue(entity_pool.acquire("wk", { x = 1 }) == nil, "failed create returns nil")
+    luassert.truthy(entity_pool.acquire("wk", { x = 1 }) == nil, "failed create returns nil")
   end)
-  lu.assertEvalToTrue(#warns == 1, "exactly one warn is logged")
+  luassert.truthy(#warns == 1, "exactly one warn is logged")
   _assert_eq(warns[1][1], "[entity_pool]", "the warn keeps its module prefix")
 end
 
-function TestEntityPool:test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil()
+local function _test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function() return nil end },
   }, function()
-    lu.assertEvalToTrue(entity_pool.acquire("nk", { x = 0 }) == nil, "acquire should return nil when create fails")
+    luassert.truthy(entity_pool.acquire("nk", { x = 0 }) == nil, "acquire should return nil when create fails")
   end)
   local stats = entity_pool.stats()["nk"]
-  lu.assertEvalToTrue(stats.miss == 1, "a failed create should still be counted as a miss")
-  lu.assertEvalToTrue(stats.live == 0, "a failed create should not increment live")
-  lu.assertEvalToTrue(stats.peak == 0, "a failed create should not raise peak")
+  luassert.truthy(stats.miss == 1, "a failed create should still be counted as a miss")
+  luassert.truthy(stats.live == 0, "a failed create should not increment live")
+  luassert.truthy(stats.peak == 0, "a failed create should not raise peak")
 end
 
-function TestEntityPool:test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live()
+local function _test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -136,23 +136,23 @@ function TestEntityPool:test_keeps_peak_at_the_high_water_mark_after_a_release_l
     local h1 = entity_pool.acquire("pk", { x = 1 })
     entity_pool.acquire("pk", { x = 2 })
     local peak2 = entity_pool.stats()["pk"]
-    lu.assertEvalToTrue(peak2.live == 2, "two acquires should make live 2")
-    lu.assertEvalToTrue(peak2.peak == 2, "peak should rise to 2")
+    luassert.truthy(peak2.live == 2, "two acquires should make live 2")
+    luassert.truthy(peak2.peak == 2, "peak should rise to 2")
 
     entity_pool.release("pk", h1)
     local after = entity_pool.stats()["pk"]
-    lu.assertEvalToTrue(after.live == 1, "release should lower live back to 1")
-    lu.assertEvalToTrue(after.peak == 2, "peak should stay at the high-water mark of 2")
+    luassert.truthy(after.live == 1, "release should lower live back to 1")
+    luassert.truthy(after.peak == 2, "peak should stay at the high-water mark of 2")
   end)
 end
 
-function TestEntityPool:test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle()
+local function _test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle()
   entity_pool.release("rk", make_handle("r", {}))
   local stats = entity_pool.stats()["rk"]
-  lu.assertEvalToTrue(stats.live == 0, "releasing without a prior acquire should keep live at 0, not negative")
+  luassert.truthy(stats.live == 0, "releasing without a prior acquire should keep live at 0, not negative")
 end
 
-function TestEntityPool:test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it()
+local function _test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -163,35 +163,35 @@ function TestEntityPool:test_keeps_peak_at_the_high_water_mark_when_live_later_r
     local h1 = entity_pool.acquire("hwk", { x = 1 })
     local h2 = entity_pool.acquire("hwk", { x = 2 })
     entity_pool.acquire("hwk", { x = 3 })
-    lu.assertEvalToTrue(entity_pool.stats()["hwk"].peak == 3, "three live handles should raise peak to 3")
+    luassert.truthy(entity_pool.stats()["hwk"].peak == 3, "three live handles should raise peak to 3")
 
     entity_pool.release("hwk", h1)
     entity_pool.release("hwk", h2)
     entity_pool.acquire("hwk", { x = 4 })
 
     local stats = entity_pool.stats()["hwk"]
-    lu.assertEvalToTrue(stats.live == 2, "re-acquiring one handle should bring live to 2")
-    lu.assertEvalToTrue(stats.peak == 3,
+    luassert.truthy(stats.live == 2, "re-acquiring one handle should bring live to 2")
+    luassert.truthy(stats.peak == 3,
       "peak should stay at its high-water mark and not be overwritten while live is below it")
   end)
 end
 
-function TestEntityPool:test_hides_the_handle_and_parks_it_at_the_park_position()
+local function _test_hides_the_handle_and_parks_it_at_the_park_position()
   local log = {}
   local handle = make_handle("h", log)
   entity_pool.release("hide_key", handle)
 
   local by_method = {}
   for _, call in ipairs(log) do by_method[call.m] = call.arg end
-  lu.assertEvalToTrue(by_method.set_model_visible == false, "release should hide the handle")
-  lu.assertEvalToTrue(by_method.set_position == PARK_POS, "release should move the handle to the park position")
+  luassert.truthy(by_method.set_model_visible == false, "release should hide the handle")
+  luassert.truthy(by_method.set_position == PARK_POS, "release should move the handle to the park position")
 
   local stats = entity_pool.stats()["hide_key"]
-  lu.assertEvalToTrue(stats ~= nil, "expected bucket entry after release")
-  lu.assertEvalToTrue(stats.idle == 1, "released handle should be parked in the idle list")
+  luassert.truthy(stats ~= nil, "expected bucket entry after release")
+  luassert.truthy(stats.idle == 1, "released handle should be parked in the idle list")
 end
 
-function TestEntityPool:test_parks_handles_until_the_idle_cap_then_destroys_extras()
+local function _test_parks_handles_until_the_idle_cap_then_destroys_extras()
   local destroyed = {}
   with_patches({
     { target = unit_lifecycle, key = "destroy_unit", value = function(handle)
@@ -201,24 +201,24 @@ function TestEntityPool:test_parks_handles_until_the_idle_cap_then_destroys_extr
     for i = 1, MAX_IDLE do
       entity_pool.release("ck", make_handle("keep" .. i, {}))
     end
-    lu.assertEvalToTrue(#destroyed == 0, "handles up to the idle cap should be parked, not destroyed")
-    lu.assertEvalToTrue(entity_pool.stats()["ck"].idle == MAX_IDLE, "idle list should fill to the cap")
+    luassert.truthy(#destroyed == 0, "handles up to the idle cap should be parked, not destroyed")
+    luassert.truthy(entity_pool.stats()["ck"].idle == MAX_IDLE, "idle list should fill to the cap")
 
     local overflow = make_handle("overflow", {})
     entity_pool.release("ck", overflow)
-    lu.assertEvalToTrue(entity_pool.stats()["ck"].idle == MAX_IDLE, "idle list should not grow beyond the cap")
-    lu.assertEvalToTrue(#destroyed == 1 and destroyed[1] == overflow,
+    luassert.truthy(entity_pool.stats()["ck"].idle == MAX_IDLE, "idle list should not grow beyond the cap")
+    luassert.truthy(#destroyed == 1 and destroyed[1] == overflow,
       "a handle past the idle cap should be destroyed")
   end)
 end
 
-function TestEntityPool:test_ignores_nil_unit_key_or_nil_handle()
+local function _test_ignores_nil_unit_key_or_nil_handle()
   entity_pool.release(nil, make_handle("x", {}))
   entity_pool.release("nilguard_key", nil)
-  lu.assertEvalToTrue(entity_pool.stats()["nilguard_key"] == nil, "release with a nil handle should not create a bucket")
+  luassert.truthy(entity_pool.stats()["nilguard_key"] == nil, "release with a nil handle should not create a bucket")
 end
 
-function TestEntityPool:test_creates_and_parks_handles_up_to_the_requested_count()
+local function _test_creates_and_parks_handles_up_to_the_requested_count()
   local created = {}
   local log = {}
   with_patches({
@@ -229,15 +229,15 @@ function TestEntityPool:test_creates_and_parks_handles_up_to_the_requested_count
   }, function()
     local sample_pos = { x = 42 }
     entity_pool.prewarm("wk", 3, { r = 1 }, { s = 2 }, sample_pos)
-    lu.assertEvalToTrue(#created == 3, "prewarm should create the requested number of handles")
-    lu.assertEvalToTrue(created[1].unit_key == "wk", "prewarm create should receive the unit_key")
-    lu.assertEvalToTrue(created[1].pos == sample_pos, "prewarm should forward the sample position")
-    lu.assertEvalToTrue(created[1].rotation.r == 1, "prewarm should forward the rotation")
-    lu.assertEvalToTrue(created[1].scale.s == 2, "prewarm should forward the scale")
+    luassert.truthy(#created == 3, "prewarm should create the requested number of handles")
+    luassert.truthy(created[1].unit_key == "wk", "prewarm create should receive the unit_key")
+    luassert.truthy(created[1].pos == sample_pos, "prewarm should forward the sample position")
+    luassert.truthy(created[1].rotation.r == 1, "prewarm should forward the rotation")
+    luassert.truthy(created[1].scale.s == 2, "prewarm should forward the scale")
   end)
 
   local stats = entity_pool.stats()["wk"]
-  lu.assertEvalToTrue(stats.idle == 3, "prewarmed handles should be parked in the idle list")
+  luassert.truthy(stats.idle == 3, "prewarmed handles should be parked in the idle list")
 
   local visible_calls = 0
   local parked_calls = 0
@@ -245,11 +245,11 @@ function TestEntityPool:test_creates_and_parks_handles_up_to_the_requested_count
     if call.m == "set_model_visible" and call.arg == false then visible_calls = visible_calls + 1 end
     if call.m == "set_position" and call.arg == PARK_POS then parked_calls = parked_calls + 1 end
   end
-  lu.assertEvalToTrue(visible_calls == 3, "each prewarmed handle should be hidden")
-  lu.assertEvalToTrue(parked_calls == 3, "each prewarmed handle should be parked at the park position")
+  luassert.truthy(visible_calls == 3, "each prewarmed handle should be hidden")
+  luassert.truthy(parked_calls == 3, "each prewarmed handle should be parked at the park position")
 end
 
-function TestEntityPool:test_defaults_the_sample_position_to_the_park_position()
+local function _test_defaults_the_sample_position_to_the_park_position()
   local seen_pos
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function(_, pos)
@@ -258,22 +258,22 @@ function TestEntityPool:test_defaults_the_sample_position_to_the_park_position()
     end },
   }, function()
     entity_pool.prewarm("dk", 1)
-    lu.assertEvalToTrue(seen_pos == PARK_POS, "prewarm without a sample pos should default to the park position")
+    luassert.truthy(seen_pos == PARK_POS, "prewarm without a sample pos should default to the park position")
   end)
 end
 
-function TestEntityPool:test_never_fills_past_the_idle_cap()
+local function _test_never_fills_past_the_idle_cap()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
       return make_handle("cap", {})
     end },
   }, function()
     entity_pool.prewarm("capk", MAX_IDLE + 5)
-    lu.assertEvalToTrue(entity_pool.stats()["capk"].idle == MAX_IDLE, "prewarm should stop at the idle cap")
+    luassert.truthy(entity_pool.stats()["capk"].idle == MAX_IDLE, "prewarm should stop at the idle cap")
   end)
 end
 
-function TestEntityPool:test_does_nothing_for_invalid_counts_or_a_nil_key()
+local function _test_does_nothing_for_invalid_counts_or_a_nil_key()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -285,21 +285,21 @@ function TestEntityPool:test_does_nothing_for_invalid_counts_or_a_nil_key()
     entity_pool.prewarm("zk", -3)
     entity_pool.prewarm(nil, 3)
   end)
-  lu.assertEvalToTrue(created == 0, "invalid prewarm arguments should create nothing")
-  lu.assertEvalToTrue(entity_pool.stats()["zk"] == nil, "a zero/negative prewarm should not build a bucket")
+  luassert.truthy(created == 0, "invalid prewarm arguments should create nothing")
+  luassert.truthy(entity_pool.stats()["zk"] == nil, "a zero/negative prewarm should not build a bucket")
 end
 
-function TestEntityPool:test_stops_parking_when_the_host_create_yields_nil()
+local function _test_stops_parking_when_the_host_create_yields_nil()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function() return nil end },
   }, function()
     entity_pool.prewarm("fk", 4)
     local stats = entity_pool.stats()["fk"]
-    lu.assertEvalToTrue(stats.idle == 0, "a failing host create should leave nothing parked")
+    luassert.truthy(stats.idle == 0, "a failing host create should leave nothing parked")
   end)
 end
 
-function TestEntityPool:test_keeps_prewarming_past_a_single_transient_host_create_failure()
+local function _test_keeps_prewarming_past_a_single_transient_host_create_failure()
   local calls = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -309,26 +309,26 @@ function TestEntityPool:test_keeps_prewarming_past_a_single_transient_host_creat
     end },
   }, function()
     entity_pool.prewarm("tfk", 3)
-    lu.assertEvalToTrue(entity_pool.stats()["tfk"].idle == 2,
+    luassert.truthy(entity_pool.stats()["tfk"].idle == 2,
       "a transient create failure should let later prewarm iterations keep parking handles")
   end)
 end
 
-function TestEntityPool:test_tops_up_only_the_missing_handles_when_some_are_already_parked()
+local function _test_tops_up_only_the_missing_handles_when_some_are_already_parked()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
       return make_handle("tu", {})
     end },
   }, function()
     entity_pool.prewarm("tuk", 2)
-    lu.assertEvalToTrue(entity_pool.stats()["tuk"].idle == 2, "the first prewarm should park two handles")
+    luassert.truthy(entity_pool.stats()["tuk"].idle == 2, "the first prewarm should park two handles")
     entity_pool.prewarm("tuk", 3)
-    lu.assertEvalToTrue(entity_pool.stats()["tuk"].idle == 3,
+    luassert.truthy(entity_pool.stats()["tuk"].idle == 3,
       "a second prewarm should top up to exactly the requested count, not overshoot")
   end)
 end
 
-function TestEntityPool:test_reports_idle_live_peak_and_miss_per_bucket()
+local function _test_reports_idle_live_peak_and_miss_per_bucket()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -339,14 +339,14 @@ function TestEntityPool:test_reports_idle_live_peak_and_miss_per_bucket()
     local h = entity_pool.acquire("sk", { x = 1 })
     entity_pool.release("sk", h)
     local stats = entity_pool.stats()["sk"]
-    lu.assertEvalToTrue(stats.idle == 1, "stats should report one idle handle")
-    lu.assertEvalToTrue(stats.live == 0, "stats should report live back to 0 after release")
-    lu.assertEvalToTrue(stats.peak == 1, "stats should report the peak live of 1")
-    lu.assertEvalToTrue(stats.miss == 1, "stats should report one miss from the create")
+    luassert.truthy(stats.idle == 1, "stats should report one idle handle")
+    luassert.truthy(stats.live == 0, "stats should report live back to 0 after release")
+    luassert.truthy(stats.peak == 1, "stats should report the peak live of 1")
+    luassert.truthy(stats.miss == 1, "stats should report one miss from the create")
   end)
 end
 
-function TestEntityPool:test_destroys_parked_handles_and_clears_the_idle_lists()
+local function _test_destroys_parked_handles_and_clears_the_idle_lists()
   local destroyed = {}
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -357,15 +357,15 @@ function TestEntityPool:test_destroys_parked_handles_and_clears_the_idle_lists()
     end },
   }, function()
     entity_pool.prewarm("xk", 2)
-    lu.assertEvalToTrue(entity_pool.stats()["xk"].idle == 2, "prewarm should park two handles")
+    luassert.truthy(entity_pool.stats()["xk"].idle == 2, "prewarm should park two handles")
 
     entity_pool.reset()
-    lu.assertEvalToTrue(#destroyed == 2, "reset should destroy every parked handle")
-    lu.assertEvalToTrue(entity_pool.stats()["xk"].idle == 0, "reset should empty the idle list")
+    luassert.truthy(#destroyed == 2, "reset should destroy every parked handle")
+    luassert.truthy(entity_pool.stats()["xk"].idle == 0, "reset should empty the idle list")
   end)
 end
 
-function TestEntityPool:test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle()
+local function _test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle()
   entity_pool.reset()
   local created = 0
   local hidden = 0
@@ -399,7 +399,7 @@ function TestEntityPool:test_prewarm_fills_the_idle_bucket_hides_and_parks_units
   entity_pool.reset()
 end
 
-function TestEntityPool:test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform()
+local function _test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform()
   entity_pool.reset()
   local created = 0
   local calls = { position = 0, orientation = 0, scale = 0, visible = nil }
@@ -439,4 +439,28 @@ function TestEntityPool:test_acquire_reuses_a_parked_idle_handle_and_refreshes_i
 end
 
 
-return TestEntityPool
+it("test_returns_nil_when_unit_key_is_nil", _test_returns_nil_when_unit_key_is_nil)
+it("test_returns_nil_when_pos_is_nil", _test_returns_nil_when_pos_is_nil)
+it("test_returns_nil_when_gameapi_absent_and_no_idle_handles", _test_returns_nil_when_gameapi_absent_and_no_idle_handles)
+it("test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility", _test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility)
+it("test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss", _test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss)
+it("test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil", _test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil)
+it("test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil", _test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil)
+it("test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live", _test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live)
+it("test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle", _test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle)
+it("test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it", _test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it)
+it("test_hides_the_handle_and_parks_it_at_the_park_position", _test_hides_the_handle_and_parks_it_at_the_park_position)
+it("test_parks_handles_until_the_idle_cap_then_destroys_extras", _test_parks_handles_until_the_idle_cap_then_destroys_extras)
+it("test_ignores_nil_unit_key_or_nil_handle", _test_ignores_nil_unit_key_or_nil_handle)
+it("test_creates_and_parks_handles_up_to_the_requested_count", _test_creates_and_parks_handles_up_to_the_requested_count)
+it("test_defaults_the_sample_position_to_the_park_position", _test_defaults_the_sample_position_to_the_park_position)
+it("test_never_fills_past_the_idle_cap", _test_never_fills_past_the_idle_cap)
+it("test_does_nothing_for_invalid_counts_or_a_nil_key", _test_does_nothing_for_invalid_counts_or_a_nil_key)
+it("test_stops_parking_when_the_host_create_yields_nil", _test_stops_parking_when_the_host_create_yields_nil)
+it("test_keeps_prewarming_past_a_single_transient_host_create_failure", _test_keeps_prewarming_past_a_single_transient_host_create_failure)
+it("test_tops_up_only_the_missing_handles_when_some_are_already_parked", _test_tops_up_only_the_missing_handles_when_some_are_already_parked)
+it("test_reports_idle_live_peak_and_miss_per_bucket", _test_reports_idle_live_peak_and_miss_per_bucket)
+it("test_destroys_parked_handles_and_clears_the_idle_lists", _test_destroys_parked_handles_and_clears_the_idle_lists)
+it("test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle", _test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle)
+it("test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform", _test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform)
+end)

@@ -1,8 +1,13 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local support = require("test.support.shared_support")
 local global_aliases = require("src.host.global_aliases")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local _config_reset = require("test.support.config_reset")
 
@@ -24,13 +29,12 @@ local function _build_env()
   }, game_api, lua_api
 end
 
-TestGlobalAliases = {}
+describe("TestGlobalAliases", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
-function TestGlobalAliases:setUp()
-  _config_reset.reset_all()
-end
-
-function TestGlobalAliases:test_install_sets_required_global_aliases()
+local function _test_install_sets_required_global_aliases()
   local env, game_api, lua_api = _build_env()
   support.with_patches({
     { key = "GameAPI", value = nil },
@@ -67,7 +71,7 @@ function TestGlobalAliases:test_install_sets_required_global_aliases()
   end)
 end
 
-function TestGlobalAliases:test_install_rejects_a_luaapi_missing_any_required_method()
+local function _test_install_rejects_a_luaapi_missing_any_required_method()
   local required_methods = {
     "call_delay_time",
     "global_register_custom_event",
@@ -81,26 +85,29 @@ function TestGlobalAliases:test_install_rejects_a_luaapi_missing_any_required_me
     local env = _build_env()
     env.LuaAPI[method_name] = nil
     local ok, err = pcall(global_aliases.install, env)
-    lu.assertEvalToTrue(not ok, "install should reject LuaAPI missing " .. method_name)
-    lu.assertEvalToTrue(
+    luassert.truthy(not ok, "install should reject LuaAPI missing " .. method_name)
+    luassert.truthy(
       tostring(err):find("missing LuaAPI." .. method_name, 1, true),
       "error should name the missing method: " .. tostring(err)
     )
   end
 end
 
-function TestGlobalAliases:test_install_asserts_missing_env_and_luaapi()
+local function _test_install_asserts_missing_env_and_luaapi()
   -- #293:install(nil) 与 env.LuaAPI 缺失的断言消息未测,消息位点变异存活。
   local ok_env, err_env = pcall(global_aliases.install, nil)
-  lu.assertEvalToTrue(not ok_env, "install should reject a missing env")
-  lu.assertEvalToTrue(tostring(err_env):find("missing runtime env", 1, true) ~= nil,
+  luassert.truthy(not ok_env, "install should reject a missing env")
+  luassert.truthy(tostring(err_env):find("missing runtime env", 1, true) ~= nil,
     "missing-env assert should carry its message: " .. tostring(err_env))
 
   local ok_api, err_api = pcall(global_aliases.install, {})
-  lu.assertEvalToTrue(not ok_api, "install should reject a LuaAPI-less env")
-  lu.assertEvalToTrue(tostring(err_api):find("missing LuaAPI", 1, true) ~= nil,
+  luassert.truthy(not ok_api, "install should reject a LuaAPI-less env")
+  luassert.truthy(tostring(err_api):find("missing LuaAPI", 1, true) ~= nil,
     "missing-LuaAPI assert should carry its message: " .. tostring(err_api))
 end
 
 
-return TestGlobalAliases
+it("test_install_sets_required_global_aliases", _test_install_sets_required_global_aliases)
+it("test_install_rejects_a_luaapi_missing_any_required_method", _test_install_rejects_a_luaapi_missing_any_required_method)
+it("test_install_asserts_missing_env_and_luaapi", _test_install_asserts_missing_env_and_luaapi)
+end)

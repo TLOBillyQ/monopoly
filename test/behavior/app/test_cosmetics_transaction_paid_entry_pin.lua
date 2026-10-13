@@ -10,7 +10,10 @@
 -- 原生 LuaUnit 改写:describe 带 before_each/after_each → setUp/tearDown,
 -- 用例数与改写前一一对应(1 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
@@ -18,7 +21,7 @@ local transaction = require("src.app.cosmetics.transaction")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 
 local function _assert_eq(actual, expected, message)
-  assert(actual == expected, (message or "assertion failed") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
 end
 
 local function _catalog()
@@ -68,21 +71,18 @@ local function _archive(owned, equipped)
   }
 end
 
-TestCosmeticsTransactionPaidEntryPin = {}
+describe("TestCosmeticsTransactionPaidEntryPin", function()
+  before_each(function()
+    transaction.reset_for_tests()
+    transaction.configure_catalog_for_tests(_catalog())
+  end)
+  after_each(function()
+    transaction.reset_for_tests()
+    paid_purchase_port.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestCosmeticsTransactionPaidEntryPin:setUp()
-  transaction.reset_for_tests()
-  transaction.configure_catalog_for_tests(_catalog())
-end
-
-function TestCosmeticsTransactionPaidEntryPin:tearDown()
-  transaction.reset_for_tests()
-  paid_purchase_port.reset_for_tests()
-  -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
-  support.restore_runtime_services()
-end
-
-function TestCosmeticsTransactionPaidEntryPin:test_locked_purchase_starts_paid_entry_and_completion_fulfills_original_product()
+it("test_locked_purchase_starts_paid_entry_and_completion_fulfills_original_product", function()
   local state, player = _state()
   local archive = _archive()
   local equipped = {}
@@ -106,8 +106,8 @@ function TestCosmeticsTransactionPaidEntryPin:test_locked_purchase_starts_paid_e
     },
   }, function()
     local result = transaction.handle_skin_transaction(state, 1, { type = "equip_slot", slot_index = 1 })
-    lu.assertEvalToTrue(result.accepted == true, "purchase start should be accepted")
-    lu.assertEvalToTrue(result.pending_purchase == true, "locked purchase should create pending purchase")
+    luassert.truthy(result.accepted == true, "purchase start should be accepted")
+    luassert.truthy(result.pending_purchase == true, "locked purchase should create pending purchase")
   end)
 
   _assert_eq(captured and captured.game, state.game, "paid entry should use state game")
@@ -123,7 +123,5 @@ function TestCosmeticsTransactionPaidEntryPin:test_locked_purchase_starts_paid_e
   _assert_eq(state.ui.skin_panel.selected_by_role["1"], "skin_1", "fulfilled purchase should equip original product")
   _assert_eq(equipped[1], "skin_1", "fulfillment should apply equip adapter")
   _assert_eq(archive.store.marked[1], "skin_1", "fulfillment should persist ownership")
-end
-
-
-return TestCosmeticsTransactionPaidEntryPin
+end)
+end)

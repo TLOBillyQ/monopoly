@@ -1,27 +1,30 @@
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- after_each → tearDown,断言从裸 assert 切到 lu.assertEvalToTrue,
+-- after_each → tearDown,断言从裸 assert 切到 luassert.truthy,
 -- 用例数与改写前一一对应(9 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
 local function _assert_eq(actual, expected, message)
-  lu.assertEvalToTrue(actual == expected, (message or "assertion failed") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
 end
 
-TestHostInstall = {}
+describe("TestHostInstall", function()
 
-function TestHostInstall:tearDown()
+  after_each(function()
   require("src.ui.screens.skin_panel").reset_for_tests()
   require("src.host.context").set_current(nil)
   -- 本 spec 反复把运行时端口拆到未配置态验证安装路径;拆完必须把共享测试基线装回去,
   -- 否则同进程后续 suite 会撞上「missing market paid gateway」之类的空端口。全量
   -- behavior 车道靠 suite 顺序掩盖了它,mutate 车道的窄 suite 子集会当场翻车。
   support.restore_runtime_services()
-end
+  end)
 
-function TestHostInstall:test_host_ports_lists_five_capability_slots_in_fixed_order()
+local function _test_host_ports_lists_five_capability_slots_in_fixed_order()
   -- 清单单一真源（#250/#251）：5 个 port 槽的有序表逐位钉死。
   -- 清 package.loaded 重放 chunk:清单只在加载时执行,得在 case 内重放才能让变异
   -- 车道 suite-file map 归因到本 suite(原条目用后装回,不泄漏)。
@@ -39,7 +42,7 @@ function TestHostInstall:test_host_ports_lists_five_capability_slots_in_fixed_or
   _assert_eq(require("src.ui.seams.host_scene_ui"), refired[5], "slot 5 is host_scene_ui")
 end
 
-function TestHostInstall:test_rejects_removed_runtime_options()
+local function _test_rejects_removed_runtime_options()
   local host_install = require("src.app.host_install")
 
   local context_ok, context_err = pcall(host_install.install, {
@@ -47,7 +50,7 @@ function TestHostInstall:test_rejects_removed_runtime_options()
     skip_context_install = true,
   })
   _assert_eq(context_ok, false, "context_policy should be rejected")
-  lu.assertEvalToTrue(tostring(context_err):find("context_policy option removed", 1, true) ~= nil,
+  luassert.truthy(tostring(context_err):find("context_policy option removed", 1, true) ~= nil,
     "context_policy error should identify removed option")
 
   local fallback_ok, fallback_err = pcall(host_install.install, {
@@ -55,11 +58,11 @@ function TestHostInstall:test_rejects_removed_runtime_options()
     skip_context_install = true,
   })
   _assert_eq(fallback_ok, false, "legacy helper fallback should be rejected")
-  lu.assertEvalToTrue(tostring(fallback_err):find("enable_legacy_helper_fallback option removed", 1, true) ~= nil,
+  luassert.truthy(tostring(fallback_err):find("enable_legacy_helper_fallback option removed", 1, true) ~= nil,
     "legacy fallback error should identify removed option")
 end
 
-function TestHostInstall:test_skip_context_install_wires_purchase_skins_to_paid_port()
+local function _test_skip_context_install_wires_purchase_skins_to_paid_port()
   local host_install = require("src.app.host_install")
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
   local skin_panel = require("src.ui.screens.skin_panel")
@@ -105,7 +108,7 @@ function TestHostInstall:test_skip_context_install_wires_purchase_skins_to_paid_
   _assert_eq(captured and captured.entry.kind, "skin", "purchase should create skin entry")
 end
 
-function TestHostInstall:test_install_subscribes_reward_day_events_and_grants_the_resolved_player()
+local function _test_install_subscribes_reward_day_events_and_grants_the_resolved_player()
   local host_install = require("src.app.host_install")
   local local_actor_resolver = require("src.ui.render.support.local_actor_resolver")
   local captured = {}
@@ -175,7 +178,7 @@ function TestHostInstall:test_install_subscribes_reward_day_events_and_grants_th
   _assert_eq(resolver_states[1], app_state, "host_install must pass the live app state to the resolver")
 end
 
-function TestHostInstall:test_reward_day_events_refresh_player_ui_from_dirty_immediately()
+local function _test_reward_day_events_refresh_player_ui_from_dirty_immediately()
   local host_install = require("src.app.host_install")
   local local_actor_resolver = require("src.ui.render.support.local_actor_resolver")
   local captured = {}
@@ -266,7 +269,7 @@ function TestHostInstall:test_reward_day_events_refresh_player_ui_from_dirty_imm
   _assert_eq(game.dirty.any, false, "immediate refresh should consume the dirty bucket")
 end
 
-function TestHostInstall:test_reward_day_grant_survives_missing_ui_sync_ports()
+local function _test_reward_day_grant_survives_missing_ui_sync_ports()
   local host_install = require("src.app.host_install")
   local local_actor_resolver = require("src.ui.render.support.local_actor_resolver")
   local captured = {}
@@ -328,7 +331,7 @@ function TestHostInstall:test_reward_day_grant_survives_missing_ui_sync_ports()
   _assert_eq(player.cash, 4000, "RewardDay4 must still grant coins without ui_sync ports")
 end
 
-function TestHostInstall:test_skips_reward_day_wiring_when_either_lazy_accessor_is_missing()
+local function _test_skips_reward_day_wiring_when_either_lazy_accessor_is_missing()
   local host_install = require("src.app.host_install")
   local captured = {}
   local lua_api = {
@@ -365,7 +368,7 @@ function TestHostInstall:test_skips_reward_day_wiring_when_either_lazy_accessor_
   end, { skip_runtime_context_refresh = true })
 end
 
-function TestHostInstall:test_install_wires_runtime_context_aliases_and_default_ports()
+local function _test_install_wires_runtime_context_aliases_and_default_ports()
   local host_install = require("src.app.host_install")
   local runtime_context = require("src.host.context")
   local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -412,7 +415,7 @@ function TestHostInstall:test_install_wires_runtime_context_aliases_and_default_
   end, { skip_runtime_context_refresh = true })
 end
 
-function TestHostInstall:test_skip_context_install_wires_skin_panel_to_skin_equip()
+local function _test_skip_context_install_wires_skin_panel_to_skin_equip()
   local host_install = require("src.app.host_install")
   local skin_panel = require("src.ui.screens.skin_panel")
   local skin_equip = require("src.rules.cosmetics")
@@ -442,7 +445,7 @@ function TestHostInstall:test_skip_context_install_wires_skin_panel_to_skin_equi
     "skin equip should receive the numeric resource id resolved from refs.skins")
 end
 
-function TestHostInstall:test_skip_context_install_wires_skin_panel_to_skin_unequip()
+local function _test_skip_context_install_wires_skin_panel_to_skin_unequip()
   local host_install = require("src.app.host_install")
   local skin_panel = require("src.ui.screens.skin_panel")
   local skin_equip = require("src.rules.cosmetics")
@@ -480,7 +483,7 @@ function TestHostInstall:test_skip_context_install_wires_skin_panel_to_skin_uneq
     "skin unequip should receive the default creature fallback from refs.default_creature")
 end
 
-function TestHostInstall:test_reward_day_without_consume_dirty_is_a_safe_noop()
+local function _test_reward_day_without_consume_dirty_is_a_safe_noop()
   -- #293:_refresh_sign_in_reward_ui 的守卫(or→and 变异会带 nil game 走下去崩、
   -- false→true 变异会谎报成功)未测——用缺 consume_dirty 的 game 钉住守卫。
   local host_install = require("src.app.host_install")
@@ -577,7 +580,7 @@ local function _capture_sign_in_deps()
   return captured_deps
 end
 
-function TestHostInstall:test_after_grant_guard_returns_false_and_never_crashes()
+local function _test_after_grant_guard_returns_false_and_never_crashes()
   -- #293: _refresh_sign_in_reward_ui 的守卫 or→and 变异会带着 nil game / 缺
   -- consume_dirty 的 game 走下去崩(位点 A/B),return false→true 变异会谎报成功;
   -- 现有用例 state 无 ui_sync 端口,变异体照样走 false 路径,杀不掉——这里给
@@ -604,7 +607,7 @@ function TestHostInstall:test_after_grant_guard_returns_false_and_never_crashes(
   _assert_eq(#refresh_calls, 0, "missing consume_dirty must not reach the ui_sync refresh")
 end
 
-function TestHostInstall:test_after_grant_returns_false_when_ui_sync_missing()
+local function _test_after_grant_returns_false_when_ui_sync_missing()
   -- #293: ui_sync == nil 分支的 return false→true 变异(谎报刷新成功)只能靠
   -- 直调 after_grant 断言返回值区分;宿主事件路径丢弃返回值杀不掉。
   local sign_in = require("src.app.host_integrations.sign_in")
@@ -635,7 +638,7 @@ function TestHostInstall:test_after_grant_returns_false_when_ui_sync_missing()
     false, "missing ui_sync must report no refresh")
 end
 
-function TestHostInstall:test_install_configures_achievement_progress_with_built_port()
+local function _test_install_configures_achievement_progress_with_built_port()
   -- #293: L126 configure(nil) 变异(丢掉 achievement_runtime.build_port())——
   -- 钉住 configure 收到的参数必须是 build_port() 的产物,不是 nil。
   local achievement_progress_port = require("src.rules.ports.achievement_progress")
@@ -651,9 +654,23 @@ function TestHostInstall:test_install_configures_achievement_progress_with_built
   }, function()
     require("src.app.host_install").install({ skip_context_install = true })
   end)
-  lu.assertEvalToTrue(captured ~= nil, "achievement_progress must be configured with a built port")
-  lu.assertEvalToTrue(type(captured) == "table", "achievement_progress port must be a table, got " .. type(captured))
+  luassert.truthy(captured ~= nil, "achievement_progress must be configured with a built port")
+  luassert.truthy(type(captured) == "table", "achievement_progress port must be a table, got " .. type(captured))
 end
 
 
-return TestHostInstall
+it("test_host_ports_lists_five_capability_slots_in_fixed_order", _test_host_ports_lists_five_capability_slots_in_fixed_order)
+it("test_rejects_removed_runtime_options", _test_rejects_removed_runtime_options)
+it("test_skip_context_install_wires_purchase_skins_to_paid_port", _test_skip_context_install_wires_purchase_skins_to_paid_port)
+it("test_install_subscribes_reward_day_events_and_grants_the_resolved_player", _test_install_subscribes_reward_day_events_and_grants_the_resolved_player)
+it("test_reward_day_events_refresh_player_ui_from_dirty_immediately", _test_reward_day_events_refresh_player_ui_from_dirty_immediately)
+it("test_reward_day_grant_survives_missing_ui_sync_ports", _test_reward_day_grant_survives_missing_ui_sync_ports)
+it("test_skips_reward_day_wiring_when_either_lazy_accessor_is_missing", _test_skips_reward_day_wiring_when_either_lazy_accessor_is_missing)
+it("test_install_wires_runtime_context_aliases_and_default_ports", _test_install_wires_runtime_context_aliases_and_default_ports)
+it("test_skip_context_install_wires_skin_panel_to_skin_equip", _test_skip_context_install_wires_skin_panel_to_skin_equip)
+it("test_skip_context_install_wires_skin_panel_to_skin_unequip", _test_skip_context_install_wires_skin_panel_to_skin_unequip)
+it("test_reward_day_without_consume_dirty_is_a_safe_noop", _test_reward_day_without_consume_dirty_is_a_safe_noop)
+it("test_after_grant_guard_returns_false_and_never_crashes", _test_after_grant_guard_returns_false_and_never_crashes)
+it("test_after_grant_returns_false_when_ui_sync_missing", _test_after_grant_returns_false_when_ui_sync_missing)
+it("test_install_configures_achievement_progress_with_built_port", _test_install_configures_achievement_progress_with_built_port)
+end)
