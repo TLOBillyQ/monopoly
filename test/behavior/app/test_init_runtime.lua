@@ -1,6 +1,7 @@
 -- init_runtime 直测:has_game_time_api 守卫、build_ui_warn_sink 路径、
 -- try_show_tip_to_role 的 pcall 故障臂。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 
 local init_runtime = require("src.app.init_runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -10,7 +11,7 @@ TestInitRuntime = {}
 -- ---- has_game_time_api ----
 
 function TestInitRuntime:test_has_game_time_api_nil_returns_false()
-  lu.assertEvalToTrue(init_runtime.has_game_time_api(nil) == false,
+  luassert.truthy(init_runtime.has_game_time_api(nil) == false,
     "nil game_api must return false")
 end
 
@@ -21,7 +22,7 @@ function TestInitRuntime:test_has_game_time_api_missing_get_second_returns_false
     get_hour = function() return 0 end,
     get_minute = function() return 0 end,
   }
-  lu.assertEvalToTrue(init_runtime.has_game_time_api(api) == false,
+  luassert.truthy(init_runtime.has_game_time_api(api) == false,
     "game_api missing get_second must return false")
 end
 
@@ -34,7 +35,7 @@ function TestInitRuntime:test_build_ui_warn_sink_skips_non_warn()
   _G.GlobalAPI = { show_tips = function(_, _) end }
   local sink = init_runtime.build_ui_warn_sink()
   -- info 级别应该跳过
-  lu.assertEvalToTrue(sink({ level = "info", text = "nope" }) == nil,
+  luassert.truthy(sink({ level = "info", text = "nope" }) == nil,
     "non-warn level must be a no-op")
   _G.GlobalAPI = saved
 end
@@ -43,7 +44,7 @@ function TestInitRuntime:test_build_ui_warn_sink_nil_entry_skips()
   local saved = _G.GlobalAPI
   _G.GlobalAPI = { show_tips = function(_, _) end }
   local sink = init_runtime.build_ui_warn_sink()
-  lu.assertEvalToTrue(sink(nil) == nil, "nil entry must be a no-op")
+  luassert.truthy(sink(nil) == nil, "nil entry must be a no-op")
   _G.GlobalAPI = saved
 end
 
@@ -55,8 +56,8 @@ function TestInitRuntime:test_build_ui_warn_sink_routes_through_marquee()
   end }
   local sink = init_runtime.build_ui_warn_sink()
   sink({ level = "warn", ui = true, text = "test warn" })
-  lu.assertEvalToTrue(called_text ~= nil, "marquee must be called for ui-opted warn entries when available")
-  lu.assertEvalToTrue(string.find(called_text, "%[warn%]") ~= nil,
+  luassert.truthy(called_text ~= nil, "marquee must be called for ui-opted warn entries when available")
+  luassert.truthy(string.find(called_text, "%[warn%]") ~= nil,
     "marquee text must contain [warn] prefix")
   _G.GlobalAPI = saved
 end
@@ -70,8 +71,8 @@ function TestInitRuntime:test_build_ui_warn_sink_nil_text_defaults_to_empty()
   end }
   local sink = init_runtime.build_ui_warn_sink()
   sink({ level = "warn", ui = true })
-  lu.assertEvalToTrue(called_text ~= nil, "marquee must be called even when text is nil")
-  lu.assertEvalToTrue(string.find(called_text, "nil$") == nil,
+  luassert.truthy(called_text ~= nil, "marquee must be called even when text is nil")
+  luassert.truthy(string.find(called_text, "nil$") == nil,
     "trailing text must not contain literal nil when text is absent")
   _G.GlobalAPI = saved
 end
@@ -81,11 +82,11 @@ function TestInitRuntime:test_build_ui_warn_sink_falls_back_to_show_tips()
   local called_text = nil
   _G.GlobalAPI = { show_tips = function(text, duration)
     called_text = text
-    lu.assertEvalToTrue(duration == 3.0, "tips duration must be 3.0")
+    luassert.truthy(duration == 3.0, "tips duration must be 3.0")
   end }
   local sink = init_runtime.build_ui_warn_sink()
   sink({ level = "warn", ui = true, text = "test warn" })
-  lu.assertEvalToTrue(called_text ~= nil, "show_tips must be called as fallback when marquee is missing")
+  luassert.truthy(called_text ~= nil, "show_tips must be called as fallback when marquee is missing")
   _G.GlobalAPI = saved
 end
 
@@ -100,7 +101,7 @@ function TestInitRuntime:test_build_ui_warn_sink_skips_warn_without_ui_opt_in()
   }
   local sink = init_runtime.build_ui_warn_sink()
   sink({ level = "warn", text = "dev trace" })
-  lu.assertEvalToTrue(called == false, "warn entries without ui=true must not reach the host")
+  luassert.truthy(called == false, "warn entries without ui=true must not reach the host")
   _G.GlobalAPI = saved
 end
 
@@ -108,7 +109,7 @@ end
 
 function TestInitRuntime:test_try_show_tip_to_role_without_role_id_returns_false()
   local result = init_runtime.try_show_tip_to_role({ text = "x" }, "text", 1.0)
-  lu.assertEvalToTrue(result == false, "tip without role_id must return false")
+  luassert.truthy(result == false, "tip without role_id must return false")
 end
 
 function TestInitRuntime:test_show_tips_pcall_error_returns_nil()
@@ -124,7 +125,7 @@ function TestInitRuntime:test_show_tips_pcall_error_returns_nil()
     return boom_role
   end
   local result = init_runtime.try_show_tip_to_role({ role_id = 1 }, "text", 1.0)
-  lu.assertEvalToTrue(result == false, "pcall failure in _show_tips_of must return false from try_show_tip_to_role")
+  luassert.truthy(result == false, "pcall failure in _show_tips_of must return false from try_show_tip_to_role")
   runtime_ports.resolve_role = saved_resolve
 end
 
@@ -138,7 +139,7 @@ function TestInitRuntime:test_call_show_tips_error_returns_false()
     return role
   end
   local result = init_runtime.try_show_tip_to_role({ role_id = 1 }, "text", 1.0)
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "pcall failure in _call_show_tips must return false from try_show_tip_to_role")
   runtime_ports.resolve_role = saved_resolve
 end
@@ -152,7 +153,7 @@ function TestInitRuntime:test_show_tips_not_a_function_returns_false()
     return role
   end
   local result = init_runtime.try_show_tip_to_role({ role_id = 1 }, "text", 1.0)
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "non-function show_tips must return false from try_show_tip_to_role")
   runtime_ports.resolve_role = saved_resolve
 end
