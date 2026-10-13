@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local events = require("src.rules.movement_events")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -5,7 +7,7 @@ local constants = require("src.config.content.constants")
 local timing = require("src.config.gameplay.timing")
 
 local function _assert_eq(actual, expected, label)
-  assert(actual == expected, tostring(label) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.truthy(actual == expected, tostring(label) .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
 end
 
 local function _make_game(opts)
@@ -71,154 +73,152 @@ local function _move_ctx(game, opts)
 end
 
 do -- describe("rules.movement_events")
-  TestMovementEvents = {}
 
-  function TestMovementEvents:setUp()
-    runtime_ports.reset_for_tests()
-  end
 
-  function TestMovementEvents:tearDown()
-    runtime_ports.reset_for_tests()
-    -- 上面的 reset 把共享端口基线拆到未配置态,必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
-    support.restore_runtime_services()
-  end
 
-  TestMovementEvents["test_emits roadblock action animation and visible feed event"] = function(self)
-    local game = _make_game({ wait_action_anim = true })
-    _configure_runtime(game)
-    local player = _player()
-    events.emit_roadblock_hit(game, player, 4, { id = 4, name = "路障格" })
-    _assert_eq(#game.queued, 1, "roadblock action animation queued")
-    _assert_eq(game.queued[1].kind, "roadblock_trigger", "roadblock animation kind")
-    _assert_eq(game.queued[1].player_id, player.id, "roadblock player id")
-    _assert_eq(game.queued[1].tile_index, 4, "roadblock tile index")
-    _assert_eq(game.queued[1].duration, timing.action_anim_default_seconds, "roadblock duration")
-    _assert_eq(#game.emitted, 1, "monopoly event emitted")
-    _assert_eq(game.emitted[1].payload.prompt_text, "玩家正在行动", "prompt text set")
-    _assert_eq(#game.feed, 1, "feed event published")
-    _assert_eq(game.feed[1].tip, nil, "roadblock feed shows tip")
-  end
+  describe("TestMovementEvents", function()
+    before_each(function()
+      runtime_ports.reset_for_tests()
+    end)
+    after_each(function()
+      runtime_ports.reset_for_tests()
+      -- 上面的 reset 把共享端口基线拆到未配置态,必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
+      support.restore_runtime_services()
+    end)
+    it("test_emits roadblock action animation and visible feed event", function()
+      local game = _make_game({ wait_action_anim = true })
+      _configure_runtime(game)
+      local player = _player()
+      events.emit_roadblock_hit(game, player, 4, { id = 4, name = "路障格" })
+      _assert_eq(#game.queued, 1, "roadblock action animation queued")
+      _assert_eq(game.queued[1].kind, "roadblock_trigger", "roadblock animation kind")
+      _assert_eq(game.queued[1].player_id, player.id, "roadblock player id")
+      _assert_eq(game.queued[1].tile_index, 4, "roadblock tile index")
+      _assert_eq(game.queued[1].duration, timing.action_anim_default_seconds, "roadblock duration")
+      _assert_eq(#game.emitted, 1, "monopoly event emitted")
+      _assert_eq(game.emitted[1].payload.prompt_text, "玩家正在行动", "prompt text set")
+      _assert_eq(#game.feed, 1, "feed event published")
+      _assert_eq(game.feed[1].tip, nil, "roadblock feed shows tip")
+    end)
 
-  TestMovementEvents["test_emits market interrupt feed with default non-tip behavior"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_market_interrupt({
-      game = game,
-      player = _player(),
-    }, 5)
-    _assert_eq(#game.emitted, 1, "market monopoly event emitted")
-    _assert_eq(game.emitted[1].payload.remaining_steps, 5, "remaining steps emitted")
-    _assert_eq(game.emitted[1].payload.prompt_text, "玩家正在行动", "market prompt text set")
-    _assert_eq(#game.feed, 1, "market feed published")
-    _assert_eq(game.feed[1].tip, false, "market feed suppresses tip by default")
-  end
+    it("test_emits market interrupt feed with default non-tip behavior", function()
+      local game = _make_game()
+      _configure_runtime(game)
+      events.emit_market_interrupt({
+        game = game,
+        player = _player(),
+      }, 5)
+      _assert_eq(#game.emitted, 1, "market monopoly event emitted")
+      _assert_eq(game.emitted[1].payload.remaining_steps, 5, "remaining steps emitted")
+      _assert_eq(game.emitted[1].payload.prompt_text, "玩家正在行动", "market prompt text set")
+      _assert_eq(#game.feed, 1, "market feed published")
+      _assert_eq(game.feed[1].tip, false, "market feed suppresses tip by default")
+    end)
 
-  TestMovementEvents["test_emits move completion without pass-start reward when pass_start is zero"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, { pass_start = 0 }), { id = 8, name = "终点" })
-    _assert_eq(#game.emitted, 1, "only move completion event emitted")
-    _assert_eq(#game.feed, 1, "only move completion feed emitted")
-    _assert_eq(#game.cash, 0, "no pass-start cash awarded")
-    _assert_eq(#game.schedules, 0, "no pass-start schedule")
-  end
+    it("test_emits move completion without pass-start reward when pass_start is zero", function()
+      local game = _make_game()
+      _configure_runtime(game)
+      events.emit_move_completed(_move_ctx(game, { pass_start = 0 }), { id = 8, name = "终点" })
+      _assert_eq(#game.emitted, 1, "only move completion event emitted")
+      _assert_eq(#game.feed, 1, "only move completion feed emitted")
+      _assert_eq(#game.cash, 0, "no pass-start cash awarded")
+      _assert_eq(#game.schedules, 0, "no pass-start schedule")
+    end)
 
-  TestMovementEvents["test_emits immediate pass-start reward with deity multiplier and turn dedupe key"] = function(self)
-    local game = _make_game({ rich = true, turn_count = 12 })
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, {
-      pass_start = 2,
-      move_opts = { pass_start_hold_seconds = 0 },
-    }), { id = 8, name = "终点" })
-    _assert_eq(#game.cash, 1, "pass-start cash awarded once")
-    _assert_eq(game.cash[1].amount, 2 * constants.pass_start_bonus * 2, "rich deity doubles pass-start bonus")
-    _assert_eq(#game.feed, 2, "move completion and pass-start feeds emitted")
-    _assert_eq(game.feed[2].tip_dedupe_key, "passed_start:7:12", "pass-start dedupe key includes turn count")
-    _assert_eq(game.feed[2].tip, nil, "pass-start feed shows tip (show_tip=true leaves tip un-suppressed)")
-  end
+    it("test_emits immediate pass-start reward with deity multiplier and turn dedupe key", function()
+      local game = _make_game({ rich = true, turn_count = 12 })
+      _configure_runtime(game)
+      events.emit_move_completed(_move_ctx(game, {
+        pass_start = 2,
+        move_opts = { pass_start_hold_seconds = 0 },
+      }), { id = 8, name = "终点" })
+      _assert_eq(#game.cash, 1, "pass-start cash awarded once")
+      _assert_eq(game.cash[1].amount, 2 * constants.pass_start_bonus * 2, "rich deity doubles pass-start bonus")
+      _assert_eq(#game.feed, 2, "move completion and pass-start feeds emitted")
+      _assert_eq(game.feed[2].tip_dedupe_key, "passed_start:7:12", "pass-start dedupe key includes turn count")
+      _assert_eq(game.feed[2].tip, nil, "pass-start feed shows tip (show_tip=true leaves tip un-suppressed)")
+    end)
 
-  TestMovementEvents["test_pass-start reward falls back to turn zero when no turn count is present"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, {
-      pass_start = 1,
-      move_opts = { pass_start_hold_seconds = 0 },
-    }), { id = 8, name = "终点" })
-    _assert_eq(game.feed[2].tip_dedupe_key, "passed_start:7:0", "missing turn count falls back to zero")
-  end
-
-  TestMovementEvents["test_pass-start reward is immediate when no pass-start step was recorded"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, {
-      pass_start = 1,
-      pass_start_at_steps = {},
-    }), { id = 8, name = "终点" })
-    _assert_eq(#game.schedules, 0, "missing first pass step should not schedule")
-    _assert_eq(#game.cash, 1, "missing first pass step should reward immediately")
-  end
-
-  TestMovementEvents["test_clamps negative pass-start hold override to immediate reward"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, {
-      pass_start = 1,
-      move_opts = { pass_start_hold_seconds = -3 },
-    }), { id = 8, name = "终点" })
-    _assert_eq(#game.schedules, 0, "negative hold should not schedule")
-    _assert_eq(#game.cash, 1, "negative hold should reward immediately")
-  end
-
-  TestMovementEvents["test_schedules default pass-start reward using first pass step, tail, and cap"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, {
-      pass_start = 1,
-      pass_start_at_steps = { 2 },
-    }), { id = 8, name = "终点" })
-    _assert_eq(#game.schedules, 1, "default hold should schedule reward")
-    _assert_eq(game.schedules[1].delay,
-      2 * timing.pass_start_hold_seconds_per_step + timing.pass_start_hold_tail_seconds,
-      "default hold uses first step and tail")
-    _assert_eq(#game.cash, 0, "scheduled reward is deferred")
-    game.schedules[1].fn()
-    _assert_eq(#game.cash, 1, "scheduled callback awards cash")
-  end
-
-  TestMovementEvents["test_caps default pass-start hold at configured maximum before adding tail"] = function(self)
-    local game = _make_game()
-    _configure_runtime(game)
-    events.emit_move_completed(_move_ctx(game, {
-      pass_start = 1,
-      pass_start_at_steps = { 100 },
-    }), { id = 8, name = "终点" })
-    _assert_eq(game.schedules[1].delay,
-      timing.pass_start_hold_max_seconds + timing.pass_start_hold_tail_seconds,
-      "default hold is capped before tail")
-  end
-
-  TestMovementEvents["test_defaults missing pass-start timing values to zero"] = function(self)
-    local saved_per = timing.pass_start_hold_seconds_per_step
-    local saved_tail = timing.pass_start_hold_tail_seconds
-    timing.pass_start_hold_seconds_per_step = nil
-    timing.pass_start_hold_tail_seconds = nil
-    local ok, err = pcall(function()
+    it("test_pass-start reward falls back to turn zero when no turn count is present", function()
       local game = _make_game()
       _configure_runtime(game)
       events.emit_move_completed(_move_ctx(game, {
         pass_start = 1,
-        pass_start_at_steps = { 3 },
+        move_opts = { pass_start_hold_seconds = 0 },
       }), { id = 8, name = "终点" })
-      _assert_eq(#game.schedules, 0, "missing timing values should produce immediate reward")
-      _assert_eq(#game.cash, 1, "missing timing values should reward immediately")
+      _assert_eq(game.feed[2].tip_dedupe_key, "passed_start:7:0", "missing turn count falls back to zero")
     end)
-    timing.pass_start_hold_seconds_per_step = saved_per
-    timing.pass_start_hold_tail_seconds = saved_tail
-    if not ok then
-      error(err)
-    end
-  end
+
+    it("test_pass-start reward is immediate when no pass-start step was recorded", function()
+      local game = _make_game()
+      _configure_runtime(game)
+      events.emit_move_completed(_move_ctx(game, {
+        pass_start = 1,
+        pass_start_at_steps = {},
+      }), { id = 8, name = "终点" })
+      _assert_eq(#game.schedules, 0, "missing first pass step should not schedule")
+      _assert_eq(#game.cash, 1, "missing first pass step should reward immediately")
+    end)
+
+    it("test_clamps negative pass-start hold override to immediate reward", function()
+      local game = _make_game()
+      _configure_runtime(game)
+      events.emit_move_completed(_move_ctx(game, {
+        pass_start = 1,
+        move_opts = { pass_start_hold_seconds = -3 },
+      }), { id = 8, name = "终点" })
+      _assert_eq(#game.schedules, 0, "negative hold should not schedule")
+      _assert_eq(#game.cash, 1, "negative hold should reward immediately")
+    end)
+
+    it("test_schedules default pass-start reward using first pass step, tail, and cap", function()
+      local game = _make_game()
+      _configure_runtime(game)
+      events.emit_move_completed(_move_ctx(game, {
+        pass_start = 1,
+        pass_start_at_steps = { 2 },
+      }), { id = 8, name = "终点" })
+      _assert_eq(#game.schedules, 1, "default hold should schedule reward")
+      _assert_eq(game.schedules[1].delay,
+        2 * timing.pass_start_hold_seconds_per_step + timing.pass_start_hold_tail_seconds,
+        "default hold uses first step and tail")
+      _assert_eq(#game.cash, 0, "scheduled reward is deferred")
+      game.schedules[1].fn()
+      _assert_eq(#game.cash, 1, "scheduled callback awards cash")
+    end)
+
+    it("test_caps default pass-start hold at configured maximum before adding tail", function()
+      local game = _make_game()
+      _configure_runtime(game)
+      events.emit_move_completed(_move_ctx(game, {
+        pass_start = 1,
+        pass_start_at_steps = { 100 },
+      }), { id = 8, name = "终点" })
+      _assert_eq(game.schedules[1].delay,
+        timing.pass_start_hold_max_seconds + timing.pass_start_hold_tail_seconds,
+        "default hold is capped before tail")
+    end)
+
+    it("test_defaults missing pass-start timing values to zero", function()
+      local saved_per = timing.pass_start_hold_seconds_per_step
+      local saved_tail = timing.pass_start_hold_tail_seconds
+      timing.pass_start_hold_seconds_per_step = nil
+      timing.pass_start_hold_tail_seconds = nil
+      local ok, err = pcall(function()
+        local game = _make_game()
+        _configure_runtime(game)
+        events.emit_move_completed(_move_ctx(game, {
+          pass_start = 1,
+          pass_start_at_steps = { 3 },
+        }), { id = 8, name = "终点" })
+        _assert_eq(#game.schedules, 0, "missing timing values should produce immediate reward")
+        _assert_eq(#game.cash, 1, "missing timing values should reward immediately")
+      end)
+      timing.pass_start_hold_seconds_per_step = saved_per
+      timing.pass_start_hold_tail_seconds = saved_tail
+      if not ok then
+        error(err)
+      end
+    end)
+  end)
 end
-
-
-return TestMovementEvents

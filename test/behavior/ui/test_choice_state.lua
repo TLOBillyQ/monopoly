@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -80,48 +81,43 @@ local function _with_client_and_seats(role_id, fn)
   }, fn)
 end
 
--- 原生 LuaUnit 迁移(busted → LuaUnit):describe 拍平为 TestChoiceState,
--- 顶层 after_each → tearDown,断言 assert.equals(e, a) → lu.assertIs(a, e),
--- 用例数与改写前一一对应(9 例)。
-
-TestChoiceState = {}
-
-function TestChoiceState:tearDown()
+describe("TestChoiceState", function()
+after_each(function()
   runtime_ports.reset_for_tests()
   -- 上面的 reset 把共享端口基线拆到未配置态,必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
   support.restore_runtime_services()
-end
+end)
 
-function TestChoiceState:test_keeps_inline_routes_open_without_expecting_modal_ui()
+it("test_keeps_inline_routes_open_without_expecting_modal_ui", function()
   _with_client_and_seats(1, function()
     local game = _make_game()
     local state = _make_state()
     local base_gate = choice_ui_state.resolve_gate_state(game, state, _make_choice("base_inline", 1))
 
-    lu.assertIs(base_gate.expects_ui, false, "base_inline should not expect modal UI")
-    lu.assertIs(base_gate.open, true, "base_inline should be treated as open")
-    lu.assertIs(base_gate.should_warn, false, "base_inline should not warn")
+    luassert.is.equal(false, base_gate.expects_ui, "base_inline should not expect modal UI")
+    luassert.is.equal(true, base_gate.open, "base_inline should be treated as open")
+    luassert.is.equal(false, base_gate.should_warn, "base_inline should not warn")
 
     local passive_gate = choice_ui_state.resolve_gate_state(game, state, _make_choice("item_phase_passive", 1))
-    lu.assertIs(passive_gate.expects_ui, true, "item_phase_passive still belongs to a served owner")
-    lu.assertIs(passive_gate.open, true, "item_phase_passive should be treated as open")
-    lu.assertIs(choice_ui_state.should_reconcile(game, state, _make_choice("item_phase_passive", 1)), false,
+    luassert.is.equal(true, passive_gate.expects_ui, "item_phase_passive still belongs to a served owner")
+    luassert.is.equal(true, passive_gate.open, "item_phase_passive should be treated as open")
+    luassert.is.equal(false, choice_ui_state.should_reconcile(game, state, _make_choice("item_phase_passive", 1)),
       "item_phase_passive should not reconcile")
   end)
-end
+end)
 
-function TestChoiceState:test_does_not_expect_choice_ui_during_blocked_turn_phases()
+it("test_does_not_expect_choice_ui_during_blocked_turn_phases", function()
   local game = _make_game({ phase = "wait_move_anim" })
   local state = _make_state({ local_role_id = 1 })
   local gate = choice_ui_state.resolve_gate_state(game, state, _make_choice("target", 1))
 
-  lu.assertIs(gate.expects_ui, false, "animation phase should suppress modal expectation")
-  lu.assertIs(gate.should_warn, false, "blocked phase should not warn about missing UI")
-  lu.assertIs(choice_ui_state.should_reconcile(game, state, _make_choice("target", 1)), false,
+  luassert.is.equal(false, gate.expects_ui, "animation phase should suppress modal expectation")
+  luassert.is.equal(false, gate.should_warn, "blocked phase should not warn about missing UI")
+  luassert.is.equal(false, choice_ui_state.should_reconcile(game, state, _make_choice("target", 1)),
     "blocked phase should not reopen modal")
-end
+end)
 
-function TestChoiceState:test_resolves_owner_automation_from_the_player_control_snapshot()
+it("test_resolves_owner_automation_from_the_player_control_snapshot", function()
   local game = _make_game({
     players = { _make_player(2, { is_ai = true }) },
     find_player_by_id = function(_, role_id)
@@ -134,11 +130,11 @@ function TestChoiceState:test_resolves_owner_automation_from_the_player_control_
   local state = _make_state({ local_role_id = 2 })
   local gate = choice_ui_state.resolve_gate_state(game, state, _make_choice("target", 2))
 
-  lu.assertIs(gate.owner_computer_controlled, true, "the snapshot should decide owner automation")
-  lu.assertIs(gate.expects_ui, false, "AI owner should not expect served choice UI")
-end
+  luassert.is.equal(true, gate.owner_computer_controlled, "the snapshot should decide owner automation")
+  luassert.is.equal(false, gate.expects_ui, "AI owner should not expect served choice UI")
+end)
 
-function TestChoiceState:test_falls_back_to_players_when_find_player_by_id_is_unavailable()
+it("test_falls_back_to_players_when_find_player_by_id_is_unavailable", function()
   local game = _make_game({
     players = { _make_player(2, { delegated = true }) },
     find_player_by_id = nil,
@@ -146,11 +142,11 @@ function TestChoiceState:test_falls_back_to_players_when_find_player_by_id_is_un
   local state = _make_state({ local_role_id = 2 })
   local gate = choice_ui_state.resolve_gate_state(game, state, _make_choice("target", 2))
 
-  lu.assertIs(gate.owner_computer_controlled, true, "the snapshot fallback should resolve owner automation")
-  lu.assertIs(gate.expects_ui, false, "auto owner should not expect modal UI")
-end
+  luassert.is.equal(true, gate.owner_computer_controlled, "the snapshot fallback should resolve owner automation")
+  luassert.is.equal(false, gate.expects_ui, "auto owner should not expect modal UI")
+end)
 
-function TestChoiceState:test_uses_the_single_runtime_role_as_served_owner_fallback()
+it("test_uses_the_single_runtime_role_as_served_owner_fallback", function()
   runtime_ports.configure({
     resolve_roles = function()
       return { _make_role(3) }
@@ -159,22 +155,22 @@ function TestChoiceState:test_uses_the_single_runtime_role_as_served_owner_fallb
   local game = _make_game({ players = { _make_player(3) } })
   local gate = choice_ui_state.resolve_gate_state(game, _make_state(), _make_choice("target", 3))
 
-  lu.assertIs(gate.served_owner, true, "single runtime role should be served owner")
-  lu.assertIs(gate.expects_ui, true, "served human owner should expect modal UI")
-  lu.assertIs(gate.should_warn, true, "missing modal should warn when UI is expected")
-end
+  luassert.is.equal(true, gate.served_owner, "single runtime role should be served owner")
+  luassert.is.equal(true, gate.expects_ui, "served human owner should expect modal UI")
+  luassert.is.equal(true, gate.should_warn, "missing modal should warn when UI is expected")
+end)
 
-function TestChoiceState:test_handles_nil_game_while_preserving_explicit_owner()
+it("test_handles_nil_game_while_preserving_explicit_owner", function()
   _with_client_and_seats(1, function()
     local state = _make_state()
     local gate = choice_ui_state.resolve_gate_state(nil, state, _make_choice("target", 1))
 
-    lu.assertIs(gate.owner_role_id, 1, "explicit owner should not require game")
-    lu.assertIs(gate.served_owner, true, "explicit served owner should still resolve")
+    luassert.is.equal(1, gate.owner_role_id, "explicit owner should not require game")
+    luassert.is.equal(true, gate.served_owner, "explicit served owner should still resolve")
   end)
-end
+end)
 
-function TestChoiceState:test_does_not_infer_served_owner_from_invalid_or_missing_runtime_roles()
+it("test_does_not_infer_served_owner_from_invalid_or_missing_runtime_roles", function()
   runtime_ports.configure({
     resolve_roles = function()
       return function() end
@@ -197,13 +193,13 @@ function TestChoiceState:test_does_not_infer_served_owner_from_invalid_or_missin
     _make_choice("target", 4)
   )
 
-  lu.assertIs(invalid_roles_gate.served_owner, false, "non-table roles should not be served owner")
-  lu.assertIs(invalid_roles_gate.expects_ui, false, "non-table roles should not expect UI")
-  lu.assertIs(missing_roles_gate.served_owner, false, "empty roles should not be served owner")
-  lu.assertIs(missing_roles_gate.expects_ui, false, "empty roles should not expect UI")
-end
+  luassert.is.equal(false, invalid_roles_gate.served_owner, "non-table roles should not be served owner")
+  luassert.is.equal(false, invalid_roles_gate.expects_ui, "non-table roles should not expect UI")
+  luassert.is.equal(false, missing_roles_gate.served_owner, "empty roles should not be served owner")
+  luassert.is.equal(false, missing_roles_gate.expects_ui, "empty roles should not expect UI")
+end)
 
-function TestChoiceState:test_matches_non_market_choices_against_the_active_screen_key()
+it("test_matches_non_market_choices_against_the_active_screen_key", function()
   _with_client_and_seats(1, function()
     local game = _make_game()
     local open_state = _make_state({
@@ -216,20 +212,20 @@ function TestChoiceState:test_matches_non_market_choices_against_the_active_scre
       ui = { choice_active = false, active_choice_screen_key = "target" },
     })
 
-    lu.assertIs(choice_ui_state.resolve_gate_state(game, open_state, _make_choice("target", 1)).open, true,
+    luassert.is.equal(true, choice_ui_state.resolve_gate_state(game, open_state, _make_choice("target", 1)).open,
       "matching active screen should be open")
-    lu.assertIs(choice_ui_state.should_reconcile(game, open_state, _make_choice("target", 1)), false,
+    luassert.is.equal(false, choice_ui_state.should_reconcile(game, open_state, _make_choice("target", 1)),
       "open modal should not reconcile")
-    lu.assertIs(choice_ui_state.resolve_gate_state(game, wrong_screen_state, _make_choice("target", 1)).open, false,
+    luassert.is.equal(false, choice_ui_state.resolve_gate_state(game, wrong_screen_state, _make_choice("target", 1)).open,
       "wrong active screen should not be open")
-    lu.assertIs(choice_ui_state.should_reconcile(game, wrong_screen_state, _make_choice("target", 1)), true,
+    luassert.is.equal(true, choice_ui_state.should_reconcile(game, wrong_screen_state, _make_choice("target", 1)),
       "wrong active screen should reconcile")
-    lu.assertIs(choice_ui_state.resolve_gate_state(game, closed_state, _make_choice("target", 1)).open, false,
+    luassert.is.equal(false, choice_ui_state.resolve_gate_state(game, closed_state, _make_choice("target", 1)).open,
       "inactive choice UI should not be open")
   end)
-end
+end)
 
-function TestChoiceState:test_uses_current_player_as_owner_when_choice_has_no_owner()
+it("test_uses_current_player_as_owner_when_choice_has_no_owner", function()
   _with_client_and_seats(2, function()
     local game = _make_game({
       current_player_index = 2,
@@ -242,10 +238,10 @@ function TestChoiceState:test_uses_current_player_as_owner_when_choice_has_no_ow
     local choice = _make_choice("target", nil)
     local gate = choice_ui_state.resolve_gate_state(game, state, choice)
 
-    lu.assertIs(gate.owner_role_id, 2, "owner should fall back to current player")
-    lu.assertIs(gate.served_owner, true, "current player fallback should be served")
+    luassert.is.equal(2, gate.owner_role_id, "owner should fall back to current player")
+    luassert.is.equal(true, gate.served_owner, "current player fallback should be served")
   end)
-end
+end)
 
 
-return TestChoiceState
+end)

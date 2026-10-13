@@ -34,6 +34,7 @@ local function _new_role(role_id, panel_calls)
   }
 end
 -- 先经真实回合机打开黑市选择,再铺宿主桩环境（顺序保证开市不受桩污染）。
+local _cleanup
 local function _setup(w, opts)
   opts = opts or {}
   _open_market(w)
@@ -43,6 +44,7 @@ local function _setup(w, opts)
   for _, p in ipairs(_game(w).players) do env.role_by_player_id[p.id] = _new_role(p.id, env.panel_calls) end
   w.paid_saved = { resolve_role = runtime_ports.resolve_role, schedule = runtime_ports.schedule,
     GameAPI = _G.GameAPI, RegisterTriggerEvent = _G.RegisterTriggerEvent, EVENT = _G.EVENT }
+  if w.defer then w.defer(function() if w.paid_saved then _cleanup(w) end end) end
   runtime_ports.resolve_role = function(player_id) return env.role_by_player_id[player_id] end
   runtime_ports.schedule = function(_, fn) env.scheduled[#env.scheduled + 1] = fn end
   _G.GameAPI = {
@@ -59,7 +61,7 @@ local function _setup(w, opts)
   w.before_items, w.before_limit = _items(w), _limit(w)
   return true
 end
-local function _cleanup(w)
+_cleanup = function(w)
   local s = w.paid_saved or {}
   runtime_ports.resolve_role, runtime_ports.schedule = s.resolve_role, s.schedule
   _G.GameAPI, _G.RegisterTriggerEvent, _G.EVENT = s.GameAPI, s.RegisterTriggerEvent, s.EVENT

@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- 高亮重放计划 → 宿主动画的投递直测(#594):reset 只发一次全局重置,
 -- replay 先全局重置再按槽位编号升序清除与高亮,发送失败留诊断不回滚记忆。
 local support = require("test.support.shared_support")
@@ -7,7 +9,7 @@ local runtime_ui = require("src.ui.render.support.runtime_ui")
 local ui_events = require("src.ui.coord.ui_events")
 local logger = require("src.foundation.log")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 
 -- 在真实 events 之上捕获事件名序列:只换宿主出口(ui_events / client role),
 -- 顺序与「重置高亮」次数都由被测链路真实产生。
@@ -36,20 +38,18 @@ local function _capture(fn, opts)
   }, function() fn(captured) end)
   return captured
 end
-
-TestItemSlotHighlightReplayCoord = {}
-
+describe("TestItemSlotHighlightReplayCoord", function()
 -- reset 计划:只发一次全局重置,不发任何逐槽事件。
-function TestItemSlotHighlightReplayCoord:test_reset_plan_emits_one_global_reset()
+it("test_reset_plan_emits_one_global_reset", function()
   local captured = _capture(function()
     coord.deliver(replay.PLAN_RESET, { false, false, false, false, false })
   end, { role = { id = 1 } })
   _assert_eq(#captured.names, 1, "reset 只发一次事件")
   _assert_eq(captured.names[1], "重置高亮", "reset 发全局重置")
-end
+end)
 
 -- replay 计划:全局重置 → 不可选槽升序清除 → 可选槽升序高亮。
-function TestItemSlotHighlightReplayCoord:test_replay_plan_emits_reset_then_ordered_slots()
+it("test_replay_plan_emits_reset_then_ordered_slots", function()
   local cases = {
     { snapshot = { true, false, true, false, false },
       expected = { "重置高亮", "重置高亮道具槽位牌2", "重置高亮道具槽位牌4",
@@ -69,19 +69,19 @@ function TestItemSlotHighlightReplayCoord:test_replay_plan_emits_reset_then_orde
     _assert_eq(table.concat(captured.names, ", "), table.concat(case.expected, ", "),
       "replay 的宿主事件顺序")
   end
-end
+end)
 
 -- none 计划不碰宿主。
-function TestItemSlotHighlightReplayCoord:test_none_plan_emits_nothing()
+it("test_none_plan_emits_nothing", function()
   local captured = _capture(function()
     _assert_eq(coord.deliver(replay.PLAN_NONE, { true, false, true, false, false }),
       true, "none 计划视为完整送达")
   end, { role = { id = 1 } })
   _assert_eq(#captured.names, 0, "none 计划不发任何宿主事件")
-end
+end)
 
 -- 有本机角色按角色投递,缺省时广播全体。
-function TestItemSlotHighlightReplayCoord:test_delivery_target_follows_client_role()
+it("test_delivery_target_follows_client_role", function()
   local cases = {
     { role = { id = 1 }, target = 1 },
     { role = { id = 2 }, target = 2 },
@@ -93,10 +93,10 @@ function TestItemSlotHighlightReplayCoord:test_delivery_target_follows_client_ro
     end, { role = case.role })
     _assert_eq(captured.targets[1], case.target, "宿主高亮事件投递目标")
   end
-end
+end)
 
 -- 发送失败:留诊断、不抛给调用方、不自动重试(记忆由 state 侧保留)。
-function TestItemSlotHighlightReplayCoord:test_send_failure_keeps_diagnostic_without_retry()
+it("test_send_failure_keeps_diagnostic_without_retry", function()
   local captured = _capture(function()
     local ok = coord.deliver(replay.PLAN_REPLAY, { true, false, true, false, false })
     _assert_eq(ok, false, "发送失败返回 false 而不抛出")
@@ -109,16 +109,16 @@ function TestItemSlotHighlightReplayCoord:test_send_failure_keeps_diagnostic_wit
   -- 失败不自动重试:统计真实尝试次数(含失败那次),一次 deliver 只该尝试一轮。
   -- 原先断言一个恒为 0 的局部变量,任何重试都发现不了(#596 审计)。
   _assert_eq(captured.attempts, 1, "未自动重试宿主高亮事件")
-end
+end)
 
 -- 未知计划断言失败(公开操作的入参守卫)。
-function TestItemSlotHighlightReplayCoord:test_unknown_plan_asserts()
+it("test_unknown_plan_asserts", function()
   _assert_eq(pcall(function()
     coord.deliver("不存在的计划", { true })
   end), false, "未知高亮计划应断言失败")
   _assert_eq(pcall(function()
     coord.deliver(replay.PLAN_REPLAY, nil)
   end), false, "replay 缺失槽位快照应断言失败")
-end
+end)
 
-return TestItemSlotHighlightReplayCoord
+end)

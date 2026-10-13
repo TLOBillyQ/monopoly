@@ -1,7 +1,9 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- screens/_option_screen 开屏 helper 规约(#262 基线复核发现的欠账):
 -- 灰底触摸放行、确定/取消按钮的可见/可用/文案、allow_cancel 三态。
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
 local option_screen = require("src.ui.screens._option_screen")
 local openers = require("src.ui.coord.choice_openers")
@@ -40,11 +42,8 @@ local function _drive(choice)
   return captured
 end
 
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- 无钩子不拆类,用例数与改写前一一对应(2 例);断言走 _assert_eq 共享辅助。
-TestOptionScreen = {}
-
-function TestOptionScreen:test_opens_with_underlay_touch_through_and_armed_confirm_cancel_buttons()
+describe("TestOptionScreen", function()
+it("test_opens_with_underlay_touch_through_and_armed_confirm_cancel_buttons", function()
   -- kills L13 false->true、L17 双 true->false 与 "确定"->nil、
   -- L18 ~=->==、L19 "取消"->nil。
   local captured = _drive({})
@@ -58,9 +57,9 @@ function TestOptionScreen:test_opens_with_underlay_touch_through_and_armed_confi
   _assert_eq(captured.buttons.cancel_node.label, "取消", "cancel label should default to 取消")
   _assert_eq(captured.opened.choice_id, 7, "open_choice should carry the choice id")
   _assert_eq(captured.opened.selected, 10, "open_choice should carry the selection")
-end
+end)
 
-function TestOptionScreen:test_disarms_the_cancel_button_when_the_choice_disallows_cancel()
+it("test_disarms_the_cancel_button_when_the_choice_disallows_cancel", function()
   -- kills L18 ~=->== 与 false->true:allow_cancel=false 必须双双落 false;
   -- 自带 cancel_label 时必须用自带文案(kills L19 or->and)。
   local captured = _drive({ allow_cancel = false, cancel_label = "返回" })
@@ -68,7 +67,7 @@ function TestOptionScreen:test_disarms_the_cancel_button_when_the_choice_disallo
   _assert_eq(captured.buttons.cancel_node.visible, false, "disallowed cancel should hide")
   _assert_eq(captured.buttons.cancel_node.enabled, false, "disallowed cancel should disable")
   _assert_eq(captured.buttons.cancel_node.label, "返回", "choice-provided cancel label should win")
-end
+end)
 
 
-return TestOptionScreen
+end)
