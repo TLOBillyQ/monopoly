@@ -1,6 +1,7 @@
 -- roster 装配层注册的 choice 取消兜底:fallback_registry 解析出
 -- choice_cancel 动作,choice id 缺省时字段为 nil。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 
 local fallback_registry = require("src.rules.choice.fallback_registry")
 
@@ -14,14 +15,14 @@ end
 
 function TestRosterFallback:test_cancel_fallback_action()
   local action = fallback_registry.resolve("market_buy", {}, { id = "c1" })
-  lu.assertEquals(action.type, "choice_cancel")
-  lu.assertEquals(action.choice_id, "c1")
+  luassert.is.equal("choice_cancel", action.type)
+  luassert.is.equal("c1", action.choice_id)
 end
 
 function TestRosterFallback:test_cancel_fallback_without_choice_id()
   local action = fallback_registry.resolve("market_buy", {}, nil)
-  lu.assertEquals(action.type, "choice_cancel")
-  lu.assertEquals(action.choice_id, nil)
+  luassert.is.equal("choice_cancel", action.type)
+  luassert.is_nil(action.choice_id)
 end
 
 return TestRosterFallback
