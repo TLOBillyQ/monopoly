@@ -1,7 +1,10 @@
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 -- timing.lua 数据契约 pin (#293 变异清扫)：整表逐键深等，钉死每个时间常量 /
 -- 阈值 / 队列。头部注释里记录的 coupling invariants 由架构/行为 spec 覆盖,
 -- 这里锁数值本身。
-local lu = require("luaunit")
 local timing = require("src.config.gameplay.timing")
 
 local expected = {
@@ -44,11 +47,11 @@ local expected = {
   deadline_warning_thresholds = { 5, 3 },
 }
 
-TestTimingPin = {}
+describe("TestTimingPin", function()
 
-function TestTimingPin:test_timing_table_matches_the_pinned_contract()
-  lu.assertEquals(timing, expected)
-end
+  it("test_timing_table_matches_the_pinned_contract", function()
+    luassert.is.same(expected, timing)
+  end)
 
 
-return TestTimingPin
+end)
