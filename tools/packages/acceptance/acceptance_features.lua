@@ -46,8 +46,12 @@ local registry = {
 function registry.select(report)
   assert(type(registry.entries) == "table" and #registry.entries > 0, "no acceptance entries registered")
   local selected, excluded = {}, {}
+  local seen_feature, seen_generated = {}, {}
   local boundary = require("foundation.platform_boundary")
   for _, entry in ipairs(registry.entries) do
+    assert(type(entry.feature) == "string" and type(entry.generated) == "string", "invalid acceptance entry")
+    assert(not seen_feature[entry.feature] and not seen_generated[entry.generated], "duplicate acceptance entry")
+    seen_feature[entry.feature], seen_generated[entry.generated] = true, true
     local verdict = entry.capability and boundary.evaluate(entry.capability, {}) or {}
     if verdict.status then
       excluded[#excluded + 1] = entry
