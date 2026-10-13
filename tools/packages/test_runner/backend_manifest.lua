@@ -5,7 +5,6 @@ return {
     "test/behavior/app/test_cosmetics_transaction.lua",
     "test/behavior/app/test_cosmetics_transaction_paid_entry_pin.lua",
     "test/behavior/app/test_cosmetics_transaction_state_pin.lua",
-    "test/behavior/app/test_event_bridge_mutation.lua",
     "test/behavior/app/test_gameplay_start.lua",
     "test/behavior/app/test_sign_in.lua",
     "test/behavior/app/test_startup_profile.lua",
@@ -381,6 +380,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/test_event_bridge_mutation.lua",
     "test/behavior/app/host_integrations/test_achievement_mutation.lua",
     "test/behavior/app/host_integrations/test_leaderboard_settlement.lua",
     "test/behavior/app/cosmetics/test_request_shape.lua",
