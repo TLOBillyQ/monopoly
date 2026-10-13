@@ -10,7 +10,8 @@
 -- 原生 LuaUnit 改写:describe 带 before_each/after_each → setUp/tearDown,
 -- 用例数与改写前一一对应(4 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 
 local transaction = require("src.app.cosmetics.transaction")
@@ -19,11 +20,16 @@ local transaction_state = require("src.app.cosmetics.transaction_state")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
 
 local function _assert_eq(actual, expected, message)
-  assert(actual == expected, (message or "assertion failed") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+  luassert.is.equal(expected, actual, message)
+end
+
+local function _require_panel(value)
+  luassert.truthy(value)
+  return value
 end
 
 local function _assert_rejected(result, reason)
-  assert(result and result.accepted == false, "transaction should reject")
+  luassert.truthy(result and result.accepted == false, "transaction should reject")
   _assert_eq(result.reason, reason, "rejection reason should be stable")
 end
 
@@ -79,18 +85,18 @@ function TestCosmeticsTransactionStatePin:test_state_module_pins_panel_result_de
   _assert_eq(missing_reason, "missing_state", "missing state reason should be stable")
 
   local root = { ui = {} }
-  local panel = assert(transaction_state.ensure_panel(root))
+  local panel = _require_panel(transaction_state.ensure_panel(root))
   _assert_eq(panel.open, false, "new panel should be closed")
   _assert_eq(panel.page_index, 1, "new panel should start on page 1")
-  lu.assertEvalToTrue(type(panel.owned_by_role) == "table", "new panel should have an ownership bucket")
-  lu.assertEvalToTrue(type(panel.selected_by_role) == "table", "new panel should have a selection bucket")
-  lu.assertEvalToTrue(type(panel.pending_skin_purchase_by_role) == "table", "new panel should have a pending purchase bucket")
+  luassert.truthy(type(panel.owned_by_role) == "table", "new panel should have an ownership bucket")
+  luassert.truthy(type(panel.selected_by_role) == "table", "new panel should have a selection bucket")
+  luassert.truthy(type(panel.pending_skin_purchase_by_role) == "table", "new panel should have a pending purchase bucket")
   _assert_eq(transaction_state.slot_index(nil, 1), 1, "nil panel slot math should use page 1")
 
   local partial = { ui = { skin_panel = { owned_by_role = {} } } }
-  local ensured_partial = assert(transaction_state.ensure_panel(partial))
-  lu.assertEvalToTrue(type(ensured_partial.selected_by_role) == "table", "ensure_panel should backfill missing selected table")
-  lu.assertEvalToTrue(type(ensured_partial.pending_skin_purchase_by_role) == "table",
+  local ensured_partial = _require_panel(transaction_state.ensure_panel(partial))
+  luassert.truthy(type(ensured_partial.selected_by_role) == "table", "ensure_panel should backfill missing selected table")
+  luassert.truthy(type(ensured_partial.pending_skin_purchase_by_role) == "table",
     "ensure_panel should backfill missing pending table")
 
   local accepted = transaction_state.accepted(panel, { action = "pin" })
@@ -122,7 +128,7 @@ function TestCosmeticsTransactionStatePin:test_state_module_loads_owned_maps_and
   transaction.configure_catalog_for_tests(_catalog())
   local archive = _archive({ ["1"] = { skin_1 = true, skin_2 = false } }, { ["1"] = "skin_2" })
   transaction.configure_archive(archive)
-  local panel = assert(transaction_state.ensure_panel({ ui = {} }))
+  local panel = _require_panel(transaction_state.ensure_panel({ ui = {} }))
 
   transaction_state.load_owned(panel, 1)
 
@@ -145,7 +151,7 @@ function TestCosmeticsTransactionStatePin:test_equipped_product_pins_nil_guards_
   _assert_eq(transaction_state.equipped_product(nil, 1), nil,
     "explicit role with nil panel returns nil")
 
-  local panel = assert(transaction_state.ensure_panel({ ui = {} }))
+  local panel = _require_panel(transaction_state.ensure_panel({ ui = {} }))
   _assert_eq(transaction_state.equipped_product(panel, nil), nil,
     "nil role with non-nil panel returns nil before accessing selected_by_role")
   _assert_eq(transaction_state.equipped_product(panel, 1), nil,
@@ -170,7 +176,7 @@ function TestCosmeticsTransactionStatePin:test_result_module_pins_missing_panel_
   _assert_rejected(rejected, "missing_state")
 
   local root = { ui = {} }
-  local existing_panel = assert(transaction_state.ensure_panel(root))
+  local existing_panel = _require_panel(transaction_state.ensure_panel(root))
   transaction.configure_equip(function()
     return true
   end)
@@ -179,7 +185,7 @@ function TestCosmeticsTransactionStatePin:test_result_module_pins_missing_panel_
     action = "equip_pin",
   })
 
-  lu.assertEvalToTrue(result.accepted == true, "equipped result should be accepted")
+  luassert.truthy(result.accepted == true, "equipped result should be accepted")
   _assert_eq(result.panel_should_close, true, "equipped result should close the panel")
   _assert_eq(result.slot_view_dirty, true, "equipped result should refresh slots")
   _assert_eq(result.host_action_attempted, true, "equipped result should report configured host adapter")
