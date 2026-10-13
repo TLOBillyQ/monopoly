@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local bankruptcy = require("src.rules.endgame")
 
 local function _make_player(name, deity)
@@ -36,24 +37,23 @@ do
     { name = "no-deity", deity = nil },
   }
 
-  TestEndgameClearsDeity = {}
-
+  describe("TestEndgameClearsDeity", function()
   for _, case in ipairs(cases) do
-    TestEndgameClearsDeity["test_clears_deity_for_" .. case.name .. "_player"] = function(self)
+    it("test_clears_deity_for_" .. case.name .. "_player", function()
       local game = _make_game()
       local player = _make_player(case.name, case.deity)
 
       bankruptcy.eliminate(game, player)
 
-      lu.assertEquals(player.status.deity.type, "", "deity type should be cleared")
-      lu.assertEquals(player.status.deity.remaining, 0, "deity remaining should be zero")
-      lu.assertEquals(player.eliminated, true, "player should be eliminated")
-    end
+      luassert.is.equal("", player.status.deity.type, "deity type should be cleared")
+      luassert.is.equal(0, player.status.deity.remaining, "deity remaining should be zero")
+      luassert.is.equal(true, player.eliminated, "player should be eliminated")
+    end)
   end
 
   -- Moved from test_chance.lua -------------------------------------------------
 
-  function TestEndgameClearsDeity:test_bankruptcy_eliminate_calls_life_die()
+  it("test_bankruptcy_eliminate_calls_life_die", function()
     local support = require("test.support.shared_support")
     local default_map = require("src.config.content.default_map")
     local function _new_game()
@@ -83,10 +83,8 @@ do
       bankruptcy.eliminate(g, p, {})
     end)
 
-    lu.assertEquals(p.eliminated, true, "eliminate should mark player as eliminated")
-    lu.assertEquals(life_die_called, true, "eliminate should call life die on role")
-  end
+    luassert.is.equal(true, p.eliminated, "eliminate should mark player as eliminated")
+    luassert.is.equal(true, life_die_called, "eliminate should call life die on role")
+  end)
+end)
 end
-
-
-return TestEndgameClearsDeity

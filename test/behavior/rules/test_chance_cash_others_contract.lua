@@ -1,5 +1,6 @@
 -- luacheck: ignore 211
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local chance_handlers = require("src.rules.chance.handlers")
@@ -10,16 +11,15 @@ local function _new_game()
 end
 
 local function _assert_delta(actual, expected, msg)
-  assert(actual == expected, (msg or "delta mismatch") .. ": expected " .. tostring(expected) .. " got " .. tostring(actual))
+  luassert.is.equal(expected, actual, msg or "delta mismatch")
 end
 
-TestChanceCashOthersContract = {}
-
-function TestChanceCashOthersContract:setUp()
+describe("TestChanceCashOthersContract", function()
+before_each(function()
   _config_reset.reset_all()
-end
+end)
 
-function TestChanceCashOthersContract:test_case1_pay_others_poor_receiver_gets_6000()
+it("test_case1_pay_others_poor_receiver_gets_6000", function()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local a = g.players[1]
@@ -30,9 +30,9 @@ function TestChanceCashOthersContract:test_case1_pay_others_poor_receiver_gets_6
   handlers.pay_others(g, a, { effect = "pay_others", amount = 3000, target = "self" })
   local b_after = g:player_cash(b)
   _assert_delta(b_after - b_before, 6000, "case1: receiver should gain 6000 when payer has poor")
-end
+end)
 
-function TestChanceCashOthersContract:test_case1_event_text_carries_the_paid_amount()
+it("test_case1_event_text_carries_the_paid_amount", function()
   -- #293:支付事件的文案用 abs_value(delta)(→ nil 变异)拼金币数,文案未测。
   local g = _new_game()
   local handlers = chance_handlers.build()
@@ -49,11 +49,11 @@ function TestChanceCashOthersContract:test_case1_event_text_carries_the_paid_amo
   handlers.pay_others(g, a, { effect = "pay_others", amount = 3000, target = "self" })
   g.event_feed_port = saved_publish
   local joined = table.concat(texts, "\n")
-  lu.assertEvalToTrue(joined:find("3000", 1, true) ~= nil,
+  luassert.truthy(joined:find("3000", 1, true) ~= nil,
     "payment event text should carry the paid amount; got " .. joined)
-end
+end)
 
-function TestChanceCashOthersContract:test_case2_pay_others_no_poor_receiver_gets_3000()
+it("test_case2_pay_others_no_poor_receiver_gets_3000", function()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local a = g.players[1]
@@ -63,9 +63,9 @@ function TestChanceCashOthersContract:test_case2_pay_others_no_poor_receiver_get
   handlers.pay_others(g, a, { effect = "pay_others", amount = 3000, target = "self" })
   local b_after = g:player_cash(b)
   _assert_delta(b_after - b_before, 3000, "case2: receiver should gain 3000 when payer has no poor")
-end
+end)
 
-function TestChanceCashOthersContract:test_case3_collect_from_others_rich_each_other_pays_6000()
+it("test_case3_collect_from_others_rich_each_other_pays_6000", function()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local a = g.players[1]
@@ -75,9 +75,9 @@ function TestChanceCashOthersContract:test_case3_collect_from_others_rich_each_o
   handlers.collect_from_others(g, a, { effect = "collect_from_others", amount = 3000, target = "self" })
   local b_after = g:player_cash(b)
   _assert_delta(99999 - b_after, 6000, "case3: each other should pay 6000 when collector has rich")
-end
+end)
 
-function TestChanceCashOthersContract:test_case4_collect_from_others_no_rich_each_other_pays_3000()
+it("test_case4_collect_from_others_no_rich_each_other_pays_3000", function()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local a = g.players[1]
@@ -86,9 +86,9 @@ function TestChanceCashOthersContract:test_case4_collect_from_others_no_rich_eac
   handlers.collect_from_others(g, a, { effect = "collect_from_others", amount = 3000, target = "self" })
   local b_after = g:player_cash(b)
   _assert_delta(99999 - b_after, 3000, "case4: each other should pay 3000 when collector has no rich")
-end
+end)
 
-function TestChanceCashOthersContract:test_case5_collect_from_others_poor_not_rich_no_doubling()
+it("test_case5_collect_from_others_poor_not_rich_no_doubling", function()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local a = g.players[1]
@@ -98,9 +98,9 @@ function TestChanceCashOthersContract:test_case5_collect_from_others_poor_not_ri
   handlers.collect_from_others(g, a, { effect = "collect_from_others", amount = 3000, target = "self" })
   local b_after = g:player_cash(b)
   _assert_delta(99999 - b_after, 3000, "case5: poor deity on collector must not double the fee")
-end
+end)
 
-function TestChanceCashOthersContract:test_case6_pay_others_rich_not_poor_no_doubling()
+it("test_case6_pay_others_rich_not_poor_no_doubling", function()
   local g = _new_game()
   local handlers = chance_handlers.build()
   local a = g.players[1]
@@ -111,7 +111,7 @@ function TestChanceCashOthersContract:test_case6_pay_others_rich_not_poor_no_dou
   handlers.pay_others(g, a, { effect = "pay_others", amount = 3000, target = "self" })
   local b_after = g:player_cash(b)
   _assert_delta(b_after - b_before, 3000, "case6: rich deity on payer must not double the fee")
-end
+end)
 
 
-return TestChanceCashOthersContract
+end)
