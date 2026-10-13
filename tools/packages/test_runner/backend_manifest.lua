@@ -561,7 +561,6 @@ return {
     "test/guards/test_steps_budget_guard.lua",
     "test/support/behavior_parallel/test/test_behavior_parallel.lua",
     "test/support/harness/test/test_harness_fail_fast.lua",
-    "test/support/luassert_migration/test/test_luassert_assertion_contract.lua",
     "test/support/luaunit_runner_infra/test/test_luaunit_runner_infra_tooling.lua",
     "tools/foundation/test/test_bootstrap.lua",
     "tools/foundation/test/test_parallel_lanes.lua",
@@ -609,6 +608,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/support/luassert_migration/test/test_luassert_assertion_contract.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_report_skipped.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_status_format.lua",
     "tools/foundation/test/test_path_join.lua",

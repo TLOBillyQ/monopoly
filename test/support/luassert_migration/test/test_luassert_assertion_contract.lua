@@ -25,10 +25,6 @@ require("test.bootstrap").install_package_paths()
 local loader = require("test.support.luassert_loader")
 local proc = require("foundation.proc")
 
--- 装载前先抓住全局 Lua assert:本契约要求 luassert 只在断言对象上局部生效,
--- 不接管 _G.assert(运行器与 LuaUnit 的后端语义都挂在它上面)。
-local _global_assert_before_load = assert
-
 local function _fail(message)
   error(message, 2)
 end
@@ -41,11 +37,7 @@ end
 
 -- 加载 luassert,失败时把 loader 的原因原样带出来(不静默跳过)。
 local function _luassert()
-  local assert_obj, load_err = loader.load()
-  if assert_obj == nil then
-    _fail("luassert loader failed: " .. tostring(load_err))
-  end
-  return assert_obj
+  return require("luassert")
 end
 
 -- 正例:断言必须通过。不过即本契约自己的红。
@@ -215,11 +207,11 @@ local _PILOT_FILES = {
 -- errors=0)。多类文件仍出两个类——multi_class_return.merge 是特殊结构,不跳过。
 local _PILOT_FILE_CASES = { 9, 9, 5, 13, 9 }
 
-TestLuassertAssertionContract = {}
+describe("luassert assertion contract", function()
 
 -- ---------------------------------------------------------------- 1. 装载契约
 
-function TestLuassertAssertionContract:test_luassert_and_say_resolve_from_the_project_tool_cache()
+it("luassert and say resolve from the project tool cache", function()
   _luassert()
   for _, module_name in ipairs({ "luassert", "say" }) do
     local source = package.searchpath(module_name, package.path)
@@ -228,17 +220,17 @@ function TestLuassertAssertionContract:test_luassert_and_say_resolve_from_the_pr
     _expect(normalized:find("/.toolcache/luarocks/", 1, true) ~= nil,
       module_name .. " must load from the project tool cache, got: " .. normalized)
   end
-end
+end)
 
-function TestLuassertAssertionContract:test_loading_luassert_does_not_take_over_the_global_lua_assert()
-  local assert_obj = _luassert()
-  _expect(_G.assert == _global_assert_before_load,
-    "loading luassert must not replace the global Lua assert")
-  _expect(assert_obj ~= _global_assert_before_load,
-    "luassert must stay a separate, locally used assertion object")
-end
+it("loading luassert does not take over the global lua assert", function()
+  local result = proc.run_command({ require("foundation.lua54").lua54_bin(), "-e",
+    'require("test.bootstrap").install_package_paths(); local original = _G.assert; local object = assert(require("test.support.luassert_loader").load()); assert(_G.assert == original and object ~= original); print("LOCAL_ASSERT_ONLY")' },
+    { cwd = loader.repo_root() })
+  _expect(result.code == 0 and tostring(result.output):find("LOCAL_ASSERT_ONLY", 1, true) ~= nil,
+    "legacy loader must keep global assert unchanged:\n" .. tostring(result.output))
+end)
 
-function TestLuassertAssertionContract:test_fresh_process_cache_loading_and_preload_rejection()
+it("fresh process cache loading and preload rejection", function()
   local scripts = {
     {
       marker = "REAL_CACHE_IDENTITY",
@@ -275,9 +267,9 @@ print("REAL_CACHE_IDENTITY")
     _expect(result.code == 0 and tostring(result.output):find(script.marker, 1, true) ~= nil,
       "fresh process contract failed: " .. script.marker .. "\n" .. tostring(result.output))
   end
-end
+end)
 
-function TestLuassertAssertionContract:test_unverified_preloaded_modules_are_rejected()
+it("unverified preloaded modules are rejected", function()
   for _, name in ipairs({ "luassert", "say" }) do
     local saved = package.loaded[name]
     package.loaded[name] = {}
@@ -287,9 +279,9 @@ function TestLuassertAssertionContract:test_unverified_preloaded_modules_are_rej
     _expect(ok and object == nil and tostring(err):find("preloaded", 1, true) ~= nil,
       name .. ": an unverified preloaded object must be rejected, got: " .. tostring(err))
   end
-end
+end)
 
-function TestLuassertAssertionContract:test_cache_loading_bypasses_fake_preload_factories()
+it("cache loading bypasses fake preload factories", function()
   local saved, preloads = {}, {}
   local function dependency(name)
     return name == "say" or name == "luassert" or name:match("^luassert%.") ~= nil
@@ -319,26 +311,34 @@ function TestLuassertAssertionContract:test_cache_loading_bypasses_fake_preload_
   end
   _expect(ok and object ~= nil and not invoked and passes and fails,
     "cache loading must bypass fake factories and retain real positive/negative assertions: " .. tostring(err))
-end
+end)
 
-function TestLuassertAssertionContract:test_verified_module_identity_cannot_be_replaced()
-  local real = _luassert()
-  for _, name in ipairs({ "luassert", "say" }) do
-    local saved = package.loaded[name]
-    package.loaded[name] = {}
-    local ok, object, err = pcall(loader.load)
-    package.loaded[name] = saved
-    _expect(ok and object == nil and tostring(err):find("identity", 1, true) ~= nil,
-      name .. ": replacing a verified module must fail, got: " .. tostring(err))
-    _expect(loader.load() == real, "restoring the verified identity must allow loading")
-  end
+it("verified module identity cannot be replaced", function()
+  local script = [[
+require("test.bootstrap").install_package_paths()
+local loader = require("test.support.luassert_loader")
+local real = assert(loader.load())
+for _, name in ipairs({ "luassert", "say" }) do
+  local saved = package.loaded[name]
+  package.loaded[name] = {}
+  local ok, object, err = pcall(loader.load)
+  package.loaded[name] = saved
+  assert(ok and object == nil and tostring(err):find("identity", 1, true))
+  assert(loader.load() == real)
 end
+print("RESTORED_REAL_IDENTITY")
+]]
+  local result = proc.run_command({ require("foundation.lua54").lua54_bin(), "-e",
+    (script:gsub("\n", " ")) }, { cwd = loader.repo_root() })
+  _expect(result.code == 0 and tostring(result.output):find("RESTORED_REAL_IDENTITY", 1, true) ~= nil,
+    "verified identity contract failed:\n" .. tostring(result.output))
+end)
 
 -- ---------------------------------------------------------------- 2. 语义矩阵
 -- 每条都是「正例成立 + 故意失败反例必须红」成对出现:只验正例等于没验边界,
 -- 断言的真实价值全在它什么时候会红。
 
-function TestLuassertAssertionContract:test_deep_compare_is_same_while_identity_is_equal_and_is_not()
+it("deep compare is same while identity is equal and is not", function()
   local luassert = _luassert()
   local expected = { hp = 10, tags = { "a", "b" } }
   local actual = { hp = 10, tags = { "a", "b" } }
@@ -357,9 +357,9 @@ function TestLuassertAssertionContract:test_deep_compare_is_same_while_identity_
   _must_fail(function()
     luassert.is.same({ hp = 10 }, { hp = 11 })
   end, "Expected objects to be the same.", "is.same on different content")
-end
+end)
 
-function TestLuassertAssertionContract:test_strict_boolean_and_truthiness_are_separate_assertion_families()
+it("strict boolean and truthiness are separate assertion families", function()
   local luassert = _luassert()
 
   _must_pass(function()
@@ -387,9 +387,9 @@ function TestLuassertAssertionContract:test_strict_boolean_and_truthiness_are_se
   _must_fail(function()
     luassert.falsy(0)
   end, "(number) 0", "falsy on 0")
-end
+end)
 
-function TestLuassertAssertionContract:test_nil_and_false_are_distinguished_by_the_nil_assertions()
+it("nil and false are distinguished by the nil assertions", function()
   local luassert = _luassert()
 
   _must_pass(function()
@@ -405,9 +405,9 @@ function TestLuassertAssertionContract:test_nil_and_false_are_distinguished_by_t
   _must_fail(function()
     luassert.is_not_nil(nil)
   end, "Expected objects to not be the same.", "is_not_nil on nil")
-end
+end)
 
-function TestLuassertAssertionContract:test_argument_order_is_expected_then_actual_in_the_failure_message()
+it("argument order is expected then actual in the failure message", function()
   local luassert = _luassert()
   -- LuaUnit 是 (actual, expected),luassert 是 (expected, actual)——顺序写反不会
   -- 改变红绿,只会让报错里的 Passed in / Expected 对调,是迁移期最难自查的坑。
@@ -421,9 +421,9 @@ function TestLuassertAssertionContract:test_argument_order_is_expected_then_actu
     "first argument must land in the Expected: block, got: " .. tostring(message))
   _expect(passed_block == "(string) 'actual-side'",
     "second argument must land in the Passed in: block, got: " .. tostring(message))
-end
+end)
 
-function TestLuassertAssertionContract:test_user_message_is_honoured_across_assertion_families()
+it("user message is honoured across assertion families", function()
   local luassert = _luassert()
   -- 每族断言的第 N 个尾参都是自定义消息;但多个位置参数后面跟消息的那几个
   -- (matches / has_error)会先吞掉数字与布尔,所以显式列出来,不靠猜。
@@ -449,9 +449,9 @@ function TestLuassertAssertionContract:test_user_message_is_honoured_across_asse
     _expect(stripped:find(case.custom, 1, true) == 1,
       case.assertion .. ": the user message must be the first line of the failure, got: " .. message)
   end
-end
+end)
 
-function TestLuassertAssertionContract:test_exception_text_is_an_exact_match_after_location_stripping()
+it("exception text is an exact match after location stripping", function()
   local luassert = _luassert()
   local boom = function()
     error("余额不足: -1")
@@ -474,9 +474,9 @@ function TestLuassertAssertionContract:test_exception_text_is_an_exact_match_aft
   _must_fail(function()
     luassert.has_error(function() end, "anything")
   end, "(no error)", "has_error on a function that does not raise")
-end
+end)
 
-function TestLuassertAssertionContract:test_exception_pattern_supports_lua_patterns_and_plain_substring()
+it("exception pattern supports lua patterns and plain substring", function()
   local luassert = _luassert()
   local boom = function()
     error("remove_by_index: index out of bounds: 7")
@@ -496,9 +496,9 @@ function TestLuassertAssertionContract:test_exception_pattern_supports_lua_patte
       error("boom")
     end)
   end, "Expected no error, but caught:", "has_no.errors on a raising function")
-end
+end)
 
-function TestLuassertAssertionContract:test_exception_type_covers_table_payloads_and_type_assertions()
+it("exception type covers table payloads and type assertions", function()
   local luassert = _luassert()
 
   _must_pass(function()
@@ -524,9 +524,9 @@ function TestLuassertAssertionContract:test_exception_type_covers_table_payloads
   _must_fail(function()
     luassert.is_table(1)
   end, "type table", "is_table on a number")
-end
+end)
 
-function TestLuassertAssertionContract:test_luassert_errors_are_plain_while_lu_fail_carries_the_luaunit_failure_prefix()
+it("luassert errors are plain while lu fail carries the luaunit failure prefix", function()
   local lu = require("luaunit")
   local luassert = _luassert()
 
@@ -543,11 +543,11 @@ function TestLuassertAssertionContract:test_luassert_errors_are_plain_while_lu_f
   end, "断言层迁移试点", "lu.fail message")
   _expect(lu_fail_message:find(lu.FAILURE_PREFIX, 1, true) ~= nil,
     "lu.fail must carry FAILURE_PREFIX (failures bucket), got: " .. lu_fail_message)
-end
+end)
 
 -- ---------------------------------------------------------------- 3. 传播契约
 
-function TestLuassertAssertionContract:test_luassert_counterexamples_land_in_the_errors_bucket_and_gate_the_exit_code()
+it("luassert counterexamples land in the errors bucket and gate the exit code", function()
   local files = {}
   for _, fixture in ipairs(_LUASSERT_FIXTURES) do
     files[#files + 1] = _FIXTURE_DIR .. fixture.basename
@@ -593,9 +593,9 @@ function TestLuassertAssertionContract:test_luassert_counterexamples_land_in_the
           fixture.basename, fixture.fragment, red.message))
     end
   end
-end
+end)
 
-function TestLuassertAssertionContract:test_luaunit_failures_bucket_gates_the_exit_code_on_its_own()
+it("luaunit failures bucket gates the exit code on its own", function()
   local fixture = _FAILURES_BUCKET_FIXTURE
   local result, output = _run_specs({ _FIXTURE_DIR .. fixture.basename })
 
@@ -619,11 +619,11 @@ function TestLuassertAssertionContract:test_luaunit_failures_bucket_gates_the_ex
     fixture.basename .. ": the luassert control case must stay green beside a lu.fail")
   _expect(red ~= nil and red.ok == false and red.message:find(fixture.fragment, 1, true) ~= nil,
     fixture.basename .. ": the lu.fail counterexample must be reported as not ok with its own message")
-end
+end)
 
 -- ---------------------------------------------------------------- 4. 试点对账
 
-function TestLuassertAssertionContract:test_pilot_case_set_is_unchanged_by_the_assertion_switch()
+it("pilot case set is unchanged by the assertion switch", function()
   local command = { require("foundation.lua54").lua54_bin(), "tools/packages/test_runner/runner.lua", "--output=TAP", "--" }
   for _, file in ipairs(_PILOT_FILES) do command[#command + 1] = file end
   local result = proc.run_command(command, { cwd = loader.repo_root() })
@@ -650,6 +650,6 @@ function TestLuassertAssertionContract:test_pilot_case_set_is_unchanged_by_the_a
       and actual.failed == 0 and actual.errors == 0,
       file .. ": expected complete " .. expected .. " case set:\n" .. tostring(single.output))
   end
-end
+end)
 
-return TestLuassertAssertionContract
+end)
