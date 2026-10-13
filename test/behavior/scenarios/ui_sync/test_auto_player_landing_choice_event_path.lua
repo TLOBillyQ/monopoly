@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local _config_reset = require("test.support.config_reset")
@@ -66,8 +67,8 @@ local function _run_choice_open_case(game_opts, expect_open, case_name)
   }, function()
     local runtime_event_ports = require("src.ui.ports.events")
     runtime_event_ports.on_need_choice(state, function() return game end, { choice = choice })
-    lu.assertFalse(opened, "event path must NOT open modal; it only records (#524): " .. case_name)
-    lu.assertTrue(state.ui_dirty == true or require("src.ui.state.runtime").is_ui_dirty(state),
+    luassert.is_false(opened, "event path must NOT open modal; it only records (#524): " .. case_name)
+    luassert.is_true(state.ui_dirty == true or require("src.ui.state.runtime").is_ui_dirty(state),
       "event path must mark ui_dirty so dirty refresh opens the modal: " .. case_name)
 
     local ui_model_sync = require("src.ui.ports.ui_sync")._model
@@ -81,9 +82,9 @@ local function _run_choice_open_case(game_opts, expect_open, case_name)
   end)
 
   if expect_open then
-    lu.assertTrue(opened, "dirty refresh MUST open modal: " .. case_name)
+    luassert.is_true(opened, "dirty refresh MUST open modal: " .. case_name)
   else
-    lu.assertFalse(opened, "dirty refresh must NOT open modal: " .. case_name)
+    luassert.is_false(opened, "dirty refresh must NOT open modal: " .. case_name)
   end
 end
 
