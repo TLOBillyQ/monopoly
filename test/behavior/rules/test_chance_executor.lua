@@ -1,50 +1,50 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local effect_chance = require("src.rules.land.effect_chance")
 local _config_reset = require("test.support.config_reset")
 
 local executor = effect_chance.executors.chance_draw_and_resolve
 
-TestChanceExecutor = {}
-
-function TestChanceExecutor:setUp()
+describe("TestChanceExecutor", function()
+before_each(function()
   _config_reset.reset_all()
-end
+end)
 
-function TestChanceExecutor:test_can_apply_true_for_chance_tile_with_game_and_player()
+it("test_can_apply_true_for_chance_tile_with_game_and_player", function()
   local game = support.new_game({ players = { "P1" }, auto_all = true })
   local player = game.players[1]
   local _, chance_tile = support.first_tile_by_type(game.board, "chance")
-  lu.assertEquals(executor.can_apply({ game = game, player = player, tile = chance_tile }), true,
+  luassert.is.equal(true, executor.can_apply({ game = game, player = player, tile = chance_tile }),
     "expected true for chance tile")
-end
+end)
 
-function TestChanceExecutor:test_can_apply_falsy_for_non_chance_tile()
+it("test_can_apply_falsy_for_non_chance_tile", function()
   local game = support.new_game({ players = { "P1" }, auto_all = true })
   local player = game.players[1]
-  lu.assertEvalToFalse(executor.can_apply({ game = game, player = player, tile = { type = "land" } }),
+  luassert.falsy(executor.can_apply({ game = game, player = player, tile = { type = "land" } }),
     "expected falsy for land tile")
-end
+end)
 
-function TestChanceExecutor:test_can_apply_falsy_when_tile_is_nil()
+it("test_can_apply_falsy_when_tile_is_nil", function()
   local game = support.new_game({ players = { "P1" }, auto_all = true })
   local player = game.players[1]
-  lu.assertEvalToFalse(executor.can_apply({ game = game, player = player, tile = nil }),
+  luassert.falsy(executor.can_apply({ game = game, player = player, tile = nil }),
     "expected falsy when tile is nil")
-end
+end)
 
-function TestChanceExecutor:test_can_apply_falsy_when_game_is_nil()
-  lu.assertEvalToFalse(executor.can_apply({ game = nil, player = {}, tile = { type = "chance" } }),
+it("test_can_apply_falsy_when_game_is_nil", function()
+  luassert.falsy(executor.can_apply({ game = nil, player = {}, tile = { type = "chance" } }),
     "expected falsy when game is nil")
-end
+end)
 
-function TestChanceExecutor:test_can_apply_falsy_when_player_is_nil()
+it("test_can_apply_falsy_when_player_is_nil", function()
   local game = support.new_game({ players = { "P1" }, auto_all = true })
-  lu.assertEvalToFalse(executor.can_apply({ game = game, player = nil, tile = { type = "chance" } }),
+  luassert.falsy(executor.can_apply({ game = game, player = nil, tile = { type = "chance" } }),
     "expected falsy when player is nil")
-end
+end)
 
-function TestChanceExecutor:test_apply_publishes_a_chance_card_event_to_the_event_log()
+it("test_apply_publishes_a_chance_card_event_to_the_event_log", function()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local player = game.players[1]
   local _, chance_tile = support.first_tile_by_type(game.board, "chance")
@@ -59,8 +59,8 @@ function TestChanceExecutor:test_apply_publishes_a_chance_card_event_to_the_even
       break
     end
   end
-  lu.assertEvalToTrue(found, "expected chance card event in event log")
-end
+  luassert.truthy(found, "expected chance card event in event log")
+end)
 
 
-return TestChanceExecutor
+end)

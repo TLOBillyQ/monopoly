@@ -1,6 +1,7 @@
-local luax = require("test.support.luax")
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local overlay_runtime = require("src.ui.render.anim.overlay_runtime")
 
 local function _new_host_spy(overrides)
@@ -29,61 +30,59 @@ local function _new_host_spy(overrides)
   end
   return hr, calls
 end
-
-TestOverlayRuntimeTransient = {}
-
-function TestOverlayRuntimeTransient:test_requires_a_position_for_both_group_and_unit_paths()
+describe("TestOverlayRuntimeTransient", function()
+it("test_requires_a_position_for_both_group_and_unit_paths", function()
   -- 精确消息钉(kills _spawn_unit_group/_spawn_unit 两条 "missing pos" -> nil)。
   local hr = _new_host_spy()
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_transient("group_a", nil, nil, 0, { host_runtime = hr })
   end, "missing pos")
-  luax.has_error(function()
+  luassert.has_error(function()
     overlay_runtime.spawn_transient(nil, "unit_a", nil, 0, { host_runtime = hr })
   end, "missing pos")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_spawns_group_and_destroys_immediately_without_duration()
+it("test_spawns_group_and_destroys_immediately_without_duration", function()
   local hr, calls = _new_host_spy()
   overlay_runtime.spawn_transient("group_a", nil, { x = 1 }, 0, { host_runtime = hr })
   _assert_eq(calls[1][1], "create_unit_group", "should spawn the unit group")
   _assert_eq(calls[2][1], "destroy_unit_with_children", "group entry should destroy with children")
   _assert_eq(calls[2][2], "group_handle", "should destroy the spawned handle")
   _assert_eq(calls[2][3], true, "should destroy children recursively")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_schedules_group_destroy_for_positive_duration()
+it("test_schedules_group_destroy_for_positive_duration", function()
   local hr, calls = _new_host_spy()
   overlay_runtime.spawn_transient("group_a", nil, { x = 1 }, 1.5, { host_runtime = hr })
   _assert_eq(calls[2][1], "schedule", "positive duration should defer destroy")
   _assert_eq(calls[2][2], 1.5, "should schedule with the requested duration")
   calls[2][3]()
   _assert_eq(calls[3][1], "destroy_unit_with_children", "deferred destroy should run on fire")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_skips_destroy_when_group_spawn_fails()
+it("test_skips_destroy_when_group_spawn_fails", function()
   local hr, calls = _new_host_spy({ create_unit_group = function() return nil end })
   overlay_runtime.spawn_transient("group_a", nil, { x = 1 }, 0, { host_runtime = hr })
   _assert_eq(#calls, 0, "failed group spawn should not destroy or schedule")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_spawns_unit_and_destroys_immediately_without_duration()
+it("test_spawns_unit_and_destroys_immediately_without_duration", function()
   local hr, calls = _new_host_spy()
   overlay_runtime.spawn_transient(nil, "unit_a", { x = 2 }, nil, { host_runtime = hr })
   _assert_eq(calls[1][1], "create_unit_with_scale", "should spawn the unit")
   _assert_eq(calls[2][1], "destroy_unit", "unit entry should destroy plainly")
   _assert_eq(calls[2][2], "unit_handle", "should destroy the spawned handle")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_skips_destroy_when_unit_spawn_fails()
+it("test_skips_destroy_when_unit_spawn_fails", function()
   local hr, calls = _new_host_spy({
     acquire_unit = function() return nil end,
   })
   overlay_runtime.spawn_transient(nil, "unit_a", { x = 2 }, 0, { host_runtime = hr })
   _assert_eq(#calls, 0, "failed unit spawn should not destroy or schedule")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_releases_pooled_unit_back_to_the_pool()
+it("test_releases_pooled_unit_back_to_the_pool", function()
   local released = nil
   local hr, calls = _new_host_spy({
     acquire_unit = function(unit_id)
@@ -98,15 +97,15 @@ function TestOverlayRuntimeTransient:test_releases_pooled_unit_back_to_the_pool(
   _assert_eq(released[1], "unit_a", "release should carry the unit id")
   _assert_eq(released[2], "pooled_unit_a", "release should return the acquired handle")
   _assert_eq(#calls, 0, "no destroy call should reach the host for a pooled unit")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_does_nothing_without_group_or_unit_id()
+it("test_does_nothing_without_group_or_unit_id", function()
   local hr, calls = _new_host_spy()
   overlay_runtime.spawn_transient(nil, nil, { x = 3 }, 0, { host_runtime = hr })
   _assert_eq(#calls, 0, "missing ids should be a no-op")
-end
+end)
 
-function TestOverlayRuntimeTransient:test_spawn_transient_without_deps_falls_back_to_host_ports()
+it("test_spawn_transient_without_deps_falls_back_to_host_ports", function()
   -- L154 `deps and deps.scene or nil` 的 and->or:deps 缺省时不得索引 nil,
   -- 必须回落到 host_runtime_ports 继续生成。
   local spawned = 0
@@ -124,7 +123,7 @@ function TestOverlayRuntimeTransient:test_spawn_transient_without_deps_falls_bac
   end)
   _assert_eq(spawned, 1, "deps-less transient spawn must fall back to the host ports")
   _assert_eq(destroyed, 1, "the fallback entry must still be destroyed")
-end
+end)
 
 
-return TestOverlayRuntimeTransient
+end)

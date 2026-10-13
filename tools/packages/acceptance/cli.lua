@@ -29,7 +29,7 @@ function M.usage()
     "--capabilities: 列出注册/执行/排除集合;Windows 默认排除 capability=acceptance-mutate 的真实 feature,不计为通过。",
     "",
     "验收套件（按需车道）：先从 features/ 中文源重生成 gitignored 的 generated specs，",
-    "再由 run_all 逐个 spawn 聚合。引擎核心由自研 acceptance4lua",
+    "再由真实 busted 执行场景/例子并以 JSON 汇总；生成物没有独立 harness。解析器来自 acceptance4lua",
     "rock 由 tools/tools.lock 跟随上游主干并从 .toolcache/luarocks 装载，本包是数据面 + 驱动层 + 车道胶水。",
     "详细语义见 tools/packages/acceptance/ 与 `lua tools/cli.lua verify --help`。",
     "",
