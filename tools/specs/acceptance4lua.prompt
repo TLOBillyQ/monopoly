@@ -7,7 +7,7 @@ Project CLI wrappers: `tools/packages/acceptance/cli/parser.lua` (Gherkin → JS
 Project entrypoints: `lua tools/cli.lua acceptance` (regenerate gitignored generated specs, then run/aggregate) and `lua tools/cli.lua acceptance-mutate` (Gherkin mutation soft lane). Parser, generator, IR-DRY and mutator wrappers are called by their explicit project paths.
 
 CLI contract:
-- `lua tools/cli.lua acceptance [--serial]` (native serial execution by default; nonempty case counts required)
+- `lua tools/cli.lua acceptance [--serial|--parallel]` (native serial execution by default; nonempty case counts required in both modes). Parallel execution shares `foundation.parallel_lanes` with verify and behavior/tooling: native cmd launchers, ordered results, output closed before numeric completion status, empty output fails, timeout terminates the owned process tree. `start /b` launches a native owner compiled with GCC into the project cache. The owner creates a suspended cmd process, assigns its exact handle to a private Windows Job Object, then resumes it; timeout terminates only that Job and waits for all owned processes to stop before publishing completion. No title matching, sh, sleep command, Start-Job or Node runtime.
 - `lua tools/cli.lua acceptance-mutate [options]` (upstream mutator flags pass through as trailing args)
 - Parser: `lua tools/packages/acceptance/cli/parser.lua <feature> <json-ir>`.
 - Generator: `lua tools/packages/acceptance/cli/generator.lua <json-ir> <spec-output>`.

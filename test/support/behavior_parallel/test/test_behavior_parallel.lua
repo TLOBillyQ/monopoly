@@ -34,18 +34,18 @@ function TestBehaviorParallel:test_discovers_specs_across_multiple_roots()
 end
 
 function TestBehaviorParallel:test_parses_quiet_result_summaries_from_the_shared_output_handler()
-  local parsed = behavior_parallel._test_support.parse_output("# RESULT: 123 ok\n")
+  local parsed = behavior_parallel._test_support.parse_output("# RESULT: 123 ok\r\n")
 
   lu.assertEquals(parsed.passed, 123)
   lu.assertEquals(parsed.failed, 0)
 end
 
 function TestBehaviorParallel:test_keeps_quiet_result_summary_failures_visible()
-  local parsed = behavior_parallel._test_support.parse_output("# RESULT: 7 ok · 2 FAIL · 1 error\n")
+  local parsed = behavior_parallel._test_support.parse_output("not ok - failed to load broken.lua\r\n# missing dependency\r\n# RESULT: 7 ok · 2 FAIL · 1 error\r\n")
 
   lu.assertEquals(parsed.passed, 7)
   lu.assertEquals(parsed.failed, 3)
-  lu.assertTrue(parsed.failure_lines[1]:find("FAIL", 1, true) ~= nil)
+  lu.assertStrContains(table.concat(parsed.failure_lines, "\n"), "failed to load broken.lua")
 end
 
 function TestBehaviorParallel:test_crash_excerpt_returns_empty_for_nil_output()

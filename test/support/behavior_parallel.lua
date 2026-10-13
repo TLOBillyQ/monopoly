@@ -1,7 +1,6 @@
 require("test.bootstrap").install_package_paths()
 
 local proc_lib = require("foundation.proc")
-local shell_lib = require("foundation.shell")
 local parallel_lanes = require("foundation.parallel_lanes")
 local sharding = require("packages.luaunit_runner.spec_sharding")
 local runner_bin = require("packages.luaunit_runner.lua54")
@@ -95,10 +94,6 @@ local function _build_lane_args(files)
   return args
 end
 
-local function _build_lane_cmd(files)
-  return shell_lib.build_command(_build_lane_args(files))
-end
-
 local function _parse_output(content)
   local result = {
     passed = 0,
@@ -114,10 +109,16 @@ local function _parse_output(content)
   local summary_failed = nil
   local summary_line = nil
   for line in content:gmatch("[^\n]+") do
+    line = line:gsub("\r$", "")
     if line:match("^ok %d") then
       result.passed = result.passed + 1
     elseif line:match("^not ok %d") then
       result.failed = result.failed + 1
+      result.failure_lines[#result.failure_lines + 1] = line
+    elseif line:match("^not ok %- failed to load ") then
+      result.failure_lines[#result.failure_lines + 1] = line
+    elseif line:match("^# ") and result.failure_lines[#result.failure_lines]
+        and result.failure_lines[#result.failure_lines]:match("^not ok %- failed to load ") then
       result.failure_lines[#result.failure_lines + 1] = line
     elseif line:match("^# BASELINE LEAK") then
       -- 共享端口基线守卫(#217)的点名行:worker 内 errors 计数只影响退出码,
@@ -259,7 +260,7 @@ function M.run(opts)
     if #lane.files > 0 then
       lane_specs[#lane_specs + 1] = {
         label = label .. "_w" .. tostring(lane.index),
-        cmd = _build_lane_cmd(lane.files),
+        cmd = _build_lane_args(lane.files),
       }
       lane_meta[#lane_meta + 1] = lane
     end
@@ -295,7 +296,7 @@ function M.run(opts)
       merged.slow_lines[#merged.slow_lines + 1] = line
     end
 
-    if not r.ok and parsed.failed == 0 then
+    if (not r.ok or parsed.passed + parsed.failed == 0) and parsed.failed == 0 then
       merged.failed = merged.failed + 1
       merged.failure_lines[#merged.failure_lines + 1] =
         "worker " .. tostring(lane_meta[i].index) .. " exited with code " .. tostring(r.exit_code)

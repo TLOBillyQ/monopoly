@@ -1,128 +1,128 @@
-local env_lib = require("foundation.env")
-local fs_lib = require("foundation.fs")
-local shell_lib = require("foundation.shell")
-local number_utils = require("src.foundation.number")
-
+-- 原生Windows: start /b启动进程所有者,Job Object精确收容/终止自有子树。
+local env = require("foundation.env")
+local fs = require("foundation.fs")
+local path = require("foundation.path")
+local shell = require("foundation.shell")
 local M = {}
+local helper_cache
 
-local _DEFAULT_TIMEOUT_SECONDS = 600
-local _POLL_INTERVAL_SECONDS = 0.3
-
-local function _lane_paths(label)
-  local prefix = "vf_" .. label
-  return {
-    output = env_lib.make_temp_path(prefix .. "_out", ".txt"),
-    status = env_lib.make_temp_path(prefix .. "_status", ".txt"),
-    launcher = env_lib.make_temp_path(prefix .. "_launcher", ".sh"),
-  }
+local function native(value) return (value:gsub("/", "\\")) end
+local function helper()
+  if helper_cache then return helper_cache end
+  local source = debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")
+  local root = assert(source:match("^(.*)/tools/foundation/parallel_lanes.lua$"))
+  if not path.is_absolute_path(root) then root = path.join_path(env.current_dir(), root) end
+  local unique = env.make_temp_path("lane_helper", ""):match("[^/]+$")
+  local target = root .. "/.toolcache/" .. unique .. "/lane_process.exe"
+  local source_path = root .. "/tools/foundation/lane_process.c"
+  local prepared, prepare_err = fs.ensure_parent_dir(target)
+  if not prepared then return nil, tostring(prepare_err) end
+  -- 独立会话独立目标,避免多Lua进程覆盖正在执行的helper。
+  local build = require("foundation.proc").run_command({ "gcc", "-municode", "-Wall", "-Wextra", "-Werror", "-O2", source_path, "-o", target })
+  if not build.ok then return nil, "native lane helper requires gcc: " .. tostring(build.output) end
+  helper_cache = target
+  return target
 end
-
-local function _write_lane_launcher(cmd, paths)
-  local cwd = env_lib.current_dir()
-  local script = table.concat({
-    "#!/bin/sh",
-    "cd " .. shell_lib.shell_quote(cwd)
-      .. " || { printf '%s\\n' '1' > " .. shell_lib.shell_quote(paths.status) .. "; exit 0; }",
-    cmd .. " > " .. shell_lib.shell_quote(paths.output) .. " 2>&1",
-    "code=$?",
-    "printf '%s\\n' \"$code\" > " .. shell_lib.shell_quote(paths.status),
-    "exit 0",
-  }, "\n")
-  return fs_lib.write_file(paths.launcher, script)
+local function status(entry)
+  local text = fs.read_raw(entry.status)
+  if not text then return nil end
+  local code, reason = text:match("^(%d+) ([%w_]+)")
+  return tonumber(code), reason
 end
-
-local function _launch(paths)
-  local cmd = "sh " .. shell_lib.shell_quote(paths.launcher) .. " >/dev/null 2>&1 &"
-  local ok, _, code = os.execute(cmd)
-  if ok == true and (code == nil or code == 0) then
-    return true
+local function pause(seconds)
+  local deadline = os.clock() + seconds
+  while os.clock() < deadline do end
+end
+local function launch(entry, executable, timeout)
+  local command = entry.cmd
+  if type(command) == "table" then
+    local args = {}
+    for index = 2, #command do args[#args + 1] = string.format("[%d]=%q", index - 2, command[index]) end
+    local argv = entry.dir .. "/argv.lua"
+    local ok, err = fs.write_file(argv, "arg={" .. table.concat(args, ",") .. "}; dofile(arg[0])\n")
+    if not ok then return nil, err end
+    command = shell.build_command({ command[1], argv })
   end
-  if number_utils.is_numeric(code) and code == 0 then
-    return true
-  end
-  return nil, "failed to launch lane"
-end
-
-local function _sleep(seconds)
-  os.execute("sleep " .. tostring(seconds) .. " >/dev/null 2>&1")
-end
-
-local function _read_status(path)
-  local content = fs_lib.read_file(path)
-  if content == nil then
-    return nil
-  end
-  return number_utils.to_integer(tostring(content):gsub("%s+", ""))
-end
-
-local function _cleanup_lane(paths)
-  fs_lib.remove_path(paths.output)
-  fs_lib.remove_path(paths.status)
-  fs_lib.remove_path(paths.launcher)
+  local command_path = entry.dir .. "/command.cmd"
+  local ok, err = fs.write_file(command_path, "@echo off\r\nchcp 65001 >nul\r\n" .. command .. "\r\nexit /b %errorlevel%\r\n")
+  if not ok then return nil, err end
+  local launcher = entry.dir .. "/launcher.cmd"
+  ok, err = fs.write_file(launcher, "@echo off\r\nchcp 65001 >nul\r\n" .. shell.build_command({
+    executable, native(command_path), native(entry.output), native(entry.status), tostring(timeout),
+  }) .. "\r\nexit /b %errorlevel%\r\n")
+  if not ok then return nil, err end
+  local exec_ok, kind, code = os.execute('start "" /b cmd.exe /d /v:off /s /c ""' .. native(launcher) .. '"" >nul 2>&1')
+  if not shell.exit_status(exec_ok, kind, code) then return nil, "failed to start owner: " .. tostring(code) end
+  return true
 end
 
 function M.run(lanes, opts)
   opts = opts or {}
-  local timeout = opts.timeout or _DEFAULT_TIMEOUT_SECONDS
-  local stream = opts.stream
-  if stream == nil then stream = true end
-
-  local active = {}
-  for _, lane in ipairs(lanes) do
-    local paths = _lane_paths(lane.label)
-    local ok, err = _write_lane_launcher(lane.cmd, paths)
-    if not ok then
-      for _, a in ipairs(active) do _cleanup_lane(a.paths) end
-      error("failed to write launcher for " .. lane.label .. ": " .. tostring(err))
-    end
-    local launched, launch_err = _launch(paths)
-    if not launched then
-      _cleanup_lane(paths)
-      for _, a in ipairs(active) do _cleanup_lane(a.paths) end
-      error("failed to launch " .. lane.label .. ": " .. tostring(launch_err))
-    end
-    active[#active + 1] = { label = lane.label, paths = paths }
+  local timeout = opts.timeout or 600
+  local executable, helper_err = helper()
+  local entries = {}
+  local started = os.time()
+  for _, lane in ipairs(lanes or {}) do
+    local unique = env.make_temp_path("parallel_lane", "")
+    local dir = opts.lane_dir and path.join_path(opts.lane_dir, unique:match("[^/]+$")) or unique
+    local entry = { label = lane.label, cmd = lane.cmd, dir = dir }
+    entry.output, entry.status = dir .. "/output.log", dir .. "/status.txt"
+    entries[#entries + 1] = entry
+    local prepared, prepare_err = fs.ensure_dir(dir)
+    if not executable then entry.launch_error = helper_err
+    elseif prepared then
+      local launched, launch_err = launch(entry, executable, timeout)
+      if not launched then entry.launch_error = tostring(launch_err) end
+    else entry.launch_error = tostring(prepare_err) end
   end
-
-  local deadline = os.time() + timeout
   while true do
     local pending = false
-    for _, a in ipairs(active) do
-      if fs_lib.path_exists(a.paths.status) ~= true then
-        pending = true
-        break
-      end
+    for _, entry in ipairs(entries) do
+      if not entry.launch_error and status(entry) == nil then pending = true end
     end
     if not pending then break end
-    if os.time() > deadline then
-      for _, a in ipairs(active) do _cleanup_lane(a.paths) end
-      error("parallel lanes timed out after " .. tostring(timeout) .. "s")
-    end
-    _sleep(_POLL_INTERVAL_SECONDS)
+    if os.time() > started + timeout + 30 then break end
+    pause(opts.poll_interval or 0.1)
   end
-
-  local all_ok = true
-  local results = {}
-  for _, a in ipairs(active) do
-    local status_code = _read_status(a.paths.status)
-    local output = fs_lib.read_file(a.paths.output) or ""
-    local success = status_code == 0
-    if stream and output ~= "" then
-      io.write(output)
-      if output:sub(-1) ~= "\n" then io.write("\n") end
+  local all_ok, results = #entries > 0, {}
+  for _, entry in ipairs(entries) do
+    local code, reason = status(entry)
+    local result = { label = entry.label, ok = false, exit_code = code, output = fs.read_raw(entry.output) or "" }
+    local identity = fs.read_raw(entry.status .. ".pid") or ""
+    result.owner_pid, result.child_pid = identity:match("(%d+) (%d+)")
+    if entry.launch_error then
+      result.reason, result.message = "launch_failed", entry.launch_error
+    elseif code == nil then
+      result.reason, result.message = "output_incomplete", "Owner did not publish completion state: " .. tostring(entry.label)
+      result.artifact_dir = entry.dir
+    elseif reason ~= "exit" then
+      result.reason, result.message = reason, "Lane " .. tostring(entry.label) .. " " .. reason .. ": " .. code
+      if reason == "termination_failed" then result.artifact_dir = entry.dir end
+    elseif code ~= 0 then
+      result.reason, result.message = "exit", "Lane " .. tostring(entry.label) .. " exited " .. code
+    elseif result.output == "" then
+      result.reason, result.message = "output_incomplete", "Lane " .. tostring(entry.label) .. " exited 0 with empty output"
+    else result.ok = true end
+    if not result.artifact_dir then
+      local cleaned, clean_err = fs.remove_path(entry.dir)
+      if not cleaned then
+        result.ok, result.artifact_dir = false, entry.dir
+        result.message = tostring(result.message or "") .. "\n" .. tostring(clean_err)
+      end
     end
-    results[#results + 1] = {
-      label = a.label,
-      ok = success,
-      output = output,
-      exit_code = status_code,
-    }
-    if not success then all_ok = false end
-    _cleanup_lane(a.paths)
+    if not result.ok then
+      all_ok = false
+      if result.message and (result.output == "" or result.reason ~= "exit") then
+        result.output = result.output .. (result.output == "" and "" or "\n") .. result.message .. "\n"
+      end
+    end
+    results[#results + 1] = result
+    if opts.stream ~= false and result.output ~= "" then
+      io.write(result.output)
+      if result.output:sub(-1) ~= "\n" then io.write("\n") end
+    end
   end
-  if stream then io.flush() end
-
+  if opts.stream ~= false then io.flush() end
   return all_ok, results
 end
-
 return M
