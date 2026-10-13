@@ -2,9 +2,12 @@
 -- role-getter resolution. The convention contract (0 sentinel vs negative) also
 -- lives in test/contract/test_ui_role_avatar.lua; these cases pin the full guard
 -- surface (nil / non-integer / non-positive / valid, plus resolve_from_role).
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 local role_avatar = require("src.ui.view.role_avatar")
 local logger = require("src.foundation.log")
@@ -22,7 +25,7 @@ function TestUiRoleAvatar:test_sanitize_image_key_covers_nil_non_integer_non_pos
     _assert_eq(role_avatar.sanitize_image_key(0), nil, "zero key resolves to nil without warning")
     _assert_eq(role_avatar.sanitize_image_key(5), 5, "positive integer key passes through")
   end)
-  lu.assertEvalToTrue(warns >= 2, "non-integer and negative keys should each warn (got " .. warns .. ")")
+  luassert.truthy(warns >= 2, "non-integer and negative keys should each warn (got " .. warns .. ")")
 end
 
 function TestUiRoleAvatar:test_resolve_from_role_guards_missing_role_missing_getter_and_getter_errors()
