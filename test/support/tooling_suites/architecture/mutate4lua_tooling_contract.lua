@@ -4,23 +4,18 @@ local fs_lib = require("foundation.fs")
 local mutate = require("packages.mutate.runner")
 
 bootstrap.install_package_paths()
+local check = require("luassert")
 
 local function _assert_eq(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
+  check.equal(expected, actual, message)
 end
 
 local function _assert_contains(text, expected, message)
-  if tostring(text or ""):find(expected, 1, true) == nil then
-    error((message or "missing expected text") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(text))
-  end
+  check.matches(expected, tostring(text or ""), 1, true, message)
 end
 
 local function _assert_not_contains(text, unexpected, message)
-  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
-    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
-  end
+  check.is_nil(tostring(text or ""):find(unexpected, 1, true), message)
 end
 
 local function _buffer()
@@ -61,7 +56,7 @@ local function _test_wrapper_delegates_to_lua_cli()
 
   _assert_eq(type(exit_code), "number", "wrapper should return numeric exit code")
   local output = out:text() .. err:text()
-  assert(output ~= "", "scan should produce output")
+  check.truthy(output ~= "", "scan should produce output")
 end
 
 local function _test_wrapper_routes_scan_command()
@@ -78,7 +73,7 @@ local function _test_wrapper_routes_scan_command()
   local output = out:text()
   local has_sites = output:find("sites:", 1, true) ~= nil
     or output:find('"sites"', 1, true) ~= nil
-  assert(has_sites or exit_code == 0, "scan should produce sites output or succeed")
+  check.truthy(has_sites or exit_code == 0, "scan should produce sites output or succeed")
 end
 
 local function _test_wrapper_help_is_bilingual_and_lists_new_cli_options()
@@ -90,7 +85,7 @@ local function _test_wrapper_help_is_bilingual_and_lists_new_cli_options()
     stderr = err,
   })
 
-  assert(exit_code == 0, "help should succeed")
+  check.truthy(exit_code == 0, "help should succeed")
   _assert_contains(out:text(), "用法", "wrapper help should include Chinese usage text")
   _assert_contains(out:text(), "Usage", "wrapper help should include English usage text")
   -- mutate4lua v0.1.0：driver 契约选项已删，差分/覆盖率选项纳入。
@@ -99,7 +94,7 @@ local function _test_wrapper_help_is_bilingual_and_lists_new_cli_options()
   _assert_contains(out:text(), "--mutate-all", "wrapper help should document mutate-all")
   _assert_not_contains(out:text(), "--index-suites", "wrapper help must not document removed suite preheat")
   _assert_not_contains(out:text(), "--lane", "wrapper help must not document removed lane option")
-  assert(err:text() == "", "help should not write stderr")
+  check.truthy(err:text() == "", "help should not write stderr")
 end
 
 local function _test_no_go_binary_references_in_wrapper()
@@ -182,15 +177,15 @@ local function _test_contract_lane_excludes_tooling_smoke_cases()
     cases_by_suite[suite.name] = table.concat(names, ",")
   end
 
-  assert((cases_by_suite["script_tools_contract"] or ""):find("mutate_wrapper_scan_output", 1, true) == nil,
+  check.truthy((cases_by_suite["script_tools_contract"] or ""):find("mutate_wrapper_scan_output", 1, true) == nil,
     "contract lane should exclude mutate scanning tooling smoke")
-  assert((cases_by_suite["script_tools_contract"] or ""):find("deploy_comprehensive", 1, true) == nil,
+  check.truthy((cases_by_suite["script_tools_contract"] or ""):find("deploy_comprehensive", 1, true) == nil,
     "contract lane should exclude deploy powershell smoke")
-  assert((cases_by_suite["script_tools_contract"] or ""):find("run_command_preserves_bilingual_stderr_and_utf8_stdin", 1, true) == nil,
+  check.truthy((cases_by_suite["script_tools_contract"] or ""):find("run_command_preserves_bilingual_stderr_and_utf8_stdin", 1, true) == nil,
     "contract lane should exclude subprocess stderr smoke")
-  assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("cli_scan_writes_metadata", 1, true) == nil,
+  check.truthy((cases_by_suite["architecture.arch_view_contract"] or ""):find("cli_scan_writes_metadata", 1, true) == nil,
     "contract lane should exclude arch_view scan tooling smoke")
-  assert((cases_by_suite["architecture.arch_view_contract"] or ""):find("viewer_command_writes_static_bundle", 1, true) == nil,
+  check.truthy((cases_by_suite["architecture.arch_view_contract"] or ""):find("viewer_command_writes_static_bundle", 1, true) == nil,
     "contract lane should exclude arch_view viewer tooling smoke")
 end
 
