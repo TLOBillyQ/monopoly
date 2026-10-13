@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -21,13 +21,12 @@ local function _event_texts(game)
   return texts
 end
 
-TestGameplayAngelImmunity = {}
+describe("TestGameplayAngelImmunity", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
-function TestGameplayAngelImmunity:setUp()
-  _config_reset.reset_all()
-end
-
-function TestGameplayAngelImmunity:test_roadblock_angel_still_stops_and_consumes_roadblock()
+local function _test_roadblock_angel_still_stops_and_consumes_roadblock()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local player = game.players[1]
   game:set_player_deity(player, "angel")
@@ -40,7 +39,7 @@ function TestGameplayAngelImmunity:test_roadblock_angel_still_stops_and_consumes
   _assert_equal(player.position, 2, "angel should stop on the roadblock tile")
 end
 
-function TestGameplayAngelImmunity:test_roadblock_non_angel_stops_and_consumes_roadblock()
+local function _test_roadblock_non_angel_stops_and_consumes_roadblock()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local player = game.players[1]
   game.board:place_roadblock(2)
@@ -52,7 +51,7 @@ function TestGameplayAngelImmunity:test_roadblock_non_angel_stops_and_consumes_r
   _assert_equal(player.position, 2, "non-angel should stop on the roadblock tile")
 end
 
-function TestGameplayAngelImmunity:test_share_wealth_angel_blocks_effect_and_emits_immunity_event()
+local function _test_share_wealth_angel_blocks_effect_and_emits_immunity_event()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local user = game.players[1]
   local target = game.players[2]
@@ -73,7 +72,7 @@ function TestGameplayAngelImmunity:test_share_wealth_angel_blocks_effect_and_emi
   luassert.truthy(#texts > 0 and texts[#texts] == "P2 天使保护，均富无效", "item_immune event should be emitted")
 end
 
-function TestGameplayAngelImmunity:test_share_wealth_non_angel_shares_wealth_normally()
+local function _test_share_wealth_non_angel_shares_wealth_normally()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local user = game.players[1]
   local target = game.players[2]
@@ -90,7 +89,7 @@ function TestGameplayAngelImmunity:test_share_wealth_non_angel_shares_wealth_nor
   _assert_not_equal(texts[#texts], "P2 天使保护，均富无效", "non-angel should not emit immunity event")
 end
 
-function TestGameplayAngelImmunity:test_exile_angel_blocks_effect_and_emits_immunity_event()
+local function _test_exile_angel_blocks_effect_and_emits_immunity_event()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local user = game.players[1]
   local target = game.players[2]
@@ -109,7 +108,7 @@ function TestGameplayAngelImmunity:test_exile_angel_blocks_effect_and_emits_immu
   _assert_equal(game.board:find_first_by_type("mountain"), mountain_idx, "mountain tile should remain available")
 end
 
-function TestGameplayAngelImmunity:test_exile_non_angel_relocates_normally()
+local function _test_exile_non_angel_relocates_normally()
   local game = support.new_game({ players = { "P1", "P2" }, auto_all = true })
   local user = game.players[1]
   local target = game.players[2]
@@ -123,4 +122,10 @@ function TestGameplayAngelImmunity:test_exile_non_angel_relocates_normally()
 end
 
 
-return TestGameplayAngelImmunity
+it("test_roadblock_angel_still_stops_and_consumes_roadblock", _test_roadblock_angel_still_stops_and_consumes_roadblock)
+it("test_roadblock_non_angel_stops_and_consumes_roadblock", _test_roadblock_non_angel_stops_and_consumes_roadblock)
+it("test_share_wealth_angel_blocks_effect_and_emits_immunity_event", _test_share_wealth_angel_blocks_effect_and_emits_immunity_event)
+it("test_share_wealth_non_angel_shares_wealth_normally", _test_share_wealth_non_angel_shares_wealth_normally)
+it("test_exile_angel_blocks_effect_and_emits_immunity_event", _test_exile_angel_blocks_effect_and_emits_immunity_event)
+it("test_exile_non_angel_relocates_normally", _test_exile_non_angel_relocates_normally)
+end)
