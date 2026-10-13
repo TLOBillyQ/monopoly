@@ -30,6 +30,55 @@
 - Acceptance step/driver 调真实 `src` 公共面，不复制业务常量或平行实现规则。
 - 期望值来自规格、字面例子或独立真源，不用与实现相同的算法重算期望值。
 
+## 断言层迁移(#74,ADR 0069 第一步)
+
+迁移顺序是**先断言、后结构**:先把 `lu.*` / `luax.has_error` 换成真 luassert,`TestX = {}` 类结构原样留着;结构层(`describe` / `it`)换 busted 时再做第二步。两步之间的中间态允许进仓库,**不建「TestX 自动包成 describe」或「lu.* 转发到 luassert」的兼容层**——shim 出错的表现是测试静默通过。
+
+### 断言对象怎么拿
+
+- 文件头两行固定:`require("test.bootstrap").install_package_paths()` 之后 `local luassert = assert(require("test.support.luassert_loader").load())`,断言只走这个局部对象。
+- loader 只从**项目工具缓存** `<repo>/.toolcache/luarocks/` 解析 `luassert`(及 rockspec 依赖 `say`),解析结果不在该目录下即失败;不落全局、不依赖 `luarocks` 的可执行位。
+- **不覆盖全局 `assert`**。旧运行器与 LuaUnit 的后端语义挂在全局 `assert` 上,覆盖它等于换执行后端而不是换断言词汇;`test/guards/lib/luassert_migration_pilot_guard.lua` 会扫 `_G.assert =` 一类写法。
+
+### 译法对照(带陷阱)
+
+| 迁移前 | 迁移后 | 陷阱 |
+| --- | --- | --- |
+| 标量 `lu.assertEquals(a, b)` | `luassert.is.equal(b, a)` | **参数顺序翻转**成 (expected, actual);`is.equal` 是 `==`,表只比身份 |
+| 表 `lu.assertEquals(a, b)` | `luassert.is.same(b, a)` | LuaUnit 原本深比较表;luassert 的 `is.same` 忽略元表做深比较,不可换成身份比较 |
+| `lu.assertNotEquals(a, b)` | 标量用 `luassert.is_not(b, a)`,表用 `luassert.is_not.same(b, a)` | 必须保住标量不等或表内容不等的原口径 |
+| `lu.assertIs` / `lu.assertNotIs` | `luassert.is.equal` / `is_not`(同一引用) | 比的是引用,不是内容 |
+| `lu.assertEvalToTrue(x)` | `luassert.truthy(x)` | **truthiness**,`1` / `"s"` / 表都通过 |
+| `lu.assertEvalToFalse(x)` | `luassert.falsy(x)` | 只认 `nil` 与 `false` |
+| `lu.assertTrue(x)` / `lu.assertFalse(x)` | `luassert.is_true(x)` / `is_false(x)` | **严格布尔**,`is_true(1)` 必红;别拿 `truthy` 顶替 |
+| `lu.assertNil` / `lu.assertNotNil` | `luassert.is_nil` / `is_not_nil` | `is_nil(false)` 必红,`false` 不是 `nil` |
+| `lu.assertIsTable` 等类型断言 | `luassert.is_table` 等 | `is_*` 家族即类型断言 |
+| `lu.assertError(f, ...)` | `luassert.has_error(function() f(...) end)` | `lu.assertError` 把尾参**传给 f**、只验「抛没抛」;`has_error` **不转发参数**,给了 expected 就**精确比文本**。保住原义要显式包闭包、不顺手把期望值升级成精确文本——那是改期望值 |
+| `lu.assertErrorMsgContains(sub, f, ...)` | `luassert.has_error.match(function() f(...) end, sub, 1, true)` | 旧断言转发尾参;新断言需闭包保住调用。`has_error` 是**精确文本**,子串必须走 `match` 且加 `1, true`(init + plain,禁用模式元字符) |
+| `luax.has_error(f, msg)` | `luassert.has_error(f, msg)` | 同口径(先剥一层 `文件:行: ` 位置前缀,字符串精确比、表深比),换名即可 |
+| `lu.assertStrContains(s, sub)` | `luassert.matches(sub, s, 1, true)` | 同上,plain 模式 |
+| `lu.fail(msg)` | `lu.fail(msg)` 原样保留 | 见下方分桶口径 |
+
+### 分桶口径(失败如何传播)
+
+旧运行器只有一个引擎、一个退出码:`exit = (failures + errors > 0 or cases == 0) and 1 or 0`。断言层的抛错按消息分类:
+
+- `lu.fail` 与 LuaUnit 断言的消息带 `LuaUnit test FAILURE: ` 前缀 → 计 **failures**;
+- **luassert 的抛错是普通字符串**(`文件:行: <说明>`),不带该前缀 → 计 **errors**。
+
+两个桶都**独立**作用于退出码,任何一种都不能被忽略:只 failed、只 errors,退出码都是非零。TAP 输出里两者都是 `not ok N - <类>.<用例>`。改动断言层后如果 `errors` 归零而 `failed` 也归零,先怀疑断言被吞了,而不是修好了。
+
+### 试点范围与对账
+
+- 本票试点 5 个文件(见 `test/guards/lib/luassert_migration_pilot_guard.lua` 的 `PILOT_FILES`),迁移前后用例集合必须逐类一致:45 例(9 / 9 / 5 / 13 / 4 + 5),基线由 `test/support/luassert_migration/test/test_luassert_assertion_contract.lua` 对账。
+- 试点文件**不跳过特殊结构**:`setUp` 钩子、`multi_class_return.merge` 的多类 return、`runtime_baseline_guard` 补装、局部断言 helper 都原样保留;guard 的 `STRUCTURE_ANCHORS` 钉住这些锚点,锚点丢失即违规。
+- 每个试点文件的 `luassert` 调用点有下界(`ASSERTION_CALL_FLOOR`),防止「断言被删成空跑」也算绿。
+- `test/support/luax.lua` 不在本票范围内,其余 spec 继续用它。
+
+### 诊断
+
+Lua 编译期 `LUA_IDSIZE` 是 60,长 chunk 名在错误消息里被截成 `...<尾部>`,所以 TAP 的 `# <src> @ <line>` **不保证是完整路径**——对账与归因按文件名(basename),不要拿它当绝对路径去拼。
+
 ## mutate4lua manifest
 
 - `src` 文件尾部的 mutate4lua manifest 与源码同属一个提交。
