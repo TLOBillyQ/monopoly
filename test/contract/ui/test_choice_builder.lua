@@ -1,9 +1,9 @@
-local lu = require("luaunit")
+local luassert = assert
 local choice_builder = require("src.ui.view.choice_builder")
 
-TestChoiceBuilder = {}
+describe("TestChoiceBuilder", function()
 
-function TestChoiceBuilder:test_builds_phase_title_and_option_fields()
+it("test_builds_phase_title_and_option_fields", function()
   local view = choice_builder.build_choice_view({
     id = 7,
     kind = "item_phase_passive",
@@ -31,16 +31,16 @@ function TestChoiceBuilder:test_builds_phase_title_and_option_fields()
     },
   })
 
-  lu.assertIs(view.title, "请选择", "choice view should return base title without phase label")
-  lu.assertIs(view.body, "第一行\n第二行", "choice view should join body_lines")
-  lu.assertIs(view.allow_cancel, false, "choice view should preserve explicit allow_cancel")
-  lu.assertIs(view.cancel_label, "返回", "choice view should preserve cancel label")
-  lu.assertIs(view.route_key, "base_inline", "choice view should copy explicit fields")
-  lu.assertIs(view.options[1].requires_pre_confirm, true, "choice view should copy pre-confirm marker")
-  lu.assertIs(view.options[1].confirm_title, "确认使用", "choice view should copy confirm title")
-end
+  luassert.is.equal("请选择", view.title, "choice view should return base title without phase label")
+  luassert.is.equal("第一行\n第二行", view.body, "choice view should join body_lines")
+  luassert.is.equal(false, view.allow_cancel, "choice view should preserve explicit allow_cancel")
+  luassert.is.equal("返回", view.cancel_label, "choice view should preserve cancel label")
+  luassert.is.equal("base_inline", view.route_key, "choice view should copy explicit fields")
+  luassert.is.equal(true, view.options[1].requires_pre_confirm, "choice view should copy pre-confirm marker")
+  luassert.is.equal("确认使用", view.options[1].confirm_title, "choice view should copy confirm title")
+end)
 
-function TestChoiceBuilder:test_defaults_body_and_option_labels()
+it("test_defaults_body_and_option_labels", function()
   local view = choice_builder.build_choice_view({
     id = 8,
     kind = "remote",
@@ -55,15 +55,15 @@ function TestChoiceBuilder:test_defaults_body_and_option_labels()
     body_lines_only = true,
   })
 
-  lu.assertIs(view.title, "请选择", "choice view should default missing title")
-  lu.assertIs(view.body, "", "body_lines_only should ignore pending.body")
-  lu.assertIs(view.cancel_label, "取消", "choice view should default cancel label")
-  lu.assertIs(view.allow_cancel, true, "choice view should allow cancel by default")
-  lu.assertIs(view.options[1].label, "3", "choice view should default option label from raw option")
-  lu.assertIs(view.options[1].id, 3, "choice view should preserve option id")
-end
+  luassert.is.equal("请选择", view.title, "choice view should default missing title")
+  luassert.is.equal("", view.body, "body_lines_only should ignore pending.body")
+  luassert.is.equal("取消", view.cancel_label, "choice view should default cancel label")
+  luassert.is.equal(true, view.allow_cancel, "choice view should allow cancel by default")
+  luassert.is.equal("3", view.options[1].label, "choice view should default option label from raw option")
+  luassert.is.equal(3, view.options[1].id, "choice view should preserve option id")
+end)
 
-function TestChoiceBuilder:test_defaults_label_from_plain_string_option()
+it("test_defaults_label_from_plain_string_option", function()
   -- kills _default_option_label 的 "nil" 字符串/type(id)/tostring(opt) 位点:
   -- 无 id 的裸字符串 option 必须以其自身为 label(变异体会产出 "nil" 或 nil)。
   local view = choice_builder.build_choice_view({
@@ -76,9 +76,8 @@ function TestChoiceBuilder:test_defaults_label_from_plain_string_option()
     },
   })
 
-  lu.assertIs(view.options[1].label, "路障卡", "a plain string option should be its own label")
-  lu.assertIs(view.options[1].id, "路障卡", "a plain string option should carry itself as id")
-end
+  luassert.is.equal("路障卡", view.options[1].label, "a plain string option should be its own label")
+  luassert.is.equal("路障卡", view.options[1].id, "a plain string option should carry itself as id")
+end)
 
-
-return TestChoiceBuilder
+end)

@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local luassert = assert
 
 local function _build_violation_report(name, violations)
   local lines = {}
@@ -110,16 +110,13 @@ local guards = {
   },
 }
 
-TestGuardRunner = {}
+describe("TestGuardRunner", function()
+  for _, guard in ipairs(guards) do
+    local runner = require(guard.module)
 
-for _, guard in ipairs(guards) do
-  local runner = require(guard.module)
-
-  TestGuardRunner["test_" .. guard.name .. "_passes"] = function(self)
-    local ok, report = _build_report(guard.name, runner.run())
-    lu.assertTrue(ok, report)
+    it("test_" .. guard.name .. "_passes", function()
+      local ok, report = _build_report(guard.name, runner.run())
+      luassert.is_true(ok, report)
+    end)
   end
-end
-
-
-return TestGuardRunner
+end)
