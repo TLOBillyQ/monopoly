@@ -1,10 +1,12 @@
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个 describe 拍平成两个 Test* 类,断言从
--- 裸 assert 切到 lu.assertEvalToTrue,用例数与改写前一一对应
+-- 裸 assert 切到 luassert.truthy,用例数与改写前一一对应
 -- (host-managed rewards 3 例 + 迁自 property 车道的 config properties 2 例 = 5 例)。
 
-local lu = require("luaunit")
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local share_task = require("src.app.host_integrations.share_task")
 
 local EXPECTED_TASKS = {
@@ -21,7 +23,7 @@ TestShareTaskHostManagedRewards = {}
 function TestShareTaskHostManagedRewards:test_mirrors_the_configured_host_task_rewards()
   for _, expected in ipairs(EXPECTED_TASKS) do
     local task = share_task.find_task(expected.period, expected.name)
-    lu.assertEvalToTrue(task ~= nil, "missing share task config: " .. expected.period .. "/" .. expected.name)
+    luassert.truthy(task ~= nil, "missing share task config: " .. expected.period .. "/" .. expected.name)
     _assert_eq(task.progress_source, expected.progress_source, expected.name .. " progress source")
     _assert_eq(task.target_progress, expected.target_progress, expected.name .. " target progress")
     _assert_eq(task.reward_currency, "金币", expected.name .. " reward currency")
@@ -49,9 +51,7 @@ do
   local property = require("test.support.property")
 
   local function _prop_assert_eq(actual, expected, message)
-    lu.assertEvalToTrue(actual == expected, (message or "assertion failed")
-      .. ": expected " .. tostring(expected)
-      .. ", got " .. tostring(actual))
+    luassert.is.equal(expected, actual, message)
   end
 
   local function _gen_task(rng)
