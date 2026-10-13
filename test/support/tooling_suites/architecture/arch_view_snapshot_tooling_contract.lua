@@ -19,6 +19,7 @@
 local bootstrap = require("test.bootstrap")
 
 bootstrap.install_package_paths()
+local check = require("luassert")
 assert(bootstrap.ensure_tool("arch_view"))
 
 local arch_view = require("arch_view")
@@ -43,9 +44,7 @@ local arch_config_path = _first_existing({
 })
 
 local function _assert_eq(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
+  check.equal(expected, actual, message)
 end
 
 -- ---------------------------------------------------------------------------
@@ -70,15 +69,15 @@ end
 
 local function _test_analyze_stamps_supported_schema_version()
   local architecture = _real_architecture()
-  assert(SUPPORTED_SCHEMA_VERSIONS[architecture.schema_version] == true,
+  check.truthy(SUPPORTED_SCHEMA_VERSIONS[architecture.schema_version] == true,
     "schema_version " .. tostring(architecture.schema_version) .. " is outside the supported range")
 end
 
 local function _test_gate_shape_on_real_config()
   local architecture = _real_architecture()
-  assert(type(architecture.check) == "table", "architecture.check must be a table")
-  assert(type(architecture.check.ok) == "boolean", "check.ok must be a boolean")
-  assert(type(architecture.check.violations) == "table", "check.violations must be a table")
+  check.truthy(type(architecture.check) == "table", "architecture.check must be a table")
+  check.truthy(type(architecture.check.ok) == "boolean", "check.ok must be a boolean")
+  check.truthy(type(architecture.check.violations) == "table", "check.violations must be a table")
 end
 
 -- ---------------------------------------------------------------------------
@@ -93,8 +92,8 @@ local _cached_bad = nil
 local function _bad_architecture()
   if _cached_bad == nil then
     local root = common.make_temp_path("arch_view_contract_bad", "")
-    assert(common.ensure_dir(common.join_path(root, "src")))
-    assert(common.write_file(common.join_path(root, "arch_view.config.json"), [[
+    check.truthy(common.ensure_dir(common.join_path(root, "src")))
+    check.truthy(common.write_file(common.join_path(root, "arch_view.config.json"), [[
 {
   "source_roots": ["src"],
   "component_rules": [
@@ -111,9 +110,9 @@ local function _bad_architecture()
   ]
 }
 ]]))
-    assert(common.write_file(common.join_path(root, "src/high.lua"), "return {}\n"))
-    assert(common.write_file(common.join_path(root, "src/low.lua"), 'local high = require("src.high")\nreturn {}\n'))
-    assert(common.write_file(common.join_path(root, "src/loose.lua"), "return {}\n"))
+    check.truthy(common.write_file(common.join_path(root, "src/high.lua"), "return {}\n"))
+    check.truthy(common.write_file(common.join_path(root, "src/low.lua"), 'local high = require("src.high")\nreturn {}\n'))
+    check.truthy(common.write_file(common.join_path(root, "src/loose.lua"), "return {}\n"))
 
     local architecture, err = arch_view.analyze({
       project_root = root,
@@ -147,7 +146,7 @@ local function _test_forbidden_dependency_violation_structure()
   local violation = _find_violation(architecture.check, function(v)
     return v.kind == "forbidden_dependency"
   end)
-  assert(violation ~= nil, "gate must report the low -> high forbidden dependency")
+  check.truthy(violation ~= nil, "gate must report the low -> high forbidden dependency")
   _assert_eq(violation.rule, "low_no_high", "forbidden_dependency must name its rule")
   _assert_eq(violation.from, "src.low", "forbidden_dependency must carry `from`")
   _assert_eq(violation.to, "src.high", "forbidden_dependency must carry `to`")
@@ -158,7 +157,7 @@ local function _test_unclassified_module_violation_structure()
   local violation = _find_violation(architecture.check, function(v)
     return v.kind == "unclassified_module" and v.module_id == "src.loose"
   end)
-  assert(violation ~= nil, "gate must report src.loose as an unclassified_module with its module_id")
+  check.truthy(violation ~= nil, "gate must report src.loose as an unclassified_module with its module_id")
 end
 
 -- arch_view's runtime must stay self-contained across the pin (no accidental
@@ -172,9 +171,9 @@ local function _test_arch_view_runtime_is_self_contained()
   local host_source = assert(common.read_file(common.join_path(runtime_dir, "host.lua")))
   -- #302:本仓底层模块已由 shared.lib.common 归位为 tools/foundation(tools/ 重设计决策)。
   -- 契约升级:arch_view runtime 自包含,不得依赖 monopoly foundation。
-  assert(common_source:find('require("foundation.', 1, true) == nil,
+  check.truthy(common_source:find('require("foundation.', 1, true) == nil,
     "arch_view runtime common must not depend on monopoly foundation")
-  assert(host_source:find("src.foundation.number", 1, true) == nil,
+  check.truthy(host_source:find("src.foundation.number", 1, true) == nil,
     "arch_view runtime host must not depend on monopoly src modules")
 end
 

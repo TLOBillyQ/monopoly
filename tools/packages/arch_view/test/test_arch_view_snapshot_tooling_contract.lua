@@ -1,13 +1,8 @@
+require("test.bootstrap").install_package_paths()
 local suite = require("test.support.tooling_suites.architecture.arch_view_snapshot_tooling_contract")
-local cases = suite.tests or {}
 
-TestArchViewSnapshotToolingContract = {}
-
-for _, case in ipairs(cases) do
-  TestArchViewSnapshotToolingContract["test_" .. case.name] = function(self)
-    case.run()
+describe("arch view snapshot tooling contracts", function()
+  for _, case in ipairs(suite.tests) do
+    it(case.name, case.run)
   end
-end
-
-
-return TestArchViewSnapshotToolingContract
+end)
