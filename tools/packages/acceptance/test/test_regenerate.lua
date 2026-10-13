@@ -47,12 +47,12 @@ function TestRegenerate:test_manifest_missing_or_invalid_never_becomes_an_empty_
     lu.assertFalse(ok)
     lu.assertStrContains(tostring(err), "manifest invalid or empty")
   end
-  io.open = function(path, mode)
+  rawset(io, "open", function(path, mode)
     if tostring(path):match("features/manifest%.lua$") then return nil end
     return original_open(path, mode)
-  end
+  end)
   local ok, err = pcall(original_dofile, "tools/packages/acceptance/acceptance_features.lua")
-  io.open = original_open
+  rawset(io, "open", original_open)
   lu.assertFalse(ok)
   lu.assertStrContains(tostring(err), "manifest unavailable")
 end
