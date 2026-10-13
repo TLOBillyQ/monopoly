@@ -377,7 +377,6 @@ return {
     "test/behavior/ui/view/test_model_api_env.lua",
     "test/behavior/ui/view/test_panel_builder.lua",
     "tools/packages/acceptance/test/test_cli_entrypoints.lua",
-    "tools/packages/acceptance/test/test_feature_stamp.lua",
     "tools/packages/acceptance/test/test_game_driver.lua",
     "tools/packages/acceptance/test/test_regenerate.lua",
     "tools/packages/acceptance/test/test_run_all_serial.lua",
@@ -397,6 +396,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/acceptance/test/test_feature_stamp.lua",
     "tools/packages/ops/test/test_deploy.lua",
     "tools/packages/ops/test/test_deploy_native.lua",
     "tools/packages/crap/test/test_crap_cli_lua54_guard.lua",
