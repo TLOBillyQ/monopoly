@@ -1,5 +1,5 @@
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 local game_runtime_bootstrap = require("src.app.gameplay_start")
@@ -9,7 +9,7 @@ local frame_timer = require("src.host.frame_timer")
 
 local function _assert_close(actual, expected, epsilon, msg)
   local delta = math.abs((actual or 0) - (expected or 0))
-  lu.assertEvalToTrue(delta <= epsilon, (msg or "value mismatch") .. " expected=" .. tostring(expected) .. " actual=" .. tostring(actual))
+  luassert.truthy(delta <= epsilon, (msg or "value mismatch") .. " expected=" .. tostring(expected) .. " actual=" .. tostring(actual))
 end
 
 local function _common_start_patches(capture, clock)
@@ -81,15 +81,15 @@ function TestRuntimeBootstrap:test_frame_timer_repeat_every_registers_repeat_tim
     frame_timer.stop(handle)
   end)
 
-  lu.assertEvalToTrue(captured.args[1] == "repeat_timeout", "registers EVENT.REPEAT_TIMEOUT")
+  luassert.truthy(captured.args[1] == "repeat_timeout", "registers EVENT.REPEAT_TIMEOUT")
   _assert_close(captured.args[2], 3 / 30.0, 1e-9, "frame interval converts to seconds at 30fps")
-  lu.assertEvalToTrue(captured.cb == callback, "callback passes through unchanged")
-  lu.assertEquals(captured.unregistered_id, 47, "stop should unregister the returned trigger id")
-  lu.assertEquals(captured.unregister_calls, 1, "stop should be idempotent for the same handle")
+  luassert.truthy(captured.cb == callback, "callback passes through unchanged")
+  luassert.is.equal(47, captured.unregistered_id, "stop should unregister the returned trigger id")
+  luassert.is.equal(1, captured.unregister_calls, "stop should be idempotent for the same handle")
 end
 
 function TestRuntimeBootstrap:test_frame_timer_repeat_every_rejects_non_function_callback()
-  luax.has_error(function()
+  luassert.has_error(function()
     frame_timer.repeat_every(3, nil)
   end, "frame_timer.repeat_every requires callback")
 end
@@ -118,12 +118,12 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_uses_wall_clock_diff_after_
     local state = {}
     local game_ref = { nil }
     game_runtime_bootstrap.start(state, game_ref)
-    lu.assertEvalToTrue(type(capture.tick_callback) == "function", "tick callback should be registered")
+    luassert.truthy(type(capture.tick_callback) == "function", "tick callback should be registered")
     capture.tick_callback()
     capture.tick_callback()
   end)
 
-  lu.assertEvalToTrue(#capture.dt_values == 2, "tick callback should produce two dt samples")
+  luassert.truthy(#capture.dt_values == 2, "tick callback should produce two dt samples")
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "first tick should fallback to fixed delta")
   _assert_close(capture.dt_values[2], 0.05, 0.0001, "second tick should use wall clock diff delta")
 end
@@ -208,17 +208,17 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_sets_game_before_priming_fi
     local state = {}
     local game_ref = { nil }
     local started = game_runtime_bootstrap.start(state, game_ref)
-    lu.assertEvalToTrue(started == primed_game, "start should return the created game")
+    luassert.truthy(started == primed_game, "start should return the created game")
   end)
 
-  lu.assertEvalToTrue(capture.primed_game == primed_game, "runtime bootstrap should prime the first turn on startup")
-  lu.assertEvalToTrue(capture.set_game_received == primed_game, "set_game should receive the primed game instance")
+  luassert.truthy(capture.primed_game == primed_game, "runtime bootstrap should prime the first turn on startup")
+  luassert.truthy(capture.set_game_received == primed_game, "set_game should receive the primed game instance")
   -- set_game 会 reset wait_callback_runtime,排在首回合之后就会抹掉首回合挂起的
   -- landing_visual 等待凭证,真机上整局死锁在 wait_landing_visual。
-  lu.assertEvalToTrue(capture.call_order[1] == "set_game", "set_game must run before the first turn is primed")
-  lu.assertEvalToTrue(capture.call_order[2] == "prime", "first turn must be primed after set_game")
-  lu.assertEvalToTrue(primed_game.turn.turn_count == 1, "primed startup game should increment first turn count")
-  lu.assertEvalToTrue(primed_game.turn.phase == "wait_action", "primed startup game should reach wait_action before rendering")
+  luassert.truthy(capture.call_order[1] == "set_game", "set_game must run before the first turn is primed")
+  luassert.truthy(capture.call_order[2] == "prime", "first turn must be primed after set_game")
+  luassert.truthy(primed_game.turn.turn_count == 1, "primed startup game should increment first turn count")
+  luassert.truthy(primed_game.turn.phase == "wait_action", "primed startup game should reach wait_action before rendering")
 end
 
 function TestRuntimeBootstrap:test_runtime_bootstrap_falls_back_when_wall_clock_unavailable()
@@ -242,11 +242,11 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_falls_back_when_wall_clock_
     local state = {}
     local game_ref = { nil }
     game_runtime_bootstrap.start(state, game_ref)
-    lu.assertEvalToTrue(type(capture.tick_callback) == "function", "tick callback should be registered")
+    luassert.truthy(type(capture.tick_callback) == "function", "tick callback should be registered")
     capture.tick_callback()
   end)
 
-  lu.assertEvalToTrue(#capture.dt_values == 1, "tick callback should produce one dt sample")
+  luassert.truthy(#capture.dt_values == 1, "tick callback should produce one dt sample")
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "invalid wall clock should fallback to fixed delta")
 end
 
@@ -278,7 +278,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_uses_raw_diff_when_wall_dif
     capture.tick_callback()
   end)
 
-  lu.assertEvalToTrue(#capture.dt_values == 2, "tick callback should produce two dt samples")
+  luassert.truthy(#capture.dt_values == 2, "tick callback should produce two dt samples")
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "first tick should fallback to fixed delta")
   _assert_close(capture.dt_values[2], 0.08, 0.0001, "second tick should fallback to raw timestamp diff")
 end
@@ -311,7 +311,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_accepts_reversed_wall_diff(
     capture.tick_callback()
   end)
 
-  lu.assertEvalToTrue(#capture.dt_values == 2, "tick callback should produce two dt samples")
+  luassert.truthy(#capture.dt_values == 2, "tick callback should produce two dt samples")
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "first tick should fallback to fixed delta")
   _assert_close(capture.dt_values[2], 0.06, 0.0001, "second tick should accept reversed diff source")
 end
@@ -345,7 +345,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_ignores_coarse_wall_clock()
     capture.tick_callback()
   end)
 
-  lu.assertEvalToTrue(#capture.dt_values == 3, "tick callback should produce three dt samples")
+  luassert.truthy(#capture.dt_values == 3, "tick callback should produce three dt samples")
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "first tick should fallback to fixed delta")
   _assert_close(capture.dt_values[2], 1.0 / 30.0, 0.0001, "coarse wall clock should keep fixed delta")
   _assert_close(capture.dt_values[3], 1.0 / 30.0, 0.0001, "coarse wall clock should keep fixed delta")
@@ -381,7 +381,7 @@ function TestRuntimeBootstrap:test_runtime_bootstrap_preserves_fractional_wall_c
     capture.tick_callback()
   end)
 
-  lu.assertEvalToTrue(#capture.dt_values == 4, "tick callback should preserve each fractional dt sample")
+  luassert.truthy(#capture.dt_values == 4, "tick callback should preserve each fractional dt sample")
   _assert_close(capture.dt_values[1], 1.0 / 30.0, 0.0001, "first tick should fallback to fixed delta")
   _assert_close(capture.dt_values[2], 0.03, 0.0001, "second tick should keep fractional wall diff")
   _assert_close(capture.dt_values[3], 0.03, 0.0001, "third tick should keep fractional wall diff")
