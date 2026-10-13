@@ -1,4 +1,7 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
+local function _str_contains(actual, expected, message)
+  check.is_truthy(actual:find(expected, 1, true), message)
+end
 local action_dispatcher = require("src.turn.actions.action_dispatcher")
 
 TestUiButtonDispatch = {}
@@ -40,8 +43,8 @@ function TestUiButtonDispatch:test_next_routes_through_game_dispatch_action()
 
   local result = action_dispatcher.dispatch_action(game, _state(), action)
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertEquals(game.dispatched, { action })
+  check.same(result, { status = "applied" })
+  check.same(game.dispatched, { action })
 end
 
 function TestUiButtonDispatch:test_unknown_button_is_rejected()
@@ -51,7 +54,7 @@ function TestUiButtonDispatch:test_unknown_button_is_rejected()
     actor_role_id = 1,
   })
 
-  lu.assertEquals(result, { status = "rejected" })
+  check.same(result, { status = "rejected" })
 end
 
 function TestUiButtonDispatch:test_cancel_redispatches_the_current_cancelable_choice()
@@ -64,32 +67,32 @@ function TestUiButtonDispatch:test_cancel_redispatches_the_current_cancelable_ch
     actor_role_id = 1,
   })
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertEquals(game.dispatched[1].type, "choice_cancel")
-  lu.assertEquals(game.dispatched[1].choice_id, "choice-1")
+  check.same(result, { status = "applied" })
+  check.same(game.dispatched[1].type, "choice_cancel")
+  check.same(game.dispatched[1].choice_id, "choice-1")
 end
 
 function TestUiButtonDispatch:test_cancel_rejects_missing_or_non_cancelable_choices()
   local game = _game()
   local action = { type = "ui_button", id = "cancel", actor_role_id = 1 }
 
-  lu.assertEquals(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
+  check.same(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
   game.turn.pending_choice = { id = "choice-2", allow_cancel = false }
-  lu.assertEquals(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
+  check.same(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
 end
 
 function TestUiButtonDispatch:test_step_turn_requires_game()
   local ok, err = pcall(action_dispatcher.step_turn, nil)
 
-  lu.assertFalse(ok)
-  lu.assertStrContains(tostring(err), "missing game")
+  check.is_false(ok)
+  _str_contains(tostring(err), "missing game")
 end
 
 function TestUiButtonDispatch:test_dispatch_action_requires_action()
   local ok, err = pcall(action_dispatcher.dispatch_action, {}, _state(), nil)
 
-  lu.assertFalse(ok)
-  lu.assertStrContains(tostring(err), "missing action")
+  check.is_false(ok)
+  _str_contains(tostring(err), "missing action")
 end
 
 return TestUiButtonDispatch

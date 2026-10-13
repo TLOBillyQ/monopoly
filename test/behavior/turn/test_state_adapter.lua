@@ -1,3 +1,4 @@
+local check = assert(require("test.support.luassert_loader").load())
 -- 原生 LuaUnit 迁移(自研 busted → LuaUnit):本文件是两个 spec 的合并
 -- (state_adapter + state_adapter_extended,#27),原为两个 do 块各包一个 describe,
 -- 钩子同为 before_each reset_all,拍平合并为单一 TestStateAdapter 类(setUp 承接);
@@ -9,7 +10,7 @@ local runtime_state = require("src.state.runtime")
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 TestStateAdapter = {}

@@ -4,8 +4,7 @@
 -- 类(setUp reset_all,describe 内 before_each 语义同);用例数与改写前一一对应
 -- (11 + 3 = 14 例)。
 
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+local check = assert(require("test.support.luassert_loader").load())
 local ChoiceTimeout = require("src.turn.waits.choice_timeout")
 local modal_timeout = require("src.turn.waits.modal_timeout")
 local timing = require("src.config.gameplay.timing")
@@ -13,7 +12,7 @@ local timing = require("src.config.gameplay.timing")
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 TestTickTimeout = {}
@@ -55,15 +54,15 @@ end
 -- (见 test_timeout_closure 的 min-visible 钉)。
 function TestTickTimeout:test_modal_default_policy_lives_on_modal_timeout()
   local policy = modal_timeout.default_policy()
-  lu.assertEvalToTrue(type(policy) == "table", "default_policy should return a table")
-  lu.assertEvalToTrue(type(policy.on_timeout) == "function",
+  check.is_truthy(type(policy) == "table", "default_policy should return a table")
+  check.is_truthy(type(policy.on_timeout) == "function",
     "modal default policy should carry on_timeout")
 end
 
 function TestTickTimeout:test_modal_default_policy_returns_new_table_each_call()
   local p1 = modal_timeout.default_policy()
   local p2 = modal_timeout.default_policy()
-  lu.assertNotIs(p1, p2, "default_policy should return a fresh clone each time")
+  check.not_equal(p1, p2, "default_policy should return a fresh clone each time")
 end
 
 function TestTickTimeout:test_step_modal_timeout_zero_timeout_clears_timer()
@@ -80,7 +79,7 @@ function TestTickTimeout:test_step_modal_timeout_zero_timeout_clears_timer()
     get_ref = function() return "ref1" end,
     on_timeout = function() end,
   })
-  lu.assertNotNil(synced, "sync_modal_timer should be called")
+  check.is_not_nil(synced, "sync_modal_timer should be called")
 end
 
 function TestTickTimeout:test_step_modal_timeout_inactive_clears_timer()
@@ -97,7 +96,7 @@ function TestTickTimeout:test_step_modal_timeout_inactive_clears_timer()
     get_ref = function() return "ref1" end,
     on_timeout = function() end,
   })
-  lu.assertNotNil(synced, "sync_modal_timer should be called when inactive")
+  check.is_not_nil(synced, "sync_modal_timer should be called when inactive")
 end
 
 function TestTickTimeout:test_step_modal_timeout_active_updates_elapsed()
@@ -115,7 +114,7 @@ function TestTickTimeout:test_step_modal_timeout_active_updates_elapsed()
     get_ref = function() return "ref1" end,
     on_timeout = function() error("should not timeout") end,
   })
-  lu.assertNotNil(last_sync, "sync_modal_timer should be called")
+  check.is_not_nil(last_sync, "sync_modal_timer should be called")
   _assert_eq(last_sync.elapsed_seconds, 0.5, "elapsed should be updated")
 end
 
@@ -152,7 +151,7 @@ function TestTickTimeout:test_step_modal_timeout_new_ref_resets_timer()
     on_timeout = function() end,
   })
   -- First sync should reset elapsed to 0 (new ref), then update
-  lu.assertEvalToTrue(#syncs >= 1, "should have sync calls")
+  check.is_truthy(#syncs >= 1, "should have sync calls")
   _assert_eq(syncs[1].ref, "new_ref", "first sync should be with new ref")
   _assert_eq(syncs[1].elapsed_seconds, 0, "new ref should reset elapsed to 0")
 end
@@ -167,16 +166,16 @@ function TestTickTimeout:test_step_modal_timeout_asserts_opts_presence_with_guar
     sync_modal_timer = function() end,
   }
   local state = { gameplay_loop_ports = { output = output_ports } }
-  luax.has_error(function()
+  check.has_error(function()
     modal_timeout.step(state, 0.1, nil)
   end, "missing opts")
-  luax.has_error(function()
+  check.has_error(function()
     modal_timeout.step(state, 0.1, {})
   end, "missing opts.is_active")
-  luax.has_error(function()
+  check.has_error(function()
     modal_timeout.step(state, 0.1, { is_active = function() return true end })
   end, "missing opts.on_timeout")
-  luax.has_error(function()
+  check.has_error(function()
     modal_timeout.step(state, 0.1, {
       is_active = function() return true end,
       on_timeout = function() end,

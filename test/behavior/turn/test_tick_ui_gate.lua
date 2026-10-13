@@ -1,3 +1,4 @@
+local check = assert(require("test.support.luassert_loader").load())
 -- #293 批3:src/turn/waits/ui_gate.lua 幸存者直测——fallback gate 默认值
 -- (L7/8/9/10)与 resolve_modal_timeout_seconds 的边界(L42 and→or / >→>=)
 -- 此前只被下游间接使用,本 spec 直测模块面。
@@ -7,7 +8,7 @@ local timing = require("src.config.gameplay.timing")
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 TestTickUiGate = {}

@@ -4,10 +4,10 @@
 local blocking = require("src.turn.waits.blocking")
 local support = require("test.support.shared_support")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_game(opts)
@@ -146,13 +146,13 @@ function TestWaitsBlocking:test_wait_move_anim_with_anim_and_hold_chains_into_ac
     "landing_visual 包装内的链条目标必须是 wait_move_anim(L106)")
 
   local resume = wait_callbacks.take(game, wait_callbacks.callback_keys.after_landing_visual)
-  lu.assertEvalToTrue(type(resume) == "function", "landing_visual resume should be registered")
+  check.is_truthy(type(resume) == "function", "landing_visual resume should be registered")
   local next_state, next_args = resume()
   _assert_eq(next_state, "wait_action_anim", "resume should chain into action anim wait")
   _assert_eq(next_args.next_state, "wait_move_anim", "action anim wait should chain into move anim")
 
   local anim_resume = wait_callbacks.take(game, wait_callbacks.callback_keys.after_action_anim)
-  lu.assertEvalToTrue(type(anim_resume) == "function", "action anim resume should be registered")
+  check.is_truthy(type(anim_resume) == "function", "action anim resume should be registered")
   local move_state, move_args = anim_resume()
   _assert_eq(move_state, "wait_move_anim", "action anim resume should enter wait_move_anim(L102)")
   _assert_eq(move_args.next_state, "move_followup", "move anim args preserve the target state")

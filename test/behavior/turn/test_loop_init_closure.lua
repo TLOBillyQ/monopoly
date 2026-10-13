@@ -12,8 +12,7 @@
 -- （46 例，before_each → setUp），describe 级 helper 提到文件级；describe 5
 -- 与 describe 2 同名的 _runner_state 因签名不同改名 _runner_state_actor_fill；
 -- assert.has_error → luax.has_error。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local config_reset = require("test.support.config_reset")
@@ -113,7 +112,7 @@ function TestLoopInitClosure:test_replaces_a_non_function_port_field_with_the_de
   _ensure(game)
   _assert_eq(type(game.auto_play_port.is_computer_controlled), "function",
     "a non-function field is replaced by the default function")
-  lu.assertEvalToTrue(game.auto_play_port.is_computer_controlled ~= "not a function", "the string field is overwritten")
+  check.is_truthy(game.auto_play_port.is_computer_controlled ~= "not a function", "the string field is overwritten")
 end
 
 function TestLoopInitClosure:test_replaces_a_non_table_auto_play_port_with_a_fresh_defaulted_table()
@@ -196,9 +195,9 @@ function TestLoopInitClosure:test_dispatches_the_runners_action_and_back_fills_t
     { target = turn_dispatch, key = "dispatch_action", value = function(_, _, action) dispatched = action; return true end },
   }, function()
     local action = gameplay_loop.step_auto_runner(game, state, 0.1, nil)
-    lu.assertEvalToTrue(dispatched ~= nil, "a runner action is dispatched")
+    check.is_truthy(dispatched ~= nil, "a runner action is dispatched")
     _assert_eq(dispatched.type, "ui_button", "the runner action flows through dispatch")
-    lu.assertEvalToTrue(dispatched.actor_role_id ~= nil, "a ui_button action without an actor is back-filled with the current player")
+    check.is_truthy(dispatched.actor_role_id ~= nil, "a ui_button action without an actor is back-filled with the current player")
     _assert_eq(action, dispatched, "step_auto_runner returns the dispatched action")
   end)
 end
@@ -364,8 +363,8 @@ function TestLoopInitClosure:test_wires_on_close_choice_to_the_modal_port_for_th
   }, function()
     gameplay_loop.step_auto_runner(game, state, 0.1, nil)
   end)
-  lu.assertEvalToTrue(dispatched ~= nil, "the runner action dispatches with a close-choice opts table")
-  lu.assertEvalToTrue(type(dispatched.on_close_choice) == "function", "a fresh modal ref wires on_close_choice")
+  check.is_truthy(dispatched ~= nil, "the runner action dispatches with a close-choice opts table")
+  check.is_truthy(type(dispatched.on_close_choice) == "function", "a fresh modal ref wires on_close_choice")
   dispatched.on_close_choice({})
   _assert_eq(closed, true, "invoking on_close_choice routes to this modal's close_choice_modal")
 end
@@ -374,7 +373,7 @@ function TestLoopInitClosure:test_reads_tile_ids_from_the_4th_argument_in_the_4_
   local ids = _captured_tile_ids(function(on_cleared)
     on_cleared("self", "game_ctx", "ignored", { 7, 8 })
   end)
-  lu.assertEvalToTrue(ids and ids[1] == 7 and ids[2] == 8,
+  check.is_truthy(ids and ids[1] == 7 and ids[2] == 8,
     "the 4-arg shape forwards arg4 as the owned tile ids")
 end
 
@@ -383,7 +382,7 @@ function TestLoopInitClosure:test_reads_tile_ids_from_the_3rd_argument_in_the_3_
     on_cleared("game_ctx", "unused", { 3 })
   end)
   -- arg4 is nil here, so game_ctx = arg1 and owned_tile_ids = arg3.
-  lu.assertEvalToTrue(ids and ids[1] == 3, "the 3-arg shape forwards arg3 as the owned tile ids")
+  check.is_truthy(ids and ids[1] == 3, "the 3-arg shape forwards arg3 as the owned tile ids")
 end
 
 function TestLoopInitClosure:test_constructs_the_full_runtime_port_set_on_the_game()
@@ -526,20 +525,20 @@ end
 function TestLoopInitClosure:test_set_game_rejects_a_nil_game_with_its_guard_message()
   -- kills set_game's `"missing game"` -> nil: the assert message is the
   -- contract callers see.
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.set_game(fixtures.build_loop_state(), nil)
   end, "missing game")
 end
 
 function TestLoopInitClosure:test_set_game_rejects_a_game_without_pending_choice()
   -- kills _configure_pending_choice's `"missing game.pending_choice"` -> nil.
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.set_game(fixtures.build_loop_state(), { turn = {} })
   end, "missing game.pending_choice")
 end
 
 function TestLoopInitClosure:test_step_auto_runner_rejects_a_nil_game()
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.step_auto_runner(nil, fixtures.build_loop_state(), 0.1, nil)
   end, "missing game")
 end
@@ -547,13 +546,13 @@ end
 function TestLoopInitClosure:test_step_auto_runner_rejects_a_state_without_an_auto_runner()
   local state = fixtures.build_loop_state()
   state.auto_runner = nil
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.step_auto_runner(support.new_game(), state, 0.1, nil)
   end, "missing auto_runner")
 end
 
 function TestLoopInitClosure:test_new_game_rejects_a_state_without_a_game_factory()
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.new_game({})
   end, "game_factory not set")
 end
@@ -565,7 +564,7 @@ function TestLoopInitClosure:test_new_game_rejects_a_state_without_an_auto_runne
   local state = {
     game_factory = function() return { players = {} } end,
   }
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.new_game(state)
   end, "missing auto_runner")
 end
@@ -575,7 +574,7 @@ function TestLoopInitClosure:test_new_game_rejects_an_auto_runner_without_reset_
     game_factory = function() return { players = {} } end,
     auto_runner = {},
   }
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop.new_game(state)
   end, "missing auto_runner.ResetTimer")
 end
@@ -614,7 +613,7 @@ function TestLoopInitClosure:test_reports_the_games_turn_count_and_stays_nil_saf
   }, function()
     gameplay_loop.set_game(fixtures.build_loop_state(), game)
   end)
-  lu.assertEvalToTrue(provider ~= nil, "set_game installs the info turn provider")
+  check.is_truthy(provider ~= nil, "set_game installs the info turn provider")
   _assert_eq(provider(), 7, "the provider reports turn.turn_count")
   game.turn = nil
   _assert_eq(provider(), nil, "the provider stays nil-safe without a turn")
@@ -634,7 +633,7 @@ function TestLoopInitClosure:test_logs_the_missing_auto_choice_action_with_level
   }, function()
     gameplay_loop._log_missing_auto_choice_action(state, ctx)
   end)
-  lu.assertEvalToTrue(captured ~= nil, "a missing auto action is logged once")
+  check.is_truthy(captured ~= nil, "a missing auto action is logged once")
   _assert_eq(captured[1], "warn", "the log level is warn")
   _assert_eq(captured[2], "auto_runner_choice_no_action_7", "the log_once key carries the choice id")
   _assert_eq(captured[3], "[Eggy]", "the log prefix is [Eggy]")
@@ -656,7 +655,7 @@ function TestLoopInitClosure:test_new_game_logs_the_startup_banner_with_the_play
   }, function()
     gameplay_loop.new_game(state)
   end)
-  lu.assertEvalToTrue(logged ~= nil, "new_game logs through the module logger")
+  check.is_truthy(logged ~= nil, "new_game logs through the module logger")
   _assert_eq(logged[1], "启动蛋仔大富翁，玩家数:", "the startup banner literal")
   _assert_eq(logged[2], 2, "the player count follows the banner")
 end

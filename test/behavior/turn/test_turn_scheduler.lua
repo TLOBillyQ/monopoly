@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local TurnScheduler = require("src.turn.scheduler")
 
@@ -73,16 +73,16 @@ function TestTurnScheduler:test_run_turn_dispatches_pending_actions_through_all_
   local events = {}
   local scheduler = TurnScheduler:new(_new_game(), _phases(events), _handlers(events))
 
-  lu.assertEquals(scheduler:run_turn(), "wait_action")
-  lu.assertEquals(scheduler:dispatch({ type = "action" }), "wait_choice")
-  lu.assertEquals(scheduler:dispatch({ type = "choice" }), "wait_move_anim")
-  lu.assertEquals(scheduler:dispatch({ type = "move_anim_done" }), "wait_action_anim")
-  lu.assertEquals(scheduler:dispatch({ type = "action_anim_done" }), "wait_landing_visual")
-  lu.assertEquals(scheduler:dispatch({ type = "landing_visual_done" }), "detained_wait")
-  lu.assertEquals(scheduler:dispatch({ type = "detained_done" }), "inter_turn_wait")
-  lu.assertEquals(scheduler:dispatch({ type = "inter_turn_done" }), "wait_seconds")
-  lu.assertNil(scheduler:dispatch({ type = "seconds_done" }))
-  lu.assertEquals(events, {
+  check.same(scheduler:run_turn(), "wait_action")
+  check.same(scheduler:dispatch({ type = "action" }), "wait_choice")
+  check.same(scheduler:dispatch({ type = "choice" }), "wait_move_anim")
+  check.same(scheduler:dispatch({ type = "move_anim_done" }), "wait_action_anim")
+  check.same(scheduler:dispatch({ type = "action_anim_done" }), "wait_landing_visual")
+  check.same(scheduler:dispatch({ type = "landing_visual_done" }), "detained_wait")
+  check.same(scheduler:dispatch({ type = "detained_done" }), "inter_turn_wait")
+  check.same(scheduler:dispatch({ type = "inter_turn_done" }), "wait_seconds")
+  check.is_nil(scheduler:dispatch({ type = "seconds_done" }))
+  check.same(events, {
     "start", "action", "action", "choice", "choice", "move_anim", "move_anim",
     "action_anim", "action_anim", "landing_visual", "landing_visual", "detained", "detained",
     "inter_turn", "inter_turn", "seconds", "seconds", "done",
@@ -97,9 +97,9 @@ function TestTurnScheduler:test_step_accumulates_choice_elapsed_seconds_and_mirr
   scheduler:run_turn()
   scheduler:dispatch({ type = "action" })
   scheduler:step(2.5)
-  lu.assertEquals(game.turn.choice_elapsed_seconds, 2.5)
+  check.same(game.turn.choice_elapsed_seconds, 2.5)
   scheduler:step(1.5)
-  lu.assertEquals(game.turn.choice_elapsed_seconds, 4.0)
+  check.same(game.turn.choice_elapsed_seconds, 4.0)
 end
 
 function TestTurnScheduler:test_reset_clears_wait_pending_action_and_choice_elapsed_seconds()
@@ -111,8 +111,8 @@ function TestTurnScheduler:test_reset_clears_wait_pending_action_and_choice_elap
   scheduler:dispatch({ type = "action" })
   scheduler:step(3.0)
   scheduler:reset()
-  lu.assertEquals(game.turn.choice_elapsed_seconds, 0)
-  lu.assertEquals(scheduler:run_turn(), "wait_action")
+  check.same(game.turn.choice_elapsed_seconds, 0)
+  check.same(scheduler:run_turn(), "wait_action")
 end
 
 function TestTurnScheduler:test_phase_progress_is_observable_through_game_turn_and_dirty()
@@ -121,11 +121,11 @@ function TestTurnScheduler:test_phase_progress_is_observable_through_game_turn_a
   local scheduler = TurnScheduler:new(game, _phases(events), _handlers(events))
 
   scheduler:run_turn()
-  lu.assertEquals(game.turn.phase, "wait_action")
-  lu.assertTrue(game.dirty.turn)
+  check.same(game.turn.phase, "wait_action")
+  check.is_true(game.dirty.turn)
 
   scheduler:dispatch({ type = "action" })
-  lu.assertEquals(game.turn.phase, "wait_choice")
+  check.same(game.turn.phase, "wait_choice")
 end
 
 function TestTurnScheduler:test_phase_handler_accepts_callable_table()
@@ -138,8 +138,8 @@ function TestTurnScheduler:test_phase_handler_accepts_callable_table()
   })
   local scheduler = TurnScheduler:new(_new_game(), { start = callable })
 
-  lu.assertNil(scheduler:run_turn())
-  lu.assertTrue(visited)
+  check.is_nil(scheduler:run_turn())
+  check.is_true(visited)
 end
 
 return TestTurnScheduler

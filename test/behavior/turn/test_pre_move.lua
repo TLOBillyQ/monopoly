@@ -1,9 +1,10 @@
+local check = assert(require("test.support.luassert_loader").load())
 local phase_pre_move = require("src.turn.phases.pre_move")
 local status_ops = require("src.player.actions.status")
 local item_phase = require("src.rules.items.phase")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _build_auto_play_port_stub()

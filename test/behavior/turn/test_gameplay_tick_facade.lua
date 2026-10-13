@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local gameplay_loop = require("src.turn.loop.init")
@@ -30,9 +30,9 @@ function TestGameplayTickFacade:test_release_pulse_marks_turn_dirty_and_syncs_st
 
   gameplay_loop.tick(game, state, 0)
 
-  lu.assertTrue(refreshed_dirty.any)
-  lu.assertTrue(refreshed_dirty.turn)
-  lu.assertEquals(status_syncs, 1)
+  check.is_true(refreshed_dirty.any)
+  check.is_true(refreshed_dirty.turn)
+  check.same(status_syncs, 1)
 end
 
 function TestGameplayTickFacade:test_visual_hold_skips_status_sync_but_keeps_event_log_flowing()
@@ -49,8 +49,8 @@ function TestGameplayTickFacade:test_visual_hold_skips_status_sync_but_keeps_eve
 
   gameplay_loop.tick(game, state, 0)
 
-  lu.assertEquals(status_syncs, 0)
-  lu.assertEquals(event_log_syncs, 1)
+  check.same(status_syncs, 0)
+  check.same(event_log_syncs, 1)
 end
 
 function TestGameplayTickFacade:test_blocked_refreshed_ui_reapplies_input_lock()
@@ -67,7 +67,7 @@ function TestGameplayTickFacade:test_blocked_refreshed_ui_reapplies_input_lock()
 
   gameplay_loop.tick(game, state, 0)
 
-  lu.assertEquals(lock_applications, 1)
+  check.same(lock_applications, 1)
 end
 
 function TestGameplayTickFacade:test_missing_ui_probe_samples_after_the_dirty_refresh()
@@ -90,9 +90,9 @@ function TestGameplayTickFacade:test_missing_ui_probe_samples_after_the_dirty_re
     if tag == "refresh" then refresh_at = index end
     if tag == "probe" then probe_at = index end
   end
-  lu.assertNotNil(refresh_at, "the dirty refresh runs in the tick")
-  lu.assertNotNil(probe_at, "the missing-ui probe runs in the tick")
-  lu.assertTrue(probe_at > refresh_at, "the probe samples after the dirty refresh")
+  check.is_not_nil(refresh_at, "the dirty refresh runs in the tick")
+  check.is_not_nil(probe_at, "the missing-ui probe runs in the tick")
+  check.is_true(probe_at > refresh_at, "the probe samples after the dirty refresh")
 end
 
 function TestGameplayTickFacade:test_pending_choice_opened_in_the_same_frame_does_not_warn()
@@ -134,7 +134,7 @@ function TestGameplayTickFacade:test_pending_choice_opened_in_the_same_frame_doe
   }, function()
     gameplay_loop.tick(game, state, 0)
   end)
-  lu.assertEquals(#warned, 0, "a choice opened in the same frame's refresh never warns")
+  check.same(#warned, 0, "a choice opened in the same frame's refresh never warns")
 end
 
 function TestGameplayTickFacade:test_auto_runner_receives_tick_context_from_the_public_tick()
@@ -152,12 +152,12 @@ function TestGameplayTickFacade:test_auto_runner_receives_tick_context_from_the_
     gameplay_loop.tick(game, state, 0.25)
   end)
 
-  lu.assertIs(captured.game, game)
-  lu.assertIs(captured.state, state)
-  lu.assertEquals(captured.dt, 0.25)
-  lu.assertIs(captured.context.game, game)
-  lu.assertIs(captured.context.state, state)
-  lu.assertEquals(captured.context.current_player_id, game:current_player().id)
+  check.equal(captured.game, game)
+  check.equal(captured.state, state)
+  check.same(captured.dt, 0.25)
+  check.equal(captured.context.game, game)
+  check.equal(captured.context.state, state)
+  check.same(captured.context.current_player_id, game:current_player().id)
 end
 
 return TestGameplayTickFacade

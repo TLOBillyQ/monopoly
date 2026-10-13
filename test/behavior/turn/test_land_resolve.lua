@@ -1,13 +1,13 @@
 -- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp、
 -- after_each → tearDown（17 例），语句位裸 assert(cond, msg) → lu.assertEvalToTrue。
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local land_resolve = require("src.turn.phases.land")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_game(opts)
@@ -171,7 +171,7 @@ function TestLandResolve:test_resolve_wait_state_wait_move_anim_has_anim_no_hold
   local state, _ = land_resolve.resolve_wait_state(game, "post_action", {}, false, true)
   _assert_eq(state, "wait_action_anim", "has anim, no hold with wait_move_anim=true should return wait_action_anim")
   local cb = wait_callbacks.peek(game, "after_action_anim")
-  lu.assertEvalToTrue(type(cb) == "function", "should have registered after_action_anim callback")
+  check.is_truthy(type(cb) == "function", "should have registered after_action_anim callback")
   local cb_state, cb_args = cb()
   _assert_eq(cb_state, "wait_move_anim", "resume callback should return wait_move_anim state")
   _assert_eq(cb_args.next_state, "post_action", "resume callback move_anim_args.next_state preserved")

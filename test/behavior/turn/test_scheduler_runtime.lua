@@ -1,6 +1,6 @@
 -- TurnScheduler 公开接口集成行为：所有推进均经 run_turn/dispatch/step/reset。
 
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local turn_runtime = require("src.turn.scheduler")
 local landing_visual_hold = require("src.state.visual_hold")
@@ -41,7 +41,7 @@ function TestSchedulerRuntime:test_turn_runtime_coroutine_mode_resolves_wait_cho
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_choice", "coroutine turn_runtime should enter wait_choice")
+  check.same(g.turn.phase, "wait_choice", "coroutine turn_runtime should enter wait_choice")
 
   g:dispatch_action({
     type = "choice_cancel",
@@ -49,8 +49,8 @@ function TestSchedulerRuntime:test_turn_runtime_coroutine_mode_resolves_wait_cho
     actor_role_id = g:current_player().id,
   })
 
-  lu.assertNil(g.turn.pending_choice, "choice_cancel should clear pending choice in coroutine mode")
-  lu.assertEvalToTrue(g.turn.phase ~= "wait_choice", "coroutine mode should leave wait_choice after cancel")
+  check.is_nil(g.turn.pending_choice, "choice_cancel should clear pending choice in coroutine mode")
+  check.is_truthy(g.turn.phase ~= "wait_choice", "coroutine mode should leave wait_choice after cancel")
 end
 
 function TestSchedulerRuntime:test_market_close_after_purchase_skips_market_reveal_wait()
@@ -78,9 +78,9 @@ function TestSchedulerRuntime:test_market_close_after_purchase_skips_market_reve
     option_id = choice.options[1].id,
     actor_role_id = p.id,
   })
-  lu.assertEvalToTrue(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
+  check.is_truthy(g.turn.pending_choice ~= nil and g.turn.pending_choice.kind == "market_buy",
     "market purchase should keep the market choice open")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "item_gain_popup",
+  check.is_truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_gain_popup",
     "market purchase should queue an item reveal before closing")
 
   g:dispatch_action({
@@ -89,9 +89,9 @@ function TestSchedulerRuntime:test_market_close_after_purchase_skips_market_reve
     actor_role_id = p.id,
   })
 
-  lu.assertNil(g.turn.pending_choice, "market close should clear pending choice")
-  lu.assertNil(g.turn.action_anim, "market close should clear market reveal animation")
-  lu.assertEvalToTrue(g.turn.phase ~= "wait_action_anim", "market close should not wait for reveal animation")
+  check.is_nil(g.turn.pending_choice, "market close should clear pending choice")
+  check.is_nil(g.turn.action_anim, "market close should clear market reveal animation")
+  check.is_truthy(g.turn.phase ~= "wait_action_anim", "market close should not wait for reveal animation")
 end
 
 function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_move_anim()
@@ -109,15 +109,15 @@ function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_move_anim()
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_move_anim", "should enter wait_move_anim")
+  check.same(g.turn.phase, "wait_move_anim", "should enter wait_move_anim")
 
   -- wrong seq -> should stay waiting
   g:dispatch_action({ type = "move_anim_done", seq = 999 })
-  lu.assertEquals(g.turn.phase, "wait_move_anim", "wrong seq should keep waiting")
+  check.same(g.turn.phase, "wait_move_anim", "wrong seq should keep waiting")
 
   -- correct seq -> should advance
   g:dispatch_action({ type = "move_anim_done", seq = move_seq })
-  lu.assertEvalToTrue(g.turn.phase ~= "wait_move_anim", "correct seq should leave wait_move_anim")
+  check.is_truthy(g.turn.phase ~= "wait_move_anim", "correct seq should leave wait_move_anim")
 end
 
 function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_action_anim()
@@ -135,15 +135,15 @@ function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_action_anim()
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_action_anim", "should enter wait_action_anim")
+  check.same(g.turn.phase, "wait_action_anim", "should enter wait_action_anim")
 
   -- wrong seq -> should stay waiting
   g:dispatch_action({ type = "action_anim_done", seq = 1 })
-  lu.assertEquals(g.turn.phase, "wait_action_anim", "wrong seq should keep waiting")
+  check.same(g.turn.phase, "wait_action_anim", "wrong seq should keep waiting")
 
   -- correct seq -> should advance
   g:dispatch_action({ type = "action_anim_done", seq = anim_seq })
-  lu.assertEvalToTrue(g.turn.phase ~= "wait_action_anim", "correct seq should leave wait_action_anim")
+  check.is_truthy(g.turn.phase ~= "wait_action_anim", "correct seq should leave wait_action_anim")
 end
 
 function TestSchedulerRuntime:test_coroutine_mode_resolves_detained_wait()
@@ -160,16 +160,16 @@ function TestSchedulerRuntime:test_coroutine_mode_resolves_detained_wait()
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "detained_wait", "should enter detained_wait")
+  check.same(g.turn.phase, "detained_wait", "should enter detained_wait")
 
   -- still active -> should stay waiting
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "detained_wait", "should stay in detained_wait while active")
+  check.same(g.turn.phase, "detained_wait", "should stay in detained_wait while active")
 
   -- clear detained -> should proceed to end_turn and finish
   g.turn.detained_wait_active = false
   g:advance_turn()
-  lu.assertEvalToTrue(g.turn.phase ~= "detained_wait", "should leave detained_wait when cleared")
+  check.is_truthy(g.turn.phase ~= "detained_wait", "should leave detained_wait when cleared")
 end
 
 function TestSchedulerRuntime:test_coroutine_mode_resolves_inter_turn_wait()
@@ -189,15 +189,15 @@ function TestSchedulerRuntime:test_coroutine_mode_resolves_inter_turn_wait()
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "inter_turn_wait", "should enter inter_turn_wait")
+  check.same(g.turn.phase, "inter_turn_wait", "should enter inter_turn_wait")
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "inter_turn_wait", "should stay in inter_turn_wait while active")
+  check.same(g.turn.phase, "inter_turn_wait", "should stay in inter_turn_wait while active")
 
   g.turn.inter_turn_wait_active = false
   g:advance_turn()
-  lu.assertEquals(g.turn.current_player_index, 2, "inter_turn_wait should advance to next player before restart")
-  lu.assertEvalToTrue(g.turn.phase ~= "inter_turn_wait", "should leave inter_turn_wait when cleared")
+  check.same(g.turn.current_player_index, 2, "inter_turn_wait should advance to next player before restart")
+  check.is_truthy(g.turn.phase ~= "inter_turn_wait", "should leave inter_turn_wait when cleared")
 end
 
 function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_landing_visual()
@@ -214,12 +214,12 @@ function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_landing_visual()
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_landing_visual", "should enter wait_landing_visual")
-  lu.assertEvalToTrue(wait_callbacks.is_wait_ready(g, "landing_visual") == true, "wait_landing_visual should arm release callback")
+  check.same(g.turn.phase, "wait_landing_visual", "should enter wait_landing_visual")
+  check.is_truthy(wait_callbacks.is_wait_ready(g, "landing_visual") == true, "wait_landing_visual should arm release callback")
 
   g:advance_turn()
-  lu.assertEvalToTrue(g.turn.phase ~= "wait_landing_visual", "second advance should leave wait_landing_visual")
-  lu.assertEquals(g.turn.landing_visual_release_pending, true, "wait_landing_visual should mark release pending")
+  check.is_truthy(g.turn.phase ~= "wait_landing_visual", "second advance should leave wait_landing_visual")
+  check.same(g.turn.landing_visual_release_pending, true, "wait_landing_visual should mark release pending")
 end
 
 function TestSchedulerRuntime:test_coroutine_mode_landing_visual_done_does_not_leak_into_wait_choice()
@@ -245,15 +245,15 @@ function TestSchedulerRuntime:test_coroutine_mode_landing_visual_done_does_not_l
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_landing_visual", "should park at wait_landing_visual with the choice open")
+  check.same(g.turn.phase, "wait_landing_visual", "should park at wait_landing_visual with the choice open")
 
   -- #197：视觉完成信号只应释放视觉等待。landing_visual 的 await 此前不消费
   -- pending action,残留的 landing_visual_done 在 wait_choice 被当作决策输入
   -- 喂给 resolver,触发 "landing_optional_effect requires string action.option_id"。
   g:dispatch_action({ type = "landing_visual_done" })
 
-  lu.assertEquals(g.turn.phase, "wait_choice", "visual release should hand off to wait_choice")
-  lu.assertEvalToTrue(g.turn.pending_choice ~= nil and g.turn.pending_choice.id == choice.id,
+  check.same(g.turn.phase, "wait_choice", "visual release should hand off to wait_choice")
+  check.is_truthy(g.turn.pending_choice ~= nil and g.turn.pending_choice.id == choice.id,
     "non-choice signal must not resolve the pending choice")
 end
 
@@ -291,10 +291,10 @@ function TestSchedulerRuntime:test_coroutine_mode_full_turn_lifecycle()
   g:advance_turn()
 
   local expected = { "start", "roll", "move", "landing", "post_action", "end_turn" }
-  lu.assertEvalToTrue(#visited == #expected,
+  check.is_truthy(#visited == #expected,
     "should visit all " .. #expected .. " phases, got " .. #visited)
   for i, name in ipairs(expected) do
-    lu.assertEvalToTrue(visited[i] == name,
+    check.is_truthy(visited[i] == name,
       "phase " .. i .. " should be " .. name .. " got " .. tostring(visited[i]))
   end
 end
@@ -316,13 +316,13 @@ function TestSchedulerRuntime:test_coroutine_mode_resolves_wait_action()
   })
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_action", "human player should enter wait_action")
+  check.same(g.turn.phase, "wait_action", "human player should enter wait_action")
 
   g:advance_turn()
-  lu.assertEquals(g.turn.phase, "wait_action", "tick advance without action should stay in wait_action")
+  check.same(g.turn.phase, "wait_action", "tick advance without action should stay in wait_action")
 
   g:dispatch_action({ type = "ui_button", id = "next" })
-  lu.assertEvalToTrue(g.turn.phase ~= "wait_action", "dispatch action should leave wait_action")
+  check.is_truthy(g.turn.phase ~= "wait_action", "dispatch action should leave wait_action")
 end
 
 

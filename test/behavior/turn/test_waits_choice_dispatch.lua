@@ -2,7 +2,7 @@
 -- Drives the three exported helpers directly with plain game/opts/output tables
 -- so the owner-resolution guards, the ensure-actor short-circuit, and the
 -- tick-dispatch return contract are observable.
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _assert_eq = support.assert_eq
 
@@ -40,7 +40,7 @@ function TestWaitsChoiceDispatch:test_returns_a_nil_action_untouched_without_res
   -- kills L19 or->and: a nil action must short-circuit and return; an `and`
   -- mutant would evaluate action.actor_role_id on nil and error.
   local result = choice_dispatch.ensure_action_actor_role_id({}, {}, nil)
-  lu.assertEvalToTrue(result == nil, "a nil action is returned as-is")
+  check.is_truthy(result == nil, "a nil action is returned as-is")
 end
 
 function TestWaitsChoiceDispatch:test_dispatches_the_built_action_and_returns_true()
@@ -55,7 +55,7 @@ function TestWaitsChoiceDispatch:test_dispatches_the_built_action_and_returns_tr
     dispatch_action_with_close_choice = function(_, _, action) dispatched[#dispatched + 1] = action end,
   }
   local ret = choice_dispatch.dispatch_choice_tick_action({}, {}, { id = 1 }, output_ports, opts, {})
-  lu.assertEvalToTrue(ret == true, "a successful dispatch returns true")
+  check.is_truthy(ret == true, "a successful dispatch returns true")
   _assert_eq(#dispatched, 1, "the built action is forwarded to dispatch_action_with_close_choice")
   _assert_eq(elapsed_writes[1], 0, "the pending-choice elapsed is reset to 0 on dispatch")
 end

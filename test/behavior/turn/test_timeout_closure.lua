@@ -12,7 +12,7 @@
 -- (setUp 承接);describe 内的辅助函数提升为文件级 local;用例数与改写前
 -- 一一对应(8 + 8 + 9 + 5 + 2 = 32 例)。
 
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local config_reset = require("test.support.config_reset")
@@ -170,7 +170,7 @@ end
 TestTimeoutClosure["test_modal default_policy returns a fresh table per call"] = function(self)
   local m1 = modal_timeout.default_policy()
   local m2 = modal_timeout.default_policy()
-  lu.assertEvalToTrue(m1 ~= m2, "the modal default policy must be a fresh table per call")
+  check.is_truthy(m1 ~= m2, "the modal default policy must be a fresh table per call")
 end
 
 TestTimeoutClosure["test_the choice min-visible reads the configured auto-decision delay"] = function(self)
@@ -191,7 +191,7 @@ TestTimeoutClosure["test_the choice min-visible reads the configured auto-decisi
   }, function()
     ChoiceTimeout.step_default(game, state, 0.8)
   end)
-  lu.assertEvalToTrue(#dispatched >= 1, "crossing the configured delay must dispatch a min-visible action")
+  check.is_truthy(#dispatched >= 1, "crossing the configured delay must dispatch a min-visible action")
 end
 
 TestTimeoutClosure["test_the choice min-visible defaults to 0 when the delay is unset"] = function(self)
@@ -225,21 +225,21 @@ function TestTimeoutClosure:test_does_nothing_when_the_modal_ports_expose_only_c
   local ctx = _ctx_with_modal({ close_choice_modal = function() end })
   -- ports resolve, but on_timeout only acts when close_popup exists.
   local ok = pcall(function() modal_timeout.default_policy().on_timeout(ctx) end)
-  lu.assertEvalToTrue(ok, "on_timeout must not crash when close_popup is absent")
+  check.is_truthy(ok, "on_timeout must not crash when close_popup is absent")
 end
 
 function TestTimeoutClosure:test_does_nothing_when_the_modal_ports_are_not_a_table()
   local ok = pcall(function()
     modal_timeout.default_policy().on_timeout(_ctx_with_modal("not-a-table"))
   end)
-  lu.assertEvalToTrue(ok, "a non-table modal port resolves to nil and is a no-op")
+  check.is_truthy(ok, "a non-table modal port resolves to nil and is a no-op")
 end
 
 function TestTimeoutClosure:test_does_nothing_when_neither_modal_close_function_is_present()
   local ok = pcall(function()
     modal_timeout.default_policy().on_timeout(_ctx_with_modal({}))
   end)
-  lu.assertEvalToTrue(ok, "modal ports without either close function resolve to nil and no-op")
+  check.is_truthy(ok, "modal ports without either close function resolve to nil and no-op")
 end
 
 function TestTimeoutClosure:test_uses_the_constants_base_when_opts_carries_no_timeout_override()
@@ -327,7 +327,7 @@ function TestTimeoutClosure:test_asserts_when_the_modal_ref_cannot_be_resolved()
     end)
     _assert_eq(ok, false, "a nil modal ref asserts 'missing modal ref'")
     -- #293: L127 assert 消息变异(消息串翻 nil)必须被钉住。
-    lu.assertEvalToTrue(tostring(err):find("missing modal ref", 1, true) ~= nil,
+    check.is_truthy(tostring(err):find("missing modal ref", 1, true) ~= nil,
       "the nil modal ref error must identify 'missing modal ref'")
   end)
 end
@@ -369,9 +369,9 @@ TestTimeoutClosure["test_delegates the ui-sync choice callbacks when the ports e
     resolve_choice_ui_state = function() calls.resolve = calls.resolve + 1; return { should_warn = false } end,
   })
   ChoiceTimeout.step_default(game, state, 0.01)
-  lu.assertEvalToTrue(calls.pending >= 1, "a fresh pending choice routes through ui_sync.on_pending_choice")
-  lu.assertEvalToTrue(calls.active >= 1, "the active check delegates to ui_sync.is_choice_active")
-  lu.assertEvalToTrue(calls.resolve >= 1, "the ui-gate resolve delegates to ui_sync.resolve_choice_ui_state")
+  check.is_truthy(calls.pending >= 1, "a fresh pending choice routes through ui_sync.on_pending_choice")
+  check.is_truthy(calls.active >= 1, "the active check delegates to ui_sync.is_choice_active")
+  check.is_truthy(calls.resolve >= 1, "the ui-gate resolve delegates to ui_sync.resolve_choice_ui_state")
 end
 
 function TestTimeoutClosure:test_tolerates_a_ui_sync_port_table_without_the_optional_choice_callbacks()
@@ -383,7 +383,7 @@ function TestTimeoutClosure:test_tolerates_a_ui_sync_port_table_without_the_opti
   state.gameplay_loop_ports = ports
   game.turn.pending_choice = { id = 1, kind = "test", route_key = "r" }
   local ok = pcall(function() ChoiceTimeout.step_default(game, state, 0.01) end)
-  lu.assertEvalToTrue(ok, "absent ui_sync callbacks fall back without crashing")
+  check.is_truthy(ok, "absent ui_sync callbacks fall back without crashing")
 end
 
 TestTimeoutClosure["test_dispatches the auto action through the close-choice path when modal ports exist"] = function(self)
@@ -399,9 +399,9 @@ TestTimeoutClosure["test_dispatches the auto action through the close-choice pat
   }, function()
     ChoiceTimeout.step_default(game, state, 999.0) -- huge dt clears the min-visible gate and the timeout
   end)
-  lu.assertNotNil(dispatched, "the decided auto action is dispatched on timeout")
+  check.is_not_nil(dispatched, "the decided auto action is dispatched on timeout")
   _assert_eq(dispatched.action.type, "auto_skip", "the policy's action is forwarded verbatim")
-  lu.assertNotNil(dispatched.opts, "modal ports present -> a close-choice opts table is supplied")
+  check.is_not_nil(dispatched.opts, "modal ports present -> a close-choice opts table is supplied")
 end
 
 TestTimeoutClosure["test_dispatches with no close-choice opts when modal ports are absent"] = function(self)
@@ -418,7 +418,7 @@ TestTimeoutClosure["test_dispatches with no close-choice opts when modal ports a
   }, function()
     ChoiceTimeout.step_default(game, state, 999.0)
   end)
-  lu.assertNotNil(dispatched, "the action still dispatches without modal ports")
+  check.is_not_nil(dispatched, "the action still dispatches without modal ports")
   _assert_eq(dispatched.opts, nil, "absent modal ports -> dispatch carries no close-choice opts")
 end
 
@@ -441,9 +441,9 @@ TestTimeoutClosure["test_bare_state_without_ui_sync_ports_runs_the_full_timeout_
   }, function()
     ChoiceTimeout.step_default(game, state, 999.0) -- huge dt clears the min-visible gate and the timeout
   end)
-  lu.assertNotNil(dispatched, "the auto-answer chain completes without ui_sync ports")
+  check.is_not_nil(dispatched, "the auto-answer chain completes without ui_sync ports")
   _assert_eq(dispatched.action.type, "auto_skip", "the decided action is forwarded verbatim")
-  lu.assertNotNil(dispatched.opts, "the close-choice wiring still resolves modal ports in the bare lane")
+  check.is_not_nil(dispatched.opts, "the close-choice wiring still resolves modal ports in the bare lane")
 end
 
 -- #603 modal 引用缓存钉:dispatch 时挂的 on_close_choice 必须绑定当局 modal
@@ -472,20 +472,20 @@ TestTimeoutClosure["test_modal_close_cache_rebinds_when_modal_ports_switch_betwe
   local modal_b = { close_choice_modal = function() closed.b = closed.b + 1 end }
 
   local opts_a = _dispatch_modal(modal_a)
-  lu.assertNotNil(opts_a, "the first game's timeout dispatch reaches the close-choice path")
+  check.is_not_nil(opts_a, "the first game's timeout dispatch reaches the close-choice path")
   opts_a.on_close_choice({})
-  lu.assertEvalToTrue(closed.a == 1 and closed.b == 0, "game A's timeout close reaches A's modal")
+  check.is_truthy(closed.a == 1 and closed.b == 0, "game A's timeout close reaches A's modal")
 
   local opts_b = _dispatch_modal(modal_b)
-  lu.assertNotNil(opts_b, "the second game's timeout dispatch still wires the close-choice path")
+  check.is_not_nil(opts_b, "the second game's timeout dispatch still wires the close-choice path")
   opts_b.on_close_choice({})
-  lu.assertEvalToTrue(closed.a == 1 and closed.b == 1,
+  check.is_truthy(closed.a == 1 and closed.b == 1,
     "game B must rebind the cached closure to B's modal, never close A's")
 
   local opts_a2 = _dispatch_modal(modal_a)
-  lu.assertNotNil(opts_a2, "returning to A's port reference still dispatches through the close-choice path")
+  check.is_not_nil(opts_a2, "returning to A's port reference still dispatches through the close-choice path")
   opts_a2.on_close_choice({})
-  lu.assertEvalToTrue(closed.a == 2 and closed.b == 1,
+  check.is_truthy(closed.a == 2 and closed.b == 1,
     "returning to A's port reference rebinds the cache to A again")
 end
 
@@ -508,10 +508,10 @@ function TestTimeoutClosure:test_resolves_modal_ports_through_close_choice_modal
   }, function()
     ChoiceTimeout.step_default(game, state, 999.0)
   end)
-  lu.assertNotNil(dispatched, "the auto action dispatches")
-  lu.assertNotNil(dispatched.opts,
+  check.is_not_nil(dispatched, "the auto action dispatches")
+  check.is_not_nil(dispatched.opts,
     "modal ports with only close_choice_modal still resolve (the or-guard's first arm)")
-  lu.assertEvalToTrue(type(dispatched.opts.on_close_choice) == "function",
+  check.is_truthy(type(dispatched.opts.on_close_choice) == "function",
     "a fresh modal ref wires the on_close_choice closure (the ~= cache guard)")
   dispatched.opts.on_close_choice({})
   _assert_eq(closed, true, "invoking on_close_choice routes to modal close_choice_modal")

@@ -4,15 +4,14 @@
 -- before_each reset_all)拍平为单一 TestRoll 类,setUp 统一 reset;用例数与
 -- 改写前一一对应(19 + 4 = 23 例)。
 
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+local check = assert(require("test.support.luassert_loader").load())
 local roll = require("src.turn.phases.roll")
 local status_ops = require("src.player.actions.status")
 
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_game(wait_action_anim)
@@ -129,7 +128,7 @@ function TestRoll:test_phase_roll_with_pre_move_queues_anim_and_returns_wait()
   _assert_eq(args.next_args.skip_anim, true, "retry args should have skip_anim=true")
   _assert_eq(#anim_queued, 1, "should queue one roll animation")
   _assert_eq(anim_queued[1].kind, "roll", "animation kind should be roll")
-  lu.assertEvalToTrue(anim_queued[1].player_id == player.id, "animation player_id should match")
+  check.is_truthy(anim_queued[1].player_id == player.id, "animation player_id should match")
 end
 
 function TestRoll:test_phase_roll_with_pre_move_no_anim_gate_returns_pre_move()
@@ -197,7 +196,7 @@ TestRoll["test__perform_dice_roll stores non-nil total via apply_roll_total (L50
   roll._phase_roll_with_pre_move(turn_mgr, { player = player })
   -- rng returns 3, dice_count=2 → raw_total=6. apply_roll_total returns 6 (no multiplier).
   -- Mutated L50 (apply_roll_total → nil): total=nil. game.last_turn.total=nil.
-  lu.assertNotNil(game.last_turn.total,
+  check.is_not_nil(game.last_turn.total,
     "apply_roll_total mutation to nil leaves last_turn.total nil")
   _assert_eq(game.last_turn.total, 6,
     "total must be sum of rolls 3+3=6; got " .. tostring(game.last_turn.total))
@@ -242,7 +241,7 @@ TestRoll["test__phase_roll calls _perform_dice_roll when rolls absent (L117)"] =
   roll._phase_roll_with_pre_move(turn_mgr, { player = player })
   -- Original: enters _perform_dice_roll → populates last_turn.
   -- Mutated L117 (call → nil): rolls/raw_total/total stay nil → last_turn untouched.
-  lu.assertNotNil(game.last_turn.rolls,
+  check.is_not_nil(game.last_turn.rolls,
     "_phase_roll without rolls must call _perform_dice_roll (L117); mutation to nil leaves last_turn.rolls nil")
   _assert_eq(#game.last_turn.rolls, 2, "expected 2 rng-based rolls")
 end
@@ -250,13 +249,13 @@ end
 TestRoll["test__roll_dice with a nil rng raises 'Dice.Roll requires rng'"] = function(self)
   -- kills _roll_from_rng's `rng and rng.next_int` `and` -> `or` (nil rng
   -- indexes nil instead of asserting) and the message -> nil.
-  luax.has_error(function()
+  check.has_error(function()
     roll._roll_dice(2, nil, nil)
   end, "Dice.Roll requires rng")
 end
 
 TestRoll["test__roll_dice with an rng lacking next_int raises 'Dice.Roll requires rng'"] = function(self)
-  luax.has_error(function()
+  check.has_error(function()
     roll._roll_dice(2, nil, {})
   end, "Dice.Roll requires rng")
 end
@@ -274,7 +273,7 @@ TestRoll["test__phase_roll publishes the roll event with tip=true"] = function(s
     roll._phase_roll_with_pre_move({ game = game }, { player = player })
   end)
   event_feed.publish = saved
-  lu.assertEvalToTrue(ok, tostring(err))
+  check.is_truthy(ok, tostring(err))
   _assert_eq(#published, 1, "exactly one roll event is published")
   _assert_eq(published[1].kind, event_kinds.dice_roll, "the event kind is dice_roll")
   _assert_eq(published[1].tip, true, "the roll event is published as a tip")
@@ -285,7 +284,7 @@ TestRoll["test__phase_roll without anim_gate_port raises 'missing anim_gate_port
   -- kills the anim_gate_port assert's message -> nil.
   local game = _make_game(false)
   game.anim_gate_port = nil
-  luax.has_error(function()
+  check.has_error(function()
     roll._phase_roll_with_pre_move({ game = game }, {
       player = { id = 1, name = "P1" },
       rolls = { 3 },

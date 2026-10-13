@@ -3,7 +3,7 @@
 -- log_turn_start 的回合数钳制链(L36-37)加 tip 标志(L41)。
 -- 策略:桩 choice_auto_policy.decide 与 event_feed.publish 捕获可观测面。
 
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local turn_decision = require("src.turn.waits.decision")
 local timing = require("src.config.gameplay.timing")
 local choice_auto_policy = require("src.turn.policies.choice_auto")
@@ -14,7 +14,7 @@ local _saved_decide = choice_auto_policy.decide
 local _saved_publish = event_feed.publish
 
 local function _assert_eq(a, b, msg)
-  lu.assertEvalToTrue(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.is_truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local _decide_captured = nil
@@ -85,7 +85,7 @@ function TestWaitsDecision:test_log_turn_start_publishes_next_turn_count_and_tip
   }
   turn_decision.log_turn_start(game)
   _assert_eq(_publish_captured.kind, "turn_start", "event kind must be turn_start")
-  lu.assertEvalToTrue(_publish_captured.text:find("第6回合", 1, true) ~= nil,
+  check.is_truthy(_publish_captured.text:find("第6回合", 1, true) ~= nil,
     "text must announce the next turn count: " .. tostring(_publish_captured.text))
   _assert_eq(_publish_captured.tip, false, "turn start must not tip")
 end
@@ -99,7 +99,7 @@ function TestWaitsDecision:test_log_turn_start_defaults_missing_turn_count_to_fi
     end,
   }
   turn_decision.log_turn_start(game)
-  lu.assertEvalToTrue(_publish_captured.text:find("第1回合", 1, true) ~= nil,
+  check.is_truthy(_publish_captured.text:find("第1回合", 1, true) ~= nil,
     "missing turn count must announce turn 1: " .. tostring(_publish_captured.text))
 end
 

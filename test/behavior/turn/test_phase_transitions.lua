@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _new_game = support.new_game
 local dispatch_validator = require("src.turn.actions.validator")
@@ -14,7 +14,7 @@ local _dispatch_validator_tests = {
     local choice = { id = 1, owner_role_id = p1.id }
     local action = { type = "choice_select", actor_role_id = p1.id }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    lu.assertEvalToTrue(result == true, "should return true when actor matches owner")
+    check.is_truthy(result == true, "should return true when actor matches owner")
   end,
   function()
     local g = _new_game()
@@ -23,7 +23,7 @@ local _dispatch_validator_tests = {
     local choice = { id = 1, owner_role_id = p1.id }
     local action = { type = "choice_select", actor_role_id = p2.id }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    lu.assertEvalToTrue(result == false, "should return false when actor does not match owner")
+    check.is_truthy(result == false, "should return false when actor does not match owner")
   end,
   function()
     local g = _new_game()
@@ -31,7 +31,7 @@ local _dispatch_validator_tests = {
     local choice = { id = 1 }
     local action = { type = "choice_select", actor_role_id = p1.id }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    lu.assertEvalToTrue(result == true, "should return true when choice has no owner")
+    check.is_truthy(result == true, "should return true when choice has no owner")
   end,
   function()
     local g = _new_game()
@@ -39,7 +39,7 @@ local _dispatch_validator_tests = {
     local choice = { id = 1, owner_role_id = p1.id }
     local action = { type = "choice_select" }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    lu.assertEvalToTrue(result == false, "should return false when action has no actor_role_id")
+    check.is_truthy(result == false, "should return false when action has no actor_role_id")
   end,
 }
 
@@ -50,7 +50,7 @@ local _resolve_wait_state_tests = {
       dirty = {},
     }
     local next_state = land._resolve_wait_state(game, "move", { player = { id = 1 } }, true)
-    lu.assertEvalToTrue(next_state == "move", "should return next_state when no action anim and wait_action_anim is true")
+    check.is_truthy(next_state == "move", "should return next_state when no action anim and wait_action_anim is true")
   end,
   function()
     local game = {
@@ -58,8 +58,8 @@ local _resolve_wait_state_tests = {
       dirty = {},
     }
     local next_state, next_args = land._resolve_wait_state(game, "move", { player = { id = 1 } }, true)
-    lu.assertEvalToTrue(next_state == "wait_action_anim", "should return wait_action_anim when action anim exists")
-    lu.assertEvalToTrue(next_args.next_state == "move", "should preserve next_state in args")
+    check.is_truthy(next_state == "wait_action_anim", "should return wait_action_anim when action anim exists")
+    check.is_truthy(next_args.next_state == "move", "should preserve next_state in args")
   end,
   function()
     local game = {
@@ -69,7 +69,7 @@ local _resolve_wait_state_tests = {
 local landing_visual_hold = require("src.state.visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
-    lu.assertEvalToTrue(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
+    check.is_truthy(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual hold is active")
     landing_visual_hold.release(game)
   end,
   function()
@@ -78,7 +78,7 @@ local landing_visual_hold = require("src.state.visual_hold")
       dirty = {},
     }
     local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
-    lu.assertEvalToTrue(next_state == "wait_action_anim", "should return wait_action_anim when action anim queue has items")
+    check.is_truthy(next_state == "wait_action_anim", "should return wait_action_anim when action anim queue has items")
   end,
 }
 
@@ -91,8 +91,8 @@ local _resolve_wait_state_extended_tests = {
   local landing_visual_hold = require("src.state.visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state, next_args = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
-    lu.assertEvalToTrue(next_state == "wait_landing_visual", "should route through landing_visual first when both hold and action_anim active")
-    lu.assertEvalToTrue(next_args.next_state == "wait_action_anim", "landing_visual should chain into wait_action_anim")
+    check.is_truthy(next_state == "wait_landing_visual", "should route through landing_visual first when both hold and action_anim active")
+    check.is_truthy(next_args.next_state == "wait_action_anim", "landing_visual should chain into wait_action_anim")
     landing_visual_hold.release(game)
   end,
   function()
@@ -101,8 +101,8 @@ local _resolve_wait_state_extended_tests = {
       dirty = {},
     }
     local next_state, next_args = land._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
-    lu.assertEvalToTrue(next_state == "wait_choice", "should return wait_choice when no action anim and wait_action_anim is false")
-    lu.assertEvalToTrue(next_args.next_state == "move", "should preserve next_state")
+    check.is_truthy(next_state == "wait_choice", "should return wait_choice when no action anim and wait_action_anim is false")
+    check.is_truthy(next_args.next_state == "move", "should preserve next_state")
   end,
   function()
     -- Test with wait_action_anim=false and no anim but landing visual hold active
@@ -113,7 +113,7 @@ local _resolve_wait_state_extended_tests = {
   local landing_visual_hold = require("src.state.visual_hold")
     landing_visual_hold.hold_state_for_game(game, { duration = 1.0 })
     local next_state = land._resolve_wait_state(game, "post_action", { player = { id = 1 } }, false)
-    lu.assertEvalToTrue(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual is active")
+    check.is_truthy(next_state == "wait_landing_visual", "should return wait_landing_visual when landing visual is active")
     landing_visual_hold.release(game)
   end,
   function()
@@ -123,8 +123,8 @@ local _resolve_wait_state_extended_tests = {
       dirty = {},
     }
     local next_state, next_args = land._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
-    lu.assertEvalToTrue(next_state == "wait_action_anim", "should return wait_action_anim when queue has move_effect")
-    lu.assertEvalToTrue(next_args.next_state == "wait_choice", "should wrap in wait_choice when wait_action_anim is false")
+    check.is_truthy(next_state == "wait_action_anim", "should return wait_action_anim when queue has move_effect")
+    check.is_truthy(next_args.next_state == "wait_choice", "should wrap in wait_choice when wait_action_anim is false")
   end,
   function()
     -- wait_move_anim flag should route directly to wait_move_anim state regardless of action_anim queue
@@ -135,9 +135,9 @@ local _resolve_wait_state_extended_tests = {
     local next_state, next_args = land._resolve_wait_state(
       game, "move_followup", { mode = "resolve_landing", player_id = 1 }, false, true
     )
-    lu.assertEvalToTrue(next_state == "wait_move_anim", "wait_move_anim flag should win over wait_action_anim/has_anim checks")
-    lu.assertEvalToTrue(next_args.next_state == "move_followup", "wait_move_anim should preserve next_state")
-    lu.assertEvalToTrue(game.turn.move_followup_pending == true, "wait_move_anim with move_followup should set move_followup_pending")
+    check.is_truthy(next_state == "wait_move_anim", "wait_move_anim flag should win over wait_action_anim/has_anim checks")
+    check.is_truthy(next_args.next_state == "move_followup", "wait_move_anim should preserve next_state")
+    check.is_truthy(game.turn.move_followup_pending == true, "wait_move_anim with move_followup should set move_followup_pending")
   end,
   function()
     -- wait_move_anim with non-move_followup next_state should not flip move_followup_pending
@@ -146,7 +146,7 @@ local _resolve_wait_state_extended_tests = {
       dirty = {},
     }
     land._resolve_wait_state(game, "post_action", { player = { id = 2 } }, false, true)
-    lu.assertEvalToTrue(game.turn.move_followup_pending ~= true,
+    check.is_truthy(game.turn.move_followup_pending ~= true,
       "wait_move_anim should not set move_followup_pending when next_state is not move_followup")
   end,
   function()
@@ -162,28 +162,28 @@ local _resolve_wait_state_extended_tests = {
     local next_state, next_args = land._resolve_wait_state(
       game, "move_followup", { mode = "resolve_landing", player_id = 3 }, false, true
     )
-    lu.assertEvalToTrue(next_state == "wait_action_anim",
+    check.is_truthy(next_state == "wait_action_anim",
       "wait_move_anim with pending action_anim should route through wait_action_anim first")
-    lu.assertEvalToTrue(next_args.next_state == "wait_move_anim",
+    check.is_truthy(next_args.next_state == "wait_move_anim",
       "wait_action_anim wrapper should chain into wait_move_anim")
-    lu.assertEvalToTrue(next_args.next_args.next_state == "move_followup",
+    check.is_truthy(next_args.next_args.next_state == "move_followup",
       "wrapped wait_move_anim args should preserve original move_followup target")
-    lu.assertEvalToTrue(game.turn.move_followup_pending == true,
+    check.is_truthy(game.turn.move_followup_pending == true,
       "wait_move_anim with move_followup target should set move_followup_pending eagerly")
   end,
 }
 
 -- Helper functions for CRAP coverage tests
 local function _crap_assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _crap_assert_not_nil(a, msg)
-  assert(a ~= nil, tostring(msg) .. ": expected non-nil got nil")
+  check.is_not_nil(a, tostring(msg) .. ": expected non-nil got nil")
 end
 
 local function _crap_assert_table(a, msg)
-  assert(type(a) == "table", tostring(msg) .. ": expected table got " .. type(a))
+  check.is_table(a, tostring(msg) .. ": expected table got " .. type(a))
 end
 
 TestPhaseTransitions = {}
@@ -275,8 +275,8 @@ function TestPhaseTransitions:test_build_wait_choice_args_missing_resume_next_st
     build_wait_choice_args(meta)
   end)
 
-  lu.assertEvalToTrue(not ok, "should have raised an error")
-  lu.assertEvalToTrue(err and string.find(err, "resume_next_state"), "error should mention resume_next_state")
+  check.is_truthy(not ok, "should have raised an error")
+  check.is_truthy(err and string.find(err, "resume_next_state"), "error should mention resume_next_state")
 end
 
 function TestPhaseTransitions:test_build_wait_choice_args_nil_meta_asserts()
@@ -284,8 +284,8 @@ function TestPhaseTransitions:test_build_wait_choice_args_nil_meta_asserts()
     build_wait_choice_args(nil)
   end)
 
-  lu.assertEvalToTrue(not ok, "nil meta should raise error")
-  lu.assertEvalToTrue(err and string.find(err, "resume_next_state"), "error should mention resume_next_state")
+  check.is_truthy(not ok, "nil meta should raise error")
+  check.is_truthy(err and string.find(err, "resume_next_state"), "error should mention resume_next_state")
 end
 
 function TestPhaseTransitions:test_build_wait_choice_args_next_args_nil_when_absent()

@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local ui_gate = require("src.turn.policies.ui_gate")
 
 -- 这个接缝是 validator_gate 与 auto_context 共用的：ui_sync 端口在无头车道
@@ -13,20 +13,20 @@ function TestUiGate:test_asks_the_port_for_the_gate_when_one_is_installed()
       return { blocked = true }
     end,
   })
-  lu.assertEquals(gate, { blocked = true })
-  lu.assertEquals(seen_state, { tag = "state" })
+  check.same(gate, { blocked = true })
+  check.same(seen_state, { tag = "state" })
 end
 
 function TestUiGate:test_returns_nil_when_no_ui_sync_ports_are_installed()
-  lu.assertNil(ui_gate.resolve({}, nil))
+  check.is_nil(ui_gate.resolve({}, nil))
 end
 
 function TestUiGate:test_returns_nil_when_the_port_exists_but_has_no_resolve_ui_gate()
-  lu.assertNil(ui_gate.resolve({}, {}))
+  check.is_nil(ui_gate.resolve({}, {}))
 end
 
 function TestUiGate:test_returns_nil_when_resolve_ui_gate_is_not_callable()
-  lu.assertNil(ui_gate.resolve({}, { resolve_ui_gate = "not a function" }))
+  check.is_nil(ui_gate.resolve({}, { resolve_ui_gate = "not a function" }))
 end
 
 

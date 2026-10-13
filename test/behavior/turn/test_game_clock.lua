@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local gameplay_loop = require("src.turn.loop.init")
@@ -27,7 +27,7 @@ function TestGameClock:test_tick_accumulates_dt_on_the_game_clock()
     gameplay_loop.tick(game, state, 0.5)
     gameplay_loop.tick(game, state, 0.25)
   end)
-  lu.assertEquals(game.game_time_seconds, 0.75)
+  check.same(game.game_time_seconds, 0.75)
 end
 
 function TestGameClock:test_finished_game_tick_freezes_the_game_clock()
@@ -37,7 +37,7 @@ function TestGameClock:test_finished_game_tick_freezes_the_game_clock()
   _with_time_limit(900, function()
     gameplay_loop.tick(game, state, 1.0)
   end)
-  lu.assertEquals(game.game_time_seconds, 10)
+  check.same(game.game_time_seconds, 10)
 end
 
 function TestGameClock:test_tick_checks_victory_on_the_frame_the_limit_is_reached()
@@ -50,7 +50,7 @@ function TestGameClock:test_tick_checks_victory_on_the_frame_the_limit_is_reache
   _with_time_limit(900, function()
     gameplay_loop.tick(game, state, 0.5)
   end)
-  lu.assertEquals(check_victory_calls, 1)
+  check.same(check_victory_calls, 1)
 end
 
 function TestGameClock:test_nil_dt_keeps_the_clock_unchanged()
@@ -59,7 +59,7 @@ function TestGameClock:test_nil_dt_keeps_the_clock_unchanged()
   _with_time_limit(900, function()
     gameplay_loop.tick(game, state, nil)
   end)
-  lu.assertEquals(game.game_time_seconds, 3)
+  check.same(game.game_time_seconds, 3)
 end
 
 function TestGameClock:test_no_time_limit_never_checks_victory()
@@ -72,7 +72,7 @@ function TestGameClock:test_no_time_limit_never_checks_victory()
   _with_time_limit(nil, function()
     gameplay_loop.tick(game, state, 1.0)
   end)
-  lu.assertEquals(check_victory_calls, 0)
+  check.same(check_victory_calls, 0)
 end
 
 return TestGameClock

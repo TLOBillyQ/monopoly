@@ -1,12 +1,11 @@
 -- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp（25 例），
 -- assert.has_error → luax.has_error，语句位裸 assert(cond, msg) → lu.assertEvalToTrue。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+local check = assert(require("test.support.luassert_loader").load())
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 TestLoopPorts = {}
@@ -64,7 +63,7 @@ function TestLoopPorts:test_base_ui_sync_ports_include_all_declared_keys_as_func
     "probe_choice_ui_missing",
   }
   for _, key in ipairs(expected) do
-    lu.assertEvalToTrue(type(ports.ui_sync[key]) == "function",
+    check.is_truthy(type(ports.ui_sync[key]) == "function",
       "ui_sync." .. key .. " should be a function")
   end
 end
@@ -80,8 +79,8 @@ end
 
 function TestLoopPorts:test_resolve_empty_table_returns_base_ports()
   local ports = gameplay_loop_ports.resolve({})
-  lu.assertEvalToTrue(type(ports.modal) == "table", "resolve({}) should include modal group")
-  lu.assertEvalToTrue(type(ports.modal.close_choice_modal) == "function",
+  check.is_truthy(type(ports.modal) == "table", "resolve({}) should include modal group")
+  check.is_truthy(type(ports.modal.close_choice_modal) == "function",
     "modal group should have close_choice_modal fn")
 end
 
@@ -90,7 +89,7 @@ function TestLoopPorts:test_resolve_legacy_flat_override_errors()
     gameplay_loop_ports.resolve({ close_choice_modal = function() end })
   end)
   _assert_eq(ok, false, "legacy flat override should raise an error")
-  lu.assertEvalToTrue(tostring(err):find("legacy flat", 1, true) ~= nil,
+  check.is_truthy(tostring(err):find("legacy flat", 1, true) ~= nil,
     "error message should mention 'legacy flat'")
 end
 
@@ -103,8 +102,8 @@ end
 
 function TestLoopPorts:test_resolve_table_without_group_keys_uses_base_ports()
   local ports = gameplay_loop_ports.resolve({ some_other_key = "value" })
-  lu.assertEvalToTrue(type(ports.modal) == "table", "no-group-key table should use base modal ports")
-  lu.assertEvalToTrue(type(ports.clock.wall_now_seconds) == "function",
+  check.is_truthy(type(ports.modal) == "table", "no-group-key table should use base modal ports")
+  check.is_truthy(type(ports.clock.wall_now_seconds) == "function",
     "no-group-key table should use base clock ports")
 end
 
@@ -117,7 +116,7 @@ function TestLoopPorts:test_override_on_output_group_custom_invalidate_is_used_o
   local result = ports.output.invalidate_ui_model({})
   _assert_eq(custom_called, 1, "custom invalidate should be called")
   _assert_eq(result, "custom", "custom return propagates")
-  lu.assertEvalToTrue(type(ports.output.sync_ui_model) == "function",
+  check.is_truthy(type(ports.output.sync_ui_model) == "function",
     "sync_ui_model should remain base function (not overridden)")
 end
 
@@ -142,8 +141,8 @@ end
 
 function TestLoopPorts:test_build_noop_group_returns_callable_noops()
   local group = gameplay_loop_ports._build_noop_group({ "x", "y" })
-  lu.assertEvalToTrue(type(group.x) == "function", "x should be a function")
-  lu.assertEvalToTrue(type(group.y) == "function", "y should be a function")
+  check.is_truthy(type(group.x) == "function", "x should be a function")
+  check.is_truthy(type(group.y) == "function", "y should be a function")
   _assert_eq(group.x(), nil, "noop x should return nil")
   _assert_eq(group.y(), nil, "noop y should return nil")
 end
@@ -152,14 +151,14 @@ function TestLoopPorts:test_build_noop_group_with_overrides_prefers_override()
   local custom = function() return 77 end
   local group = gameplay_loop_ports._build_noop_group({ "a", "b" }, { a = custom })
   _assert_eq(group.a, custom, "overridden key should be the custom fn")
-  lu.assertEvalToTrue(type(group.b) == "function", "non-overridden key should still be a function")
+  check.is_truthy(type(group.b) == "function", "non-overridden key should still be a function")
   _assert_eq(group.b(), nil, "non-overridden key should return nil")
 end
 
 function TestLoopPorts:test_build_noop_group_includes_extra_override_keys()
   local extra_fn = function() return "extra" end
   local group = gameplay_loop_ports._build_noop_group({ "a" }, { b = extra_fn })
-  lu.assertEvalToTrue(type(group.a) == "function", "declared key should still be present")
+  check.is_truthy(type(group.a) == "function", "declared key should still be present")
   _assert_eq(group.b, extra_fn, "extra key from overrides should be included")
 end
 
@@ -170,7 +169,7 @@ function TestLoopPorts:test_describe_contract_group_names_includes_all_groups()
     group_set[name] = true
   end
   for _, expected in ipairs({ "modal", "anim", "ui_sync", "debug", "clock", "state", "output" }) do
-    lu.assertEvalToTrue(group_set[expected] == true,
+    check.is_truthy(group_set[expected] == true,
       "describe_contract group_names should include " .. expected)
   end
 end
@@ -178,9 +177,9 @@ end
 function TestLoopPorts:test_describe_contract_returns_independent_copies()
   local contract1 = gameplay_loop_ports.describe_contract()
   local contract2 = gameplay_loop_ports.describe_contract()
-  lu.assertEvalToTrue(contract1.group_names ~= contract2.group_names,
+  check.is_truthy(contract1.group_names ~= contract2.group_names,
     "each describe_contract call should return fresh group_names")
-  lu.assertEvalToTrue(contract1.port_groups.modal ~= contract2.port_groups.modal,
+  check.is_truthy(contract1.port_groups.modal ~= contract2.port_groups.modal,
     "each describe_contract call should return fresh port_groups.modal")
 end
 
@@ -192,12 +191,12 @@ function TestLoopPorts:test_describe_contract_port_groups_contain_expected_keys_
     return set
   end
   local modal_keys = _keys_set("modal")
-  lu.assertEvalToTrue(modal_keys.close_choice_modal == true, "modal should include close_choice_modal")
-  lu.assertEvalToTrue(modal_keys.open_choice_modal == true, "modal should include open_choice_modal")
+  check.is_truthy(modal_keys.close_choice_modal == true, "modal should include close_choice_modal")
+  check.is_truthy(modal_keys.open_choice_modal == true, "modal should include open_choice_modal")
   local clock_keys = _keys_set("clock")
-  lu.assertEvalToTrue(clock_keys.wall_now_seconds == true, "clock should include wall_now_seconds")
-  lu.assertEvalToTrue(clock_keys.wall_diff_seconds == true, "clock should include wall_diff_seconds")
-  lu.assertEvalToTrue(clock_keys.cpu_now_seconds == true, "clock should include cpu_now_seconds")
+  check.is_truthy(clock_keys.wall_now_seconds == true, "clock should include wall_now_seconds")
+  check.is_truthy(clock_keys.wall_diff_seconds == true, "clock should include wall_diff_seconds")
+  check.is_truthy(clock_keys.cpu_now_seconds == true, "clock should include cpu_now_seconds")
   local output_keys = _keys_set("output")
   for _, expected in ipairs({
     "invalidate_ui_model", "clear_ui_dirty", "is_ui_dirty",
@@ -207,13 +206,13 @@ function TestLoopPorts:test_describe_contract_port_groups_contain_expected_keys_
     "set_pending_choice_elapsed", "set_pending_choice_id",
     "sync_modal_timer", "get_modal_elapsed", "get_modal_ref",
   }) do
-    lu.assertEvalToTrue(output_keys[expected] == true, "output should include " .. expected)
+    check.is_truthy(output_keys[expected] == true, "output should include " .. expected)
   end
   local state_keys = _keys_set("state")
   for _, expected in ipairs({
     "apply_role_control_lock", "install_event_handlers", "on_bankruptcy_tiles_cleared",
   }) do
-    lu.assertEvalToTrue(state_keys[expected] == true, "state should include " .. expected)
+    check.is_truthy(state_keys[expected] == true, "state should include " .. expected)
   end
 end
 
@@ -256,14 +255,14 @@ end
 function TestLoopPorts:test__merge_required_ports_raises_missing_base_port_key_for_an_absent_base_port()
   -- kills the guard's message -> nil and tostring(key) -> nil mutants. The
   -- public resolve path never misses a base port; drive the guard directly.
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop_ports._M_test._merge_required_ports({}, {}, nil, { "ghost_port" })
   end, "missing base port: ghost_port")
 end
 
 function TestLoopPorts:test_resolve_rejects_a_non_table_override_with_its_guard_message()
   -- kills resolve's "invalid gameplay_loop_ports override: expected table" -> nil.
-  luax.has_error(function()
+  check.has_error(function()
     gameplay_loop_ports.resolve("not a table")
   end, "invalid gameplay_loop_ports override: expected table")
 end
@@ -271,9 +270,9 @@ end
 function TestLoopPorts:test_repeated_resolve_nil_returns_independent_group_tables_no_shared_mutation()
   local ports1 = gameplay_loop_ports.resolve(nil)
   local ports2 = gameplay_loop_ports.resolve(nil)
-  lu.assertEvalToTrue(ports1 ~= ports2, "each resolve should return new top-level table")
-  lu.assertEvalToTrue(ports1.modal ~= ports2.modal, "modal group should be independent")
-  lu.assertEvalToTrue(ports1.output ~= ports2.output, "output group should be independent")
+  check.is_truthy(ports1 ~= ports2, "each resolve should return new top-level table")
+  check.is_truthy(ports1.modal ~= ports2.modal, "modal group should be independent")
+  check.is_truthy(ports1.output ~= ports2.output, "output group should be independent")
 end
 
 

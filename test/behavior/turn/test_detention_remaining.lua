@@ -1,3 +1,4 @@
+local check = assert(require("test.support.luassert_loader").load())
 -- Detention "remaining turns" use the 含当前回合 (inclusive) convention (CONTEXT「扣留剩余回合」):
 -- the player-visible 扣留剩余回合 counts the current frozen turn, so it is never 0
 -- while detained. The internal stay_turns counter still decrements at turn start

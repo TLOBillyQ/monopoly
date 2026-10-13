@@ -1,11 +1,11 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local loop_runtime = require("src.turn.loop.runtime")
 local runtime_state = require("src.state.runtime")
 local tip_queue = require("src.foundation.tips")
 local _config_reset = require("test.support.config_reset")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_state()
@@ -140,7 +140,7 @@ function TestLoopRuntime:test_sync_phase_flags_same_wait_move_anim_no_sync_pendi
   loop_runtime.sync_phase_flags(state, "wait_move_anim")
   loop_runtime.sync_phase_flags(state, "wait_move_anim")
   local board_runtime = runtime_state.ensure_board_runtime(state)
-  lu.assertEvalToTrue(not board_runtime.board_sync_pending, "staying in wait_move_anim should not set board_sync_pending")
+  check.is_truthy(not board_runtime.board_sync_pending, "staying in wait_move_anim should not set board_sync_pending")
 end
 
 function TestLoopRuntime:test_sync_phase_flags_unlocks_next_turn_lock_on_phase_change()
@@ -156,8 +156,8 @@ end
 function TestLoopRuntime:test_build_board_scene_port_returns_table()
   local state = _make_state()
   local port = loop_runtime.build_board_scene_port(state)
-  lu.assertIsTable(port, "should return a port table")
-  lu.assertIsFunction(port.get_board_scene, "should have get_board_scene")
+  check.is_table(port, "should return a port table")
+  check.is_function(port.get_board_scene, "should have get_board_scene")
 end
 
 function TestLoopRuntime:test_build_board_scene_port_get_board_scene_returns_state_board_scene()
@@ -177,8 +177,8 @@ end
 function TestLoopRuntime:test_build_popup_port_returns_table_with_push_popup()
   local state = _make_state()
   local port = loop_runtime.build_popup_port(state)
-  lu.assertIsTable(port, "should return a port table")
-  lu.assertIsFunction(port.push_popup, "should have push_popup function")
+  check.is_table(port, "should return a port table")
+  check.is_function(port.push_popup, "should have push_popup function")
 end
 
 function TestLoopRuntime:test_build_popup_port_push_popup_returns_false_when_no_push_popup_fn()
@@ -247,8 +247,8 @@ end
 function TestLoopRuntime:test_build_tile_feedback_port_returns_table()
   local state = _make_state()
   local port = loop_runtime.build_tile_feedback_port(state)
-  lu.assertIsTable(port, "should return a port table")
-  lu.assertIsFunction(port.on_tile_upgraded, "should have on_tile_upgraded")
+  check.is_table(port, "should return a port table")
+  check.is_function(port.on_tile_upgraded, "should have on_tile_upgraded")
 end
 
 function TestLoopRuntime:test_build_tile_feedback_port_no_game_returns_false()
@@ -311,8 +311,8 @@ end
 function TestLoopRuntime:test_build_board_visual_feedback_port_returns_table()
   local state = _make_state()
   local port = loop_runtime.build_board_visual_feedback_port(state)
-  lu.assertIsTable(port, "should return a port table")
-  lu.assertIsFunction(port.sync_many, "should have sync_many")
+  check.is_table(port, "should return a port table")
+  check.is_function(port.sync_many, "should have sync_many")
 end
 
 function TestLoopRuntime:test_build_board_visual_feedback_port_cached_on_second_call()

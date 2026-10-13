@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local event_feed = require("src.rules.ports.event_feed")
 local phase_registry = require("src.turn.phases.registry")
@@ -65,14 +65,14 @@ function TestPhaseRegistry:test_end_turn_publishes_tile_name_and_arms_inter_turn
     local phases = phase_registry.build_default_phases()
     local next_state, next_args = phases.end_turn(_make_turn_mgr(game), { player = player })
     _assert_eq(next_state, "inter_turn_wait", "end_turn should enter the inter-turn wait")
-    lu.assertEvalToTrue(type(next_args) == "table" and next(next_args) == nil,
+    check.is_truthy(type(next_args) == "table" and next(next_args) == nil,
       "inter-turn wait carries no args")
   end)
 
-  lu.assertEvalToTrue(#published == 1, "end_turn should publish the turn_end event")
-  lu.assertEvalToTrue(published[1].text:find("测试大道", 1, true) ~= nil,
+  check.is_truthy(#published == 1, "end_turn should publish the turn_end event")
+  check.is_truthy(published[1].text:find("测试大道", 1, true) ~= nil,
     "turn_end text should carry the landing tile name: " .. tostring(published[1].text))
-  lu.assertEvalToTrue(published[1].tip == false, "turn_end should not surface a tip")
+  check.is_truthy(published[1].tip == false, "turn_end should not surface a tip")
   _assert_eq(game.turn.inter_turn_wait_seconds, 0.5, "inter-turn wait should use the configured seconds")
   _assert_eq(game.turn.inter_turn_wait_elapsed, 0, "inter-turn wait elapsed should start at zero")
   _assert_eq(game.turn.inter_turn_wait_active, true, "inter-turn wait should be armed")
@@ -100,11 +100,11 @@ function TestPhaseRegistry:test_end_turn_falls_back_to_unknown_tile_when_not_pos
   }, function()
     local phases = phase_registry.build_default_phases()
     local ok = pcall(phases.end_turn, _make_turn_mgr(game), { player = player })
-    lu.assertEvalToTrue(ok, "end_turn should not raise for an unpositioned player")
+    check.is_truthy(ok, "end_turn should not raise for an unpositioned player")
   end)
 
-  lu.assertEvalToTrue(#published == 1, "end_turn should still publish the turn_end event")
-  lu.assertEvalToTrue(published[1].text:find("未知地块", 1, true) ~= nil,
+  check.is_truthy(#published == 1, "end_turn should still publish the turn_end event")
+  check.is_truthy(published[1].text:find("未知地块", 1, true) ~= nil,
     "unpositioned player should fall back to the unknown tile label: " .. tostring(published[1].text))
 end
 

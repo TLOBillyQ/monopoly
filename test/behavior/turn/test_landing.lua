@@ -1,7 +1,7 @@
 -- luacheck: ignore 211
 -- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp（31 例），
 -- 语句位裸 assert(cond, msg) → lu.assertEvalToTrue，表达式位内建 assert 保留。
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _new_game = support.new_game
 local _build_ui_port = support.build_ui_port
@@ -69,7 +69,7 @@ local function _run_roadblock_stopped_landing(g, p, idx)
   _assert_eq(followup_state, "landing", "roadblock stop should continue into landing")
   land.run({ game = g }, followup_args)
   local pending = _get_choice(g)
-  lu.assertEvalToTrue(pending and pending.kind == "landing_optional_effect", "roadblock-stopped landing should open landing optional choice")
+  check.is_truthy(pending and pending.kind == "landing_optional_effect", "roadblock-stopped landing should open landing optional choice")
   return pending
 end
 
@@ -95,7 +95,7 @@ function TestLanding:test_land_on_start_reward()
   g:update_player_position(p, idx)
   local before = g:player_cash(p)
   local res = _resolve_landing(g, p, g.board:get_tile(idx), nil)
-  lu.assertEvalToTrue(not res, "landing resolver should not wait")
+  check.is_truthy(not res, "landing resolver should not wait")
   _assert_eq(g:player_cash(p), before + constants.pass_start_bonus, "landing on start should grant reward")
 end
 
@@ -106,7 +106,7 @@ function TestLanding:test_land_on_start_reward_when_passed_start_zero()
   g:update_player_position(p, idx)
   local before = g:player_cash(p)
   local res = _resolve_landing(g, p, g.board:get_tile(idx), { passed_start = 0 })
-  lu.assertEvalToTrue(not res, "landing resolver should not wait")
+  check.is_truthy(not res, "landing resolver should not wait")
   _assert_eq(g:player_cash(p), before + constants.pass_start_bonus, "passed_start zero should still grant start reward")
 end
 
@@ -117,7 +117,7 @@ function TestLanding:test_land_on_start_skips_duplicate_passed_start_reward()
   g:update_player_position(p, idx)
   local before = g:player_cash(p)
   local res = _resolve_landing(g, p, g.board:get_tile(idx), { passed_start = 1 })
-  lu.assertEvalToTrue(not res, "landing resolver should not wait")
+  check.is_truthy(not res, "landing resolver should not wait")
   _assert_eq(g:player_cash(p), before, "passed_start reward should not be duplicated on start landing")
 end
 
@@ -129,7 +129,7 @@ function TestLanding:test_land_on_start_rich_deity_doubles_reward()
   g:update_player_position(p, idx)
   local before = g:player_cash(p)
   local res = _resolve_landing(g, p, g.board:get_tile(idx), {})
-  lu.assertEvalToTrue(not res, "landing resolver should not wait")
+  check.is_truthy(not res, "landing resolver should not wait")
   _assert_eq(g:player_cash(p), before + constants.pass_start_bonus * 2, "rich deity should double start reward")
 end
 
@@ -147,8 +147,8 @@ function TestLanding:test_pass_players_without_steal_does_not_crash()
   local res = _resolve_landing(g, p1, g.board:get_tile(idx), {
     encountered_players = { p2.id },
   })
-  lu.assertEvalToTrue(not res, "landing resolver should not wait without steal")
-  lu.assertEvalToTrue(_get_choice(g) == nil, "should not open choice without steal")
+  check.is_truthy(not res, "landing resolver should not wait without steal")
+  check.is_truthy(_get_choice(g) == nil, "should not open choice without steal")
 end
 
 function TestLanding:test_passing_player_with_steal_card_does_not_trigger_steal_and_still_pays_rent()
@@ -167,11 +167,11 @@ function TestLanding:test_passing_player_with_steal_card_does_not_trigger_steal_
   local move_result = { encountered_players = { p2.id } }
 
   local res = _resolve_landing(g, p1, tile_ref, move_result)
-  lu.assertEvalToTrue(not res, "passing another player should not open a landing choice")
-  lu.assertEvalToTrue(_get_choice(g) == nil, "landing should not open steal prompt")
+  check.is_truthy(not res, "passing another player should not open a landing choice")
+  check.is_truthy(_get_choice(g) == nil, "landing should not open steal prompt")
   _assert_eq(item_inventory.count(p1), before_steal_count, "steal card should remain unconsumed")
   _assert_eq(item_inventory.count(p2), before_target_count, "passed target should keep items")
-  lu.assertEvalToTrue(g:player_cash(p1) < before_cash, "rent must be paid after failed steal on AI-owned tile")
+  check.is_truthy(g:player_cash(p1) < before_cash, "rent must be paid after failed steal on AI-owned tile")
 end
 
 function TestLanding:test_landing_optional_waits_with_ui()
@@ -181,12 +181,12 @@ function TestLanding:test_landing_optional_waits_with_ui()
   local idx, tile_ref = _first_land_tile(g.board)
   g:update_player_position(p, idx)
   local res = _resolve_landing(g, p, tile_ref, {})
-  lu.assertEvalToTrue(res and res.waiting, "landing resolver should wait when UI is available")
+  check.is_truthy(res and res.waiting, "landing resolver should wait when UI is available")
   local pending = _get_choice(g)
-  lu.assertEvalToTrue(pending and pending.kind == "landing_optional_effect", "pending choice for landing optional")
-  lu.assertEvalToTrue(pending.allow_cancel == true,
+  check.is_truthy(pending and pending.kind == "landing_optional_effect", "pending choice for landing optional")
+  check.is_truthy(pending.allow_cancel == true,
     "landing optional choice must allow cancel (kills optional_allow_cancel true→false)")
-  lu.assertEvalToTrue(pending.cancel_label == "跳过",
+  check.is_truthy(pending.cancel_label == "跳过",
     "landing optional cancel label must be 跳过 (kills cancel_label 跳过→nil)")
 end
 
@@ -197,9 +197,9 @@ function TestLanding:test_landing_optional_choice_carries_move_result_meta()
   g:update_player_position(p, idx)
   local move_result = { passed_start = 2 }
   local res = _resolve_landing(g, p, tile_ref, move_result)
-  lu.assertEvalToTrue(res and res.waiting, "landing should open optional choice")
+  check.is_truthy(res and res.waiting, "landing should open optional choice")
   local pending = _get_choice(g)
-  lu.assertEvalToTrue(pending and pending.meta and pending.meta.move_result == move_result,
+  check.is_truthy(pending and pending.meta and pending.meta.move_result == move_result,
     "optional choice meta must carry the landing move_result (kills `context or {}` -> `context and {}`)")
 end
 
@@ -210,13 +210,13 @@ function TestLanding:test_landing_optional_waits_without_ui_and_can_resolve()
   g:update_player_position(p, idx)
   local before_cash = g:player_cash(p)
   local res = _resolve_landing(g, p, tile_ref, {})
-  lu.assertEvalToTrue(res and res.waiting, "landing resolver should wait without manual UI interaction")
+  check.is_truthy(res and res.waiting, "landing resolver should wait without manual UI interaction")
   local pending = _get_choice(g)
-  lu.assertEvalToTrue(pending and pending.kind == "landing_optional_effect", "pending choice expected")
+  check.is_truthy(pending and pending.kind == "landing_optional_effect", "pending choice expected")
   local resolved = _resolve_choice_first(g, pending)
-  lu.assertEvalToTrue(resolved, "expected at least one optional effect")
-  lu.assertEvalToTrue(_tile_state(g, tile_ref).owner_id == p.id, "land should be purchased after resolving choice")
-  lu.assertEvalToTrue(g:player_cash(p) < before_cash, "cash deducted for purchase")
+  check.is_truthy(resolved, "expected at least one optional effect")
+  check.is_truthy(_tile_state(g, tile_ref).owner_id == p.id, "land should be purchased after resolving choice")
+  check.is_truthy(g:player_cash(p) < before_cash, "cash deducted for purchase")
 end
 
 function TestLanding:test_landing_optional_stale_choice_is_blocked()
@@ -226,15 +226,15 @@ function TestLanding:test_landing_optional_stale_choice_is_blocked()
   local idx, tile_ref = _first_land_tile(g.board)
   g:update_player_position(p, idx)
   local res = _resolve_landing(g, p, tile_ref, {})
-  lu.assertEvalToTrue(res and res.waiting, "should open choice")
+  check.is_truthy(res and res.waiting, "should open choice")
   local pending = _get_choice(g)
-  lu.assertEvalToTrue(pending and pending.kind == "landing_optional_effect", "pending choice expected")
+  check.is_truthy(pending and pending.kind == "landing_optional_effect", "pending choice expected")
 
   g:set_player_cash(p, 0)
 
   local choice_resolver = require("src.rules.choice.resolver")
   choice_resolver.resolve(g, pending, { option_id = "buy_land" })
-  lu.assertEvalToTrue(_tile_state(g, tile_ref).owner_id == nil, "stale buy_land should be blocked")
+  check.is_truthy(_tile_state(g, tile_ref).owner_id == nil, "stale buy_land should be blocked")
 end
 
 function TestLanding:test_zero_cash_no_buy_choice()
@@ -244,8 +244,8 @@ function TestLanding:test_zero_cash_no_buy_choice()
   g:update_player_position(p, idx)
   g:set_player_cash(p, 0)
   local res = _resolve_landing(g, p, tile_ref, {})
-  lu.assertEvalToTrue(res and res.waiting, "buy choice should appear even when cash is zero")
-  lu.assertEvalToTrue(_get_choice(g) ~= nil, "pending choice should exist")
+  check.is_truthy(res and res.waiting, "buy choice should appear even when cash is zero")
+  check.is_truthy(_get_choice(g) ~= nil, "pending choice should exist")
 end
 
 function TestLanding:test_roadblock_stop_on_unowned_land_opens_buy_choice()
@@ -255,7 +255,7 @@ function TestLanding:test_roadblock_stop_on_unowned_land_opens_buy_choice()
   local p = g:current_player()
   local idx, _ = _first_land_tile(g.board)
   local pending = _run_roadblock_stopped_landing(g, p, idx)
-  lu.assertEvalToTrue(_choice_offers(pending, "buy_land"), "buy_land should be offered after roadblock stop on unowned land")
+  check.is_truthy(_choice_offers(pending, "buy_land"), "buy_land should be offered after roadblock stop on unowned land")
 end
 
 function TestLanding:test_roadblock_stop_on_own_land_opens_upgrade_choice()
@@ -268,7 +268,7 @@ function TestLanding:test_roadblock_stop_on_own_land_opens_upgrade_choice()
   g:set_player_property(p, tile_ref.id, true)
   g:set_tile_level(tile_ref, 0)
   local pending = _run_roadblock_stopped_landing(g, p, idx)
-  lu.assertEvalToTrue(_choice_offers(pending, "upgrade_land"), "upgrade_land should be offered after roadblock stop on own upgradeable land")
+  check.is_truthy(_choice_offers(pending, "upgrade_land"), "upgrade_land should be offered after roadblock stop on own upgradeable land")
 end
 
 function TestLanding:test_turn_land_bridges_to_wait_action_anim_for_chance()
@@ -285,10 +285,10 @@ function TestLanding:test_turn_land_bridges_to_wait_action_anim_for_chance()
     { target = patched, key = "rand", value = function() return 0 end },
   }, function()
     local next_state, next_args = land.run({ game = g }, { player = p, move_result = {} })
-    lu.assertEvalToTrue(next_state == "wait_landing_visual", "chance landing should defer visual release before action anim")
-    lu.assertEvalToTrue(next_args and next_args.next_state == "wait_action_anim",
+    check.is_truthy(next_state == "wait_landing_visual", "chance landing should defer visual release before action anim")
+    check.is_truthy(next_args and next_args.next_state == "wait_action_anim",
       "chance landing should resume into wait_action_anim after visual hold")
-    lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance action anim should be queued")
+    check.is_truthy(g.turn.action_anim and g.turn.action_anim.kind == "chance", "chance action anim should be queued")
   end)
 end
 
@@ -305,11 +305,11 @@ function TestLanding:test_turn_land_bridges_to_wait_action_anim_for_item()
     end },
   }, function()
     local next_state, next_args = land.run({ game = g }, { player = p, move_result = {} })
-    lu.assertEvalToTrue(next_state == "wait_landing_visual", "item landing should defer visual release before action anim")
-    lu.assertEvalToTrue(next_args and next_args.next_state == "wait_action_anim",
+    check.is_truthy(next_state == "wait_landing_visual", "item landing should defer visual release before action anim")
+    check.is_truthy(next_args and next_args.next_state == "wait_action_anim",
       "item landing should resume into wait_action_anim after visual hold")
-    lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "item_gain_popup", "item gain popup anim should be queued")
-    lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.item_id == 2001, "item action anim item_id mismatch")
+    check.is_truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_gain_popup", "item gain popup anim should be queued")
+    check.is_truthy(g.turn.action_anim and g.turn.action_anim.item_id == 2001, "item action anim item_id mismatch")
   end)
 end
 
@@ -331,19 +331,19 @@ function TestLanding:test_item_landing_queues_reveal_on_success()
     end },
   }, function()
     local res = _resolve_landing(g, p, tile_ref, {})
-    lu.assertEvalToTrue(not res, "item landing should not wait")
+    check.is_truthy(not res, "item landing should not wait")
   end)
   -- 2026-08-18 换皮(CONTEXT「卡牌展示广播」 修订):道具地块拿卡改走「卡牌展示屏」弹窗全员广播。
-  lu.assertEvalToTrue(#popups == 1, "item tile landing should push the card reveal popup")
+  check.is_truthy(#popups == 1, "item tile landing should push the card reveal popup")
   local gain_popup = popups[1] or {}
-  lu.assertEvalToTrue(gain_popup.kind == "item_card", "gain popup kind mismatch")
-  lu.assertEvalToTrue(gain_popup.title == "道具卡", "gain popup title mismatch")
-  lu.assertEvalToTrue(gain_popup.image_ref == 2001, "gain popup image ref mismatch")
-  lu.assertEvalToTrue(gain_popup.broadcast == true, "gain popup should broadcast to all roles")
-  lu.assertEvalToTrue(gain_popup.auto_close_seconds == timing.item_get_reveal_seconds, "gain popup auto close mismatch")
-  lu.assertEvalToTrue(g.turn.action_anim and g.turn.action_anim.kind == "item_gain_popup", "item landing should queue gain popup anim")
-  lu.assertEvalToTrue(g.turn.action_anim.item_id == 2001, "item landing reveal item mismatch")
-  lu.assertEvalToTrue(g.turn.action_anim.player_id == p.id, "item landing reveal player mismatch")
+  check.is_truthy(gain_popup.kind == "item_card", "gain popup kind mismatch")
+  check.is_truthy(gain_popup.title == "道具卡", "gain popup title mismatch")
+  check.is_truthy(gain_popup.image_ref == 2001, "gain popup image ref mismatch")
+  check.is_truthy(gain_popup.broadcast == true, "gain popup should broadcast to all roles")
+  check.is_truthy(gain_popup.auto_close_seconds == timing.item_get_reveal_seconds, "gain popup auto close mismatch")
+  check.is_truthy(g.turn.action_anim and g.turn.action_anim.kind == "item_gain_popup", "item landing should queue gain popup anim")
+  check.is_truthy(g.turn.action_anim.item_id == 2001, "item landing reveal item mismatch")
+  check.is_truthy(g.turn.action_anim.player_id == p.id, "item landing reveal player mismatch")
 end
 
 function TestLanding:test_item_landing_full_inventory_no_duplicate_success_popup()
@@ -357,7 +357,7 @@ function TestLanding:test_item_landing_full_inventory_no_duplicate_success_popup
   local p = g:current_player()
   while not p.inventory:is_full() do
     local ok = p.inventory:add({ id = 2001 })
-    lu.assertEvalToTrue(ok == true, "preload inventory failed")
+    check.is_truthy(ok == true, "preload inventory failed")
   end
   local idx, tile_ref = _first_tile_by_type(g.board, "item")
   g:update_player_position(p, idx)
@@ -367,11 +367,11 @@ function TestLanding:test_item_landing_full_inventory_no_duplicate_success_popup
     end },
   }, function()
     local res = _resolve_landing(g, p, tile_ref, {})
-    lu.assertEvalToTrue(not res, "item landing should not wait")
+    check.is_truthy(not res, "item landing should not wait")
   end)
-  lu.assertEvalToTrue(#popups == 1, "full inventory should only keep existing fail popup")
-  lu.assertEvalToTrue(popups[1].title == "道具", "full inventory popup title mismatch")
-  lu.assertEvalToTrue(string.find(popups[1].body, "背包已满", 1, true), "full inventory popup body mismatch")
+  check.is_truthy(#popups == 1, "full inventory should only keep existing fail popup")
+  check.is_truthy(popups[1].title == "道具", "full inventory popup title mismatch")
+  check.is_truthy(string.find(popups[1].body, "背包已满", 1, true), "full inventory popup body mismatch")
 end
 
 function TestLanding:test_chance_landing_pushes_popup()
@@ -387,8 +387,8 @@ function TestLanding:test_chance_landing_pushes_popup()
   g:update_player_position(p, idx)
   g.rng = {
     next_int = function(_, min, max)
-      lu.assertEvalToTrue(min == 1, "chance landing rng should start at 1")
-      lu.assertEvalToTrue(max > 0, "chance landing rng should use a positive upper bound")
+      check.is_truthy(min == 1, "chance landing rng should start at 1")
+      check.is_truthy(max > 0, "chance landing rng should use a positive upper bound")
       return 1
     end,
   }
@@ -401,15 +401,15 @@ function TestLanding:test_chance_landing_pushes_popup()
     end },
   }, function()
     local res = _resolve_landing(g, p, tile_ref, {})
-    lu.assertEvalToTrue(not res, "chance landing should not wait")
+    check.is_truthy(not res, "chance landing should not wait")
   end)
   local card_desc = chance_cfg[1] and chance_cfg[1].description or ""
-  lu.assertEvalToTrue(#popups == 1, "chance landing should push one popup")
-  lu.assertEvalToTrue(popups[1].title == "机会卡", "chance landing popup title mismatch")
-  lu.assertEvalToTrue(string.find(popups[1].body, p.name, 1, true), "chance landing popup should include player name")
-  lu.assertEvalToTrue(string.find(popups[1].body, card_desc, 1, true), "chance landing popup should include card description")
-  lu.assertEvalToTrue(popups[1].image_ref == chance_cfg[1].id, "chance landing popup image_ref mismatch")
-  lu.assertEvalToTrue(popups[1].auto_close_seconds == timing.action_anim_default_seconds, "chance popup auto close mismatch")
+  check.is_truthy(#popups == 1, "chance landing should push one popup")
+  check.is_truthy(popups[1].title == "机会卡", "chance landing popup title mismatch")
+  check.is_truthy(string.find(popups[1].body, p.name, 1, true), "chance landing popup should include player name")
+  check.is_truthy(string.find(popups[1].body, card_desc, 1, true), "chance landing popup should include card description")
+  check.is_truthy(popups[1].image_ref == chance_cfg[1].id, "chance landing popup image_ref mismatch")
+  check.is_truthy(popups[1].auto_close_seconds == timing.action_anim_default_seconds, "chance popup auto close mismatch")
 end
 
 function TestLanding:test_upgrade_land_emits_tile_upgraded_event()
@@ -431,17 +431,17 @@ function TestLanding:test_upgrade_land_emits_tile_upgraded_event()
     end },
   }, function()
     local res = _resolve_landing(g, p, tile_ref, {})
-    lu.assertEvalToTrue(res and res.waiting, "upgrade path should open landing optional choice")
+    check.is_truthy(res and res.waiting, "upgrade path should open landing optional choice")
     local pending = _get_choice(g)
-    lu.assertEvalToTrue(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
+    check.is_truthy(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
     local choice_resolver = require("src.rules.choice.resolver")
     choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
   end)
 
-  lu.assertEvalToTrue(_tile_state(g, tile_ref).level == 1, "upgrade should raise land level to 1")
-  lu.assertEvalToTrue(captured_kind == monopoly_event.land.tile_upgraded, "upgrade should emit tile_upgraded event")
-  lu.assertEvalToTrue(captured_payload and captured_payload.tile_id == tile_ref.id, "event payload tile_id mismatch")
-  lu.assertEvalToTrue(captured_payload and captured_payload.level == 1, "event payload level mismatch")
+  check.is_truthy(_tile_state(g, tile_ref).level == 1, "upgrade should raise land level to 1")
+  check.is_truthy(captured_kind == monopoly_event.land.tile_upgraded, "upgrade should emit tile_upgraded event")
+  check.is_truthy(captured_payload and captured_payload.tile_id == tile_ref.id, "event payload tile_id mismatch")
+  check.is_truthy(captured_payload and captured_payload.level == 1, "event payload level mismatch")
 end
 
 function TestLanding:test_upgrade_land_prefers_direct_ui_notify_before_event_bridge()
@@ -450,7 +450,7 @@ function TestLanding:test_upgrade_land_prefers_direct_ui_notify_before_event_bri
   _set_ui_port(g, {
     on_tile_upgraded = function(_, tile_id, level)
       direct_calls = direct_calls + 1
-      lu.assertEvalToTrue(tile_id ~= nil and level ~= nil, "direct tile upgraded callback should receive payload")
+      check.is_truthy(tile_id ~= nil and level ~= nil, "direct tile upgraded callback should receive payload")
       return true
     end,
   })
@@ -470,15 +470,15 @@ function TestLanding:test_upgrade_land_prefers_direct_ui_notify_before_event_bri
     end },
   }, function()
     local res = _resolve_landing(g, p, tile_ref, {})
-    lu.assertEvalToTrue(res and res.waiting, "upgrade path should open landing optional choice")
+    check.is_truthy(res and res.waiting, "upgrade path should open landing optional choice")
     local pending = _get_choice(g)
-    lu.assertEvalToTrue(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
+    check.is_truthy(pending and pending.kind == "landing_optional_effect", "pending optional choice expected")
     local choice_resolver = require("src.rules.choice.resolver")
     choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
   end)
 
-  lu.assertEvalToTrue(direct_calls == 1, "upgrade should notify ui runtime directly once")
-  lu.assertEvalToTrue(emitted == false, "direct ui notify should skip event bridge fallback")
+  check.is_truthy(direct_calls == 1, "upgrade should notify ui runtime directly once")
+  check.is_truthy(emitted == false, "direct ui notify should skip event bridge fallback")
 end
 
 function TestLanding:test_hospital_landing_emits_status_feedback_event()
@@ -499,10 +499,10 @@ function TestLanding:test_hospital_landing_emits_status_feedback_event()
     },
   }, function()
     local res = _resolve_landing(g, player, tile_ref, {})
-    lu.assertEvalToTrue(not res, "hospital landing should resolve synchronously")
+    check.is_truthy(not res, "hospital landing should resolve synchronously")
   end)
 
-  lu.assertEvalToTrue(#emitted >= 1, "hospital landing should emit at least one event")
+  check.is_truthy(#emitted >= 1, "hospital landing should emit at least one event")
   _assert_eq(emitted[1].kind, monopoly_event.feedback.status_applied, "hospital should emit status feedback event")
   _assert_eq(emitted[1].payload.cue_name, "hospital_shock", "hospital cue mismatch")
   _assert_eq(emitted[1].payload.tile_index, idx, "hospital feedback should preserve landing index")
@@ -526,10 +526,10 @@ function TestLanding:test_mountain_landing_emits_status_feedback_event()
     },
   }, function()
     local res = _resolve_landing(g, player, tile_ref, {})
-    lu.assertEvalToTrue(not res, "mountain landing should resolve synchronously")
+    check.is_truthy(not res, "mountain landing should resolve synchronously")
   end)
 
-  lu.assertEvalToTrue(#emitted >= 1, "mountain landing should emit at least one event")
+  check.is_truthy(#emitted >= 1, "mountain landing should emit at least one event")
   _assert_eq(emitted[1].kind, monopoly_event.feedback.status_applied, "mountain should emit status feedback event")
   _assert_eq(emitted[1].payload.cue_name, "mountain_stun", "mountain cue mismatch")
   _assert_eq(emitted[1].payload.tile_index, idx, "mountain feedback should preserve landing index")
@@ -566,7 +566,7 @@ function TestLanding:test_mine_landing_defers_hospital_effect_until_move_followu
 
   local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
   _assert_eq(resumed_state, "end_turn", "mine move followup should end the turn after hospital followup")
-  lu.assertEvalToTrue(g:detention_remaining(player) > 0, "mine move followup should apply hospital stay")
+  check.is_truthy(g:detention_remaining(player) > 0, "mine move followup should apply hospital stay")
 end
 
 function TestLanding:test_legacy_save_with_seat_id_runs_through_mine_landing()
@@ -583,7 +583,7 @@ function TestLanding:test_legacy_save_with_seat_id_runs_through_mine_landing()
 
   local resumed_state, _ = move_followup.run({ game = g }, next_args.next_args)
   _assert_eq(resumed_state, "end_turn", "legacy seat_id should not block move followup")
-  lu.assertEvalToTrue(g:detention_remaining(player) > 0, "hospital stay must still apply for legacy save")
+  check.is_truthy(g:detention_remaining(player) > 0, "hospital stay must still apply for legacy save")
   _assert_eq(player.seat_id, 4001, "seat_id remains an orphan field; no logic path clears it")
 end
 
@@ -598,8 +598,8 @@ function TestLanding:test_inert_mine_does_not_trigger_on_landing()
 
   local next_state, next_args = land.run({ game = g }, { player = player, move_result = {} })
 
-  lu.assertEvalToTrue(next_state ~= "wait_action_anim", "explicitly inert mine should not stage a mine trigger animation")
-  lu.assertEvalToTrue(next_state ~= "move_followup", "explicitly inert mine should not divert into hospital followup")
+  check.is_truthy(next_state ~= "wait_action_anim", "explicitly inert mine should not stage a mine trigger animation")
+  check.is_truthy(next_state ~= "move_followup", "explicitly inert mine should not divert into hospital followup")
   _assert_eq(next_args and next_args.player, player, "inert mine should preserve normal landing continuation")
   _assert_eq(g:detention_remaining(player), 0, "inert mine should not hospitalize anyone")
   _assert_eq(g.board:has_mine(idx), true, "inert mine should remain on the tile")
@@ -706,7 +706,7 @@ function TestLanding:test_mine_with_active_hold_routes_through_landing_visual()
     "after visual hold release, should chain into wait_action_anim")
   _assert_eq(next_args.next_args.next_state, "move_followup",
     "action anim should chain into move_followup for hospital effects")
-  lu.assertEvalToTrue(landing_visual_hold.is_active_game(g),
+  check.is_truthy(landing_visual_hold.is_active_game(g),
     "hold should still be active until tick releases it")
 end
 

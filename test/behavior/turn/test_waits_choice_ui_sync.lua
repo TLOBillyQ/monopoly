@@ -2,7 +2,7 @@
 -- Drives sync_pending_choice_ui and resolve_missing_ui_warning directly with
 -- stub ports so the id-change sync guard and the active/should-warn logic are
 -- observable without the surrounding tick.
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _assert_eq = support.assert_eq
 local _with_patches = support.with_patches
@@ -35,14 +35,14 @@ function TestWaitsChoiceUiSync:test_reports_active_with_a_pending_choice_but_no_
   -- active_choice.
   local active, should_warn = choice_ui_sync.resolve_missing_ui_warning(
     {}, {}, {}, { id = 1 }, nil, false)
-  lu.assertEvalToTrue(active == true, "a pending choice alone marks the frame active")
-  lu.assertEvalToTrue(not should_warn, "with no active_choice the missing-ui warning stays off")
+  check.is_truthy(active == true, "a pending choice alone marks the frame active")
+  check.is_truthy(not should_warn, "with no active_choice the missing-ui warning stays off")
 end
 
 function TestWaitsChoiceUiSync:test_reports_active_with_an_active_choice_but_no_pending()
   -- kills L18 second ~=/==: a non-nil active_choice makes it active.
   local active = choice_ui_sync.resolve_missing_ui_warning({}, {}, {}, nil, { id = 1 }, false)
-  lu.assertEvalToTrue(active == true, "an active choice alone marks the frame active")
+  check.is_truthy(active == true, "an active choice alone marks the frame active")
 end
 
 function TestWaitsChoiceUiSync:test_suppresses_the_warning_when_the_ui_already_reports_the_choice_active()
@@ -50,14 +50,14 @@ function TestWaitsChoiceUiSync:test_suppresses_the_warning_when_the_ui_already_r
   -- must be off.
   local _, should_warn = choice_ui_sync.resolve_missing_ui_warning(
     {}, {}, {}, { id = 1 }, { id = 1 }, true)
-  lu.assertEvalToTrue(not should_warn, "an already-active ui suppresses the missing-ui warning")
+  check.is_truthy(not should_warn, "an already-active ui suppresses the missing-ui warning")
 end
 
 function TestWaitsChoiceUiSync:test_warns_when_a_pending_choice_is_active_but_the_ui_is_not()
   -- kills L23 not->removed: the warning must fire when ui_choice_active is false.
   local _, should_warn = choice_ui_sync.resolve_missing_ui_warning(
     {}, {}, {}, { id = 1 }, { id = 1 }, false)
-  lu.assertEvalToTrue(should_warn == true, "an active choice without ui coverage warns")
+  check.is_truthy(should_warn == true, "an active choice without ui coverage warns")
 end
 
 function TestWaitsChoiceUiSync:test_resolve_returns_the_resolved_gate_as_the_third_value()
@@ -107,7 +107,7 @@ function TestWaitsChoiceUiSync:test_probe_warns_with_the_full_gate_fields_when_t
       resolve_choice_ui_state = function() return gate end,
     }, { get_pending_choice = function() return choice end })
   end)
-  lu.assertEvalToTrue(captured ~= nil, "a missing ui warns")
+  check.is_truthy(captured ~= nil, "a missing ui warns")
   _assert_eq(captured[1], "warn", "the log level is warn")
   _assert_eq(captured[2], "choice_runtime_without_ui_6", "the log_once key carries the choice id")
   _assert_eq(captured[3], "[Eggy]", "the log prefix is [Eggy]")
@@ -154,7 +154,7 @@ function TestWaitsChoiceUiSync:test_warn_falls_back_to_the_choice_route_key_with
       { id = 2, kind = "k", owner_role_id = 3, route_key = "choice_route" },
       true, nil)
   end)
-  lu.assertEvalToTrue(captured ~= nil, "a warning is logged")
+  check.is_truthy(captured ~= nil, "a warning is logged")
   _assert_eq(captured[8], "route_key=choice_route", "no gate -> the choice route key is logged")
   _assert_eq(captured[10], "served_owner=nil", "no gate -> gate fields log as nil")
 end

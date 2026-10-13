@@ -1,10 +1,10 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 
 do
 local validator = require("src.turn.actions.validator")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_game_with_player(role_id, current_index)
@@ -293,7 +293,7 @@ end
 function TestValidatorNamedSurface:test_resolve_gate_state_without_ports()
   local state = { game = { turn = { phase = "land" } } }
   local gate = validator.resolve_gate_state(state, nil)
-  lu.assertEvalToTrue(type(gate) == "table", "should return gate table")
+  check.is_truthy(type(gate) == "table", "should return gate table")
   _assert_eq(gate.phase, "land", "phase should be from game.turn")
   _assert_eq(gate.input_blocked, false, "input_blocked defaults to false")
   _assert_eq(gate.choice_active, false, "choice_active defaults to false")
@@ -330,7 +330,7 @@ do
 local validator = require("src.turn.actions.validator")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local _config_reset = require("test.support.config_reset")

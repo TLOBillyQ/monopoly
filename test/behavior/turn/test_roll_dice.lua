@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local roll = require("src.turn.phases.roll")
 local dice_multiplier = require("src.turn.phases.dice_multiplier")
 local status_ops = require("src.player.actions.status")
@@ -8,10 +8,10 @@ TestRollDice = {}
 local function _test_apply_roll_total_uses_pending_multiplier()
   local game = { player_pending_dice_multiplier = status_ops.player_pending_dice_multiplier }
   local boosted = { id = 1, status = { pending_dice_multiplier = 4 } }
-  lu.assertEvalToTrue(dice_multiplier.apply_roll_total(game, 3, boosted) == 12,
+  check.is_truthy(dice_multiplier.apply_roll_total(game, 3, boosted) == 12,
     "apply_roll_total should multiply raw total by the pending multiplier")
   local plain = { id = 2, status = {} }
-  lu.assertEvalToTrue(dice_multiplier.apply_roll_total(game, 5, plain) == 5,
+  check.is_truthy(dice_multiplier.apply_roll_total(game, 5, plain) == 5,
     "apply_roll_total should pass through raw total without a multiplier")
 end
 
@@ -32,7 +32,7 @@ local _apply_dice_multiplier_tests = {
     local original_move_followup = package.loaded["src.turn.phases.move_followup"]
     package.loaded["src.rules.movement"] = {
       move = function(_, _, total)
-        lu.assertEvalToTrue(total == 12, "total should be multiplied: expected 12, got " .. tostring(total))
+        check.is_truthy(total == 12, "total should be multiplied: expected 12, got " .. tostring(total))
         return { visited = {}, steps = {} }
       end
     }
@@ -46,11 +46,11 @@ local _apply_dice_multiplier_tests = {
       total = 3,
       raw_total = 3,
     })
-    lu.assertEvalToTrue(game:player_pending_dice_multiplier(player) == 1, "should reset multiplier to 1")
+    check.is_truthy(game:player_pending_dice_multiplier(player) == 1, "should reset multiplier to 1")
     package.loaded["src.rules.movement"] = original_movement
     package.loaded["src.turn.phases.move_followup"] = original_move_followup
     package.loaded["src.turn.phases.move"] = nil
-    lu.assertEvalToTrue(result == "test_result", "should complete move phase")
+    check.is_truthy(result == "test_result", "should complete move phase")
   end,
   function()
     local player = { id = 1, position = 1, status = { pending_dice_multiplier = 3 } }
@@ -69,7 +69,7 @@ local _apply_dice_multiplier_tests = {
     local original_move_followup = package.loaded["src.turn.phases.move_followup"]
     package.loaded["src.rules.movement"] = {
       move = function(game, p, total)
-        lu.assertEvalToTrue(total == 6, "total should not be multiplied when raw_total is nil")
+        check.is_truthy(total == 6, "total should not be multiplied when raw_total is nil")
         return { visited = {}, steps = {} }
       end
     }
@@ -86,27 +86,27 @@ local _apply_dice_multiplier_tests = {
     package.loaded["src.rules.movement"] = original_movement
     package.loaded["src.turn.phases.move_followup"] = original_move_followup
     package.loaded["src.turn.phases.move"] = nil
-    lu.assertEvalToTrue(result == "test_result", "should skip multiplier when raw_total is nil")
+    check.is_truthy(result == "test_result", "should skip multiplier when raw_total is nil")
   end,
 }
 
 local _roll_dice_extended_tests = {
   function()
     local results, total = roll._roll_dice(0, nil, { next_int = function() return 3 end })
-    lu.assertEvalToTrue(#results == 0, "should return empty results for zero dice")
-    lu.assertEvalToTrue(total == 0, "total should be 0 for zero dice")
+    check.is_truthy(#results == 0, "should return empty results for zero dice")
+    check.is_truthy(total == 0, "total should be 0 for zero dice")
   end,
   function()
     local results, total = roll._roll_dice(1, nil, { next_int = function(_, min, max) return min end })
-    lu.assertEvalToTrue(#results == 1, "should return 1 result")
-    lu.assertEvalToTrue(results[1] == 1, "should use min value from rng")
-    lu.assertEvalToTrue(total == 1, "total should be min value")
+    check.is_truthy(#results == 1, "should return 1 result")
+    check.is_truthy(results[1] == 1, "should use min value from rng")
+    check.is_truthy(total == 1, "total should be min value")
   end,
   function()
     local results, total = roll._roll_dice(2, { 1, 2, 3, 4 }, { next_int = function() return 6 end })
-    lu.assertEvalToTrue(#results == 2, "should return only 2 results")
-    lu.assertEvalToTrue(results[1] == 1 and results[2] == 2, "should use first 2 override values")
-    lu.assertEvalToTrue(total == 3, "total should be sum of first 2 values")
+    check.is_truthy(#results == 2, "should return only 2 results")
+    check.is_truthy(results[1] == 1 and results[2] == 2, "should use first 2 override values")
+    check.is_truthy(total == 3, "total should be sum of first 2 values")
   end,
 }
 
@@ -141,7 +141,7 @@ function TestRollDice:test_roll_dice_screen_tolerates_a_nil_anim()
 
   dice_anim.play_roll_dice_screen(nil, 0, 0, opts)
 
-  lu.assertEvalToTrue(true, "roll dice screen should tolerate a nil anim")
+  check.is_truthy(true, "roll dice screen should tolerate a nil anim")
 end
 
 function TestRollDice:test_apply_move_total_applies_multiplier_updates_last_turn_and_publishes()
@@ -155,8 +155,8 @@ function TestRollDice:test_apply_move_total_applies_multiplier_updates_last_turn
 
   local total = dice_multiplier.apply_move_total(game, player, 3, 3)
 
-  lu.assertEvalToTrue(total == 12, "multiplied total should be applied")
-  lu.assertEvalToTrue(game.last_turn.total == 12, "last_turn should record the multiplied total")
+  check.is_truthy(total == 12, "multiplied total should be applied")
+  check.is_truthy(game.last_turn.total == 12, "last_turn should record the multiplied total")
 end
 
 function TestRollDice:test_apply_dice_multiplier_applies_and_resets()
@@ -227,21 +227,21 @@ function TestRollDice:test_play_roll_dice_resolves_face_from_anim_data()
 
   -- anim.total = 6：边界值，验证 <=6 判定（杀死 replace <= with <）
   dice_anim.play_roll_dice_screen({ total = 6 }, 0, 0, make_opts())
-  lu.assertEvalToTrue(face_nodes[6].visible, "face 6 should be visible for total=6")
-  lu.assertEvalToTrue(not face_nodes[5].visible, "face 5 should not be visible for total=6")
+  check.is_truthy(face_nodes[6].visible, "face 6 should be visible for total=6")
+  check.is_truthy(not face_nodes[5].visible, "face 5 should not be visible for total=6")
 
   -- anim.total = 3：验证 _resolve_face_value 正常解析（杀死 to_integer→nil）
   dice_anim.play_roll_dice_screen({ total = 3 }, 0, 0, make_opts())
-  lu.assertEvalToTrue(face_nodes[3].visible, "face 3 should be visible for total=3")
-  lu.assertEvalToTrue(not face_nodes[1].visible, "face 1 should not be visible for total=3")
+  check.is_truthy(face_nodes[3].visible, "face 3 should be visible for total=3")
+  check.is_truthy(not face_nodes[1].visible, "face 1 should not be visible for total=3")
 
   -- anim.total = 5 无 rolls：验证回退到 anim.total 路径（杀死 _resolve_face_value(anim.total)→nil）
   dice_anim.play_roll_dice_screen({ total = 5 }, 0, 0, make_opts())
-  lu.assertEvalToTrue(face_nodes[5].visible, "face 5 should be visible for total=5 (fallback path)")
+  check.is_truthy(face_nodes[5].visible, "face 5 should be visible for total=5 (fallback path)")
 
   -- anim.rolls = {3}：验证优先使用 rolls[1]（杀死 _resolve_roll_face(anim)→nil）
   dice_anim.play_roll_dice_screen({ rolls = { 3 } }, 0, 0, make_opts())
-  lu.assertEvalToTrue(face_nodes[3].visible, "face 3 should be visible when rolls={3}")
+  check.is_truthy(face_nodes[3].visible, "face 3 should be visible when rolls={3}")
 end
 
 function TestRollDice:test_play_roll_dice_rejects_invalid_face_zero()
@@ -292,7 +292,7 @@ function TestRollDice:test_play_roll_dice_rejects_invalid_face_zero()
   -- _resolve_roll_display_face: 0 or 1 = 0（Lua 中 0 是 truthy，or 短路返回 0）
   -- _show_roll_result 设 face=0 → _set_face_nodes_visibility 中 face==index 全为 false
   -- 原代码 face 1 可见，变异存活则所有 face 不可见
-  lu.assertEvalToTrue(face_nodes[1].visible == true,
+  check.is_truthy(face_nodes[1].visible == true,
     "face 1 should be visible as default when total=0 is rejected (kill replace 1 with 0)")
 end
 
@@ -337,17 +337,17 @@ function TestRollDice:test_play_roll_dice_timing_defaults_to_zero()
 
   -- duration=nil → 默认值 0（杀第一个 replace 0 with 1）
   dice_anim.play_roll_dice_screen(nil, nil, 0, make_opts())
-  lu.assertEvalToTrue(#schedule_calls >= 1, "should have at least one schedule call")
-  lu.assertEvalToTrue(schedule_calls[1] == 0,
+  check.is_truthy(#schedule_calls >= 1, "should have at least one schedule call")
+  check.is_truthy(schedule_calls[1] == 0,
     "step delay should default to 0 when duration is nil, got " .. tostring(schedule_calls[1]))
 
   -- hold_seconds=nil → cleanup_delay 仍为 0（杀第二个 replace 0 with 1）
   dice_anim.play_roll_dice_screen(nil, 0, nil, make_opts())
-  lu.assertEvalToTrue(#schedule_calls >= 2, "should have at least two schedule calls when cleanup present")
+  check.is_truthy(#schedule_calls >= 2, "should have at least two schedule calls when cleanup present")
   -- cleanup_delay = duration + hold_seconds，hold_seconds=nil 默认 0，cleanup delay 应为 0
   -- _schedule_teardown 调用 run_step(cleanup_delay or 0, ...) 再 scheduler(delay or 0, ...)
   -- 第二帧 schedule 的 delay 就是 cleanup 调度的 delay
-  lu.assertEvalToTrue(schedule_calls[2] == 0,
+  check.is_truthy(schedule_calls[2] == 0,
     "cleanup delay should default to 0 when hold_seconds is nil, got " .. tostring(schedule_calls[2]))
 end
 

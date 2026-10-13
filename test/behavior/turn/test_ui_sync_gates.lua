@@ -1,4 +1,4 @@
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local loop_ui_sync_defaults = require("src.turn.output.ui_sync_defaults")
 
 -- turn 层不再解析 state.ui.* 门控键名：base 端口返回全关的惰性 gate，
@@ -20,14 +20,14 @@ function TestUiSyncGates:test_base_resolve_ui_gate_is_inert()
     }
   }
   local result = ports.resolve_ui_gate(state)
-  lu.assertEvalToTrue(type(result) == "table", "should return a table")
-  lu.assertEvalToTrue(result.input_blocked == false, "inert gate should keep input_blocked false")
-  lu.assertEvalToTrue(result.choice_active == false, "inert gate should keep choice_active false")
-  lu.assertEvalToTrue(result.market_active == false, "inert gate should keep market_active false")
-  lu.assertEvalToTrue(result.popup_active == false, "inert gate should keep popup_active false")
-  lu.assertEvalToTrue(result.popup_seq == nil, "inert gate should keep popup_seq nil")
-  lu.assertEvalToTrue(result.popup_owner_index == nil, "inert gate should keep popup_owner_index nil")
-  lu.assertEvalToTrue(result.popup_auto_close_seconds == nil, "inert gate should keep popup_auto_close_seconds nil")
+  check.is_truthy(type(result) == "table", "should return a table")
+  check.is_truthy(result.input_blocked == false, "inert gate should keep input_blocked false")
+  check.is_truthy(result.choice_active == false, "inert gate should keep choice_active false")
+  check.is_truthy(result.market_active == false, "inert gate should keep market_active false")
+  check.is_truthy(result.popup_active == false, "inert gate should keep popup_active false")
+  check.is_truthy(result.popup_seq == nil, "inert gate should keep popup_seq nil")
+  check.is_truthy(result.popup_owner_index == nil, "inert gate should keep popup_owner_index nil")
+  check.is_truthy(result.popup_auto_close_seconds == nil, "inert gate should keep popup_auto_close_seconds nil")
 end
 
 function TestUiSyncGates:test_fill_derives_queries_from_resolve_ui_gate()
@@ -46,10 +46,10 @@ function TestUiSyncGates:test_fill_derives_queries_from_resolve_ui_gate()
     resolve_ui_gate = function() return gate end,
   }
   loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-  lu.assertEvalToTrue(ports.is_input_blocked({}) == true, "is_input_blocked should come from resolve_ui_gate")
-  lu.assertEvalToTrue(ports.is_choice_active({}) == false, "is_choice_active should come from resolve_ui_gate")
-  lu.assertEvalToTrue(ports.is_popup_active({}) == true, "is_popup_active should come from resolve_ui_gate")
-  lu.assertEvalToTrue(ports.get_popup_owner_index({}) == 2, "get_popup_owner_index should come from resolve_ui_gate")
+  check.is_truthy(ports.is_input_blocked({}) == true, "is_input_blocked should come from resolve_ui_gate")
+  check.is_truthy(ports.is_choice_active({}) == false, "is_choice_active should come from resolve_ui_gate")
+  check.is_truthy(ports.is_popup_active({}) == true, "is_popup_active should come from resolve_ui_gate")
+  check.is_truthy(ports.get_popup_owner_index({}) == 2, "get_popup_owner_index should come from resolve_ui_gate")
 end
 
 function TestUiSyncGates:test_fill_rejects_gate_query_override_without_resolve_ui_gate()
@@ -67,8 +67,8 @@ function TestUiSyncGates:test_fill_rejects_gate_query_override_without_resolve_u
     local ok, err = pcall(function()
       loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
     end)
-    lu.assertEvalToTrue(ok == false, key .. " override without resolve_ui_gate should error")
-    lu.assertEvalToTrue(tostring(err):find("lacks resolve_ui_gate", 1, true) ~= nil,
+    check.is_truthy(ok == false, key .. " override without resolve_ui_gate should error")
+    check.is_truthy(tostring(err):find("lacks resolve_ui_gate", 1, true) ~= nil,
       key .. " error should explain missing resolve_ui_gate")
   end
 end
@@ -82,9 +82,9 @@ function TestUiSyncGates:test_fill_accepts_gate_query_override_with_resolve_ui_g
     set_input_blocked = function() return true end,
   }
   loop_ui_sync_defaults.fill_ui_sync_defaults(ports, base)
-  lu.assertEvalToTrue(ports.is_input_blocked({}) == true, "explicit is_input_blocked override should be kept")
-  lu.assertEvalToTrue(ports.set_input_blocked({}, true) == true, "explicit set_input_blocked override should be kept")
-  lu.assertEvalToTrue(ports.is_popup_active({}) == false, "derived query should read from provided resolve_ui_gate")
+  check.is_truthy(ports.is_input_blocked({}) == true, "explicit is_input_blocked override should be kept")
+  check.is_truthy(ports.set_input_blocked({}, true) == true, "explicit set_input_blocked override should be kept")
+  check.is_truthy(ports.is_popup_active({}) == false, "derived query should read from provided resolve_ui_gate")
 end
 
 

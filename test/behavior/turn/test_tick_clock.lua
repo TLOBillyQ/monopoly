@@ -6,7 +6,7 @@ if not math.tofixed then
   math.tofixed = function(v) return v end
 end
 
-local lu = require("luaunit")
+local check = assert(require("test.support.luassert_loader").load())
 local tick_clock = require("src.turn.loop.tick_clock")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
@@ -14,7 +14,7 @@ local _config_reset = require("test.support.config_reset")
 local _saved_fps = runtime_constants.fps
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local function _make_state(now_fn, diff_fn)
@@ -40,8 +40,8 @@ end
 
 function TestTickClock:test_resolve_fallback_tick_seconds_divides_by_fps()
   local result = tick_clock.resolve_fallback_tick_seconds(60)
-  lu.assertEvalToTrue(type(result) == "number", "resolve_fallback_tick_seconds should return a number")
-  lu.assertEvalToTrue(result > 0, "resolve_fallback_tick_seconds should return positive value")
+  check.is_truthy(type(result) == "number", "resolve_fallback_tick_seconds should return a number")
+  check.is_truthy(result > 0, "resolve_fallback_tick_seconds should return positive value")
 end
 
 function TestTickClock:test_resolve_fallback_tick_seconds_uses_30fps_for_invalid_fps()
@@ -185,7 +185,7 @@ function TestTickClock:test_resolve_tick_seconds_normal_diff_uses_wall_diff()
   )
   tick_clock.resolve_tick_seconds(state, 0.033)
   local dt, reason = tick_clock.resolve_tick_seconds(state, 0.033)
-  lu.assertEvalToTrue(dt ~= nil and dt > 0, "normal diff should return positive dt")
+  check.is_truthy(dt ~= nil and dt > 0, "normal diff should return positive dt")
   _assert_eq(reason, "wall:diff", "normal diff reason should be wall:diff")
 end
 
@@ -200,7 +200,7 @@ function TestTickClock:test_resolve_tick_seconds_reversed_diff_uses_wall_diff_re
   )
   tick_clock.resolve_tick_seconds(state, 0.033)
   local dt, reason = tick_clock.resolve_tick_seconds(state, 0.033)
-  lu.assertEvalToTrue(dt ~= nil and dt > 0, "reversed diff should return positive dt via reverse")
+  check.is_truthy(dt ~= nil and dt > 0, "reversed diff should return positive dt via reverse")
   _assert_eq(reason, "wall:diff_reversed", "reversed diff reason should be wall:diff_reversed")
 end
 
@@ -215,7 +215,7 @@ function TestTickClock:test_resolve_tick_seconds_fallback_to_raw_diff_when_wall_
   )
   tick_clock.resolve_tick_seconds(state, 0.033)
   local dt, reason = tick_clock.resolve_tick_seconds(state, 0.033)
-  lu.assertEvalToTrue(dt ~= nil and dt > 0, "raw diff fallback should return positive dt")
+  check.is_truthy(dt ~= nil and dt > 0, "raw diff fallback should return positive dt")
   _assert_eq(reason, "wall:raw_diff", "raw diff reason should be wall:raw_diff")
 end
 
@@ -230,7 +230,7 @@ function TestTickClock:test_resolve_tick_seconds_raw_diff_reversed_when_both_neg
   )
   tick_clock.resolve_tick_seconds(state, 0.033)
   local dt, reason = tick_clock.resolve_tick_seconds(state, 0.033)
-  lu.assertEvalToTrue(dt ~= nil and dt > 0, "raw reversed diff should return positive dt")
+  check.is_truthy(dt ~= nil and dt > 0, "raw reversed diff should return positive dt")
   _assert_eq(reason, "wall:raw_diff_reversed", "raw reversed reason should be wall:raw_diff_reversed")
 end
 

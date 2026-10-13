@@ -1,5 +1,4 @@
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+local check = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local _assert_eq = support.assert_eq
 local move_followup = require("src.turn.phases.move_followup")
@@ -284,7 +283,7 @@ function TestMoveFollowupMarket:test_missing_player_id_lookup_fails_before_landi
   end)
 
   _assert_eq(ok, false, "missing player_id should fail")
-  lu.assertEvalToTrue(tostring(err):find("missing move followup player", 1, true), tostring(err))
+  check.is_truthy(tostring(err):find("missing move followup player", 1, true), tostring(err))
 end
 
 function TestMoveFollowupMarket:test_missing_turn_table_keeps_clear_pending_as_noop()
@@ -295,12 +294,12 @@ function TestMoveFollowupMarket:test_missing_turn_table_keeps_clear_pending_as_n
   end)
 
   _assert_eq(ok, false, "unknown mode should still fail")
-  lu.assertEvalToTrue(tostring(err):find("unknown move followup mode", 1, true), tostring(err))
+  check.is_truthy(tostring(err):find("unknown move followup mode", 1, true), tostring(err))
 end
 
 function TestMoveFollowupMarket:test_resolve_landing_without_player_id_raises_missing_move_followup_player_id()
   -- kills _resolve_player's "missing move followup player_id" -> nil.
-  luax.has_error(function()
+  check.has_error(function()
     move_followup.run({ game = {} }, { mode = "resolve_landing" })
   end, "missing move followup player_id")
 end
@@ -321,7 +320,7 @@ function TestMoveFollowupMarket:test_apply_location_effects_publishes_each_log_e
     })
   end)
   restore()
-  lu.assertEvalToTrue(ok, tostring(err))
+  check.is_truthy(ok, tostring(err))
   _assert_eq(#published, 2, "each log entry publishes exactly once")
   _assert_eq(published[1].tip, true, "followup log entries publish as tips")
   _assert_eq(published[2].tip, true, "every followup log entry is a tip")

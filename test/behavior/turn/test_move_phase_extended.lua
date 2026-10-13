@@ -1,8 +1,7 @@
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+local check = assert(require("test.support.luassert_loader").load())
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end
 
 local status_ops = require("src.player.actions.status")
@@ -67,9 +66,9 @@ function TestMovePhaseExtended:test_returns_wait_move_anim_when_anim_gate_port_e
   local state_name, args = _phase_move(turn_mgr, { player = player, raw_total = 4, total = 4 })
   restore_movement()
   _assert_eq(state_name, "wait_move_anim", "should return wait_move_anim state")
-  lu.assertIsTable(args, "should return args table")
+  check.is_table(args, "should return args table")
   _assert_eq(args.next_state, "move_followup", "next_state should be move_followup")
-  lu.assertNotNil(args.next_args, "next_args should be present")
+  check.is_not_nil(args.next_args, "next_args should be present")
   _assert_eq(args.next_args.mode, "resume_turn_move", "mode should be resume_turn_move")
   _assert_eq(args.next_args.move_result, move_result, "move_result should be forwarded")
   _assert_eq(game.turn.move_anim.player_id, 1, "move_anim should record player_id")
@@ -304,13 +303,13 @@ function TestMovePhaseExtended:test_missing_anim_gate_port_asserts()
   local ok, err = pcall(_phase_move, turn_mgr, { player = player, raw_total = 1, total = 1 })
   restore_movement()
   _assert_eq(ok, false, "missing anim_gate_port should error")
-  lu.assertEvalToTrue(tostring(err):find("anim_gate_port") ~= nil, "error should mention anim_gate_port")
+  check.is_truthy(tostring(err):find("anim_gate_port") ~= nil, "error should mention anim_gate_port")
 end
 
 function TestMovePhaseExtended:test_asserts_turn_mgr_game_with_the_missing_game_message()
   -- kills _phase_move's "missing game" -> nil.
   local _phase_move = require("src.turn.phases.move")
-  luax.has_error(function()
+  check.has_error(function()
     _phase_move({}, { player = {}, raw_total = 3 })
   end, "missing game")
 end
