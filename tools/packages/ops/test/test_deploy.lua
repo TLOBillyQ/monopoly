@@ -151,14 +151,10 @@ function TestDeployPlatformDetection:test_platform_name_errors_on_other_platform
   _with_stubbed("test_is_windows_host", function()
     return false
   end, function()
-    _with_stubbed("test_is_wsl_host", function()
-      return false
+    _with_stubbed("exit_with_error", function(message)
+      captured = message
     end, function()
-      _with_stubbed("exit_with_error", function(message)
-        captured = message
-      end, function()
-        deploy.resolve_platform_name()
-      end)
+      deploy.resolve_platform_name()
     end)
   end)
   lu.assertEvalToTrue(tostring(captured):find("Windows only", 1, true),
@@ -294,15 +290,7 @@ function TestDeployCopy:test_copy_directory_tree_fallback_mirrors_including_hidd
   _with_sandbox(function(root)
     local proj = _make_project(root)
     local target = root .. "/target/src"
-    _with_stubbed("test_is_windows_host", function()
-      return false
-    end, function()
-      _with_stubbed("test_is_wsl_host", function()
-        return false
-      end, function()
-        deploy.copy_directory_tree(proj .. "/src", target)
-      end)
-    end)
+    deploy.copy_directory_tree(proj .. "/src", target)
     for _, relative in ipairs({
       "a.lua", "sub/b.lua", ".hidden.lua", ".hiddendir/x.lua", "notes.txt", ".keep",
     }) do
@@ -314,16 +302,8 @@ end
 
 function TestDeployCopy:test_copy_directory_tree_fallback_errors_on_missing_source()
   _with_sandbox(function(root)
-    _with_stubbed("test_is_windows_host", function()
-      return false
-    end, function()
-      _with_stubbed("test_is_wsl_host", function()
-        return false
-      end, function()
-        lu.assertError(function()
-          deploy.copy_directory_tree(root .. "/missing", root .. "/target")
-        end)
-      end)
+    lu.assertError(function()
+      deploy.copy_directory_tree(root .. "/missing", root .. "/target")
     end)
   end)
 end
@@ -389,7 +369,7 @@ function TestDeployCliSurface:test_cli_subcommand_help_shows_usage()
 end
 
 function TestDeployCliSurface:test_cli_subcommand_forwards_extra_args_to_script()
-  local result = _run_cli_deploy({ "extra1" })
+  local result = _run_cli_deploy({ "额外 参数" })
   lu.assertFalse(result.ok)
   lu.assertEvalToTrue(result.output:find("ERROR:", 1, true),
     "extra args via cli.lua must reach deploy.lua and fail with ERROR: " .. result.output)

@@ -15,7 +15,8 @@ local DEPLOY_ENTRY = "tools/packages/ops/deploy.lua"
 
 local function _shell_quote(value)
   local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
+  assert(not text:find('["\r\n%%!]'), "Unsupported command argument")
+  return '"' .. text .. '"'
 end
 
 function M.usage()
@@ -24,7 +25,7 @@ function M.usage()
     "",
     "把 src/ + main.lua + Data/ 按原样部署到本地 Eggy 宿主目录(LuaSource_大富翁)。",
     "零参数、零开关;任何多余参数 → ERROR + exit 1(deploy.lua 自身 CLI 面不变)。",
-    "目标平台仅原生 Windows 或 WSL(经 cmd.exe + wslpath 互操作,#128 / #127 平台约束)。",
+    "目标平台仅原生 Windows(Lua 5.4 + cmd;ADR 0066)。",
     "行为真源见 tools/packages/ops/deploy.lua。",
     "",
   }, "\n") .. "\n"

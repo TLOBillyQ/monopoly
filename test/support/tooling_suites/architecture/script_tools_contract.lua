@@ -348,10 +348,7 @@ local function _test_cli_help_text_is_bilingual()
   end
 end
 
--- 部署目标只有 Windows 侧 Eggy 宿主:原生 win 或 WSL(经 cmd.exe + wslpath 互操作,
--- #128 / #127 平台约束)。mac / native Linux 落点已删除,脚本在这些平台直接报错。
--- WSL 落点无法用 fake_home 沙箱化(读的是 Windows 侧 %USERPROFILE%),
--- 故部署行为由文本断言 + 非目标平台的报错断言钉住。
+-- 原生 Windows 部署契约:文本检查与安全帮助入口;复制由 ops 隔离目录测试覆盖。
 local function _test_deploy_lua_matches_simplified_cli()
   local script_text = assert(fs_lib.read_file(path_lib.join_path(project_root, "tools/packages/ops/deploy.lua")))
 
@@ -399,22 +396,10 @@ local function _test_deploy_lua_matches_simplified_cli()
     "deploy.lua should keep the windows default deploy path semantics"
   )
 
-  -- WSL 分支(#128 / #127 平台约束):落点解析到 Windows 用户 Desktop/dev/eggy,不是 WSL 内部 $HOME。
-  _assert_contains(
-    script_text,
-    "function M.test_is_wsl_host",
-    "deploy.lua should detect WSL separately from native Linux"
-  )
-  _assert_contains(
-    script_text,
-    "function M.resolve_wsl_windows_home",
-    "deploy.lua should resolve the Windows host home when deploying from WSL"
-  )
-  _assert_contains(
-    script_text,
-    '_join_path(_join_path(_join_path(_join_path(win_home, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())',
-    "deploy.lua WSL branch should target the Windows-side Desktop/dev/eggy path"
-  )
+  -- #95:删除互操作入口及其运行依赖。
+  for _, retired in ipairs({ "test_is_wsl_host", "resolve_wsl_windows_home", "convert_to_windows_path", "wslpath", "/dev/null", "mkdir -p" }) do
+    _assert_not_contains(script_text, retired, "deploy should retire " .. retired)
+  end
 
   -- 非目标平台落点与检测已删除。
   _assert_not_contains(
