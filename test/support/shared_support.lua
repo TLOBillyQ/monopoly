@@ -68,7 +68,7 @@ local function assert_tile_id_sequence(entries, expected_ids, msg)
 end
 
 local function ensure_ui_runtime_for_test(state)
-  assert(type(state) == "table", "missing state")
+  luassert.truthy(type(state) == "table", "missing state")
   local ui_runtime = state.ui_runtime
   if type(ui_runtime) ~= "table" then
     ui_runtime = {}
@@ -384,7 +384,7 @@ local function next_choice_id(game)
 end
 
 local function open_choice(game, payload)
-  assert(game and game.turn, "Choice.open requires game.turn")
+  luassert.truthy(game and game.turn, "Choice.open requires game.turn")
   payload = payload or {}
   local id = next_choice_id(game)
   local entry = {
