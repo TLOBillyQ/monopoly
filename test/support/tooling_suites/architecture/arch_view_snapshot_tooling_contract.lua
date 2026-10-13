@@ -127,8 +127,8 @@ local function _bad_architecture()
   return _cached_bad
 end
 
-local function _find_violation(check, predicate)
-  for _, violation in ipairs((check and check.violations) or {}) do
+local function _find_violation(gate_check, predicate)
+  for _, violation in ipairs((gate_check and gate_check.violations) or {}) do
     if predicate(violation) then
       return violation
     end
