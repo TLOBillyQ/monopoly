@@ -25,6 +25,7 @@ local _MODULES = {
   "share_task",
   "action_log_toggle",
   "items",
+  "item_effect_groups",
   "chance",
   "deities",
   "item_atlas",

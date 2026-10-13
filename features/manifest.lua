@@ -12,6 +12,7 @@ local entries = {
   { feature = "features/game/economy.feature",                     generated = "test_economy_acceptance.lua" },
   { feature = "features/game/endgame.feature",                     generated = "test_endgame_acceptance.lua" },
   { feature = "features/game/item_slot_highlight_replay.feature", generated = "test_item_slot_highlight_replay_acceptance.lua" },
+  { feature = "features/game/item_effect_groups.feature",          generated = "test_item_effect_groups_acceptance.lua" },
   { feature = "features/game/items.feature",                       generated = "test_items_acceptance.lua" },
   { feature = "features/game/main_turn_buttons.feature",           generated = "test_main_turn_buttons_acceptance.lua" },
   { feature = "features/game/market.feature",                      generated = "test_market_acceptance.lua" },

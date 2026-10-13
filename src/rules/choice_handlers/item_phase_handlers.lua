@@ -1,4 +1,3 @@
-local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
 local intent_output_port = require("src.rules.ports.intent_output")
 local completions = require("src.rules.choice_handlers.item_completions")
@@ -60,9 +59,6 @@ function phase_handlers.build(helpers)
       return _handle_passive_waiting_result(game, result, meta, player, item_id)
     end
 
-    if not (type(result) == "table" and result.ok == false) then
-      availability.mark_effect_group_used(game, item_id)
-    end
     return settle_choice_window(game, item_phase.resolve_completion(game, player, meta, result))
   end
 

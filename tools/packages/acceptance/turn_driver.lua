@@ -26,7 +26,61 @@ local intent_dispatcher = require("src.turn.output.intent_dispatcher")
 local target_select_timer = require("src.turn.waits.target_select_timer")
 local pending_confirmation = require("src.state.pending_confirmation")
 
+local item_phase = require("src.rules.items.phase")
+local player_control = require("src.player.control")
+
 local turn_driver = {}
+
+-- 初始化控制方式只经控制模块命令；补位身份由 new_game 的 ai fixture 提供。
+function turn_driver.set_item_control_mode(_, player, mode)
+  if mode == "真人" or mode == "补位电脑" then return end
+  if mode == "手动托管" then
+    assert(player_control.toggle_manual_delegation(player).enabled)
+  elseif mode == "AFK托管" then
+    assert(player_control.enable_afk_delegation(player).enabled)
+  else
+    error("unknown item control mode: " .. tostring(mode))
+  end
+end
+
+-- 驱动自动循环或真人窗口，保留当次结算结果供步骤观察，不推进掷骰。
+function turn_driver.run_item_phase(ctx, player, phase)
+  return item_phase.run({ game = ctx.game }, phase, {
+    player = player, next_state = "roll", next_args = { player = player },
+  })
+end
+
+function turn_driver.cancel_pending_choice(ctx)
+  local choice = assert(ctx.game.turn.pending_choice, "no pending choice to cancel")
+  return choice_resolver.resolve(ctx.game, choice, {
+    type = "choice_cancel", choice_id = choice.id, actor_role_id = choice.owner_role_id,
+  })
+end
+
+-- 已完成用卡的局面从真实 end_turn 收尾并轮转一圈；停在目标席位
+-- 下一回合的行动之前，避免自动 start 先把待断言的剩余卡用掉。
+function turn_driver.rotate_to_next_own_turn(ctx, player)
+  local phases = require("src.turn.phases.registry").build_default_phases()
+  local scheduler = require("src.turn.scheduler")
+  local completed = 0
+  local runtime = scheduler:new(ctx.game, {
+    start = function(turn_mgr)
+      if completed == #ctx.game.players then return nil end
+      completed = completed + 1
+      return phases.end_turn(turn_mgr, { player = ctx.game:current_player() })
+    end,
+  })
+  runtime:run_turn()
+  for _ = 1, #ctx.game.players do
+    turn_timer_policy.update_inter_turn_wait_timer(ctx.game, ctx.game.turn,
+      ctx.game.turn.inter_turn_wait_seconds + 1.0, function() runtime:run_turn() end)
+  end
+  assert(ctx.game:current_player() == player, "rotation did not return to player")
+end
+
+function turn_driver.attempt_item_use(ctx, player, item_id, phase)
+  return item_use_flow.begin_item_use(ctx.game, player.id, item_id, { phase = phase })
+end
 
 local function _runtime(ctx)
   local rt = ctx.game.turn_runtime
@@ -75,8 +129,12 @@ function turn_driver.stay_turns(_, player)
   return player.status and player.status.stay_turns or 0
 end
 
-function turn_driver.pending_remote_dice(_, player)
-  return player.status and player.status.pending_remote_dice or nil
+function turn_driver.pending_remote_dice(ctx, player)
+  local values = ctx.game:peek_pending_remote_dice(player)
+  if values == nil then return nil end
+  local snapshot = {}
+  for index, value in ipairs(values) do snapshot[index] = value end
+  return snapshot
 end
 
 function turn_driver.dice_multiplier(_, player)

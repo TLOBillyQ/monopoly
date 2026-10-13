@@ -75,7 +75,7 @@ do
     _assert_eq(called.meta.phase, "post_action", "post_action phase meta is forwarded")
   end
 
-  function TestItemCompletionsClosure:test_marks_effect_group_used_for_passive_origin_and_delegates()
+  function TestItemCompletionsClosure:test_passive_followup_delegates_without_registering_an_unsettled_effect()
     local g = support.new_game()
     local p = g.players[1]
     local called = {}
@@ -91,8 +91,8 @@ do
       _assert_eq(res.stay, true, "delegate result is returned")
     end)
     _assert_eq(called.meta.item_id, item_ids.remote_dice, "item id meta is forwarded")
-    _assert_eq(g.turn.used_effect_groups[_effect_group(item_ids.remote_dice)], true,
-      "passive_origin item marks its effect group used")
+    _assert_eq(g.turn.used_effect_groups[_effect_group(item_ids.remote_dice)], nil,
+      "window completion alone must not register an unsettled effect")
   end
 
   function TestItemCompletionsClosure:test_does_not_mark_effect_group_when_passive_origin_is_absent()

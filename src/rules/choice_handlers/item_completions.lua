@@ -1,4 +1,3 @@
-local availability = require("src.rules.items.availability")
 local item_phase = require("src.rules.items.phase")
 local normalize = require("src.rules.choice_handlers.item_normalize")
 
@@ -32,9 +31,6 @@ function completions.build(helpers)
 
   local function _resolve_followup_completion(game, choice, player, result)
     local meta = choice.meta or {}
-    if meta.passive_origin and meta.item_id then
-      availability.mark_effect_group_used(game, meta.item_id)
-    end
     if normalize.is_repeatable_phase_meta(meta) then
       return _settle_choice_window(game, item_phase.resolve_completion(game, player, meta, result))
     end

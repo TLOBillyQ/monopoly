@@ -387,6 +387,11 @@ function driver.items_of(_, player)
 end
 
 -- 道具在指定阶段是否可 offer;返回 ok, deny_reason(availability 同形)。
+function driver.item_in_slot(_, player, slot)
+  local item = inventory.items(player)[slot]
+  return type(item) == "table" and item.id or nil
+end
+
 function driver.item_offer_allowed(ctx, player, item_id, phase)
   return item_availability.can_offer_in_phase(ctx.game, player, item_id, phase)
 end

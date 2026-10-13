@@ -4,6 +4,7 @@
 -- 不补动画）。外部 begin/resolve seam 保持冻结，
 -- 本模块只被 use_flow implementation 与自身测试穿过。
 local achievement_progress = require("src.rules.ports.achievement_progress")
+local availability = require("src.rules.items.availability")
 local action_anim_port = require("src.foundation.ports.action_anim")
 local flow_context = require("src.rules.items.use_flow_context")
 local inventory = require("src.rules.items.inventory")
@@ -144,6 +145,7 @@ local function _settle_applied(game, player, item_id, ledger, canonical, consume
   end
   _consume_after_success(player, item_id, ledger, consume_mode)
   _assert_applier_owned(item_id, ledger, consume_mode)
+  availability.mark_effect_group_used(game, item_id)
   local frozen = _frozen_base("applied", true, player, item_id, ledger, canonical)
   frozen.action_anim = _queue_fallback_anim(game, player, item_id, before_seq, canonical)
   frozen.after_action_anim = canonical.after_action_anim
