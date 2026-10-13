@@ -1,5 +1,7 @@
 -- 验证：道具目标选择超时后清除 item_phase_ask 的 pending confirmation，并清空 pending_choice
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local target_select_timer = require("src.turn.waits.target_select_timer")
 local pending_confirmation = require("src.state.pending_confirmation")
 local DeadlineService = require("src.turn.deadlines")
@@ -49,39 +51,39 @@ local function _build_game()
   return game, advanced
 end
 
-TestTargetSelectTimeoutRefundsPreconsume = {}
+describe("TestTargetSelectTimeoutRefundsPreconsume", function()
 
-function TestTargetSelectTimeoutRefundsPreconsume:test_registers_deadline_when_item_phase_ask_active_becomes_true()
+it("test_registers_deadline_when_item_phase_ask_active_becomes_true", function()
   local state = _build_state()
   local game = _build_game()
   target_select_timer.step(game, state, 0.1)
-  lu.assertTrue(DeadlineService.is_active(state, "target_select"))
-end
+  luassert.is_true(DeadlineService.is_active(state, "target_select"))
+end)
 
-function TestTargetSelectTimeoutRefundsPreconsume:test_ticking_past_timeout_clears_item_phase_ask_active_and_pending_choice()
+it("test_ticking_past_timeout_clears_item_phase_ask_active_and_pending_choice", function()
   local state = _build_state()
   local game, advanced = _build_game()
   state._game = game
 
   target_select_timer.step(game, state, 0.1)
-  lu.assertTrue(DeadlineService.is_active(state, "target_select"))
+  luassert.is_true(DeadlineService.is_active(state, "target_select"))
 
   -- 推进 16 秒（超过 target_select 15s）
   DeadlineService.tick(state, 16.0)
 
-  lu.assertFalse(pending_confirmation.is_active(state))
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertTrue(advanced.count >= 1)
-end
+  luassert.is_false(pending_confirmation.is_active(state))
+  luassert.is_nil(game.turn.pending_choice)
+  luassert.is_true(advanced.count >= 1)
+end)
 
-function TestTargetSelectTimeoutRefundsPreconsume:test_cancels_deadline_when_item_phase_ask_active_becomes_false()
+it("test_cancels_deadline_when_item_phase_ask_active_becomes_false", function()
   local state = _build_state()
   local game = _build_game()
   target_select_timer.step(game, state, 0.1)
   pending_confirmation.clear(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   target_select_timer.step(game, state, 0.1)
-  lu.assertFalse(DeadlineService.is_active(state, "target_select"))
-end
+  luassert.is_false(DeadlineService.is_active(state, "target_select"))
+end)
 
 
-return TestTargetSelectTimeoutRefundsPreconsume
+end)

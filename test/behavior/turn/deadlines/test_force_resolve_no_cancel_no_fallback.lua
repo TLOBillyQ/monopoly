@@ -1,5 +1,10 @@
 -- 验证：choice 无 allow_cancel + 无 auto_action + 无注册 fallback → force_skip 必然推进
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 local force_resolve = require("src.turn.deadlines")
 local pending_confirmation = require("src.state.pending_confirmation")
 local fallback_registry = require("src.rules.choice.fallback_registry")
@@ -48,13 +53,13 @@ local function _build_game()
   return game, advanced
 end
 
-TestForceResolveNoCancelNoFallback = {}
+describe("TestForceResolveNoCancelNoFallback", function()
 
-function TestForceResolveNoCancelNoFallback:setUp()
+before_each(function()
   fallback_registry.reset()
-end
+end)
 
-function TestForceResolveNoCancelNoFallback:test_force_skip_clears_pending_choice_and_sets_force_skip_flag()
+it("test_force_skip_clears_pending_choice_and_sets_force_skip_flag", function()
   local state = _build_state()
   local game = _build_game()
   local choice = { id = "c2", kind = "weird", options = {} }
@@ -62,11 +67,11 @@ function TestForceResolveNoCancelNoFallback:test_force_skip_clears_pending_choic
 
   force_resolve.force_skip(game, state, choice, "test")
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertTrue(state._choice_force_skip_pending == true)
-end
+  luassert.is_nil(game.turn.pending_choice)
+  luassert.is_true(state._choice_force_skip_pending == true)
+end)
 
-function TestForceResolveNoCancelNoFallback:test_force_skip_clears_ui_state_output_port_and_all_choice_deadlines()
+it("test_force_skip_clears_ui_state_output_port_and_all_choice_deadlines", function()
   local state = _build_state()
   local game, advanced = _build_game()
   local clear_calls = 0
@@ -76,7 +81,7 @@ function TestForceResolveNoCancelNoFallback:test_force_skip_clears_ui_state_outp
     output = {
       clear_pending_choice = function(state_arg)
         clear_calls = clear_calls + 1
-        lu.assertEquals(state_arg, state)
+        _assert_same(state_arg, state)
       end,
     },
   }
@@ -89,18 +94,18 @@ function TestForceResolveNoCancelNoFallback:test_force_skip_clears_ui_state_outp
 
   force_resolve.force_skip(game, state, choice, "test")
 
-  lu.assertEquals(clear_calls, 1)
-  lu.assertFalse(pending_confirmation.is_active(state))
-  lu.assertTrue(game.turn._choice_force_skip_pending == true)
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertFalse(force_resolve.is_active(state, "choice"))
-  lu.assertFalse(force_resolve.is_active(state, "market_buy"))
-  lu.assertFalse(force_resolve.is_active(state, "target_select"))
-  lu.assertFalse(force_resolve.is_active(state, "modal_popup"))
-  lu.assertEquals(advanced.count, 1)
-end
+  _assert_same(clear_calls, 1)
+  luassert.is_false(pending_confirmation.is_active(state))
+  luassert.is_true(game.turn._choice_force_skip_pending == true)
+  luassert.is_nil(game.turn.pending_choice)
+  luassert.is_false(force_resolve.is_active(state, "choice"))
+  luassert.is_false(force_resolve.is_active(state, "market_buy"))
+  luassert.is_false(force_resolve.is_active(state, "target_select"))
+  luassert.is_false(force_resolve.is_active(state, "modal_popup"))
+  _assert_same(advanced.count, 1)
+end)
 
-function TestForceResolveNoCancelNoFallback:test_force_skip_ignores_malformed_output_port_and_nil_state_safely()
+it("test_force_skip_ignores_malformed_output_port_and_nil_state_safely", function()
   local state = _build_state()
   local game = _build_game()
   state._resolved_gameplay_loop_ports = {
@@ -111,32 +116,32 @@ function TestForceResolveNoCancelNoFallback:test_force_skip_ignores_malformed_ou
   game.turn.pending_choice = { id = "c4", kind = "weird", options = {} }
 
   local ok, err = pcall(force_resolve.force_skip, game, state, game.turn.pending_choice, "test")
-  lu.assertTrue(ok, tostring(err))
-  lu.assertNil(game.turn.pending_choice)
+  luassert.is_true(ok, tostring(err))
+  luassert.is_nil(game.turn.pending_choice)
 
   ok, err = pcall(force_resolve.force_skip, { finished = true, turn = {} }, nil, nil, "test")
-  lu.assertTrue(ok, tostring(err))
-end
+  luassert.is_true(ok, tostring(err))
+end)
 
-function TestForceResolveNoCancelNoFallback:test_force_skip_tolerates_nil_game_and_missing_output_ports()
+it("test_force_skip_tolerates_nil_game_and_missing_output_ports", function()
   local state = _build_state()
   pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 
   local ok, err = pcall(force_resolve.force_skip, nil, state, { id = "c6", kind = "weird" }, "test")
 
-  lu.assertTrue(ok, tostring(err))
-  lu.assertFalse(pending_confirmation.is_active(state))
-end
+  luassert.is_true(ok, tostring(err))
+  luassert.is_false(pending_confirmation.is_active(state))
+end)
 
-function TestForceResolveNoCancelNoFallback:test_force_skip_does_not_advance_a_finished_game()
+it("test_force_skip_does_not_advance_a_finished_game", function()
   local state = _build_state()
   local game, advanced = _build_game()
   game.finished = true
 
   force_resolve.force_skip(game, state, { id = "c5", kind = "weird", options = {} }, "test")
 
-  lu.assertEquals(advanced.count, 0)
-end
+  _assert_same(advanced.count, 0)
+end)
 
 
-return TestForceResolveNoCancelNoFallback
+end)

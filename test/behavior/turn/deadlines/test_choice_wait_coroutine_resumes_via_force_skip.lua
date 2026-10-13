@@ -1,4 +1,12 @@
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
+local function _assert_not_equal(actual, expected, message)
+  luassert.is_not(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local TurnScheduler = require("src.turn.scheduler")
 
@@ -19,9 +27,9 @@ local function _phases()
   }
 end
 
-TestChoiceWaitCoroutineResumesViaForceSkip = {}
+describe("TestChoiceWaitCoroutineResumesViaForceSkip", function()
 
-function TestChoiceWaitCoroutineResumesViaForceSkip:test_force_skip_dispatch_leaves_choice_wait_and_clears_choice()
+it("test_force_skip_dispatch_leaves_choice_wait_and_clears_choice", function()
   local game = _new_game()
   game.turn.pending_choice = {
     id = "c2",
@@ -31,27 +39,27 @@ function TestChoiceWaitCoroutineResumesViaForceSkip:test_force_skip_dispatch_lea
   }
   local scheduler = TurnScheduler:new(game, _phases())
 
-  lu.assertEquals(scheduler:run_turn(), "wait_choice")
+  _assert_same(scheduler:run_turn(), "wait_choice")
   game.turn._choice_force_skip_pending = true
   scheduler:step(0)
 
-  lu.assertNil(game.turn.pending_choice)
-  lu.assertNil(game.turn._choice_force_skip_pending)
-  lu.assertNotEquals(game.turn.phase, "wait_choice")
-end
+  luassert.is_nil(game.turn.pending_choice)
+  luassert.is_nil(game.turn._choice_force_skip_pending)
+  _assert_not_equal(game.turn.phase, "wait_choice")
+end)
 
-function TestChoiceWaitCoroutineResumesViaForceSkip:test_stale_force_skip_is_consumed_without_affecting_later_choice()
+it("test_stale_force_skip_is_consumed_without_affecting_later_choice", function()
   local game = _new_game()
   local scheduler = TurnScheduler:new(game, _phases())
 
   game.turn._choice_force_skip_pending = true
-  lu.assertNil(scheduler:run_turn())
-  lu.assertNil(game.turn._choice_force_skip_pending)
+  luassert.is_nil(scheduler:run_turn())
+  luassert.is_nil(game.turn._choice_force_skip_pending)
 
   scheduler:reset()
   game.turn.pending_choice = { id = "fresh", kind = "weird", options = {}, allow_cancel = false }
-  lu.assertEquals(scheduler:run_turn(), "wait_choice")
-  lu.assertNotNil(game.turn.pending_choice)
-end
+  _assert_same(scheduler:run_turn(), "wait_choice")
+  luassert.is_not_nil(game.turn.pending_choice)
+end)
 
-return TestChoiceWaitCoroutineResumesViaForceSkip
+end)

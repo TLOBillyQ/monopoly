@@ -1,9 +1,13 @@
 -- pin：force-skip 超时路径把已算出的 action 透传给 resolve_choice，
 -- choice_auto_policy.decide 恰调 1 次（非 2 次），终态仍走 force_skip。
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 
 local deadlines = require("src.turn.deadlines")
@@ -11,13 +15,13 @@ local choice_auto_policy = require("src.turn.policies.choice_auto")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
 
-TestDoubleDecide = {}
+describe("TestDoubleDecide", function()
 
-function TestDoubleDecide:setUp()
+before_each(function()
   fallback_registry.reset()
-end
+end)
 
-function TestDoubleDecide:test_skips_re_deciding_when_a_precomputed_force_skip_is_passed()
+it("test_skips_re_deciding_when_a_precomputed_force_skip_is_passed", function()
   local decide_calls = 0
   local state = {}
   runtime_state.ensure_all(state)
@@ -40,10 +44,10 @@ function TestDoubleDecide:test_skips_re_deciding_when_a_precomputed_force_skip_i
   end)
 
   _assert_eq(decide_calls, 0, "a precomputed action must skip choice_auto_policy.decide")
-  lu.assertEvalToTrue(advanced == true, "an unresolved force_skip still advances the turn")
-end
+  luassert.truthy(advanced == true, "an unresolved force_skip still advances the turn")
+end)
 
-function TestDoubleDecide:test_still_decides_when_no_precomputed_action_is_passed()
+it("test_still_decides_when_no_precomputed_action_is_passed", function()
   local decide_calls = 0
   local state = {}
   runtime_state.ensure_all(state)
@@ -64,7 +68,7 @@ function TestDoubleDecide:test_still_decides_when_no_precomputed_action_is_passe
   end)
 
   _assert_eq(decide_calls, 1, "without a precomputed action, decide is called once")
-end
+end)
 
 
-return TestDoubleDecide
+end)

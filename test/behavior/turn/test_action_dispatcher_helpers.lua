@@ -1,30 +1,34 @@
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local helpers = require("src.turn.actions.action_dispatcher_helpers")
 
-TestActionDispatcherHelpers = {}
+describe("TestActionDispatcherHelpers", function()
 
 -- should_invalidate_ui 覆盖（杀掉 INVALIDATING_ACTION_TYPES 表内 true→false 幸存者）
 
-function TestActionDispatcherHelpers:test_should_invalidate_ui_for_complete_optional_action_phase()
+it("test_should_invalidate_ui_for_complete_optional_action_phase", function()
   _assert_eq(helpers.should_invalidate_ui({ type = "complete_optional_action_phase" }), true,
     "complete_optional_action_phase should invalidate UI")
-end
+end)
 
-function TestActionDispatcherHelpers:test_should_invalidate_ui_for_choice_cancel()
+it("test_should_invalidate_ui_for_choice_cancel", function()
   _assert_eq(helpers.should_invalidate_ui({ type = "choice_cancel" }), true,
     "choice_cancel should invalidate UI")
-end
+end)
 
-function TestActionDispatcherHelpers:test_should_invalidate_ui_for_unknown_type()
+it("test_should_invalidate_ui_for_unknown_type", function()
   _assert_eq(helpers.should_invalidate_ui({ type = "unknown_action" }), false,
     "unknown action type should not invalidate UI")
-end
+end)
 
 -- allows_market_cancel_while_blocked 覆盖（杀掉 _blocked_gate / _cancel_action /
 -- _same_choice 内部 and→or 以及 return false→true 幸存者）
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_blocked_gate_nil()
+it("test_allows_market_cancel_blocked_gate_nil", function()
   local result = helpers.allows_market_cancel_while_blocked(
     nil,
     { turn = {} },
@@ -33,9 +37,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_blocked_gate_nil(
     {}
   )
   _assert_eq(result, false, "nil gate_state should not allow market cancel")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_gate_not_blocked()
+it("test_allows_market_cancel_gate_not_blocked", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = false },
     { turn = {} },
@@ -44,9 +48,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_gate_not_blocked(
     {}
   )
   _assert_eq(result, false, "unblocked gate should not allow market cancel")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_not_cancel_action()
+it("test_allows_market_cancel_not_cancel_action", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = {} },
@@ -55,9 +59,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_not_cancel_action
     {}
   )
   _assert_eq(result, false, "non-cancel action through blocked gate should not be allowed")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_not_cancel_action_with_matching_pending()
+it("test_allows_market_cancel_not_cancel_action_with_matching_pending", function()
   -- 非 cancel action 即使与 market_buy pending choice 同 id 也不允许通过
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
@@ -67,9 +71,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_not_cancel_action
     {}
   )
   _assert_eq(result, false, "non-cancel action should not be allowed even with matching pending choice")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_no_pending_choice()
+it("test_allows_market_cancel_no_pending_choice", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = { pending_choice = nil } },
@@ -78,9 +82,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_no_pending_choice
     {}
   )
   _assert_eq(result, false, "blocked gate + cancel action but no pending choice should not allow")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_pending_not_market_buy()
+it("test_allows_market_cancel_pending_not_market_buy", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = { pending_choice = { id = "c1", kind = "item_phase_passive" } } },
@@ -89,9 +93,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_pending_not_marke
     {}
   )
   _assert_eq(result, false, "blocked gate + cancel action + non-market pending choice should not allow")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_different_choice_id()
+it("test_allows_market_cancel_different_choice_id", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = { pending_choice = { id = "c2", kind = "market_buy" } } },
@@ -100,9 +104,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_different_choice_
     {}
   )
   _assert_eq(result, false, "different choice_id should not match")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_same_choice_id()
+it("test_allows_market_cancel_same_choice_id", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = { pending_choice = { id = "c1", kind = "market_buy" } } },
@@ -111,9 +115,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_same_choice_id()
     {}
   )
   _assert_eq(result, true, "blocked gate + cancel action + matching market_buy pending choice should allow")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_choice_id_nil_in_action()
+it("test_allows_market_cancel_choice_id_nil_in_action", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = { pending_choice = { id = "c1", kind = "market_buy" } } },
@@ -122,9 +126,9 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_choice_id_nil_in_
     {}
   )
   _assert_eq(result, false, "action without choice_id should not match even with same pending choice id")
-end
+end)
 
-function TestActionDispatcherHelpers:test_allows_market_cancel_choice_id_nil_in_pending()
+it("test_allows_market_cancel_choice_id_nil_in_pending", function()
   local result = helpers.allows_market_cancel_while_blocked(
     { input_blocked = true },
     { turn = { pending_choice = { kind = "market_buy" } } },
@@ -133,6 +137,5 @@ function TestActionDispatcherHelpers:test_allows_market_cancel_choice_id_nil_in_
     {}
   )
   _assert_eq(result, false, "pending choice without id should not match")
-end
-
-return TestActionDispatcherHelpers
+end)
+end)

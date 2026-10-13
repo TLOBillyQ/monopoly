@@ -1,5 +1,10 @@
 -- 验证：超时温柔跳过不扣资源（玩家 cash/inventory 在 force_skip 后保持不变）
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 local force_resolve = require("src.turn.deadlines")
 local fallback_registry = require("src.rules.choice.fallback_registry")
 local runtime_state = require("src.state.runtime")
@@ -52,13 +57,13 @@ local function _build_game(player_cash, inventory)
   return game, advanced
 end
 
-TestGentleSkipNoPenalty = {}
+describe("TestGentleSkipNoPenalty", function()
 
-function TestGentleSkipNoPenalty:setUp()
+before_each(function()
   fallback_registry.reset()
-end
+end)
 
-function TestGentleSkipNoPenalty:test_market_buy_timeout_does_not_change_player_cash()
+it("test_market_buy_timeout_does_not_change_player_cash", function()
   local state = _build_state()
   local game = _build_game(50000, {})
   local choice = {
@@ -74,11 +79,11 @@ function TestGentleSkipNoPenalty:test_market_buy_timeout_does_not_change_player_
   local before_cash = game.players[1].cash
   force_resolve.resolve_choice(game, state, choice, "tick_timeout")
 
-  lu.assertEquals(game.players[1].cash, before_cash)
-  lu.assertNil(game.turn.pending_choice)
-end
+  _assert_same(game.players[1].cash, before_cash)
+  luassert.is_nil(game.turn.pending_choice)
+end)
 
-function TestGentleSkipNoPenalty:test_item_target_timeout_does_not_change_inventory()
+it("test_item_target_timeout_does_not_change_inventory", function()
   local state = _build_state()
   local game = _build_game(50000, { { id = 7, count = 2 } })
   local choice = {
@@ -95,9 +100,9 @@ function TestGentleSkipNoPenalty:test_item_target_timeout_does_not_change_invent
   local before_inv_count = game.players[1].inventory[1].count
   force_resolve.resolve_choice(game, state, choice, "tick_timeout")
 
-  lu.assertEquals(game.players[1].inventory[1].count, before_inv_count)
-  lu.assertNil(game.turn.pending_choice)
-end
+  _assert_same(game.players[1].inventory[1].count, before_inv_count)
+  luassert.is_nil(game.turn.pending_choice)
+end)
 
 
-return TestGentleSkipNoPenalty
+end)
