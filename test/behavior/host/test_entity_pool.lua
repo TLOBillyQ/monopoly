@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local entity_pool = require("src.host.entity_pool")
 local unit_lifecycle = require("src.host.units")
 local runtime_constants = require("src.config.gameplay.runtime_constants")
@@ -26,25 +26,24 @@ local function make_handle(tag, log)
   }
 end
 
-TestEntityPool = {}
+describe("TestEntityPool", function()
+  after_each(function()
+    entity_pool.reset()
+  end)
 
-function TestEntityPool:tearDown()
-  entity_pool.reset()
-end
-
-function TestEntityPool:test_returns_nil_when_unit_key_is_nil()
+local function _test_returns_nil_when_unit_key_is_nil()
   luassert.truthy(entity_pool.acquire(nil, {}) == nil, "expected nil with nil unit_key")
 end
 
-function TestEntityPool:test_returns_nil_when_pos_is_nil()
+local function _test_returns_nil_when_pos_is_nil()
   luassert.truthy(entity_pool.acquire("k", nil) == nil, "expected nil with nil pos")
 end
 
-function TestEntityPool:test_returns_nil_when_gameapi_absent_and_no_idle_handles()
+local function _test_returns_nil_when_gameapi_absent_and_no_idle_handles()
   luassert.truthy(entity_pool.acquire("miss_key", { x = 0 }) == nil, "expected nil without GameAPI")
 end
 
-function TestEntityPool:test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility()
+local function _test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility()
   local log = {}
   local handle = make_handle("h", log)
   entity_pool.release("reuse_key", handle)
@@ -70,7 +69,7 @@ function TestEntityPool:test_pulls_a_parked_handle_and_re_applies_position_orien
   luassert.truthy(stats.miss == 0, "reusing an idle handle should not count as a miss")
 end
 
-function TestEntityPool:test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss()
+local function _test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss()
   local seen
   local created = make_handle("created", {})
   with_patches({
@@ -96,7 +95,7 @@ function TestEntityPool:test_forwards_key_pos_rotation_scale_to_the_host_and_cou
   luassert.truthy(stats.peak == 1, "peak should track the first live handle")
 end
 
-function TestEntityPool:test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil()
+local function _test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil()
   -- kills the warn call's "[entity_pool]" -> nil.
   local logger = require("src.foundation.log")
   local warns = {}
@@ -112,7 +111,7 @@ function TestEntityPool:test_logs_the_entity_pool_prefix_when_the_host_create_yi
   _assert_eq(warns[1][1], "[entity_pool]", "the warn keeps its module prefix")
 end
 
-function TestEntityPool:test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil()
+local function _test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function() return nil end },
   }, function()
@@ -124,7 +123,7 @@ function TestEntityPool:test_returns_nil_and_counts_the_miss_when_the_host_creat
   luassert.truthy(stats.peak == 0, "a failed create should not raise peak")
 end
 
-function TestEntityPool:test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live()
+local function _test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -145,13 +144,13 @@ function TestEntityPool:test_keeps_peak_at_the_high_water_mark_after_a_release_l
   end)
 end
 
-function TestEntityPool:test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle()
+local function _test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle()
   entity_pool.release("rk", make_handle("r", {}))
   local stats = entity_pool.stats()["rk"]
   luassert.truthy(stats.live == 0, "releasing without a prior acquire should keep live at 0, not negative")
 end
 
-function TestEntityPool:test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it()
+local function _test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -175,7 +174,7 @@ function TestEntityPool:test_keeps_peak_at_the_high_water_mark_when_live_later_r
   end)
 end
 
-function TestEntityPool:test_hides_the_handle_and_parks_it_at_the_park_position()
+local function _test_hides_the_handle_and_parks_it_at_the_park_position()
   local log = {}
   local handle = make_handle("h", log)
   entity_pool.release("hide_key", handle)
@@ -190,7 +189,7 @@ function TestEntityPool:test_hides_the_handle_and_parks_it_at_the_park_position(
   luassert.truthy(stats.idle == 1, "released handle should be parked in the idle list")
 end
 
-function TestEntityPool:test_parks_handles_until_the_idle_cap_then_destroys_extras()
+local function _test_parks_handles_until_the_idle_cap_then_destroys_extras()
   local destroyed = {}
   with_patches({
     { target = unit_lifecycle, key = "destroy_unit", value = function(handle)
@@ -211,13 +210,13 @@ function TestEntityPool:test_parks_handles_until_the_idle_cap_then_destroys_extr
   end)
 end
 
-function TestEntityPool:test_ignores_nil_unit_key_or_nil_handle()
+local function _test_ignores_nil_unit_key_or_nil_handle()
   entity_pool.release(nil, make_handle("x", {}))
   entity_pool.release("nilguard_key", nil)
   luassert.truthy(entity_pool.stats()["nilguard_key"] == nil, "release with a nil handle should not create a bucket")
 end
 
-function TestEntityPool:test_creates_and_parks_handles_up_to_the_requested_count()
+local function _test_creates_and_parks_handles_up_to_the_requested_count()
   local created = {}
   local log = {}
   with_patches({
@@ -248,7 +247,7 @@ function TestEntityPool:test_creates_and_parks_handles_up_to_the_requested_count
   luassert.truthy(parked_calls == 3, "each prewarmed handle should be parked at the park position")
 end
 
-function TestEntityPool:test_defaults_the_sample_position_to_the_park_position()
+local function _test_defaults_the_sample_position_to_the_park_position()
   local seen_pos
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function(_, pos)
@@ -261,7 +260,7 @@ function TestEntityPool:test_defaults_the_sample_position_to_the_park_position()
   end)
 end
 
-function TestEntityPool:test_never_fills_past_the_idle_cap()
+local function _test_never_fills_past_the_idle_cap()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
       return make_handle("cap", {})
@@ -272,7 +271,7 @@ function TestEntityPool:test_never_fills_past_the_idle_cap()
   end)
 end
 
-function TestEntityPool:test_does_nothing_for_invalid_counts_or_a_nil_key()
+local function _test_does_nothing_for_invalid_counts_or_a_nil_key()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -288,7 +287,7 @@ function TestEntityPool:test_does_nothing_for_invalid_counts_or_a_nil_key()
   luassert.truthy(entity_pool.stats()["zk"] == nil, "a zero/negative prewarm should not build a bucket")
 end
 
-function TestEntityPool:test_stops_parking_when_the_host_create_yields_nil()
+local function _test_stops_parking_when_the_host_create_yields_nil()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function() return nil end },
   }, function()
@@ -298,7 +297,7 @@ function TestEntityPool:test_stops_parking_when_the_host_create_yields_nil()
   end)
 end
 
-function TestEntityPool:test_keeps_prewarming_past_a_single_transient_host_create_failure()
+local function _test_keeps_prewarming_past_a_single_transient_host_create_failure()
   local calls = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -313,7 +312,7 @@ function TestEntityPool:test_keeps_prewarming_past_a_single_transient_host_creat
   end)
 end
 
-function TestEntityPool:test_tops_up_only_the_missing_handles_when_some_are_already_parked()
+local function _test_tops_up_only_the_missing_handles_when_some_are_already_parked()
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
       return make_handle("tu", {})
@@ -327,7 +326,7 @@ function TestEntityPool:test_tops_up_only_the_missing_handles_when_some_are_alre
   end)
 end
 
-function TestEntityPool:test_reports_idle_live_peak_and_miss_per_bucket()
+local function _test_reports_idle_live_peak_and_miss_per_bucket()
   local created = 0
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -345,7 +344,7 @@ function TestEntityPool:test_reports_idle_live_peak_and_miss_per_bucket()
   end)
 end
 
-function TestEntityPool:test_destroys_parked_handles_and_clears_the_idle_lists()
+local function _test_destroys_parked_handles_and_clears_the_idle_lists()
   local destroyed = {}
   with_patches({
     { target = unit_lifecycle, key = "create_unit_with_scale", value = function()
@@ -364,7 +363,7 @@ function TestEntityPool:test_destroys_parked_handles_and_clears_the_idle_lists()
   end)
 end
 
-function TestEntityPool:test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle()
+local function _test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle()
   entity_pool.reset()
   local created = 0
   local hidden = 0
@@ -398,7 +397,7 @@ function TestEntityPool:test_prewarm_fills_the_idle_bucket_hides_and_parks_units
   entity_pool.reset()
 end
 
-function TestEntityPool:test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform()
+local function _test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform()
   entity_pool.reset()
   local created = 0
   local calls = { position = 0, orientation = 0, scale = 0, visible = nil }
@@ -438,4 +437,28 @@ function TestEntityPool:test_acquire_reuses_a_parked_idle_handle_and_refreshes_i
 end
 
 
-return TestEntityPool
+it("test_returns_nil_when_unit_key_is_nil", _test_returns_nil_when_unit_key_is_nil)
+it("test_returns_nil_when_pos_is_nil", _test_returns_nil_when_pos_is_nil)
+it("test_returns_nil_when_gameapi_absent_and_no_idle_handles", _test_returns_nil_when_gameapi_absent_and_no_idle_handles)
+it("test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility", _test_pulls_a_parked_handle_and_re_applies_position_orientation_scale_and_visibility)
+it("test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss", _test_forwards_key_pos_rotation_scale_to_the_host_and_counts_a_miss)
+it("test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil", _test_logs_the_entity_pool_prefix_when_the_host_create_yields_nil)
+it("test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil", _test_returns_nil_and_counts_the_miss_when_the_host_create_yields_nil)
+it("test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live", _test_keeps_peak_at_the_high_water_mark_after_a_release_lowers_live)
+it("test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle", _test_does_not_drive_live_below_zero_when_releasing_an_un_acquired_handle)
+it("test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it", _test_keeps_peak_at_the_high_water_mark_when_live_later_rises_below_it)
+it("test_hides_the_handle_and_parks_it_at_the_park_position", _test_hides_the_handle_and_parks_it_at_the_park_position)
+it("test_parks_handles_until_the_idle_cap_then_destroys_extras", _test_parks_handles_until_the_idle_cap_then_destroys_extras)
+it("test_ignores_nil_unit_key_or_nil_handle", _test_ignores_nil_unit_key_or_nil_handle)
+it("test_creates_and_parks_handles_up_to_the_requested_count", _test_creates_and_parks_handles_up_to_the_requested_count)
+it("test_defaults_the_sample_position_to_the_park_position", _test_defaults_the_sample_position_to_the_park_position)
+it("test_never_fills_past_the_idle_cap", _test_never_fills_past_the_idle_cap)
+it("test_does_nothing_for_invalid_counts_or_a_nil_key", _test_does_nothing_for_invalid_counts_or_a_nil_key)
+it("test_stops_parking_when_the_host_create_yields_nil", _test_stops_parking_when_the_host_create_yields_nil)
+it("test_keeps_prewarming_past_a_single_transient_host_create_failure", _test_keeps_prewarming_past_a_single_transient_host_create_failure)
+it("test_tops_up_only_the_missing_handles_when_some_are_already_parked", _test_tops_up_only_the_missing_handles_when_some_are_already_parked)
+it("test_reports_idle_live_peak_and_miss_per_bucket", _test_reports_idle_live_peak_and_miss_per_bucket)
+it("test_destroys_parked_handles_and_clears_the_idle_lists", _test_destroys_parked_handles_and_clears_the_idle_lists)
+it("test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle", _test_prewarm_fills_the_idle_bucket_hides_and_parks_units_and_respects_max_idle)
+it("test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform", _test_acquire_reuses_a_parked_idle_handle_and_refreshes_its_transform)
+end)
