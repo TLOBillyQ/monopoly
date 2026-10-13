@@ -98,3 +98,33 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 已登记例外（#609 复审，2026-09-03 真机试玩后维持）：**`default_ports.end_game` 暂以「pcall 无异常」为成功**，偏离宿主调用第 3 条「成功按接口规定的明确信号判定」。理由：`game_end` 返回值仍未取证——真机试玩只观测到副作用（会话退出），没有读回返回值；宿主文档亦只述副作用。若其确无返回值，truthy 判定会把真实成功误报为失败。收紧的前提是单独探针读一次 `game_end` 的返回值，而非再跑一次试玩；在此之前本例外与上文「pcall 没抛不是成功信号」的通用事实并存，即本端口的 `true` 只代表「调用未炸」，不代表宿主已结束会话。
 
 遗留嫌疑已由真机试玩排除（2026-09-03，#609 取证）：宿主事件回调三参签名假定 `(_, _, data)`、`gm.finished` 注册句柄被丢弃未校验（对照 #585 已证实宿主会静默拒注册）——真机胜负面板按玩家正确弹出且会话随即退出，说明句柄注册未被静默拒、`winner_ids` 也确实从第三参取到，整条 `gm.finished` → 面板 → `game_end` 链路端到端成立。两条嫌疑均按观测证据关闭，不再列为待办。
+
+## ADR 0066 — 开发与工具链保证面收窄到原生 Windows
+
+工具链的平台约束原为「macOS 与 WSL Ubuntu」（#127 / #129），Windows 只作为部署目标。本决策把保证面收窄为**原生 Windows 单一平台**：`foundation/{shell,proc,fs,env,path}` 不再保留 POSIX 路径，改以 Lua 标准库与 `cmd.exe`／原生可执行表达；`deploy` 的 WSL 互操作分支（`cmd.exe` + `wslpath`）与其测试一并退场。理由：Eggy 宿主、部署目标与开发机都在 Windows，保留一条没有消费者、却要为它各写一套测试的 POSIX 路径是纯负担；`tools/packages/ops/deploy.lua` 的双轨写法已证明原生等价实现可行，是本决策的现成模板。
+
+`sh` / `find` / `rm` / `mkdir -p` / `cp -R` / `command -v` / `uname` / `pwd` / `/tmp` / 后台 `&` + `sleep` 的语义一律换为原生等价。**Git for Windows 的 POSIX 层不是受支持的运行前提**——`sh.exe` 与 MSYS 路径改写会让「兼容 Windows」退化成「兼容某个 Git Bash」。断言 POSIX 契约的既有测试改写为断言当前平台口径，使「在非 Windows 平台运行会红」成为显式事实，而不是靠注释里的约定。
+
+代价必须写明：这是平台收窄而非双轨化，将来若回到 macOS 须重新引入平台分派层。后台并行执行（`parallel_lanes`）没有现成模板，实现形态在落地时单独取证。
+
+## ADR 0067 — 本仓退场本地 swarm-forge 编排
+
+`swarmforge/` 的 pack 资产（conf / roles / constitution 共 12 个文件）整套下架，`.swarmforge/` 运行时状态不再由本仓定义；随之删除 AGENTS.md 的 swarm 路由行与 pack 同步纪律、`.gitignore` 的 swarm 段、`root_whitelist_guard` 的 `swarmforge` 白名单与 launcher 退役钉、`repo_hygiene` 的 `.swarmforge/` 违规项、`features/manifest.lua` 的 `features/swarmforge/*` 三条、`clean`/`distclean` 的 `.swarmforge/` 条目。启停、编排与角色供给不再由本仓承接。
+
+APS 三件（`gherkin-parser` / `ir-dry-checker` / `gherkin-mutator`）的 PATH 供给机制同期整套删除：`provision.lua`、`swarm_root.lua`、`aps_forwarders.lua` 与其单测、`test/support/aps_forwarder_probe.lua` 一起退场，契约文本改为按显式路径调用 `tools/packages/acceptance/cli/parser.lua`、`cli/ir_dry.lua` 与 `acceptance_mutate/mutator.lua`。判据是按名解析在本仓**没有消费者**：唯一能成立它的前提是外部 launcher 把 `.swarmforge/bin` 放 PATH 最前，而本仓真实调用点早已是显式路径；为不存在的消费者保留转发器，还要在 Windows 上再养一套 `.cmd` 变体。
+
+## ADR 0068 — 质量控制全量交接到 uml-viewer
+
+CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-viewer`（`lua` 分支）的标准派发承接：仓根以 `uml-quality.json` 声明 `standardTools`，CRAP 与变异经 `./uml crap` / `./uml mutate` 走 crapper / mutator 的 Lua 路径，架构面经 `./uml ir` 走 policy 与 IR。`tools/tools.lock` 的 `crap4lua` / `mutate4lua` / `arch_view` 三钉、`tools/packages/{crap,mutate,coverage,arch_view}` 与对应 verify 车道随之退场。`docs/architecture.md` 与 `test/guards/` 仍是「人能读懂、机器能拦」的层边界执行真源，policy 是同一份边界在 uml-viewer 侧的表达式，不构成第二真源。
+
+理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。留下的是 uml-viewer 没有对应物的两件：`dry4lua`（结构重复检测）与 `acceptance4lua`（中文 Gherkin 验收管线），仍按 `tools/tools.lock` 跟随上游主干装载。
+
+## ADR 0069 — 测试框架的终态是 busted
+
+本仓测试后端定为 busted，LuaUnit 与自研运行器退场。三项约束随决策一并钉死：
+
+1. **迁移分两步，各自可独立验收**。先换断言层（`lu.*` → luassert），再换结构层（`TestX = {}` + `function TestX:test_y()` → `describe` / `it`）。**不做「自动把 TestX 包成 describe」的兼容层**：这类 shim 出错的表现是测试静默通过，是本仓最难发现的一类事故。两步之间的中间态允许进仓库。
+2. **装载与调用不依赖可执行位**。busted 与 `luassert` / `say` / `lua_cliargs` / `mediator_lua` / `penlight` / `lua-term` / `luasystem` / `luafilesystem` / `dkjson` / `datafile` 纳入 `.toolcache/luarocks`，以 `lua -e 'require("busted.runner")()'` 形态调用，与 `lua54` 既有「不依赖 shell wrapper 或可执行位」口径同源；`luaunit` 的 ensure 随之退役。Windows 上 tree 布局与 POSIX 同形已取证，不需平台分支。
+3. **完成的判据是数量与红绿双钉**。迁移前先在车道上取逐车道 passed / failed 基线，迁移后必须一致；另加 spec 文件集数量的 guard，防止文件被静默漏跑；再加一组故意写错的断言样本，迁移后仍须为红——直接钉住「断言没有退化成恒真」，这是九千处机械替换的真实风险面。
+
+理由：本仓今天并存两套 harness——`test/**` 走 LuaUnit 类风格，`features/**` 的生成物已是 `describe` / `it` 加自带 harness（上游 generator 天然输出 busted 形状）。迁到真 busted 把两者统一成一套，并让 crapper / mutator 的 Lua 默认路径（busted + luacov）不必再包一层适配；此前替换掉 busted 的决定没有留下任何登记，本决策取代之。
