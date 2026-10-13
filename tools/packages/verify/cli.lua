@@ -52,7 +52,9 @@ function M.usage()
     "    (spec-lane --profile <目录> 或单文件)。",
     "",
     "pipeline 不包含(按需走单工具):mutate / dry / arch-view / crap report / acceptance;",
-    "acceptance 需单独 `lua tools/cli.lua acceptance`,acceptance-mutate 是软车道。",
+    "acceptance 需单独 `lua tools/cli.lua acceptance`,dry 与 acceptance-mutate 是软车道,",
+    "且当前按 POSIX 专用能力声明:原生 Windows 上请求退 3(status=unavailable),",
+    "不在 slim / --tooling / acceptance 这些最低保证面内(#96 / ADR 0066)。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
   }, "\n") .. "\n"
