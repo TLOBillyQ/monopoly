@@ -2,9 +2,12 @@
 -- TestAchievementProgressProperties(3 例)两个类,after_each → tearDown;
 -- 用例数与改写前一一对应(23 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local achievement = require("src.app.host_integrations.achievement")
 local achievement_runtime = require("src.app.host_integrations.achievement_runtime")
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
@@ -57,14 +60,14 @@ end
 
 function TestAchievement:test_finds_achievements_by_editor_id()
   local first = achievement.find(1)
-  lu.assertEvalToTrue(first ~= nil, "achievement 1 should exist")
+  luassert.truthy(first ~= nil, "achievement 1 should exist")
   _assert_eq(first.name, "最强大富翁I", "achievement 1 name")
   _assert_eq(first.category, "简单", "achievement 1 category")
   _assert_eq(first.condition, "获得1场游戏的胜利", "achievement 1 condition")
   _assert_eq(first.target_progress, 1, "achievement 1 target progress")
 
   local hidden = achievement.find("40")
-  lu.assertEvalToTrue(hidden ~= nil, "achievement 40 should exist")
+  luassert.truthy(hidden ~= nil, "achievement 40 should exist")
   _assert_eq(hidden.name, "海绵宝宝！", "achievement 40 name")
   _assert_eq(hidden.category, "传奇", "achievement 40 category")
   _assert_eq(hidden.condition, "使用海绵宝宝皮肤1次", "achievement 40 condition")
@@ -514,9 +517,7 @@ do
   end)
 
   local function _prop_assert_eq(actual, expected, message)
-    assert(actual == expected, (message or "assertion failed")
-      .. ": expected " .. tostring(expected)
-      .. ", got " .. tostring(actual))
+    luassert.is.equal(expected, actual, message)
   end
 
   local function _copy(ids)
@@ -567,7 +568,7 @@ do
       first[1] = -1
 
       local second = achievement.mapped_ids_for_event(event_name)
-      lu.assertEvalToTrue(_same_array(second, expected), "mutating returned ids must not change mapping")
+      luassert.truthy(_same_array(second, expected), "mutating returned ids must not change mapping")
     end)
   end
 
