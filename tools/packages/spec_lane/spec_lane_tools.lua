@@ -6,7 +6,8 @@ local _PROFILE_TOOLS = {
   acceptance = { "acceptance4lua" },
   contract = { "arch_view" },
   guards = { "arch_view" },
-  tooling = { "acceptance4lua", "arch_view", "crap4lua", "dry4lua", "mutate4lua" },
+  -- dry 的 Windows 边界用例无需加载上游 POSIX 扫描器(#96)。
+  tooling = { "acceptance4lua", "arch_view", "crap4lua", "mutate4lua" },
 }
 
 -- #298 的发现式包结构：tooling 车道 33 行

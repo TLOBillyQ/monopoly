@@ -14,6 +14,22 @@
 -- 该判的是「runner 到底能不能跑」。
 local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
 local env = bootstrap.install(debug.getinfo(1, "S").source)
+
+-- 平台保证边界(#96):与 packages.acceptance_mutate.cli 同一份声明,判定必须
+-- 发生在 ensure_tool 之前 —— 否则会先装一遍工具,再让探针链给出「runner_worker
+-- 没吐出可解析的 job 响应」这条假诊断,把原生 Windows 的边界故障报成变异结论。
+local platform_boundary = require("foundation.platform_boundary")
+for _, value in ipairs(arg or {}) do
+  if value == "--help" or value == "-h" then
+    io.write(require("packages.acceptance_mutate.cli").usage())
+    os.exit(0)
+  end
+end
+local verdict = platform_boundary.evaluate("acceptance-mutate", arg or {})
+if verdict.status ~= nil then
+  os.exit(platform_boundary.emit(verdict))
+end
+
 assert(bootstrap.ensure_tool("acceptance4lua", env))
 
 local fs_lib = require("foundation.fs")
@@ -143,7 +159,9 @@ local function _probe_runner(feature_path)
   io.flush()
 end
 
-local args = arg or {}
+-- 平台边界(#96)已消费掉 --skip-if-unavailable,这里用剥完开关的 argv:
+-- 漏给上游会被当成未知选项退 2,把平台边界伪装成用法错误。
+local args = verdict.args
 _probe_runner(_feature_from_args(args))
 
 -- 等价变异过滤器(issue #204):角色ID 族列经 Background 身份线程绑定,步骤对标识值

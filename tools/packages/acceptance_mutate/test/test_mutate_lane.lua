@@ -47,24 +47,23 @@ end
 -- (skipped/total 计数)承接。此处只留探针失败大声退非零的回归钉。
 TestMutateLane = {}
 
--- 回归钉:runner adapter 坏掉时(典型:Lua 5.4 launcher 解析不到,子进程退回
--- PATH 上的 lua 5.5),soft 差分档会跳过全部变异体、报 total=0 然后退 0——
--- 一个测试都没跑却报绿。车道必须先探针、后变异,探针挂了就大声退非零。
-function TestMutateLane:test_aborts_loudly_when_the_runner_adapter_cannot_run_tests()
+-- Windows 上即使 runner 配置损坏,也先报告平台不可用(#96),不给变异结论。
+function TestMutateLane:test_reports_unavailable_before_probing_a_broken_runner()
   local tmp_dir = _tmp_dir("mutate_lane_broken")
   local feature_path = path_lib.join_path(tmp_dir, "sample.feature")
   _write_sample_feature(feature_path)
 
   local result = _run_lane({
-    env_prefix = "ACCEPTANCE_LUA_BIN=/nonexistent/lua",
+    env_prefix = 'set "ACCEPTANCE_LUA_BIN=missing-lua.exe" &&',
     feature_path = feature_path,
     work_dir = path_lib.join_path(tmp_dir, "work"),
     level = "soft",
   })
 
-  lu.assertFalse(result.ok)
-  lu.assertEvalToTrue(tostring(result.output):find("infrastructure_error", 1, true))
-  lu.assertEvalToTrue(tostring(result.output):find("ACCEPTANCE_LUA_BIN", 1, true))
+  lu.assertEquals(result.code, 3, result.output)
+  lu.assertEvalToTrue(tostring(result.output):find("status=unavailable", 1, true))
+  lu.assertNil(tostring(result.output):find("infrastructure_error", 1, true),
+    "平台不可用要在 runner 探针之前诊断")
 
   fs_lib.remove_path(tmp_dir)
 end
