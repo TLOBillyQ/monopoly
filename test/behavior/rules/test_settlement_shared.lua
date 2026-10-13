@@ -43,7 +43,7 @@ it("test_with_ok_fills_a_missing_ok_flag_and_preserves_an_explicit_one", functio
   local explicit = shared.with_ok({ ok = false, status = "rejected" })
   luassert.truthy(explicit.ok == false, "explicit ok is preserved")
 
-  luassert.is.equal(shared.with_ok("not-a-table"), "not-a-table")
+  luassert.is.equal("not-a-table", shared.with_ok("not-a-table"))
 end)
 
 it("test_resolve_actor_returns_nil_without_a_finder_and_the_player_with_one", function()
@@ -58,7 +58,7 @@ it("test_resolve_tile_prefers_the_context_tile_over_any_board_lookup", function(
   local context_tile = { from = "context" }
   local tile = shared.resolve_tile(_make_game(_make_board()), { position = 2 }, { tile = context_tile })
 
-  luassert.is.equal(tile, context_tile)
+  luassert.is.equal(context_tile, tile)
 end)
 
 it("test_resolve_tile_resolves_by_tile_id_through_the_board", function()

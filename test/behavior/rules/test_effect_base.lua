@@ -1,3 +1,4 @@
+-- luacheck: globals pending
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local support = require("test.support.shared_support")

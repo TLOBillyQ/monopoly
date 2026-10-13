@@ -1,6 +1,6 @@
 -- luacheck: ignore 211
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local chance_handlers = require("src.rules.chance.handlers")

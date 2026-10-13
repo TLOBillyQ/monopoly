@@ -1,4 +1,3 @@
--- before_each 转 setUp,裸 assert 转 luassert.truthy,用例数与改写前一一对应(8 例)。
 
 require("test.bootstrap").install_package_paths()
 local luassert = assert

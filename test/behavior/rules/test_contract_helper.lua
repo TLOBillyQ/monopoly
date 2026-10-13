@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local contract_helper = require("src.rules.ports.contract_helper")
 
 local function _assert_eq(a, b, msg)

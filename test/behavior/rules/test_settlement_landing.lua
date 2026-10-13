@@ -126,7 +126,7 @@ it("test_optional_cost_resolver_prices_upgrade_land_and_ignores_everything_else"
       return 100 + level
     end },
   }, function()
-    luassert.is.equal(resolver("upgrade_land", _tile, game), 102)
+    luassert.is.equal(102, resolver("upgrade_land", _tile, game))
   end)
 
   with_patches({
@@ -137,7 +137,7 @@ it("test_optional_cost_resolver_prices_upgrade_land_and_ignores_everything_else"
       return 200 + level
     end },
   }, function()
-    luassert.is.equal(resolver("upgrade_land", _tile, game), 200)
+    luassert.is.equal(200, resolver("upgrade_land", _tile, game))
   end)
 end)
 
@@ -241,7 +241,7 @@ it("test_followup_chain_rejects_at_the_depth_cap_with_the_out_attached", functio
     luassert.truthy(result.ok == false and result.status == "rejected"
       and result.reason == "landing_depth_exceeded",
       "depth cap rejects with landing_depth_exceeded")
-    luassert.is.equal(result.followup, out)
+    luassert.is.equal(out, result.followup)
   end)
   -- 深度从 0 起,第 11 次 pipeline 后触顶;depth 默认值的 0→1 变异会提前一次。
   luassert.truthy(captured.calls == 11, "depth counts from 0 to the cap of 10")

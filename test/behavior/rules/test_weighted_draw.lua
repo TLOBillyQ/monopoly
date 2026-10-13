@@ -29,18 +29,18 @@ end
 describe("TestWeightedDraw", function()
 it("test_returns_empty_for_empty_array", function()
   local picked = weighted_draw.pick({}, 1, _weight_of, true)
-  luassert.is.equal(#picked, 0, "empty array must yield empty result")
+  luassert.is.equal(0, #picked, "empty array must yield empty result")
 end)
 
 it("test_returns_empty_when_count_is_0", function()
   local picked = weighted_draw.pick({ { id = "a", weight = 10 } }, 0, _weight_of, true)
-  luassert.is.equal(#picked, 0, "count<=0 must yield empty result")
+  luassert.is.equal(0, #picked, "count<=0 must yield empty result")
 end)
 
 it("test_returns_empty_when_total_weight_is_zero", function()
   local picked = weighted_draw.pick(
     { { id = "a", weight = 0 }, { id = "b", weight = 0 } }, 1, _weight_of, true)
-  luassert.is.equal(#picked, 0, "all-zero weights must yield empty result")
+  luassert.is.equal(0, #picked, "all-zero weights must yield empty result")
 end)
 
 it("test_clamps_negative_weights_to_zero", function()
@@ -48,7 +48,7 @@ it("test_clamps_negative_weights_to_zero", function()
   local array = { { id = "a", weight = -5 }, { id = "b", weight = 10 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 1, _weight_of, true)
-    luassert.is.equal(picked[1].id, "b", "negative-weight bucket must be unreachable; got " ..
+    luassert.is.equal("b", picked[1].id, "negative-weight bucket must be unreachable; got " ..
       tostring(picked[1] and picked[1].id))
   end)
 end)
@@ -59,8 +59,8 @@ it("test_draws_from_a_pool_whose_total_weight_is_exactly_one", function()
   local array = { { id = "a", weight = 1 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 1, _weight_of, true)
-    luassert.is.equal(#picked, 1, "total weight 1 is a drawable pool; got " .. #picked)
-    luassert.is.equal(picked[1].id, "a", "the only bucket must be picked")
+    luassert.is.equal(1, #picked, "total weight 1 is a drawable pool; got " .. #picked)
+    luassert.is.equal("a", picked[1].id, "the only bucket must be picked")
   end)
 end)
 
@@ -68,8 +68,8 @@ it("test_draws_from_a_single_element_pool", function()
   local array = { { id = "a", weight = 10 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 1, _weight_of, true)
-    luassert.is.equal(#picked, 1, "a one-element pool is drawable; got " .. #picked)
-    luassert.is.equal(picked[1].id, "a", "the only bucket must be picked")
+    luassert.is.equal(1, #picked, "a one-element pool is drawable; got " .. #picked)
+    luassert.is.equal("a", picked[1].id, "the only bucket must be picked")
   end)
 end)
 
@@ -77,7 +77,7 @@ it("test_repeatable_single_pick_honours_rng_lower_bound_first_bucket", function(
   local array = { { id = "a", weight = 3 }, { id = "b", weight = 7 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 1, _weight_of, true)
-    luassert.is.equal(picked[1].id, "a", "rng=1 must hit first bucket")
+    luassert.is.equal("a", picked[1].id, "rng=1 must hit first bucket")
   end)
 end)
 
@@ -85,7 +85,7 @@ it("test_repeatable_single_pick_honours_rng_upper_bound_last_bucket", function()
   local array = { { id = "a", weight = 3 }, { id = "b", weight = 7 } }
   with_rng(function(_, max) return max end, function()
     local picked = weighted_draw.pick(array, 1, _weight_of, true)
-    luassert.is.equal(picked[1].id, "b", "rng=total_weight must hit last bucket")
+    luassert.is.equal("b", picked[1].id, "rng=total_weight must hit last bucket")
   end)
 end)
 
@@ -93,7 +93,7 @@ it("test_repeatable_can_draw_the_same_element_multiple_times", function()
   local array = { { id = "a", weight = 1 }, { id = "b", weight = 1 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 3, _weight_of, true)
-    luassert.is.equal(#picked, 3, "repeatable must return `count` picks; got " .. #picked)
+    luassert.is.equal(3, #picked, "repeatable must return `count` picks; got " .. #picked)
     luassert.truthy(picked[1].id == "a" and picked[2].id == "a" and picked[3].id == "a",
       "rng=1 must repeatedly pick the first bucket")
   end)
@@ -103,8 +103,8 @@ it("test_unique_draw_returns_distinct_elements", function()
   local array = { { id = "a", weight = 5 }, { id = "b", weight = 5 }, { id = "c", weight = 5 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 2, _weight_of, false)
-    luassert.is.equal(#picked, 2, "unique draw of 2 must return 2 elements; got " .. #picked)
-    luassert.is_not.equal(picked[1].id, picked[2].id, "unique draw must not repeat an element")
+    luassert.is.equal(2, #picked, "unique draw of 2 must return 2 elements; got " .. #picked)
+    luassert.is_not.equal(picked[2].id, picked[1].id, "unique draw must not repeat an element")
   end)
 end)
 
@@ -112,7 +112,7 @@ it("test_unique_draw_caps_at_array_length_when_count_exceeds_it", function()
   local array = { { id = "a", weight = 5 }, { id = "b", weight = 5 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 9, _weight_of, false)
-    luassert.is.equal(#picked, 2, "unique draw must cap at array length; got " .. #picked)
+    luassert.is.equal(2, #picked, "unique draw must cap at array length; got " .. #picked)
     local ids = _ids(picked)
     table.sort(ids)
     luassert.truthy(ids[1] == "a" and ids[2] == "b", "unique draw must exhaust all elements")
@@ -125,7 +125,7 @@ it("test_unique_draw_still_takes_the_last_bucket_when_remaining_weight_is_exactl
   local array = { { id = "a", weight = 1 }, { id = "b", weight = 1 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 2, _weight_of, false)
-    luassert.is.equal(#picked, 2, "remaining weight 1 must not stop the draw; got " .. #picked)
+    luassert.is.equal(2, #picked, "remaining weight 1 must not stop the draw; got " .. #picked)
     local ids = _ids(picked)
     table.sort(ids)
     luassert.truthy(ids[1] == "a" and ids[2] == "b", "both weight-1 buckets must be drawn")
@@ -138,9 +138,9 @@ it("test_unique_draw_stops_early_when_remaining_weight_is_exhausted", function()
   local array = { { id = "a", weight = 5 }, { id = "b", weight = 5 }, { id = "c", weight = 0 } }
   with_rng(function() return 1 end, function()
     local picked = weighted_draw.pick(array, 3, _weight_of, false)
-    luassert.is.equal(#picked, 2, "zero-weight element must not be drawn; got " .. #picked)
+    luassert.is.equal(2, #picked, "zero-weight element must not be drawn; got " .. #picked)
     for _, e in ipairs(picked) do
-      luassert.is_not.equal(e.id, "c", "zero-weight element must never be picked")
+      luassert.is_not.equal("c", e.id, "zero-weight element must never be picked")
     end
   end)
 end)

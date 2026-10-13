@@ -1,9 +1,8 @@
--- before_each 转 setUp,用例数与改写前一一对应(8 例)。
 -- #293 批3:补 resolve 端口直测(9 例)——registry 只挂 descriptor_for 不挂
 -- handlers,descriptor_for 分支与 handlers 回退分支必须被直接驱动。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert
+local luassert = require("luassert")
 local choice_resolver = require("src.rules.choice.resolver")
 local event_kinds = require("src.config.gameplay.event_kinds")
 

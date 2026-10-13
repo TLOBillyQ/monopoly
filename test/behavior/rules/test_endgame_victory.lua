@@ -7,9 +7,6 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 
--- (_make_player 返回值不同:单值 vs 双值),不能合并,原地保留 do 块;Test*
--- 类在文件顶部声明,两个 do 块里的方法分别挂在同一类上。用例数与改写前
--- 一一对应(4 + 2 + 1 + 1 = 8 例 + 6 例 = 12 例)。
 
 describe("TestEndgameVictory", function()
 do

@@ -1,7 +1,6 @@
 -- 规则层边界断言直测(T36):越界索引、负余额、未知 dirty 域、守卫消息闭包。
 --
 -- 断言层迁移(#74 第一步「先断言、后结构」):断言后端换成项目工具缓存里的真
--- luassert,结构、用例集合与期望值不变。迁移口径见 CODING_STANDARDS.md。
 --
 -- 本文件的三类译法值得单独记:
 --   - lu.assertFalse 是**严格布尔**(pcall 的 ok 恰好是布尔,故 is_false 等价);
@@ -11,7 +10,7 @@
 --     精确文本不是子串——子串口径要写成 has_error.match(fn, pat, 1, true)。
 require("test.bootstrap").install_package_paths()
 
-local luassert = assert
+local luassert = require("luassert")
 local inventory = require("src.rules.items.inventory")
 local balance_ops = require("src.player.actions.balance")
 local dirty_tracker = require("src.state.dirty_tracker")
