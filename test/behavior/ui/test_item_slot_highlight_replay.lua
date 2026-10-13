@@ -179,7 +179,6 @@ end)
 
 -- ===== 性质覆盖(#594):例子测试逐个钉三态,这里钉住例子跨不过的不变量 =====
 do
-  require("luaunit")
   local property = require("test.support.property")
 
   local _PLANS = { replay = true, reset = true, none = true }

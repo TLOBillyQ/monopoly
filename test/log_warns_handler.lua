@@ -80,7 +80,7 @@ local function _has_output_argument(options, name)
 end
 
 return function(options)
-  local events = require("packages.test_runner.events")
+  local events = assert(options and options.busted, "real busted lifecycle required")
   local tap_handler_factory = require("packages.test_runner.tap_handler").tap_handler_factory
 
   local _verbose = os.getenv("EGGY_TEST_VERBOSE") == "1"
@@ -109,6 +109,7 @@ return function(options)
 
   local function _start_capture()
     case_buffer = { lines = {} }
+    if options.capture_logs == false then return end
     original_print = _G.print
     _G.print = function(...)
       local parts = {}
@@ -148,15 +149,16 @@ return function(options)
     end)
   end
 
-  events.subscribe({ "test", "start" }, function(element)
+  events.subscribe({ "project", "case", "start" }, function(element)
     current_case_name = _element_name(element)
     case_started_at = _now_ms()
     _start_capture()
     return nil, true
   end)
 
-  events.subscribe({ "test", "end" }, function(element)
+  events.subscribe({ "project", "case", "end" }, function(element)
     local captured = _stop_capture()
+    element.captured = captured
     _process(captured)
     if case_started_at ~= nil then
       local elapsed = _now_ms() - case_started_at
@@ -171,7 +173,7 @@ return function(options)
     return nil, true
   end)
 
-  events.subscribe({ "suite", "end" }, function()
+  events.subscribe({ "project", "suite", "end" }, function()
     if next(aggregated) ~= nil then
       io.write("# warn summary:\n")
       local rows = {}

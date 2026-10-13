@@ -4,12 +4,12 @@
 -- `LUA_PATH=<lua_path> <lua_bin> spec.lua`,替代旧 busted --helper 机制。
 -- runner 的默认 lua_bin/lua_path 不含宿主项目的模块路径,
 -- 本仓通过 luarocks tree 消费,必须显式给:
---   lua_bin  —— 钉定的 Lua 5.4(与 packages.luaunit_runner.lua54 同口径,PATH
+--   lua_bin  —— 钉定的 Lua 5.4(与 foundation.lua54 同口径,PATH
 --               上的 lua 是 5.5);
 --   lua_path —— tree 的 share/lua/5.4 路径 + 仓库 tools/ 与根目录模块布局
 --               (acceptance.steps、acceptance.runtime、src.* 都从这里解析)。
 local path_lib = require("foundation.path")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 
 local spawn_env = {}
 

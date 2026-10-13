@@ -137,7 +137,7 @@ shim_redirects_child_lua_to_lua54()
   local path_lib = require("foundation.path")
   local proc_lib = require("foundation.proc")
   local shell_lib = require("foundation.shell")
-  local bin = require("packages.luaunit_runner.lua54")
+  local bin = require("foundation.lua54")
   local lua54 = bin.detect_lua54()
   check.is_not_nil(lua54, "lua5.4 interpreter must be resolvable for the shim test")
 

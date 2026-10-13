@@ -3,7 +3,7 @@ if arg then rawset(arg, 0, "tools/packages/luaunit_runner/test/test_spec_shardin
 require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local fs_lib = require("foundation.fs")
-local sharding = require("packages.luaunit_runner.spec_sharding")
+local sharding = require("foundation.spec_sharding")
 local _TMP_ROOT = "./tmp/spec_sharding_spec"
 local function _rm_rf(path) fs_lib.remove_path(path) end
 local function _write_file(path, content) assert(fs_lib.write_file(path, content or "")) end

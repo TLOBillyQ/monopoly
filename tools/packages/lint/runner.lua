@@ -99,7 +99,7 @@ function M.run(args)
     return 1
   end
   local command = {
-    require("packages.luaunit_runner.lua54").lua54_bin(),
+    require("foundation.lua54").lua54_bin(),
     "-e", "dofile('tools/foundation/bootstrap.lua').install('tools/cli.lua'); "
       .. "assert(package.searchpath('luacheck.main',package.path):find('/.toolcache/luarocks/',1,true)); "
       .. "require('luacheck.main')()",

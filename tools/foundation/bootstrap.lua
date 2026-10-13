@@ -194,10 +194,6 @@ function bootstrap.ensure_luacheck_tree(repo_root)
   return _ensure_rock_installed(repo_root, "luacheck", "1.2.0-1", "share/lua/5.4/luacheck/main.lua")
 end
 
-function bootstrap.ensure_luaunit_tree(repo_root)
-  return _ensure_rock_installed(repo_root, "luaunit", "3.5-1", "share/lua/5.4/luaunit.lua")
-end
-
 -- luassert(断言层迁移期,#74):终态 busted 的断言库,迁移期先由
 -- test/support/luassert_loader.lua 从同一 tree 局部加载。marker 取 init.lua;
 -- say 是 luassert 的 rockspec 依赖,由 luarocks 依赖解析一并带进同一 tree,

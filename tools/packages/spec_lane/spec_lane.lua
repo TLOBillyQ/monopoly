@@ -14,10 +14,10 @@ local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
 local tap_summary = require("foundation.tap_summary")
 local parallel_lanes = require("foundation.parallel_lanes")
-local sharding = require("packages.luaunit_runner.spec_sharding")
+local sharding = require("foundation.spec_sharding")
 local lane_args = require("packages.spec_lane.spec_lane_args")
 local lane_tools = require("packages.spec_lane.spec_lane_tools")
-local runner_bin = require("packages.luaunit_runner.lua54")
+local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
 

@@ -1,6 +1,6 @@
 --- Real busted execution; project events bracket the complete hook chain.
 local M = {}
-function M.run(files, helper, output, arguments)
+function M.run(files, helper, output, arguments, configure, settings)
   local busted = require("busted.core")()
   local real_it
   local register = busted.register
@@ -12,7 +12,6 @@ function M.run(files, helper, output, arguments)
   busted.register = register
   -- Preserve ordinary require identity across files. Specs own singleton patches.
   busted.register("file", "file", {})
-  local events = require("packages.test_runner.events")
   local counts = { files = #files, cases = 0, passed = 0, failed = 0, errors = 0 }
   local pending, current
   local file_cases = {}
@@ -28,7 +27,9 @@ function M.run(files, helper, output, arguments)
   local function finish()
     if not pending then return end
     counts.cases = counts.cases + 1
-    events.publish({ "test", "end" }, pending.element, nil, pending.status, pending.message)
+    local bucket = pending.status == "success" and "passed" or pending.status == "failure" and "failed" or "errors"
+    counts[bucket] = counts[bucket] + 1
+    busted.publish({ "project", "case", "end" }, pending.element, nil, pending.status, pending.message)
     pending, current = nil, nil
   end
   busted.subscribe({ "error" }, function(test, _, message)
@@ -48,9 +49,12 @@ function M.run(files, helper, output, arguments)
     pending = { element = element(test), status = status, message = current and current.message }
     return nil, true
   end)
-  if output == "TAP" then require("packages.test_runner.tap_handler").tap_handler_factory({ arguments = arguments })
-  else assert(loadfile(output))()({ arguments = arguments }) end
-  if helper then assert(loadfile(helper))() end
+  local options = { arguments = arguments, busted = busted, counts = counts,
+    capture_logs = settings and settings.capture_logs }
+  if output == "TAP" then require("packages.test_runner.tap_handler").tap_handler_factory(options)
+  else assert(loadfile(output))()(options) end
+  if helper then assert(loadfile(helper))(options) end
+  if configure then configure(busted, counts) end
   -- Wrap the genuine it executor at busted's public register seam. Its normal
   -- nested hook traversal is unchanged; project events bracket the whole call.
   busted.register("it", function(test)
@@ -62,7 +66,7 @@ function M.run(files, helper, output, arguments)
       project_element.trace.source = "@" .. file.name
       file_cases[file.name] = (file_cases[file.name] or 0) + 1
     end
-    events.publish({ "test", "start" }, project_element, nil)
+    busted.publish({ "project", "case", "start" }, project_element, nil)
     local status = busted.safe("it", function() real_it(test) end, test)
     if not pending then
       pending = { element = project_element, status = "error", message = "test hook failed before body" }
@@ -79,10 +83,7 @@ function M.run(files, helper, output, arguments)
       io.write("not ok - empty spec file: " .. file .. "\n")
     end
   end
-  events.publish({ "suite", "end" })
-  counts.passed = events.results.successes
-  counts.failed = events.results.failures
-  counts.errors = counts.errors + events.results.errors
+  busted.publish({ "project", "suite", "end" })
   return counts
 end
 return M

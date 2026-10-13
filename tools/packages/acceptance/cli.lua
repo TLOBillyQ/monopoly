@@ -14,7 +14,7 @@ local RUN_ALL_ENTRY = "tools/packages/acceptance/run_all.lua"
 
 local function _forward(entry, args)
   require("test.bootstrap").install_package_paths()
-  local parts = { require("packages.luaunit_runner.lua54").lua54_bin(), entry }
+  local parts = { require("foundation.lua54").lua54_bin(), entry }
   for _, value in ipairs(args or {}) do parts[#parts + 1] = value end
   local result = require("foundation.proc").run_command(parts)
   io.write(result.output or "")

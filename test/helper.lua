@@ -2,14 +2,13 @@
 --- and installs Eggy fakes.
 --- Specs that need per-test runtime refresh opt in explicitly.
 ---
---- 覆盖率不再由此处初始化 rock luacov。自研运行器
---- 的 `-c` 在 spec 加载前装 quality.coverage_collector 的 hook(runner.lua),口径与
---- 落盘全部自持,helper 无需参与。原先 LUACOV=1 触发 require("luacov.runner") 的分支
---- 随 rock 退场删除。
+--- 覆盖率由中性运行器的 `-c` 在 spec 加载前初始化项目缓存中的 luacov，
+--- helper 仅负责运行时与用例生命周期。
 
 require("test.bootstrap")
 
-local events = require("packages.test_runner.events")
+local options = ...
+local events = assert(options and options.busted, "real busted lifecycle required")
 local env_runtime = require("test.env_runtime")
 env_runtime.refresh()
 
@@ -19,8 +18,8 @@ local runtime_baseline_guard = require("test.support.runtime_baseline_guard")
 -- 套件级 RNG 重播:behavior 套共用单条全局 math.random 序列,各 spec 消耗的抽数不定
 -- (掷骰、抽卡、AI 决策……),会让进入后续用例的 RNG 状态取决于「同进程/同 worker 里
 -- 此前跑了什么、抽了多少」。任何断言依赖「进入时 RNG 状态」的用例都可能在并行 LPT
--- 分桶重排后假红。本 helper 直接订阅 tools/packages/luaunit_runner 的事件面，不经过 busted facade：
--- 直接 require packages.luaunit_runner.events),每例 test/start 统一重播
+-- 分桶重排后假红。本 helper 订阅已验证真实 busted 的项目生命周期，
+-- 每例完整 before_each 链开始前统一重播
 -- test_env.DEFAULT_SEED,从源头消除泄漏,取代逐 spec 的 randomseed(1) band-aid
 -- (#45/#46)。守卫见 test/behavior/foundation/test_rng_reset_isolation.lua。
 --
@@ -36,10 +35,11 @@ local function _is_behavior_spec(element)
   return source:gsub("\\", "/"):find("test/behavior", 1, true) ~= nil
 end
 
-events.subscribe({ "test", "start" }, function(element)
+events.subscribe({ "project", "case", "start" }, function(element)
   if _is_behavior_spec(element) then
     test_env.reseed_defaults()
   end
+  return nil, true
 end)
 
 -- 共享运行时端口基线守卫(#217):test end 事件在所有 after_each 之后触发,此刻
@@ -49,9 +49,9 @@ end)
 -- (behavior_parallel 按此行聚合失败明细),收尾把计数打进 errors 让车道硬失败,
 -- 不再靠 suite 顺序侥幸掩盖(mutate 车道的窄 suite 子集就是这么翻车的)。
 local baseline_leak_count = 0
-events.subscribe({ "test", "end" }, function(element)
+events.subscribe({ "project", "case", "end" }, function(element)
   if not _is_behavior_spec(element) then
-    return
+    return nil, true
   end
   local missing = runtime_baseline_guard.check_and_restore()
   if #missing > 0 then
@@ -61,11 +61,13 @@ events.subscribe({ "test", "end" }, function(element)
       .. " 拆了共享端口基线未装回: " .. table.concat(missing, ", ")
       .. "(teardown 调 shared_support.restore_runtime_services() 装回,#217)\n")
   end
+  return nil, true
 end)
-events.subscribe({ "suite", "end" }, function()
+events.subscribe({ "project", "suite", "end" }, function()
   if baseline_leak_count > 0 then
-    events.results.errors = events.results.errors + baseline_leak_count
+    options.counts.errors = options.counts.errors + baseline_leak_count
   end
+  return nil, true
 end)
 
 return env_runtime

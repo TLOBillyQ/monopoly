@@ -1,9 +1,9 @@
-local events = require("packages.test_runner.events")
 local M = {}
 function M.tap_handler_factory(options)
+  local events = assert(options.busted)
   local handler = { successes = {}, failures = {}, errors = {} }
   local counter = 0
-  events.subscribe({ "test", "end" }, function(element, _, status, message)
+  events.subscribe({ "project", "case", "end" }, function(element, _, status, message)
     counter = counter + 1
     if status == "success" then
       handler.successes[#handler.successes + 1] = element
@@ -18,7 +18,7 @@ function M.tap_handler_factory(options)
     end
     return nil, true
   end)
-  events.subscribe({ "suite", "end" }, function()
+  events.subscribe({ "project", "suite", "end" }, function()
     io.write(("1..%d\n"):format(counter))
     return nil, true
   end)

@@ -2,8 +2,8 @@ require("test.bootstrap").install_package_paths()
 
 local proc_lib = require("foundation.proc")
 local parallel_lanes = require("foundation.parallel_lanes")
-local sharding = require("packages.luaunit_runner.spec_sharding")
-local runner_bin = require("packages.luaunit_runner.lua54")
+local sharding = require("foundation.spec_sharding")
+local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
 

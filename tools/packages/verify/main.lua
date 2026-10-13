@@ -8,12 +8,12 @@ require("test.bootstrap").install_package_paths()
 -- `bootstrap.install(<本文件>)` 从源文件路径向上找仓库根,不依赖 cwd)。
 local bootstrap_env = require("foundation.bootstrap").install(debug.getinfo(1, "S").source)
 local fs_lib = require("foundation.fs")
-local runner_bin = require("packages.luaunit_runner.lua54")
+local runner_bin = require("packages.test_runner.lua54")
 local lanes_mod = require("packages.verify.lanes")
 local runner = require("packages.verify.runner")
 
 -- lua5.4 探测(候选表 + `<candidate> -v` 验证 + 记忆化)原先在这里有一份逐字副本,
--- 与 packages.luaunit_runner.lua54 靠"同口径"的注释手工同步。归一到
+-- 与 packages.test_runner.lua54 靠"同口径"的注释手工同步。归一到
 -- lua54.detect_lua54():探不到返回 nil,正是这里判定 coverage 车道能否开所需要的语义。
 local function _resolve_lua54()
   return runner_bin.detect_lua54()

@@ -11,7 +11,7 @@ local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 -- 预热点:解释器探测会 spawn `<candidate> -v`,必须在 stub proc 之前完成,
 -- 否则缓存的探测结果会被 stub 污染。
-require("packages.luaunit_runner.lua54").lua54_bin()
+require("foundation.lua54").lua54_bin()
 local bootstrap = require("foundation.bootstrap")
 local run_all = require("packages.acceptance.run_all")
 local registry = require("packages.acceptance.acceptance_features")

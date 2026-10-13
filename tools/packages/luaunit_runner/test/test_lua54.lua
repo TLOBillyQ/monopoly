@@ -2,7 +2,7 @@
 if arg then rawset(arg, 0, "tools/packages/luaunit_runner/test/test_lua54.lua") end
 require("test.bootstrap").install_package_paths()
 local check = require("luassert")
-local bin = require("packages.luaunit_runner.lua54")
+local bin = require("packages.test_runner.lua54")
 
 describe("lua54 runner entry", function()
   it("argv prefix defaults to lua54 and runner", function()

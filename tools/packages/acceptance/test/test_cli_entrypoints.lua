@@ -9,7 +9,7 @@ local check = require("luassert")
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local json = require("acceptance4lua.json")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 

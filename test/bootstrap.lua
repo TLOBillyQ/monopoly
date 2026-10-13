@@ -18,8 +18,7 @@ function M.install_package_paths()
   end
 
   local bootstrap = dofile(_module_dir() .. "/../tools/foundation/bootstrap.lua")
-  local env = bootstrap.install(debug.getinfo(1, "S").source)
-  bootstrap.ensure_luaunit_tree(env.repo_root)
+  bootstrap.install(debug.getinfo(1, "S").source)
 
   _package_paths_installed = true
 end
