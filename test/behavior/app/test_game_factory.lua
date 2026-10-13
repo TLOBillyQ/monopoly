@@ -2,15 +2,15 @@
 -- 断言从裸 assert 切到 luassert.truthy,用例数与改写前一一对应(6 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local game_factory = require("src.app.game_factory")
 local balance_ops = require("src.player.actions.balance")
 local constants = require("src.config.content.constants")
 local control = require("src.player.control")
 
-TestGameFactory = {}
+describe("TestGameFactory", function()
 
-function TestGameFactory:test_create_players_role_roster()
+local function _test_create_players_role_roster()
   -- Test _create_players with role_roster
   local opts = {
     role_roster = {
@@ -27,7 +27,7 @@ function TestGameFactory:test_create_players_role_roster()
   luassert.truthy(players[2].id == "r2", "second player should have role_id r2")
 end
 
-function TestGameFactory:test_create_players_single_expands()
+local function _test_create_players_single_expands()
   -- Test _create_players with single player name (should expand to 4)
   local opts = {
     players = { "SoloPlayer" },
@@ -40,7 +40,7 @@ function TestGameFactory:test_create_players_single_expands()
   luassert.truthy(players[2].name == "玩家2", "second player should have default name")
 end
 
-function TestGameFactory:test_create_players_missing_name()
+local function _test_create_players_missing_name()
   -- Test _create_players with role_roster entry missing name
   local opts = {
     role_roster = {
@@ -54,7 +54,7 @@ function TestGameFactory:test_create_players_missing_name()
   luassert.truthy(players[1].name == "玩家1", "should use default name when not provided")
 end
 
-function TestGameFactory:test_create_players_ai_by_index()
+local function _test_create_players_ai_by_index()
   -- Test _create_players with ai_map using index
   local opts = {
     players = { "P1", "P2", "P3", "P4" },
@@ -70,7 +70,7 @@ function TestGameFactory:test_create_players_ai_by_index()
   luassert.truthy(players[4] ~= nil, "player 4 should exist")
 end
 
-function TestGameFactory:test_create_players_role_ids()
+local function _test_create_players_role_ids()
   -- Test _create_players assigns correct role_ids from roles_cfg
   local opts = {
     players = { "P1", "P2" },
@@ -83,7 +83,7 @@ function TestGameFactory:test_create_players_role_ids()
   luassert.truthy(players[2].role_id ~= nil, "player 2 should have role_id")
 end
 
-function TestGameFactory:test_role_roster_preserves_provided_name()
+local function _test_role_roster_preserves_provided_name()
   -- L79 `entry and entry.name or nil` 的 or->and 变异会把非空名吞成缺省名。
   local opts = {
     role_roster = { { role_id = "r1", name = "Player1" } },
@@ -95,7 +95,7 @@ function TestGameFactory:test_role_roster_preserves_provided_name()
     "roster entry name must be preserved; got " .. tostring(players[1].name))
 end
 
-function TestGameFactory:test_role_roster_empty_name_defaults_to_index()
+local function _test_role_roster_empty_name_defaults_to_index()
   -- 空串名必须走缺省名分支(不返回空串)。
   local opts = {
     role_roster = { { role_id = "r1", name = "" } },
@@ -107,7 +107,7 @@ function TestGameFactory:test_role_roster_empty_name_defaults_to_index()
     "empty roster name must default to 玩家1; got " .. tostring(players[1].name))
 end
 
-function TestGameFactory:test_auto_all_marks_all_human_players_manually_delegated()
+local function _test_auto_all_marks_all_human_players_manually_delegated()
   -- L87 首个 or->and 与 L98 调用换 nil:auto_all=true 时托管必须仍为 true。
   local opts = {
     role_roster = { { role_id = "r1", name = "A" }, { role_id = "r2", name = "B" } },
@@ -120,7 +120,7 @@ function TestGameFactory:test_auto_all_marks_all_human_players_manually_delegate
   luassert.truthy(control.is_delegated(players[2]), "auto_all must delegate player 2")
 end
 
-function TestGameFactory:test_auto_flag_resolves_from_auto_players()
+local function _test_auto_flag_resolves_from_auto_players()
   -- L87 第二个 or->and 与尾部 false->true:auto_players 命中与未命中的角色托管必须不同。
   local opts = {
     role_roster = {
@@ -136,7 +136,7 @@ function TestGameFactory:test_auto_flag_resolves_from_auto_players()
   luassert.truthy(not control.is_delegated(players[2]), "auto_players miss must stay direct")
 end
 
-function TestGameFactory:test_names_path_cycles_roles_in_order()
+local function _test_names_path_cycles_roles_in_order()
   -- L111 角色下标算术:3 个名字必须依次拿到 roles_cfg[1..3] 的 id。
   local opts = {
     players = { "P1", "P2", "P3" },
@@ -149,7 +149,7 @@ function TestGameFactory:test_names_path_cycles_roles_in_order()
   luassert.truthy(players[3].role_id == 1003, "player 3 must get roles_cfg[3].id")
 end
 
-function TestGameFactory:test_empty_role_roster_falls_back_to_names()
+local function _test_empty_role_roster_falls_back_to_names()
   -- L121 #role_roster > 0 的 >->=:空 roster 表必须回落 names 路径而不是产出空玩家表。
   local opts = {
     role_roster = {},
@@ -162,14 +162,14 @@ function TestGameFactory:test_empty_role_roster_falls_back_to_names()
   luassert.truthy(players[1].name == "Solo", "fallback must keep the provided name")
 end
 
-function TestGameFactory:test_starting_cash_comes_from_constants()
+local function _test_starting_cash_comes_from_constants()
   -- 起始金币唯一真源是 constants.starting_cash(fan_club 存根已拆,无加成通路)。
   local players = game_factory.build_players({ players = { "A" }, ai = {}, auto_all = false })
   luassert.truthy(balance_ops.player_cash(nil, players[1]) == constants.starting_cash,
     "player must start with exactly constants.starting_cash")
 end
 
-function TestGameFactory:test_create_players_role_roster_ignores_slot_index_ai_keys()
+local function _test_create_players_role_roster_ignores_slot_index_ai_keys()
   -- Test role_roster mode ignores slot-index ai keys to avoid human/AI key collisions
   local opts = {
     role_roster = {
@@ -198,4 +198,17 @@ function TestGameFactory:test_create_players_role_roster_ignores_slot_index_ai_k
 end
 
 
-return TestGameFactory
+it("test_create_players_role_roster", _test_create_players_role_roster)
+it("test_create_players_single_expands", _test_create_players_single_expands)
+it("test_create_players_missing_name", _test_create_players_missing_name)
+it("test_create_players_ai_by_index", _test_create_players_ai_by_index)
+it("test_create_players_role_ids", _test_create_players_role_ids)
+it("test_role_roster_preserves_provided_name", _test_role_roster_preserves_provided_name)
+it("test_role_roster_empty_name_defaults_to_index", _test_role_roster_empty_name_defaults_to_index)
+it("test_auto_all_marks_all_human_players_manually_delegated", _test_auto_all_marks_all_human_players_manually_delegated)
+it("test_auto_flag_resolves_from_auto_players", _test_auto_flag_resolves_from_auto_players)
+it("test_names_path_cycles_roles_in_order", _test_names_path_cycles_roles_in_order)
+it("test_empty_role_roster_falls_back_to_names", _test_empty_role_roster_falls_back_to_names)
+it("test_starting_cash_comes_from_constants", _test_starting_cash_comes_from_constants)
+it("test_create_players_role_roster_ignores_slot_index_ai_keys", _test_create_players_role_roster_ignores_slot_index_ai_keys)
+end)

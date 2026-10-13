@@ -1,11 +1,11 @@
 -- state_factory.build_state 直测:参数归一化、守卫、初始状态字段锚定。
 -- 初始字段(等待动画/计数/标志)被回合循环直接消费,数值与布尔变异必须钉住。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 
 local state_factory = require("src.app.state_factory")
 
-TestStateFactory = {}
+describe("TestStateFactory", function()
 
 local function _build(opts_extra)
   local opts = {
@@ -23,7 +23,7 @@ local function _build(opts_extra)
   return state_factory.build_state(opts)
 end
 
-function TestStateFactory:test_initial_state_fields_match_the_defaults()
+local function _test_initial_state_fields_match_the_defaults()
   local state = _build()
   luassert.truthy(state.ui ~= nil, "ui state must be built")
   luassert.truthy(state.pending_choice_elapsed == 0, "pending choice elapsed starts at 0")
@@ -37,7 +37,7 @@ function TestStateFactory:test_initial_state_fields_match_the_defaults()
   luassert.truthy(state.action_button_active == false, "action button starts inactive")
 end
 
-function TestStateFactory:test_game_factory_and_auto_runner_are_wired()
+local function _test_game_factory_and_auto_runner_are_wired()
   local state = _build()
   luassert.truthy(state.game_factory ~= nil and state.game_factory.factory == true,
     "the game factory must be built into the state")
@@ -45,7 +45,7 @@ function TestStateFactory:test_game_factory_and_auto_runner_are_wired()
     "the auto runner must be wired into the state")
 end
 
-function TestStateFactory:test_guards_missing_get_current_game()
+local function _test_guards_missing_get_current_game()
   luassert.has_error(function()
     state_factory.build_state({
       build_game_factory = function()
@@ -56,7 +56,7 @@ function TestStateFactory:test_guards_missing_get_current_game()
   end, "missing get_current_game")
 end
 
-function TestStateFactory:test_guards_missing_build_game_factory()
+local function _test_guards_missing_build_game_factory()
   luassert.has_error(function()
     state_factory.build_state({
       get_current_game = function()
@@ -67,7 +67,7 @@ function TestStateFactory:test_guards_missing_build_game_factory()
   end, "missing build_game_factory")
 end
 
-function TestStateFactory:test_guards_missing_auto_runner()
+local function _test_guards_missing_auto_runner()
   luassert.has_error(function()
     state_factory.build_state({
       get_current_game = function()
@@ -80,7 +80,7 @@ function TestStateFactory:test_guards_missing_auto_runner()
   end, "missing auto_runner")
 end
 
-function TestStateFactory:test_two_argument_form_normalizes_opts()
+local function _test_two_argument_form_normalizes_opts()
   -- 双参数调用(arg1 不是 table),走 _normalize_args 的 else 分支(arg1, arg2 or {})。
   local get_current_game = function()
     return nil
@@ -97,4 +97,10 @@ function TestStateFactory:test_two_argument_form_normalizes_opts()
     "two-arg form must wire the auto runner")
 end
 
-return TestStateFactory
+it("test_initial_state_fields_match_the_defaults", _test_initial_state_fields_match_the_defaults)
+it("test_game_factory_and_auto_runner_are_wired", _test_game_factory_and_auto_runner_are_wired)
+it("test_guards_missing_get_current_game", _test_guards_missing_get_current_game)
+it("test_guards_missing_build_game_factory", _test_guards_missing_build_game_factory)
+it("test_guards_missing_auto_runner", _test_guards_missing_auto_runner)
+it("test_two_argument_form_normalizes_opts", _test_two_argument_form_normalizes_opts)
+end)
