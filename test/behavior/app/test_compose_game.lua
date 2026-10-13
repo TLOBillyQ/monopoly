@@ -1,11 +1,11 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local composition_root = require("src.app.compose_game")
 
-TestComposeGame = {}
+describe("TestComposeGame", function()
 
-function TestComposeGame:test_exposes_only_new_game()
+local function _test_exposes_only_new_game()
   local exported_key
   local exported_count = 0
   for key in pairs(composition_root) do
@@ -16,7 +16,7 @@ function TestComposeGame:test_exposes_only_new_game()
   luassert.is.equal("new_game", exported_key, "composition root must only expose game creation")
 end
 
-function TestComposeGame:test_rejects_player_mixin_collision_during_module_assembly()
+local function _test_rejects_player_mixin_collision_during_module_assembly()
   support.with_patches({
     { target = package.loaded, key = "src.app.compose_game", value = nil },
     {
@@ -38,7 +38,7 @@ function TestComposeGame:test_rejects_player_mixin_collision_during_module_assem
   })
 end
 
-function TestComposeGame:test_new_game_applies_game_defaults()
+local function _test_new_game_applies_game_defaults()
   local game_state = require("src.state.game_state")
   local game = support.new_game()
   luassert.is_not.same(game_state, game, "new_game returns an instance, not the class")
@@ -53,7 +53,7 @@ function TestComposeGame:test_new_game_applies_game_defaults()
   luassert.is.equal("table", type(game.intent_output_port))
 end
 
-function TestComposeGame:test_new_game_installs_default_ports_for_a_fresh_class()
+local function _test_new_game_installs_default_ports_for_a_fresh_class()
   local fake_class = {
     __name = "FakeGame",
     new = function()
@@ -71,4 +71,8 @@ function TestComposeGame:test_new_game_installs_default_ports_for_a_fresh_class(
   luassert.is.equal("function", type(game.tile_owner_notifier.notify_owner_changed))
 end
 
-return TestComposeGame
+it("test_exposes_only_new_game", _test_exposes_only_new_game)
+it("test_rejects_player_mixin_collision_during_module_assembly", _test_rejects_player_mixin_collision_during_module_assembly)
+it("test_new_game_applies_game_defaults", _test_new_game_applies_game_defaults)
+it("test_new_game_installs_default_ports_for_a_fresh_class", _test_new_game_installs_default_ports_for_a_fresh_class)
+end)

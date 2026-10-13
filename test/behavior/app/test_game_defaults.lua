@@ -1,10 +1,10 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local game_defaults = require("src.app.game_defaults")
 
-TestGameDefaults = {}
+describe("TestGameDefaults", function()
 
-function TestGameDefaults:test_identifies_class_like_tables()
+local function _test_identifies_class_like_tables()
   luassert.is_false(game_defaults.is_class_like(nil))
   luassert.is_false(game_defaults.is_class_like(42))
   luassert.is_false(game_defaults.is_class_like("string"))
@@ -23,7 +23,7 @@ function TestGameDefaults:test_identifies_class_like_tables()
   luassert.is_false(game_defaults.is_class_like(instance))
 end
 
-function TestGameDefaults:test_build_player_by_id_handles_missing_players_and_ids()
+local function _test_build_player_by_id_handles_missing_players_and_ids()
   luassert.is_nil(next(game_defaults.build_player_by_id(nil)))
   local indexed = game_defaults.build_player_by_id({
     { id = 1, name = "A" },
@@ -37,7 +37,7 @@ function TestGameDefaults:test_build_player_by_id_handles_missing_players_and_id
   luassert.is.equal(2, count)
 end
 
-function TestGameDefaults:test_build_initial_turn_returns_expected_defaults()
+local function _test_build_initial_turn_returns_expected_defaults()
   local turn = game_defaults.build_initial_turn()
   luassert.is.equal(1, turn.current_player_index)
   luassert.is.equal(0, turn.turn_count)
@@ -70,7 +70,7 @@ function TestGameDefaults:test_build_initial_turn_returns_expected_defaults()
   luassert.is_nil(turn.post_action)
 end
 
-function TestGameDefaults:test_init_tile_state_resets_only_land_tiles()
+local function _test_init_tile_state_resets_only_land_tiles()
   local board = { path = {
     { type = "land", owner_id = 7, level = 3 },
     { type = "special", owner_id = 9, level = 2 },
@@ -82,7 +82,7 @@ function TestGameDefaults:test_init_tile_state_resets_only_land_tiles()
   luassert.is.equal(2, board.path[2].level)
 end
 
-function TestGameDefaults:test_build_market_limits_filters_non_positive_and_missing_limits()
+local function _test_build_market_limits_filters_non_positive_and_missing_limits()
   local market_cfg = require("src.config.content.market")
   local saved = {}
   for index = 1, #market_cfg do
@@ -100,4 +100,9 @@ function TestGameDefaults:test_build_market_limits_filters_non_positive_and_miss
   luassert.is_nil(limits["nil-limit"])
 end
 
-return TestGameDefaults
+it("test_identifies_class_like_tables", _test_identifies_class_like_tables)
+it("test_build_player_by_id_handles_missing_players_and_ids", _test_build_player_by_id_handles_missing_players_and_ids)
+it("test_build_initial_turn_returns_expected_defaults", _test_build_initial_turn_returns_expected_defaults)
+it("test_init_tile_state_resets_only_land_tiles", _test_init_tile_state_resets_only_land_tiles)
+it("test_build_market_limits_filters_non_positive_and_missing_limits", _test_build_market_limits_filters_non_positive_and_missing_limits)
+end)
