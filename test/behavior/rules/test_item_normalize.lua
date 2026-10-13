@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- item_normalize 直测:规范化/校验辅助的边界与错误路径。
 -- 这些纯函数被 choice_handlers 各 completion 复用,集成 spec 只覆盖成功路径;
 -- 本 spec 补缺失/非法输入的 fail-fast 契约(变异清扫 #259 survivor 真缺口闭合)。
@@ -16,57 +16,57 @@ do
 end
 local normalize = require("src.rules.choice_handlers.item_normalize")
 
-TestItemNormalize = {}
 
-function TestItemNormalize:test_choice_action_option_id_requires_a_numeric_action_option_id()
-  -- 缺 option_id 且 required=true:报错且消息带 action 前缀(不是裸 meta)。
-  luassert.has_error(function()
-    normalize.choice_action_option_id("k", {})
-  end, "k requires numeric action.option_id")
-end
+describe("TestItemNormalize", function()
+  it("test_choice_action_option_id_requires_a_numeric_action_option_id", function()
+    -- 缺 option_id 且 required=true:报错且消息带 action 前缀(不是裸 meta)。
+    luassert.has_error(function()
+      normalize.choice_action_option_id("k", {})
+    end, "k requires numeric action.option_id")
+  end)
 
-function TestItemNormalize:test_is_repeatable_phase_meta_rejects_non_table_meta_and_non_repeatable_phases()
-  luassert.is_false(normalize.is_repeatable_phase_meta(nil))
-  luassert.is_false(normalize.is_repeatable_phase_meta({ phase = "post_move" }))
-  luassert.is_true(normalize.is_repeatable_phase_meta({ phase = "pre_action" }))
-end
+  it("test_is_repeatable_phase_meta_rejects_non_table_meta_and_non_repeatable_phases", function()
+    luassert.is_false(normalize.is_repeatable_phase_meta(nil))
+    luassert.is_false(normalize.is_repeatable_phase_meta({ phase = "post_move" }))
+    luassert.is_true(normalize.is_repeatable_phase_meta({ phase = "pre_action" }))
+  end)
 
-function TestItemNormalize:test_merge_after_action_anim_only_merges_table_payloads()
-  local final = {}
-  local merged = normalize.merge_after_action_anim({ after_action_anim = "not-a-table" }, final)
-  luassert.is_nil(merged.after_action_anim)
+  it("test_merge_after_action_anim_only_merges_table_payloads", function()
+    local final = {}
+    local merged = normalize.merge_after_action_anim({ after_action_anim = "not-a-table" }, final)
+    luassert.is_nil(merged.after_action_anim)
+  
+    local anim = { key = "x" }
+    local merged2 = normalize.merge_after_action_anim({ after_action_anim = anim }, {})
+    luassert.is.equal(anim, merged2.after_action_anim)
+  end)
 
-  local anim = { key = "x" }
-  local merged2 = normalize.merge_after_action_anim({ after_action_anim = anim }, {})
-  luassert.is.equal(anim, merged2.after_action_anim)
-end
+  it("test_item_phase_meta_rejects_an_empty_string_phase", function()
+    luassert.has_error(function()
+      normalize.item_phase_meta(nil, { phase = "" }, { kind = "k" })
+    end, "k requires string meta.phase")
+  end)
 
-function TestItemNormalize:test_item_phase_meta_rejects_an_empty_string_phase()
-  luassert.has_error(function()
-    normalize.item_phase_meta(nil, { phase = "" }, { kind = "k" })
-  end, "k requires string meta.phase")
-end
+  it("test_item_target_meta_rejects_a_non_numeric_item_id", function()
+    luassert.has_error(function()
+      normalize.item_target_meta(nil, { item_id = "abc" }, { kind = "k" })
+    end, "k requires numeric meta.item_id")
+  end)
 
-function TestItemNormalize:test_item_target_meta_rejects_a_non_numeric_item_id()
-  luassert.has_error(function()
-    normalize.item_target_meta(nil, { item_id = "abc" }, { kind = "k" })
-  end, "k requires numeric meta.item_id")
-end
+  it("test_remote_dice_meta_rejects_a_non_numeric_dice_count", function()
+    luassert.has_error(function()
+      normalize.remote_dice_meta(nil, { dice_count = "abc" }, { kind = "k" })
+    end, "k requires numeric meta.dice_count")
+  end)
 
-function TestItemNormalize:test_remote_dice_meta_rejects_a_non_numeric_dice_count()
-  luassert.has_error(function()
-    normalize.remote_dice_meta(nil, { dice_count = "abc" }, { kind = "k" })
-  end, "k requires numeric meta.dice_count")
-end
-
-function TestItemNormalize:test_validate_remote_dice_meta_rejects_a_non_positive_dice_count()
-  local game = { find_player_by_id = function()
-    return {}
-  end }
-  luassert.has_error(function()
-    normalize.validate_remote_dice_meta(game, { player_id = 1, dice_count = 0 }, { kind = "k" })
-  end, "k requires positive meta.dice_count")
-end
+  it("test_validate_remote_dice_meta_rejects_a_non_positive_dice_count", function()
+    local game = { find_player_by_id = function()
+      return {}
+    end }
+    luassert.has_error(function()
+      normalize.validate_remote_dice_meta(game, { player_id = 1, dice_count = 0 }, { kind = "k" })
+    end, "k requires positive meta.dice_count")
+  end)
 
 
-return TestItemNormalize
+end)

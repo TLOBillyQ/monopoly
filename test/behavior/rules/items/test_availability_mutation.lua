@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- Mutation-pinning specs for src/rules/items/availability.lua.
 -- Per [[reference_mutate4lua_test_corpus]]: closure via busted spec, not Gherkin.
 -- Strategy: assert a value that DIFFERS between original and each surviving mutant.
@@ -80,7 +80,6 @@ local function _roadblock_can_offer(is_auto, auto_result, manual_result)
   end)
 end
 
-TestAvailabilityMutation = {}
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- L15: phase_timing.pre_move = { pre_move = true, turn = true }  (two `true`)
@@ -88,51 +87,52 @@ TestAvailabilityMutation = {}
 -- `phase_timing[phase][timing] == true`. Flipping either `true` to `false`
 -- makes the corresponding lookup return false.
 -- ════════════════════════════════════════════════════════════════════════════
-TestAvailabilityMutation["test_pre_move/pre_move is allowed (kills first `true`->false on L15)"] = function(self)
-  luassert.truthy(availability.trigger_timing_allowed("pre_move", "pre_move") == true, "pre_move phase with pre_move timing must be allowed")
-end
+describe("TestAvailabilityMutation", function()
+  it("test_pre_move/pre_move is allowed (kills first `true`->false on L15)", function()
+    luassert.truthy(availability.trigger_timing_allowed("pre_move", "pre_move") == true, "pre_move phase with pre_move timing must be allowed")
+  end)
 
-TestAvailabilityMutation["test_pre_move/turn is allowed (kills second `true`->false on L15)"] = function(self)
-  luassert.truthy(availability.trigger_timing_allowed("pre_move", "turn") == true, "pre_move phase with turn timing must be allowed")
-end
+  it("test_pre_move/turn is allowed (kills second `true`->false on L15)", function()
+    luassert.truthy(availability.trigger_timing_allowed("pre_move", "turn") == true, "pre_move phase with turn timing must be allowed")
+  end)
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- L27 / L28: followup_choice_item_set[monster] / [missile] = true.
 -- Exercised via availability.requires_followup_choice, which returns
 -- `followup_choice_item_set[item_id] == true`.
 -- ════════════════════════════════════════════════════════════════════════════
-TestAvailabilityMutation["test_monster requires a followup choice (kills L27 `true`->false)"] = function(self)
-  luassert.truthy(availability.requires_followup_choice(item_ids.monster) == true, "monster must require a followup choice")
-end
+  it("test_monster requires a followup choice (kills L27 `true`->false)", function()
+    luassert.truthy(availability.requires_followup_choice(item_ids.monster) == true, "monster must require a followup choice")
+  end)
 
-TestAvailabilityMutation["test_missile requires a followup choice (kills L28 `true`->false)"] = function(self)
-  luassert.truthy(availability.requires_followup_choice(item_ids.missile) == true, "missile must require a followup choice")
-end
+  it("test_missile requires a followup choice (kills L28 `true`->false)", function()
+    luassert.truthy(availability.requires_followup_choice(item_ids.missile) == true, "missile must require a followup choice")
+  end)
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- L91: `if auto_play_port.is_computer_controlled(game, player) then` -> nil.
 -- Original branches to auto_candidates when auto; mutant always falls to
 -- manual_candidates. Make the two paths yield opposite offerability.
 -- ════════════════════════════════════════════════════════════════════════════
-TestAvailabilityMutation["test_auto player uses auto_candidates (kills L91 condition->nil)"] = function(self)
-  -- is_auto true; auto path non-empty (offer), manual path empty (no offer).
-  -- Original: auto path -> can_offer true. Mutant(nil cond): manual -> false.
-  local can_offer = _roadblock_can_offer(true, { { idx = 1 } }, {})
-  luassert.truthy(can_offer == true, "auto player with non-empty auto_candidates must be offerable; got " .. tostring(can_offer))
-end
+  it("test_auto player uses auto_candidates (kills L91 condition->nil)", function()
+    -- is_auto true; auto path non-empty (offer), manual path empty (no offer).
+    -- Original: auto path -> can_offer true. Mutant(nil cond): manual -> false.
+    local can_offer = _roadblock_can_offer(true, { { idx = 1 } }, {})
+    luassert.truthy(can_offer == true, "auto player with non-empty auto_candidates must be offerable; got " .. tostring(can_offer))
+  end)
 
-TestAvailabilityMutation["test_manual player uses manual_candidates (guards L91 the other way)"] = function(self)
-  -- is_auto false; manual non-empty, auto empty. Original: manual -> true.
-  local can_offer = _roadblock_can_offer(false, {}, { { idx = 1 } })
-  luassert.truthy(can_offer == true, "manual player with non-empty manual_candidates must be offerable; got " .. tostring(can_offer))
-end
+  it("test_manual player uses manual_candidates (guards L91 the other way)", function()
+    -- is_auto false; manual non-empty, auto empty. Original: manual -> true.
+    local can_offer = _roadblock_can_offer(false, {}, { { idx = 1 } })
+    luassert.truthy(can_offer == true, "manual player with non-empty manual_candidates must be offerable; got " .. tostring(can_offer))
+  end)
 
-TestAvailabilityMutation["test_auto_candidates result is returned, not discarded (kills L92 ->nil)"] = function(self)
-  -- is_auto true; auto non-empty, manual empty. Original returns the auto list
-  -- (offerable). Mutant replacing the call with nil -> type(nil) fails -> false.
-  local can_offer = _roadblock_can_offer(true, { { idx = 1 }, { idx = 2 } }, {})
-  luassert.truthy(can_offer == true, "auto_candidates list must drive offerability; got " .. tostring(can_offer))
-end
+  it("test_auto_candidates result is returned, not discarded (kills L92 ->nil)", function()
+    -- is_auto true; auto non-empty, manual empty. Original returns the auto list
+    -- (offerable). Mutant replacing the call with nil -> type(nil) fails -> false.
+    local can_offer = _roadblock_can_offer(true, { { idx = 1 }, { idx = 2 } }, {})
+    luassert.truthy(can_offer == true, "auto_candidates list must drive offerability; got " .. tostring(can_offer))
+  end)
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- L156: `return type(candidates) == "table" and #candidates > 0`
@@ -140,18 +140,18 @@ end
 --   >-> >=  : empty table -> original false, mutant true.
 --   0 -> 1  : single-element table -> original true, mutant false.
 -- ════════════════════════════════════════════════════════════════════════════
-TestAvailabilityMutation["test_empty candidate table is NOT offerable (kills and->or and >->>=)"] = function(self)
-  -- type=="table" true, #==0. Original: true and (0>0) -> false.
-  -- Mut and->or: true or ... -> true. Mut >->>=: true and (0>=0) -> true.
-  local can_offer = _roadblock_can_offer(true, {}, {})
-  luassert.truthy(can_offer == false, "empty roadblock candidates must NOT be offerable; got " .. tostring(can_offer))
-end
+  it("test_empty candidate table is NOT offerable (kills and->or and >->>=)", function()
+    -- type=="table" true, #==0. Original: true and (0>0) -> false.
+    -- Mut and->or: true or ... -> true. Mut >->>=: true and (0>=0) -> true.
+    local can_offer = _roadblock_can_offer(true, {}, {})
+    luassert.truthy(can_offer == false, "empty roadblock candidates must NOT be offerable; got " .. tostring(can_offer))
+  end)
 
-TestAvailabilityMutation["test_single candidate IS offerable (kills 0->1)"] = function(self)
-  -- #==1. Original: 1>0 -> true. Mut 0->1: 1>1 -> false.
-  local can_offer = _roadblock_can_offer(true, { { idx = 1 } }, {})
-  luassert.truthy(can_offer == true, "a single roadblock candidate must be offerable; got " .. tostring(can_offer))
-end
+  it("test_single candidate IS offerable (kills 0->1)", function()
+    -- #==1. Original: 1>0 -> true. Mut 0->1: 1>1 -> false.
+    local can_offer = _roadblock_can_offer(true, { { idx = 1 } }, {})
+    luassert.truthy(can_offer == true, "a single roadblock candidate must be offerable; got " .. tostring(can_offer))
+  end)
 
 
-return TestAvailabilityMutation
+end)
