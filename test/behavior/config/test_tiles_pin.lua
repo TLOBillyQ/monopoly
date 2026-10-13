@@ -1,6 +1,9 @@
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 -- tiles.lua 数据契约 pin:整表逐条深等(#293 变异清扫)。
 -- 棋盘数据(坐标/价格/租金/升级档)被规则与视图消费,改表必须改契约。
-local lu = require("luaunit")
 local tiles = require("src.config.content.tiles")
 
 local expected = {
@@ -51,27 +54,27 @@ local expected = {
   { id = 45, name = "机会卡", type = "chance", row = 8, col = 5, price = 0, upgrade_costs = { 0, 0, 0 }, rents = { 0, 0, 0, 0 } },
 }
 
-TestTilesPin = {}
+describe("TestTilesPin", function()
 
-function TestTilesPin:test_tile_catalog_matches_the_pinned_contract()
-  lu.assertEvalToTrue(#tiles == #expected, "tile count must match")
-  for i, want in ipairs(expected) do
-    lu.assertEvalToTrue(tiles[i] ~= nil, "tile " .. i .. " must exist")
-    lu.assertEvalToTrue(tiles[i].id == want.id, "tile " .. i .. " id")
-    lu.assertEvalToTrue(tiles[i].name == want.name, "tile " .. i .. " name")
-    lu.assertEvalToTrue(tiles[i].type == want.type, "tile " .. i .. " type")
-    lu.assertEvalToTrue(tiles[i].row == want.row and tiles[i].col == want.col, "tile " .. i .. " position")
-    lu.assertEvalToTrue(tiles[i].price == want.price, "tile " .. i .. " price")
-    lu.assertEvalToTrue(tiles[i].build_row == want.build_row and tiles[i].build_col == want.build_col, "tile " .. i .. " build position")
-    lu.assertEvalToTrue(#tiles[i].upgrade_costs == #want.upgrade_costs, "tile " .. i .. " upgrade count")
-    for k, v in ipairs(want.upgrade_costs) do
-      lu.assertEvalToTrue(tiles[i].upgrade_costs[k] == v, "tile " .. i .. " upgrade cost " .. k)
+  it("test_tile_catalog_matches_the_pinned_contract", function()
+    luassert.truthy(#tiles == #expected, "tile count must match")
+    for i, want in ipairs(expected) do
+      luassert.truthy(tiles[i] ~= nil, "tile " .. i .. " must exist")
+      luassert.truthy(tiles[i].id == want.id, "tile " .. i .. " id")
+      luassert.truthy(tiles[i].name == want.name, "tile " .. i .. " name")
+      luassert.truthy(tiles[i].type == want.type, "tile " .. i .. " type")
+      luassert.truthy(tiles[i].row == want.row and tiles[i].col == want.col, "tile " .. i .. " position")
+      luassert.truthy(tiles[i].price == want.price, "tile " .. i .. " price")
+      luassert.truthy(tiles[i].build_row == want.build_row and tiles[i].build_col == want.build_col, "tile " .. i .. " build position")
+      luassert.truthy(#tiles[i].upgrade_costs == #want.upgrade_costs, "tile " .. i .. " upgrade count")
+      for k, v in ipairs(want.upgrade_costs) do
+        luassert.truthy(tiles[i].upgrade_costs[k] == v, "tile " .. i .. " upgrade cost " .. k)
+      end
+      luassert.truthy(#tiles[i].rents == #want.rents, "tile " .. i .. " rent count")
+      for k, v in ipairs(want.rents) do
+        luassert.truthy(tiles[i].rents[k] == v, "tile " .. i .. " rent " .. k)
+      end
     end
-    lu.assertEvalToTrue(#tiles[i].rents == #want.rents, "tile " .. i .. " rent count")
-    for k, v in ipairs(want.rents) do
-      lu.assertEvalToTrue(tiles[i].rents[k] == v, "tile " .. i .. " rent " .. k)
-    end
-  end
-end
+  end)
 
-return TestTilesPin
+end)
