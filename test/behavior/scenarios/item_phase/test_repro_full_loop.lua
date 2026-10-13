@@ -1,7 +1,18 @@
 -- [DEBUG-rf01] 全链路复现:真实 gameplay_loop.tick + 真实 choice/modal 超时步进
 -- + 真实 need_choice 消费者 + 真实触控输入管线(输入锁/槽位预确认)。
 -- 剧本:同回合 2 查税 + 1 财神后,最后一张查税是否可用。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_equal(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
+local function _assert_not_equal(actual, expected, message)
+  luassert.is_not.equal(expected, actual, message)
+end
+local function _require_choice(value, message)
+  luassert.truthy(value, message)
+  return value
+end
 local fixtures = require("test.support.gameplay_fixtures")
 local support = require("test.support.shared_support")
 local gameplay_loop = require("src.turn.loop")
@@ -79,7 +90,7 @@ function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactiv
     old_emit(kind, payload)
     if kind == "need_choice" then
       local ok, err = pcall(runtime_event_ports.on_need_choice, state, function() return g end, payload)
-      lu.assertTrue(ok, "on_need_choice error: " .. tostring(err))
+      luassert.is_true(ok, "on_need_choice error: " .. tostring(err))
     end
   end
 
@@ -114,7 +125,7 @@ function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactiv
   -- 点槽位 → 预确认屏 → 确认(与真机操作同路)
   local function _use_slot(item_id, tag)
     local idx = _slot_index_of(item_id)
-    lu.assertNotNil(idx, "USER SYMPTOM(" .. tag .. "): no tappable slot for item " ..
+    luassert.is_not_nil(idx, "USER SYMPTOM(" .. tag .. "): no tappable slot for item " ..
       tostring(item_id) .. " in cached ui_model — slots dead until countdown")
     local before = g.turn.pending_choice and g.turn.pending_choice.id
     _tap({ type = "item_slot_click", slot_index = idx })
@@ -124,20 +135,20 @@ function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactiv
       _tap({ type = "choice_select", choice_id = pc.id, option_id = item_id })
     end
     local after = g.turn.pending_choice and g.turn.pending_choice.id
-    lu.assertNotEquals(after, before, "USER SYMPTOM(" .. tag .. "): slot tap+confirm did not advance the window " ..
+    _assert_not_equal(after, before, "USER SYMPTOM(" .. tag .. "): slot tap+confirm did not advance the window " ..
       "(tap swallowed; user can only wait for countdown)")
   end
 
   -- 目标选择 modal:直接点目标(必要时二次确认)
   local function _pick_target(tag)
-    local followup = assert(g.turn.pending_choice, tag .. ": target choice missing")
-    lu.assertNotEquals(followup.kind, "item_phase_passive", tag .. ": expected followup, got passive")
+    local followup = _require_choice(g.turn.pending_choice, tag .. ": target choice missing")
+    _assert_not_equal(followup.kind, "item_phase_passive", tag .. ": expected followup, got passive")
     local option_id = followup.options[1].id
     _tap({ type = "choice_select", choice_id = followup.id, option_id = option_id })
     if g.turn.pending_choice and g.turn.pending_choice.id == followup.id then
       _tap({ type = "choice_select", choice_id = followup.id, option_id = option_id })
     end
-    lu.assertEvalToTrue(not (g.turn.pending_choice and g.turn.pending_choice.id == followup.id),
+    luassert.truthy(not (g.turn.pending_choice and g.turn.pending_choice.id == followup.id),
       tag .. ": target selection did not resolve")
   end
 
@@ -145,8 +156,8 @@ function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactiv
   g:advance_turn()
   _tick(1.0)
   _dump("after boot")
-  local pc = assert(g.turn.pending_choice, "item window should open")
-  lu.assertEquals(pc.kind, "item_phase_passive", "expected passive, got " .. tostring(pc.kind))
+  local pc = _require_choice(g.turn.pending_choice, "item window should open")
+  _assert_equal(pc.kind, "item_phase_passive", "expected passive, got " .. tostring(pc.kind))
 
   -- 查税 1(思考 4s,目标 3s)
   _tick(4.0); _use_slot(item_ids.tax, "tax1")
@@ -154,34 +165,34 @@ function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactiv
   _tick(3.0); _dump("after tax1")
 
   -- 查税 2(思考 3s,目标 2s)
-  lu.assertEvalToTrue(g.turn.pending_choice and g.turn.pending_choice.kind == "item_phase_passive",
+  luassert.truthy(g.turn.pending_choice and g.turn.pending_choice.kind == "item_phase_passive",
     "passive should reopen after tax1")
   _use_slot(item_ids.tax, "tax2")
   _tick(2.0); _pick_target("tax2")
   _tick(3.0); _dump("after tax2")
 
   -- 财神
-  lu.assertEvalToTrue(g.turn.pending_choice and g.turn.pending_choice.kind == "item_phase_passive",
+  luassert.truthy(g.turn.pending_choice and g.turn.pending_choice.kind == "item_phase_passive",
     "passive should reopen after tax2")
   _use_slot(item_ids.rich, "rich")
   _tick(3.0); _dump("after rich settle")
 
   local reopened = g.turn.pending_choice
-  lu.assertNotNil(reopened, "window should reopen after rich use")
-  lu.assertEquals(reopened.kind, "item_phase_passive", "reopened should be passive, got " .. tostring(reopened.kind))
-  lu.assertEvalToTrue(_has_option(reopened, item_ids.tax), "last tax should be listed")
+  luassert.is_not_nil(reopened, "window should reopen after rich use")
+  _assert_equal(reopened.kind, "item_phase_passive", "reopened should be passive, got " .. tostring(reopened.kind))
+  luassert.truthy(_has_option(reopened, item_ids.tax), "last tax should be listed")
   local reopened_id = reopened.id
 
   -- 自身只显示 3s,不得被跨窗口累计超时关闭
   _tick(3.0); _dump("after 3s on reopened")
   local still = g.turn.pending_choice
-  lu.assertEvalToTrue(still ~= nil and still.id == reopened_id,
+  luassert.truthy(still ~= nil and still.id == reopened_id,
     "reopened window must stay open (user symptom: locked until turn-end countdown)")
 
   -- 用户症状面:最后一张查税必须还能通过真实触控用出去
   _use_slot(item_ids.tax, "tax3-after-rich")
   _tick(0.5)
-  lu.assertNotNil(g.turn.pending_choice, "tax target choice should open for the last tax")
+  luassert.is_not_nil(g.turn.pending_choice, "tax target choice should open for the last tax")
   _dump("after tax3 slot tap")
 
   monopoly_event.emit_intent = old_emit
