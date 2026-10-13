@@ -11,6 +11,7 @@
 local bootstrap = require("test.bootstrap")
 
 bootstrap.install_package_paths()
+local check = require("luassert")
 assert(bootstrap.ensure_tool("arch_view"))
 
 local arch_view = require("arch_view")
@@ -69,15 +70,15 @@ end
 
 local function _test_cli_scan_stamps_supported_schema_version()
   local payload = _scan_payload()
-  assert(SUPPORTED_SCHEMA_VERSIONS[payload.schema_version] == true,
+  check.truthy(SUPPORTED_SCHEMA_VERSIONS[payload.schema_version] == true,
     "scan wrote schema_version " .. tostring(payload.schema_version) .. ", outside the supported range")
 end
 
 local function _test_cli_scan_gate_shape()
   local payload = _scan_payload()
-  assert(type(payload.check) == "table", "scan output must carry a check table")
-  assert(type(payload.check.ok) == "boolean", "check.ok must be a boolean")
-  assert(type(payload.check.violations) == "table", "check.violations must be a table")
+  check.truthy(type(payload.check) == "table", "scan output must carry a check table")
+  check.truthy(type(payload.check.ok) == "boolean", "check.ok must be a boolean")
+  check.truthy(type(payload.check.violations) == "table", "check.violations must be a table")
 end
 
 local tooling_tests = {
