@@ -1,14 +1,8 @@
+require("test.bootstrap").install_package_paths()
 local suite = require("test.support.tooling_suites.architecture.luaunit_runner_infra_tooling")
-local cases = suite.tests or {}
 
-TestLuaunitRunnerInfraTooling = {}
-
--- 原 busted 场景循环:for _, case in ipairs(cases) do it(case.name, case.run) end
-for _, case in ipairs(cases) do
-  TestLuaunitRunnerInfraTooling["test_" .. case.name] = function(self)
-    case.run()
+describe("luaunit runner infrastructure tooling", function()
+  for _, case in ipairs(suite.tests) do
+    it(case.name, case.run)
   end
-end
-
-
-return TestLuaunitRunnerInfraTooling
+end)

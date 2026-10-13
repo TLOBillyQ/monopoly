@@ -559,7 +559,6 @@ return {
     "test/guards/test_root_whitelist_guard.lua",
     "test/guards/test_same_name_pair_guard.lua",
     "test/guards/test_steps_budget_guard.lua",
-    "test/support/luaunit_runner_infra/test/test_luaunit_runner_infra_tooling.lua",
     "tools/foundation/test/test_parallel_lanes.lua",
     "tools/foundation/test/test_script_tools_contract.lua",
     "tools/foundation/test/test_script_tools_contract_common.lua",
@@ -594,6 +593,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/support/luaunit_runner_infra/test/test_luaunit_runner_infra_tooling.lua",
     "tools/packages/luaunit_runner/test/test_spec_sharding.lua",
     "tools/packages/acceptance_mutate/test/test_acceptance_mutate_cli.lua",
     "tools/packages/acceptance_mutate/test/test_mutate_lane.lua",

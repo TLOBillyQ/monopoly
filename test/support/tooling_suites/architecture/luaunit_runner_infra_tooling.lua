@@ -2,10 +2,10 @@ local bootstrap = require("test.bootstrap")
 
 bootstrap.install_package_paths()
 
+local check = require("luassert")
+
 local function _assert(condition, message)
-  if not condition then
-    error(message or "assertion failed", 2)
-  end
+  check.is_true(condition, message)
 end
 
 -- #361 P6:handler 测试已挪 behavior 车道,behavior 车道每跑必加载
