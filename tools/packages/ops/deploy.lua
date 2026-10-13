@@ -3,12 +3,8 @@
 --
 -- 行为真源:本文件自身(deploy.lua)。历史来源 deploy.ps1(373 行)已随 #384 删除,
 -- 整体由本文件取代(ADR 0030);正文中 deploy.ps1 行号仅作历史坐标保留。
--- 本文件是 story1(deploy_core)的落地:核心部署逻辑 + story2(deploy_wsl)接缝
--- (resolve_wsl_windows_home / convert_to_windows_path / Copy-DirectoryTree 的 wsl 分支)。
---
--- 自包含决策:本脚本只用 Lua 5.4 标准库,不 require foundation.*。deploy.lua 必须在
--- 原生 Windows 上运行(部署目标是 Windows 侧 Eggy 宿主),而 foundation 工具链只跑
--- macOS/WSL(POSIX 路径);行为等价优先,故文件系统操作按真实平台分支。
+-- 仅支持原生 Windows(ADR 0066 / #95),以 Lua 5.4 标准库和 cmd 原生命令
+-- 保留目标解析、目录镜像与逐文件复制语义;不加载额外文件系统依赖。
 --
 -- CLI 面:零参数、零开关、无 --help(继承被取代的 deploy.ps1 空 param(),#384);任何参数 → ERROR + exit 1。
 -- 子命令入口:lua tools/cli.lua deploy 经 tools/packages/ops/cli.lua 壳转发,仅 --help/-h 在壳内
@@ -28,8 +24,7 @@ local function _normalize_path(value)
   return tostring(value or ""):gsub("\\", "/")
 end
 
--- 真实运行平台(以路径分隔符为准),与"部署平台判定"区分开:模拟 win(OS=Windows_NT)
--- 在 POSIX 上成立,但底层命令仍走 POSIX。
+-- 原生运行平台以 Lua 的路径分隔符判定。
 local function _actual_is_windows()
   return package.config:sub(1, 1) == "\\"
 end
@@ -54,45 +49,22 @@ local function _popen(command)
   return output
 end
 
--- 取输出第一行(PowerShell 的 `| Select-Object -First 1` 等价),截到 CR 或 LF。
-local function _first_line(output)
-  local line = tostring(output or ""):match("^[^\r\n]*")
-  if line == nil then
-    return ""
-  end
-  return line
-end
-
 local function _current_dir()
-  if _actual_is_windows() then
-    return _normalize_path(_trim(_popen("cd")))
-  end
-  return _normalize_path(_trim(_popen("pwd")))
+  return _normalize_path(_trim(_popen("chcp 65001 >nul & cd")))
 end
 
--- 命令行参数引号:POSIX 单引号;Windows cmd 双引号(路径已反斜杠化)。
+-- cmd 路径参数;拒绝引号、变量展开与换行,避免路径被解释成命令。
 local function _cmd_arg(value)
-  if _actual_is_windows() then
-    local text = tostring(value or ""):gsub("/", "\\")
-    text = text:gsub("\\+$", "")
-    if text:match("^%a:$") then
-      text = text .. "\\"
-    end
-    return '"' .. text:gsub('"', '""') .. '"'
-  end
-  return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
+  local text = tostring(value or ""):gsub("/", "\\")
+  assert(not text:find('["\r\n%%!]'), "Unsupported command path")
+  return '"' .. text .. '"'
 end
 
 local function _path_exists(path)
   if path == nil or path == "" then
     return false
   end
-  local ok, kind, code
-  if _actual_is_windows() then
-    ok, kind, code = os.execute("if exist " .. _cmd_arg(path) .. " (exit /b 0) else (exit /b 1)")
-  else
-    ok, kind, code = os.execute("[ -e " .. _cmd_arg(path) .. " ]")
-  end
+  local ok, kind, code = os.execute("if exist " .. _cmd_arg(path) .. " (exit /b 0) else (exit /b 1)")
   return _exit_status(ok, kind, code)
 end
 
@@ -100,12 +72,7 @@ local function _path_is_dir(path)
   if path == nil or path == "" then
     return false
   end
-  local ok, kind, code
-  if _actual_is_windows() then
-    ok, kind, code = os.execute("if exist " .. _cmd_arg(path .. "\\NUL") .. " (exit /b 0) else (exit /b 1)")
-  else
-    ok, kind, code = os.execute("[ -d " .. _cmd_arg(path) .. " ]")
-  end
+  local ok, kind, code = os.execute("if exist " .. _cmd_arg(path .. "/") .. " (exit /b 0) else (exit /b 1)")
   return _exit_status(ok, kind, code)
 end
 
@@ -113,16 +80,11 @@ local function _path_is_file(path)
   if path == nil or path == "" then
     return false
   end
-  local ok, kind, code
-  if _actual_is_windows() then
-    ok, kind, code = os.execute(
-      "if exist " .. _cmd_arg(path)
-        .. " (if not exist " .. _cmd_arg(path .. "\\NUL")
-        .. " (exit /b 0) else (exit /b 1)) else (exit /b 1)"
-    )
-  else
-    ok, kind, code = os.execute("[ -f " .. _cmd_arg(path) .. " ]")
-  end
+  local ok, kind, code = os.execute(
+    "if exist " .. _cmd_arg(path)
+      .. " (if not exist " .. _cmd_arg(path .. "/")
+      .. " (exit /b 0) else (exit /b 1)) else (exit /b 1)"
+  )
   return _exit_status(ok, kind, code)
 end
 
@@ -130,12 +92,7 @@ local function _ensure_dir(path)
   if path == nil or path == "" then
     return true
   end
-  local ok, kind, code
-  if _actual_is_windows() then
-    ok, kind, code = os.execute("if not exist " .. _cmd_arg(path) .. " mkdir " .. _cmd_arg(path))
-  else
-    ok, kind, code = os.execute("mkdir -p " .. _cmd_arg(path))
-  end
+  local ok, kind, code = os.execute("if not exist " .. _cmd_arg(path) .. " mkdir " .. _cmd_arg(path))
   local success = _exit_status(ok, kind, code)
   if not success then
     error("Failed to create directory: " .. tostring(path))
@@ -148,14 +105,10 @@ local function _remove_path(path)
     return true
   end
   local ok, kind, code
-  if _actual_is_windows() then
-    if _path_is_dir(path) then
-      ok, kind, code = os.execute("rmdir /s /q " .. _cmd_arg(path))
-    else
-      ok, kind, code = os.execute("del /f /q " .. _cmd_arg(path))
-    end
+  if _path_is_dir(path) then
+    ok, kind, code = os.execute("rmdir /s /q " .. _cmd_arg(path))
   else
-    ok, kind, code = os.execute("rm -rf " .. _cmd_arg(path))
+    ok, kind, code = os.execute("del /f /q " .. _cmd_arg(path))
   end
   local success = _exit_status(ok, kind, code)
   if not success then
@@ -165,12 +118,7 @@ local function _remove_path(path)
 end
 
 local function _command_available(name)
-  local command
-  if _actual_is_windows() then
-    command = "where " .. tostring(name) .. " >nul 2>&1"
-  else
-    command = "command -v " .. tostring(name) .. " >/dev/null 2>&1"
-  end
+  local command = "where " .. tostring(name) .. " >nul 2>&1"
   local ok, kind, code = os.execute(command)
   return _exit_status(ok, kind, code)
 end
@@ -244,10 +192,7 @@ end
 
 local function _is_path_rooted(value)
   local normalized = _normalize_path(value)
-  if _actual_is_windows() then
-    return normalized:match("^%a:") ~= nil or normalized:match("^[/\\]") ~= nil
-  end
-  return normalized:sub(1, 1) == "/"
+  return normalized:match("^%a:") ~= nil or normalized:match("^[/\\]") ~= nil
 end
 
 -- .NET ExpandEnvironmentVariables 等价:%NAME% 展开,未定义变量原样保留。
@@ -263,7 +208,7 @@ end
 
 local function _script_path()
   local source = debug.getinfo(1, "S").source or ""
-  local value = tostring(source):gsub("^@", "")
+  local value = _normalize_path(tostring(source):gsub("^@", ""))
   if value == "" then
     value = tostring(arg and arg[0] or "")
   end
@@ -324,84 +269,20 @@ function M.resolve_normalized_path(path_text)
     candidate = _join_path(_current_dir(), candidate)
   end
   local full = M.normalize_path_text(_get_full_path(candidate))
-  return full:gsub("/+$", "")
+  return (full:gsub("/+$", ""))
 end
 
 -- 平台判定入口。
 
 function M.test_is_windows_host()
-  if os.getenv("OS") == "Windows_NT" then
-    return true
-  end
   return _actual_is_windows()
-end
-
--- /proc/version 含 "microsoft"(不区分大小写)即 WSL 内核(历史坐标 deploy.ps1 #33-34,已随 #384 删除)。
-local function _proc_version_mentions_microsoft()
-  local version_file = io.open("/proc/version", "r")
-  if version_file == nil then
-    return false
-  end
-  local version_text = version_file:read("*a") or ""
-  version_file:close()
-  return version_text:lower():find("microsoft", 1, true) ~= nil
-end
-
-function M.test_is_wsl_host()
-  if M.test_is_windows_host() then
-    return false
-  end
-  local distro = os.getenv("WSL_DISTRO_NAME")
-  if not _is_blank(distro) then
-    return true
-  end
-  return _proc_version_mentions_microsoft()
 end
 
 function M.resolve_platform_name()
   if M.test_is_windows_host() then
     return "win"
   end
-  if M.test_is_wsl_host() then
-    return "wsl"
-  end
-  M.exit_with_error("Deploy target is Windows only; run on Windows or WSL.")
-end
-
--- story2(deploy_wsl)完整实现(历史坐标 deploy.ps1 #116-135,已随 #384 删除):cmd.exe 读 %USERPROFILE% →
--- 校验 ^[A-Za-z]:\ → wslpath -u → /mnt 路径。任一失败返回空串,由调用方
--- (Resolve-DefaultTargetPath wsl 分支)报错。
-function M.resolve_wsl_windows_home()
-  local win_profile = ""
-  local ok = pcall(function()
-    win_profile = _trim(_first_line(_popen('cmd.exe /c "echo %USERPROFILE%" 2>/dev/null')))
-  end)
-  if not ok then
-    win_profile = ""
-  end
-  if win_profile == "" or win_profile:match("^%a:\\") == nil then
-    return ""
-  end
-  local wsl_path = ""
-  ok = pcall(function()
-    wsl_path = _trim(_first_line(_popen("wslpath -u " .. _cmd_arg(win_profile) .. " 2>/dev/null")))
-  end)
-  if not ok then
-    return ""
-  end
-  return M.normalize_path_text(wsl_path)
-end
-
--- story2(deploy_wsl)完整实现(历史坐标 deploy.ps1 #202-210,已随 #384 删除):wslpath -w;失败返回空串,
--- 由调用方(Copy-DirectoryTree wsl 分支)回落逐文件拷贝。
-function M.convert_to_windows_path(path_text)
-  local ok, converted = pcall(function()
-    return _trim(_first_line(_popen("wslpath -w " .. _cmd_arg(path_text) .. " 2>/dev/null")))
-  end)
-  if not ok then
-    return ""
-  end
-  return converted
+  M.exit_with_error("Deploy target is Windows only; run on native Windows.")
 end
 
 function M.join_lua_source_dir_name()
@@ -419,15 +300,6 @@ function M.resolve_default_target_path(resolved_platform)
     return M.resolve_normalized_path(
       _join_path(_join_path(_join_path(_join_path(home_dir, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())
     )
-  elseif resolved_platform == "wsl" then
-    -- story2(deploy_wsl)接缝:win_home 经 /mnt 写入,不是 WSL 内部 $HOME(工单 #128)。
-    local win_home = M.resolve_wsl_windows_home()
-    if _is_blank(win_home) then
-      M.exit_with_error("Cannot resolve Windows host home from WSL (need cmd.exe + wslpath interop).")
-    end
-    return M.resolve_normalized_path(
-      _join_path(_join_path(_join_path(_join_path(win_home, "Desktop"), "dev"), "eggy"), M.join_lua_source_dir_name())
-    )
   end
   M.exit_with_error("No default deploy target is configured for this platform.")
 end
@@ -440,7 +312,7 @@ end
 
 function M.resolve_project_root()
   local candidates = {
-    _get_full_path(_join_path(_script_dir(), "../..")),
+    _get_full_path(_join_path(_script_dir(), "../../..")),
     _current_dir(),
   }
 
@@ -460,35 +332,25 @@ function M.reset_directory(path_text)
   _ensure_dir(path_text)
 end
 
--- 单层条目枚举(含隐藏,等价 Get-ChildItem -Force):POSIX find / Windows dir /a。
--- win_switch / posix_type 由调用方传入,文件为 "/a-d" + "f",目录为 "/ad" + "d"。
-local function _list_names(path, win_switch, posix_type)
-  local output
-  if _actual_is_windows() then
-    output = _popen("dir /b " .. win_switch .. " " .. _cmd_arg(path) .. " 2>nul")
-  else
-    output = _popen("find " .. _cmd_arg(path) .. " -mindepth 1 -maxdepth 1 -type " .. posix_type .. " 2>/dev/null")
-  end
+-- dir /a 包含隐藏项;同一 cmd 进程先选 UTF-8,保留中文文件名。
+local function _list_names(path, win_switch)
+  local output = _popen("chcp 65001 >nul & dir /b " .. win_switch .. " " .. _cmd_arg(path) .. " 2>nul")
   local names = {}
   for line in (output .. "\n"):gmatch("(.-)\n") do
     local name = line:gsub("\r$", "")
     if name ~= "" and name ~= "." and name ~= ".." then
-      if _actual_is_windows() then
-        names[#names + 1] = name
-      else
-        names[#names + 1] = name:match("([^/]+)$") or name
-      end
+      names[#names + 1] = name
     end
   end
   return names
 end
 
 local function _list_files(path)
-  return _list_names(path, "/a-d", "f")
+  return _list_names(path, "/a-d")
 end
 
 local function _list_dirs(path)
-  return _list_names(path, "/ad", "d")
+  return _list_names(path, "/ad")
 end
 
 -- 枚举源目录全部条目(含隐藏文件);目录缺失按 PowerShell Get-ChildItem 语义抛错,
@@ -548,12 +410,7 @@ local function _copy_entry_recursive(source, target)
   end
 end
 
--- 目录树镜像。win/wsl 走 robocopy /MIR:增量只传变化文件,且由 Windows 侧执行,
--- 避免 WSL 经 9P(/mnt)逐文件操作的巨大开销(全删重拷曾耗时 ~75s)。
--- robocopy 不可用或失败(退出码 >= 8,0-7 均为成功)时回落逐文件拷贝。
--- robocopy 单次执行:win 直接调 robocopy;wsl 经 cmd.exe /c robocopy(路径已由
--- Convert-ToWindowsPath 转成 Windows 盘符)。退出码 < 8(0-7 均为成功)返回 true,
--- >= 8 或无法启动返回 false,由调用方决定是否回落逐文件拷贝。
+-- robocopy /MIR 增量镜像;退出码 0-7 成功,>=8 或不可用时逐文件回退。
 local function _run_robocopy(program, source, target, redirect)
   local robo_flags = "/MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:1"
   local ok, kind, code = os.execute(
@@ -571,37 +428,17 @@ local function _run_robocopy(program, source, target, redirect)
   return exit_code < 8
 end
 
--- 尝试走 robocopy /MIR 镜像:win 直接调 robocopy;wsl 经 cmd.exe /c robocopy。
--- 成功(退出码 < 8)返回 true 表示无需回落;不可用、路径转换失败或退出码 >= 8
--- 返回 false,由调用方回落通用逐文件拷贝。
 local function _try_robocopy_mirror(source_dir, target_dir)
-  if M.test_is_windows_host() and _command_available("robocopy") then
-    local redirect = _actual_is_windows() and ">nul 2>&1" or ">/dev/null 2>&1"
-    return _run_robocopy(
-      "robocopy",
-      _normalize_path(source_dir):gsub("/", "\\"),
-      _normalize_path(target_dir):gsub("/", "\\"),
-      redirect
-    )
-  end
-  if M.test_is_wsl_host() and _command_available("cmd.exe") then
-    -- story2(deploy_wsl)完整实现(历史坐标 deploy.ps1 #230-240,已随 #384 删除):Convert-ToWindowsPath →
-    -- cmd.exe /c robocopy(必须经 cmd.exe 启动:system32 里实际叫 Robocopy.exe
-    -- 大写 R,Linux PATH 查找大小写敏感);退出码 < 8 成功、>= 8 或路径转换
-    -- 失败时回落通用逐文件拷贝。cmd.exe 会对 UNC 工作目录发一条无害警告,
-    -- stderr 一起丢弃(等价 2>$null | Out-Null);本分支只在 POSIX(WSL)执行,
-    -- 用 /dev/null 而非 Windows 的 nul。
-    local robo_source = M.convert_to_windows_path(source_dir)
-    local robo_target = M.convert_to_windows_path(target_dir)
-    if _is_blank(robo_source) or _is_blank(robo_target) then
-      return false
-    end
-    return _run_robocopy("cmd.exe /c robocopy", robo_source, robo_target, ">/dev/null 2>&1")
+  if _command_available("robocopy") then
+    return _run_robocopy("robocopy", source_dir, target_dir, ">nul 2>&1")
   end
   return false
 end
 
 function M.copy_directory_tree(source_dir, target_dir)
+  if not _path_is_dir(source_dir) then
+    error("Source directory does not exist: " .. tostring(source_dir))
+  end
   if _try_robocopy_mirror(source_dir, target_dir) then
     return
   end
@@ -701,8 +538,7 @@ local function _set_windows_encoding()
   if not M.test_is_windows_host() then
     return
   end
-  local redirect = _actual_is_windows() and ">nul 2>&1" or ">/dev/null 2>&1"
-  os.execute("chcp 65001 " .. redirect)
+  os.execute("chcp 65001 >nul 2>&1")
 end
 
 local function _error_text(err)
@@ -746,8 +582,7 @@ local function main()
     _join_path(target_path, "Data/Prefab.lua")
   )
 
-  -- 统计读本地源侧而非部署目标:拷贝是 as-is,数字等价,且免去在 /mnt(9P)上
-  -- 把整棵 src 重读一遍的开销(历史坐标 deploy.ps1 #348-349 注释,已随 #384 删除)。
+  -- 统计读本地源侧:拷贝是 as-is,文件与有效行数量等价。
   local total_files =
     M.get_lua_file_count(_join_path(project_root, "src"))
     + M.get_lua_file_count(_join_path(project_root, "main.lua"))
