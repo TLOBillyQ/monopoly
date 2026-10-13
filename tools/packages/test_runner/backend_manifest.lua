@@ -378,10 +378,10 @@ return {
     "test/behavior/ui/view/test_panel_builder.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
-    "tools/packages/spec_lane/test/test_spec_lane.lua",
-    "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/spec_lane/test/test_spec_lane.lua",
+    "tools/packages/verify/test/test_verify_full.lua",
     "tools/packages/mutate/test/test_lua54_guard.lua",
     "tools/packages/mutate/test/test_mutate4lua_tooling_contract.lua",
     "tools/packages/arch_view/test/test_arch_view_snapshot_tooling_contract.lua",
