@@ -209,7 +209,6 @@ return {
     "test/behavior/rules/test_weighted_draw.lua",
     "test/behavior/scenarios/deadlines/test_all_human_no_input_full_game.lua",
     "test/behavior/scenarios/item_phase/test_repro_full_loop.lua",
-    "test/behavior/scenarios/ui_sync/test_auto_player_landing_choice_event_path.lua",
     "test/behavior/state/test_board_state.lua",
     "test/behavior/state/test_dirty_tracker.lua",
     "test/behavior/state/test_event_log.lua",
@@ -592,6 +591,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/scenarios/ui_sync/test_auto_player_landing_choice_event_path.lua",
     "test/behavior/app/test_transaction_context.lua",
     "test/behavior/app/test_state_factory.lua",
     "test/behavior/app/test_game_factory.lua",

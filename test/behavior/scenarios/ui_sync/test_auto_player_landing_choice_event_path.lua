@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local _config_reset = require("test.support.config_reset")
@@ -88,15 +88,14 @@ local function _run_choice_open_case(game_opts, expect_open, case_name)
   end
 end
 
-TestAutoPlayerLandingChoiceEventPath = {}
-
-function TestAutoPlayerLandingChoiceEventPath:setUp()
-  _config_reset.reset_all()
-end
+describe("TestAutoPlayerLandingChoiceEventPath", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
 -- 无 tearDown:席位名册经 with_patches 单字段 patch 铺设,出入两侧自动还原。
 
-function TestAutoPlayerLandingChoiceEventPath:test_auto_player_landing_modal_opens_only_via_dirty_reconcile()
+local function _test_auto_player_landing_modal_opens_only_via_dirty_reconcile()
   _run_choice_open_case(
     { players = { "P1", "P2" }, auto_all = true, ai = {} },
     false,
@@ -104,7 +103,7 @@ function TestAutoPlayerLandingChoiceEventPath:test_auto_player_landing_modal_ope
   )
 end
 
-function TestAutoPlayerLandingChoiceEventPath:test_ai_player_landing_modal_opens_only_via_dirty_reconcile()
+local function _test_ai_player_landing_modal_opens_only_via_dirty_reconcile()
   _run_choice_open_case(
     { players = { "P1", "P2" }, ai = { [1] = true } },
     false,
@@ -112,7 +111,7 @@ function TestAutoPlayerLandingChoiceEventPath:test_ai_player_landing_modal_opens
   )
 end
 
-function TestAutoPlayerLandingChoiceEventPath:test_local_human_landing_modal_opens_only_via_dirty_reconcile()
+local function _test_local_human_landing_modal_opens_only_via_dirty_reconcile()
   _run_choice_open_case(
     { players = { "P1", "P2" }, ai = {} },
     true,
@@ -121,4 +120,7 @@ function TestAutoPlayerLandingChoiceEventPath:test_local_human_landing_modal_ope
 end
 
 
-return TestAutoPlayerLandingChoiceEventPath
+it("test_auto_player_landing_modal_opens_only_via_dirty_reconcile", _test_auto_player_landing_modal_opens_only_via_dirty_reconcile)
+it("test_ai_player_landing_modal_opens_only_via_dirty_reconcile", _test_ai_player_landing_modal_opens_only_via_dirty_reconcile)
+it("test_local_human_landing_modal_opens_only_via_dirty_reconcile", _test_local_human_landing_modal_opens_only_via_dirty_reconcile)
+end)
