@@ -12,6 +12,12 @@ local is_module = ... == "packages.dry.runner"
 local platform_boundary = require("foundation.platform_boundary")
 local verdict = nil
 if not is_module then
+  for _, value in ipairs(arg or {}) do
+    if value == "--help" or value == "-h" then
+      io.write(require("packages.dry.cli").usage())
+      os.exit(0)
+    end
+  end
   verdict = platform_boundary.evaluate("dry", arg or {})
   if verdict.status ~= nil then
     os.exit(platform_boundary.emit(verdict))
