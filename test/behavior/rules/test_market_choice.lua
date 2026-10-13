@@ -1,11 +1,18 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
 local saved_modules
+local patched_events = require("src.foundation.events")
+local patched_choice_contract = require("src.config.choice.contract")
+local saved_emit, saved_owner_resolver
 before_each(function()
+  saved_emit = patched_events.emit
+  saved_owner_resolver = patched_choice_contract.resolve_owner_role_id
   saved_modules = {}
   for name, module in pairs(package.loaded) do saved_modules[name] = module end
 end)
 after_each(function()
+  patched_events.emit = saved_emit
+  patched_choice_contract.resolve_owner_role_id = saved_owner_resolver
   for name in pairs(package.loaded) do
     if saved_modules[name] == nil then package.loaded[name] = nil end
   end
