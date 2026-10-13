@@ -20,7 +20,6 @@ return {
     "test/behavior/host/test_entity_pool.lua",
     "test/behavior/host/test_init_mutation.lua",
     "test/behavior/host/test_paid_purchase_gateway.lua",
-    "test/behavior/host/test_synthetic_actor_registry.lua",
     "test/behavior/rules/board/test_init_mutation.lua",
     "test/behavior/rules/board/test_route_plan.lua",
     "test/behavior/rules/chance/test_movement_handlers_mutation.lua",
@@ -390,6 +389,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/host/test_synthetic_actor_registry.lua",
     "test/behavior/app/test_share_task.lua",
     "test/behavior/app/test_roster_roles.lua",
     "test/behavior/app/test_host_install.lua",

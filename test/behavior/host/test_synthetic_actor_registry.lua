@@ -1,7 +1,7 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -13,9 +13,9 @@ end
 local _with_patches = support.with_patches
 local runtime_constants = require("src.config.gameplay.runtime_constants")
 
-TestSyntheticActorRegistry = {}
+describe("TestSyntheticActorRegistry", function()
 
-function TestSyntheticActorRegistry:test_spawns_from_first_path_tile()
+local function _test_spawns_from_first_path_tile()
   local registry_module = require("src.host.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
@@ -52,7 +52,7 @@ function TestSyntheticActorRegistry:test_spawns_from_first_path_tile()
   _assert_eq(created[1].rot, runtime_constants.q_left, "registry should spawn synthetic actors facing left")
 end
 
-function TestSyntheticActorRegistry:test_spawns_at_zero_when_lua_api_cannot_query_start_tile()
+local function _test_spawns_at_zero_when_lua_api_cannot_query_start_tile()
   local registry_module = require("src.host.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
@@ -74,7 +74,7 @@ function TestSyntheticActorRegistry:test_spawns_at_zero_when_lua_api_cannot_quer
   _assert_eq(created[1].pos.x, 0, "fallback position should be zero")
 end
 
-function TestSyntheticActorRegistry:test_spawns_at_zero_when_query_unit_raises()
+local function _test_spawns_at_zero_when_query_unit_raises()
   local registry_module = require("src.host.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
@@ -100,7 +100,7 @@ function TestSyntheticActorRegistry:test_spawns_at_zero_when_query_unit_raises()
   _assert_eq(created[1].pos.x, 0, "throwing query_unit fallback position should be zero")
 end
 
-function TestSyntheticActorRegistry:test_reset_destroys_spawned_actor_and_clears_registry()
+local function _test_reset_destroys_spawned_actor_and_clears_registry()
   local registry_module = require("src.host.synthetic_actor_registry")
   local destroyed = {}
   local spawned_unit = {
@@ -142,7 +142,7 @@ function TestSyntheticActorRegistry:test_reset_destroys_spawned_actor_and_clears
   _assert_eq(registry.resolve_actor(-3), nil, "registry reset should clear actor lookup")
 end
 
-function TestSyntheticActorRegistry:test_adapter_lose_destroys_unit_and_drops_from_registry()
+local function _test_adapter_lose_destroys_unit_and_drops_from_registry()
   local registry_module = require("src.host.synthetic_actor_registry")
   local destroyed = {}
   local spawned_unit = {
@@ -186,7 +186,7 @@ function TestSyntheticActorRegistry:test_adapter_lose_destroys_unit_and_drops_fr
   _assert_eq(#destroyed, 1, "second lose call should not double-destroy the unit")
 end
 
-function TestSyntheticActorRegistry:test_adapter_die_retires_actor_like_lose()
+local function _test_adapter_die_retires_actor_like_lose()
   local registry_module = require("src.host.synthetic_actor_registry")
   local destroyed = {}
   local spawned_unit = {
@@ -228,7 +228,7 @@ end
 
 -- ── _start_actor_ai branches ──────────────────────────────────────
 
-function TestSyntheticActorRegistry:test_spawn_logs_warning_when_start_ai_is_missing()
+local function _test_spawn_logs_warning_when_start_ai_is_missing()
   local registry_module = require("src.host.synthetic_actor_registry")
   local warned = {}
   local logger = require("src.foundation.log")
@@ -256,7 +256,7 @@ function TestSyntheticActorRegistry:test_spawn_logs_warning_when_start_ai_is_mis
   _assert_eq(warned[1].msg, "synthetic actor missing start_ai", "missing start_ai should use correct message")
 end
 
-function TestSyntheticActorRegistry:test_spawn_logs_warning_when_start_ai_raises()
+local function _test_spawn_logs_warning_when_start_ai_raises()
   local registry_module = require("src.host.synthetic_actor_registry")
   local warned = {}
   local logger = require("src.foundation.log")
@@ -288,7 +288,7 @@ end
 
 -- ── adapter: send_ui_custom_event / game_win_and_show_result_panel ──
 
-function TestSyntheticActorRegistry:test_adapter_send_ui_custom_event_returns_false()
+local function _test_adapter_send_ui_custom_event_returns_false()
   local registry_module = require("src.host.synthetic_actor_registry")
   local registry = registry_module.new({
     LuaAPI = {
@@ -314,7 +314,7 @@ end
 
 -- ── adapter: id / get_roleid / get_name ───────────────────────────
 
-function TestSyntheticActorRegistry:test_adapter_id_and_name_match_configured_spec()
+local function _test_adapter_id_and_name_match_configured_spec()
   local registry_module = require("src.host.synthetic_actor_registry")
   local registry = registry_module.new({
     LuaAPI = {
@@ -342,7 +342,7 @@ end
 
 -- ── _normalize_pending_spec: fields present / absent ──────────────
 
-function TestSyntheticActorRegistry:test_spawns_with_default_name_and_missing_avatar_when_spec_fields_absent()
+local function _test_spawns_with_default_name_and_missing_avatar_when_spec_fields_absent()
   local registry_module = require("src.host.synthetic_actor_registry")
   local registry = registry_module.new({
     LuaAPI = {
@@ -367,7 +367,7 @@ end
 
 -- ── _safe_query_start_pos: nil tile_unit → zero pos ───────────────
 
-function TestSyntheticActorRegistry:test_spawns_at_zero_when_query_unit_returns_nil()
+local function _test_spawns_at_zero_when_query_unit_returns_nil()
   local registry_module = require("src.host.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
@@ -391,7 +391,7 @@ end
 
 -- ── _resolve_start_tile_id: nil map_cfg / missing path ────────────
 
-function TestSyntheticActorRegistry:test_spawns_at_zero_when_map_cfg_is_nil()
+local function _test_spawns_at_zero_when_map_cfg_is_nil()
   local registry_module = require("src.host.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
@@ -415,7 +415,7 @@ end
 
 -- ── _resolve_start_tile_id: map_cfg without path ─────────────────
 
-function TestSyntheticActorRegistry:test_spawns_at_zero_when_map_cfg_has_no_path()
+local function _test_spawns_at_zero_when_map_cfg_has_no_path()
   local registry_module = require("src.host.synthetic_actor_registry")
   local created = {}
   local registry = registry_module.new({
@@ -439,7 +439,7 @@ end
 
 -- ── _resolve_destroy_unit: nil env / game_api without destroy_unit ─
 
-function TestSyntheticActorRegistry:test_adapter_lose_is_noop_when_destroy_unit_missing()
+local function _test_adapter_lose_is_noop_when_destroy_unit_missing()
   local registry_module = require("src.host.synthetic_actor_registry")
   local spawned_unit = { start_ai = function() end }
   local registry = registry_module.new({
@@ -463,7 +463,7 @@ end
 
 -- ── registry.reset: already destroyed actor ───────────────────────
 
-function TestSyntheticActorRegistry:test_reset_skips_already_destroyed_actor()
+local function _test_reset_skips_already_destroyed_actor()
   local registry_module = require("src.host.synthetic_actor_registry")
   local destroyed = {}
   local spawned_unit = { start_ai = function() end }
@@ -492,7 +492,7 @@ end
 
 -- ── registry.spawn_pending: empty pending specs → no-op ───────────
 
-function TestSyntheticActorRegistry:test_spawn_pending_is_noop_when_no_specs_registered()
+local function _test_spawn_pending_is_noop_when_no_specs_registered()
   local registry_module = require("src.host.synthetic_actor_registry")
   local spawned = false
   local registry = registry_module.new({
@@ -510,7 +510,7 @@ end
 
 -- ── _start_actor_ai: successful call logs nothing ─────────────────
 
-function TestSyntheticActorRegistry:test_spawn_logs_nothing_when_start_ai_succeeds()
+local function _test_spawn_logs_nothing_when_start_ai_succeeds()
   local registry_module = require("src.host.synthetic_actor_registry")
   local warned = {}
   local logger = require("src.foundation.log")
@@ -539,7 +539,7 @@ end
 
 -- ── registry.is_synthetic_player: 退役后仍认得该 player ───────────
 
-function TestSyntheticActorRegistry:test_is_synthetic_player_survives_retirement()
+local function _test_is_synthetic_player_survives_retirement()
   -- #611:合成 AI 淘汰时 die/lose 触发退役并从注册表删除,resolve_actor 恒 nil。
   -- 终局面板路由要静默跳过它,必须有一个不随退役消失的合成身份判定。
   local registry_module = require("src.host.synthetic_actor_registry")
@@ -570,7 +570,7 @@ function TestSyntheticActorRegistry:test_is_synthetic_player_survives_retirement
   _assert_eq(registry.is_synthetic_player(-22), true, "surviving synthetic player should be recognized")
 end
 
-function TestSyntheticActorRegistry:test_is_synthetic_player_is_cleared_by_reset()
+local function _test_is_synthetic_player_is_cleared_by_reset()
   -- 新一局重登记前 reset 清空:上一局的合成 player_id 不得泄漏给下一局。
   local registry_module = require("src.host.synthetic_actor_registry")
   local registry = registry_module.new({
@@ -589,4 +589,24 @@ function TestSyntheticActorRegistry:test_is_synthetic_player_is_cleared_by_reset
 end
 
 
-return TestSyntheticActorRegistry
+it("test_spawns_from_first_path_tile", _test_spawns_from_first_path_tile)
+it("test_spawns_at_zero_when_lua_api_cannot_query_start_tile", _test_spawns_at_zero_when_lua_api_cannot_query_start_tile)
+it("test_spawns_at_zero_when_query_unit_raises", _test_spawns_at_zero_when_query_unit_raises)
+it("test_reset_destroys_spawned_actor_and_clears_registry", _test_reset_destroys_spawned_actor_and_clears_registry)
+it("test_adapter_lose_destroys_unit_and_drops_from_registry", _test_adapter_lose_destroys_unit_and_drops_from_registry)
+it("test_adapter_die_retires_actor_like_lose", _test_adapter_die_retires_actor_like_lose)
+it("test_spawn_logs_warning_when_start_ai_is_missing", _test_spawn_logs_warning_when_start_ai_is_missing)
+it("test_spawn_logs_warning_when_start_ai_raises", _test_spawn_logs_warning_when_start_ai_raises)
+it("test_adapter_send_ui_custom_event_returns_false", _test_adapter_send_ui_custom_event_returns_false)
+it("test_adapter_id_and_name_match_configured_spec", _test_adapter_id_and_name_match_configured_spec)
+it("test_spawns_with_default_name_and_missing_avatar_when_spec_fields_absent", _test_spawns_with_default_name_and_missing_avatar_when_spec_fields_absent)
+it("test_spawns_at_zero_when_query_unit_returns_nil", _test_spawns_at_zero_when_query_unit_returns_nil)
+it("test_spawns_at_zero_when_map_cfg_is_nil", _test_spawns_at_zero_when_map_cfg_is_nil)
+it("test_spawns_at_zero_when_map_cfg_has_no_path", _test_spawns_at_zero_when_map_cfg_has_no_path)
+it("test_adapter_lose_is_noop_when_destroy_unit_missing", _test_adapter_lose_is_noop_when_destroy_unit_missing)
+it("test_reset_skips_already_destroyed_actor", _test_reset_skips_already_destroyed_actor)
+it("test_spawn_pending_is_noop_when_no_specs_registered", _test_spawn_pending_is_noop_when_no_specs_registered)
+it("test_spawn_logs_nothing_when_start_ai_succeeds", _test_spawn_logs_nothing_when_start_ai_succeeds)
+it("test_is_synthetic_player_survives_retirement", _test_is_synthetic_player_survives_retirement)
+it("test_is_synthetic_player_is_cleared_by_reset", _test_is_synthetic_player_is_cleared_by_reset)
+end)
