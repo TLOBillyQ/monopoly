@@ -1,25 +1,25 @@
 -- host_runtime.lua 直测：schedule 的 nil delay 缺省(转发时归一为 0)与逐名转发面。
 -- 宿主无关(纯转发,端口经 runtime_ports.configure 注入)。
-local lu = require("luaunit")
+local luassert = assert
 
 local host_runtime = require("src.ui.seams.host_runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local support = require("test.support.shared_support")
 
-TestHostRuntime = {}
+describe("TestHostRuntime", function()
 
-function TestHostRuntime:setUp()
+before_each(function()
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestHostRuntime:tearDown()
+after_each(function()
   runtime_ports.reset_for_tests()
   -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
   support.restore_runtime_services()
-end
+end)
 
 -- nil delay 缺省:delay or 0 是转发表的归一化点,必须把 nil 落成 0。
-function TestHostRuntime:test_schedule_forwards_nil_delay_as_zero()
+it("test_schedule_forwards_nil_delay_as_zero", function()
   local received = {}
   runtime_ports.configure({
     schedule = function(delay, fn)
@@ -32,12 +32,12 @@ function TestHostRuntime:test_schedule_forwards_nil_delay_as_zero()
   local marker = function() end
   local result = host_runtime.schedule(nil, marker)
 
-  lu.assertEvalToTrue(received.delay == 0, "nil delay must be normalized to 0")
-  lu.assertEvalToTrue(received.fn == marker, "the callback must pass through")
-  lu.assertEvalToTrue(result == 42, "the port result must pass through")
-end
+  luassert.truthy(received.delay == 0, "nil delay must be normalized to 0")
+  luassert.truthy(received.fn == marker, "the callback must pass through")
+  luassert.truthy(result == 42, "the port result must pass through")
+end)
 
-function TestHostRuntime:test_schedule_keeps_an_explicit_delay()
+it("test_schedule_keeps_an_explicit_delay", function()
   local received = {}
   runtime_ports.configure({
     schedule = function(delay)
@@ -46,7 +46,7 @@ function TestHostRuntime:test_schedule_keeps_an_explicit_delay()
   })
 
   host_runtime.schedule(3.0, function() end)
-  lu.assertEvalToTrue(received.delay == 3.0, "an explicit delay must pass through unchanged")
-end
+  luassert.truthy(received.delay == 3.0, "an explicit delay must pass through unchanged")
+end)
 
-return TestHostRuntime
+end)
