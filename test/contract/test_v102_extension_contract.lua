@@ -1,59 +1,60 @@
-local lu = require("luaunit")
-
-local function _assert_eq(actual, expected, message)
-  assert(actual == expected, (message or "assertion failed") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
-end
+local luassert = assert
 
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 
-TestV102ExtensionContract = {}
+describe("TestV102ExtensionContract", function()
+  after_each(function()
+    require("src.ui.screens.skin_panel").reset_for_tests()
+    require("src.ui.screens.item_atlas").reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestV102ExtensionContract:test_publishes_reveal_constants()
+  it("test_publishes_reveal_constants", function()
   local event_kinds = require("src.config.gameplay.event_kinds")
   local timing = require("src.config.gameplay.timing")
 
   -- #543:item_get_reveal 图鉴放大卡私有展示链整条拆除,获得展示统一
   -- item_gain_popup;展示时长常量沿用原 3 秒口径不变。
-  _assert_eq(event_kinds.item_get_reveal, nil, "retired item_get_reveal kind should stay removed")
-  _assert_eq(event_kinds.item_gain_popup, "item_gain_popup", "gain popup event kind should be stable")
-  _assert_eq(timing.item_get_reveal_seconds, 3.0, "item reveal duration should be fixed at 3s")
-end
+  luassert.is.equal(nil, event_kinds.item_get_reveal, "retired item_get_reveal kind should stay removed")
+  luassert.is.equal("item_gain_popup", event_kinds.item_gain_popup, "gain popup event kind should be stable")
+  luassert.is.equal(3.0, timing.item_get_reveal_seconds, "item reveal duration should be fixed at 3s")
+  end)
 
-function TestV102ExtensionContract:test_retires_global_visibility_variants()
+  it("test_retires_global_visibility_variants", function()
   local node_ops = require("src.ui.render.support.node_ops")
 
   -- #544:#512 时代的 set_visible_global/set_touch_enabled_global 广播 workaround
   -- 经真机原型实证过期(覆盖层节点住图鉴 canvas,per-role 可查、canvas 门控兜底),
   -- 全仓消费者清零后整条退役;重新引入即打破此钉(旁观者泄漏由广播变体造成)。
-  _assert_eq(node_ops.set_visible_global, nil, "retired set_visible_global should stay removed")
-  _assert_eq(node_ops.set_touch_enabled_global, nil, "retired set_touch_enabled_global should stay removed")
-end
+  luassert.is.equal(nil, node_ops.set_visible_global, "retired set_visible_global should stay removed")
+  luassert.is.equal(nil, node_ops.set_touch_enabled_global, "retired set_touch_enabled_global should stay removed")
+  end)
 
-function TestV102ExtensionContract:test_splits_skin_and_item_atlas_schema()
+  it("test_splits_skin_and_item_atlas_schema", function()
   local skin_schema = require("src.ui.schema.skin")
   local item_atlas_schema = require("src.ui.schema.item_atlas")
   local market_schema = require("src.ui.schema.market")
   local market_layout = require("src.ui.schema.market_layout")
 
-  _assert_eq(#skin_schema.action_buttons, 6, "skin schema should expose six action buttons")
-  _assert_eq(#item_atlas_schema.card_images, 8, "item atlas schema should expose eight card images")
-  _assert_eq(skin_schema.canvas, "皮肤商店", "skin schema canvas should match exported node")
-  _assert_eq(item_atlas_schema.canvas, "道具图鉴", "item atlas canvas should match exported node")
-  lu.assertEvalToTrue(market_schema.tab_skin == nil, "market schema should not expose retired skin tab")
-  lu.assertEvalToTrue(market_layout.tab_skin == nil, "market layout should not expose retired skin tab")
-end
+  luassert.is.equal(6, #skin_schema.action_buttons, "skin schema should expose six action buttons")
+  luassert.is.equal(8, #item_atlas_schema.card_images, "item atlas schema should expose eight card images")
+  luassert.is.equal("皮肤商店", skin_schema.canvas, "skin schema canvas should match exported node")
+  luassert.is.equal("道具图鉴", item_atlas_schema.canvas, "item atlas canvas should match exported node")
+  luassert.truthy(market_schema.tab_skin == nil, "market schema should not expose retired skin tab")
+  luassert.truthy(market_layout.tab_skin == nil, "market layout should not expose retired skin tab")
+  end)
 
-function TestV102ExtensionContract:test_item_atlas_catalog_is_derived_from_items()
+  it("test_item_atlas_catalog_is_derived_from_items", function()
   local items = require("src.config.content.items")
   local item_atlas = require("src.config.content.item_atlas")
 
-  _assert_eq(#item_atlas, #items, "atlas should mirror visible item catalog size")
-  _assert_eq(item_atlas[1].id, items[1].id, "atlas should preserve item id")
-  _assert_eq(item_atlas[1].description, items[1].description, "atlas should reuse item description")
-end
+  luassert.is.equal(#items, #item_atlas, "atlas should mirror visible item catalog size")
+  luassert.is.equal(items[1].id, item_atlas[1].id, "atlas should preserve item id")
+  luassert.is.equal(items[1].description, item_atlas[1].description, "atlas should reuse item description")
+  end)
 
-function TestV102ExtensionContract:test_coordinators_keep_skin_and_atlas_state_separate()
+  it("test_coordinators_keep_skin_and_atlas_state_separate", function()
   local skin_panel = require("src.ui.screens.skin_panel")
   local item_atlas = require("src.ui.screens.item_atlas")
   -- 装载时预绑已删(#262):catalog 字段由注入路径维护,读前先 reset。
@@ -66,15 +67,15 @@ function TestV102ExtensionContract:test_coordinators_keep_skin_and_atlas_state_s
   item_atlas.open(state, 1)
   item_atlas.handle_action(state, { type = "select", slot_index = 2 }, 1)
 
-  _assert_eq(state.ui.skin_panel.open, false, "skin panel should auto-close after owned equip (design 336)")
-  _assert_eq(state.ui.skin_panel.selected_by_role["1"], skin_panel.catalog[1].product_id,
+  luassert.is.equal(false, state.ui.skin_panel.open, "skin panel should auto-close after owned equip (design 336)")
+  luassert.is.equal(skin_panel.catalog[1].product_id, state.ui.skin_panel.selected_by_role["1"],
     "skin panel should keep selected skin by role")
-  _assert_eq(state.ui.item_atlas.open, true, "item atlas should open independently")
-  _assert_eq(state.ui.item_atlas.selected_item_id, item_atlas.catalog[2].id,
+  luassert.is.equal(true, state.ui.item_atlas.open, "item atlas should open independently")
+  luassert.is.equal(item_atlas.catalog[2].id, state.ui.item_atlas.selected_item_id,
     "item atlas should select catalog items by slot")
-end
+  end)
 
-function TestV102ExtensionContract:test_view_command_dispatches_v102_extension_intents()
+  it("test_view_command_dispatches_v102_extension_intents", function()
   local view_command = require("src.ui.ports.view_command").build()
   local skin_panel = require("src.ui.screens.skin_panel")
   local state = { ui = {} }
@@ -86,28 +87,28 @@ function TestV102ExtensionContract:test_view_command_dispatches_v102_extension_i
     return true
   end)
 
-  lu.assertEvalToTrue(view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 7 }) == true,
+  luassert.truthy(view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 7 }) == true,
     "skin open intent should be handled")
-  lu.assertEvalToTrue(view_command.dispatch(state, { type = "skin_panel_action", action = { type = "buy", slot_index = 2 }, actor_role_id = 7 }) == true,
+  luassert.truthy(view_command.dispatch(state, { type = "skin_panel_action", action = { type = "buy", slot_index = 2 }, actor_role_id = 7 }) == true,
     "skin action intent should be handled")
-  lu.assertEvalToTrue(view_command.dispatch(state, { type = "skin_panel_action", action = { type = "equip", slot_index = 2 }, actor_role_id = 7 }) == true,
+  luassert.truthy(view_command.dispatch(state, { type = "skin_panel_action", action = { type = "equip", slot_index = 2 }, actor_role_id = 7 }) == true,
     "skin equip intent should be handled")
-  lu.assertEvalToTrue(view_command.dispatch(state, { type = "open_gallery_panel", actor_role_id = 7 }) == true,
+  luassert.truthy(view_command.dispatch(state, { type = "open_gallery_panel", actor_role_id = 7 }) == true,
     "gallery open intent should be handled")
-  lu.assertEvalToTrue(view_command.dispatch(state, { type = "item_atlas_action", action = { type = "select", slot_index = 1 }, actor_role_id = 7 }) == true,
+  luassert.truthy(view_command.dispatch(state, { type = "item_atlas_action", action = { type = "select", slot_index = 1 }, actor_role_id = 7 }) == true,
     "atlas action intent should be handled")
 
-  _assert_eq(state.ui.skin_panel.owned_by_role["7"][skin_panel.catalog[2].product_id], true,
+  luassert.is.equal(true, state.ui.skin_panel.owned_by_role["7"][skin_panel.catalog[2].product_id],
     "skin action should update selected slot")
-  _assert_eq(equipped and equipped.role_id, 7, "skin equip callback should receive actor role")
-  _assert_eq(equipped and equipped.skin, skin_panel.catalog[2], "skin equip callback should receive selected skin")
-  _assert_eq(state.ui.item_atlas.selected_item_id, require("src.ui.screens.item_atlas").catalog[1].id,
+  luassert.is.equal(7, equipped and equipped.role_id, "skin equip callback should receive actor role")
+  luassert.is.equal(skin_panel.catalog[2], equipped and equipped.skin, "skin equip callback should receive selected skin")
+  luassert.is.equal(require("src.ui.screens.item_atlas").catalog[1].id, state.ui.item_atlas.selected_item_id,
     "atlas action should update item atlas")
 
   skin_panel.reset_for_tests()
-end
+  end)
 
-function TestV102ExtensionContract:test_host_install_wires_skin_panel_to_skin_equip()
+  it("test_host_install_wires_skin_panel_to_skin_equip", function()
   local host_install = require("src.app.host_install")
   local skin_panel = require("src.ui.screens.skin_panel")
   local skin_equip = require("src.rules.cosmetics")
@@ -132,14 +133,14 @@ function TestV102ExtensionContract:test_host_install_wires_skin_panel_to_skin_eq
     skin_panel.handle_action(state, { type = "equip", slot_index = 3 }, 9)
   end)
 
-  _assert_eq(captured and captured.role_id, 9, "host install should pass role id to skin equip")
-  _assert_eq(captured and captured.creature_key,
-    runtime_refs.skins[tostring(skin_panel.catalog[3].product_id)],
+  luassert.is.equal(9, captured and captured.role_id, "host install should pass role id to skin equip")
+  luassert.is.equal(runtime_refs.skins[tostring(skin_panel.catalog[3].product_id)],
+    captured and captured.creature_key,
     "host install should map selected skin to the numeric resource id from refs.skins")
   skin_panel.reset_for_tests()
-end
+  end)
 
-function TestV102ExtensionContract:test_host_install_wires_purchase_skins_to_paid_goods()
+  it("test_host_install_wires_purchase_skins_to_paid_goods", function()
   local host_install = require("src.app.host_install")
   local paid_purchase_port = require("src.rules.ports.paid_purchase")
   local skin_panel = require("src.ui.screens.skin_panel")
@@ -180,73 +181,73 @@ function TestV102ExtensionContract:test_host_install_wires_purchase_skins_to_pai
     host_install.install({ skip_context_install = true })
     skin_panel.open(state, 9)
     skin_panel.handle_action(state, { type = "equip", slot_index = 1 }, 9)
-    lu.assertEvalToTrue(captured ~= nil, "skin purchase should start paid purchase")
+    luassert.truthy(captured ~= nil, "skin purchase should start paid purchase")
     captured.entry.on_purchase(state.game, player, captured.entry, {})
   end)
 
   local skin = skin_panel.catalog[1]
-  _assert_eq(captured and captured.game, state.game, "skin purchase should use current game")
-  _assert_eq(captured and captured.player, player, "skin purchase should resolve player by role id")
-  _assert_eq(captured and captured.entry.product_id, skin.product_id,
+  luassert.is.equal(state.game, captured and captured.game, "skin purchase should use current game")
+  luassert.is.equal(player, captured and captured.player, "skin purchase should resolve player by role id")
+  luassert.is.equal(skin.product_id, captured and captured.entry.product_id,
     "skin purchase should pass selected skin product")
-  _assert_eq(captured and captured.entry.kind, "skin", "skin purchase entry should be tagged as skin")
-  lu.assertEvalToTrue(type(captured.entry.on_purchase) == "function", "skin purchase should carry fulfillment callback")
-  _assert_eq(state.ui.skin_panel.owned_by_role["9"][skin.product_id], true,
+  luassert.is.equal("skin", captured and captured.entry.kind, "skin purchase entry should be tagged as skin")
+  luassert.truthy(type(captured.entry.on_purchase) == "function", "skin purchase should carry fulfillment callback")
+  luassert.is.equal(true, state.ui.skin_panel.owned_by_role["9"][skin.product_id],
     "paid skin callback should unlock skin")
-  _assert_eq(state.ui.skin_panel.selected_by_role["9"], skin.product_id,
+  luassert.is.equal(skin.product_id, state.ui.skin_panel.selected_by_role["9"],
     "paid skin callback should equip skin")
   skin_panel.reset_for_tests()
-end
+  end)
 
-function TestV102ExtensionContract:test_achievement_integration_is_implemented()
+  it("test_achievement_integration_is_implemented", function()
   local achievement = require("src.app.host_integrations.achievement")
 
-  lu.assertEvalToTrue(achievement.host_pending ~= true, "achievement should no longer be a host-pending noop")
-  _assert_eq(type(achievement.record_gameplay_event), "function", "achievement should expose gameplay event routing")
-  _assert_eq(type(achievement.add_progress), "function", "achievement should expose progress routing")
-  _assert_eq(type(achievement.current_progress), "function", "achievement should expose host progress reads")
-  _assert_eq(achievement.mapped_ids_for_event("游戏胜利")[1], 1, "win event should map to the win achievements")
-end
+  luassert.truthy(achievement.host_pending ~= true, "achievement should no longer be a host-pending noop")
+  luassert.is.equal("function", type(achievement.record_gameplay_event), "achievement should expose gameplay event routing")
+  luassert.is.equal("function", type(achievement.add_progress), "achievement should expose progress routing")
+  luassert.is.equal("function", type(achievement.current_progress), "achievement should expose host progress reads")
+  luassert.is.equal(1, achievement.mapped_ids_for_event("游戏胜利")[1], "win event should map to the win achievements")
+  end)
 
-function TestV102ExtensionContract:test_share_task_integration_is_host_managed()
+  it("test_share_task_integration_is_host_managed", function()
   local share_task = require("src.app.host_integrations.share_task")
   local task = share_task.find_task("永久", "邀请10人")
 
-  lu.assertEvalToTrue(share_task.host_pending ~= true, "share_task should no longer be a host-pending noop")
-  _assert_eq(type(share_task.find_task), "function", "share_task should expose task lookup")
-  _assert_eq(task.progress_source, "首次进入地图的人数", "share_task should mirror host progress source")
-  _assert_eq(task.target_progress, 10, "share_task should mirror host target progress")
-  _assert_eq(task.reward_amount, 36800, "share_task should mirror host reward amount")
-  _assert_eq(share_task.claim().reason, "host_managed", "share_task claims should stay host-managed")
-end
+  luassert.truthy(share_task.host_pending ~= true, "share_task should no longer be a host-pending noop")
+  luassert.is.equal("function", type(share_task.find_task), "share_task should expose task lookup")
+  luassert.is.equal("首次进入地图的人数", task.progress_source, "share_task should mirror host progress source")
+  luassert.is.equal(10, task.target_progress, "share_task should mirror host target progress")
+  luassert.is.equal(36800, task.reward_amount, "share_task should mirror host reward amount")
+  luassert.is.equal("host_managed", share_task.claim().reason, "share_task claims should stay host-managed")
+  end)
 
-function TestV102ExtensionContract:test_sign_in_integration_is_implemented()
+  it("test_sign_in_integration_is_implemented", function()
   local sign_in = require("src.app.host_integrations.sign_in")
 
-  lu.assertEvalToTrue(sign_in.host_pending ~= true, "sign_in should no longer be a host-pending noop")
-  _assert_eq(type(sign_in.grant), "function", "sign_in should expose reward grant")
-  _assert_eq(sign_in.amount_for_day(1), 500, "sign_in day 1 should grant 500 coins")
-  _assert_eq(sign_in.amount_for_day(7), 10000, "sign_in day 7 should grant 10000 coins")
-  _assert_eq(sign_in.day_from_event("RewardDay3"), 3, "sign_in should map host event to day")
-end
+  luassert.truthy(sign_in.host_pending ~= true, "sign_in should no longer be a host-pending noop")
+  luassert.is.equal("function", type(sign_in.grant), "sign_in should expose reward grant")
+  luassert.is.equal(500, sign_in.amount_for_day(1), "sign_in day 1 should grant 500 coins")
+  luassert.is.equal(10000, sign_in.amount_for_day(7), "sign_in day 7 should grant 10000 coins")
+  luassert.is.equal(3, sign_in.day_from_event("RewardDay3"), "sign_in should map host event to day")
+  end)
 
-function TestV102ExtensionContract:test_leaderboard_integration_is_implemented()
+  it("test_leaderboard_integration_is_implemented", function()
   local leaderboard = require("src.app.host_integrations.leaderboard")
 
-  lu.assertEvalToTrue(leaderboard.host_pending ~= true, "leaderboard should no longer be a host-pending noop")
-  _assert_eq(type(leaderboard.settle), "function", "leaderboard should expose game-end settlement")
-  _assert_eq(leaderboard.win_count_archive_key, 1001, "leaderboard should target the win-count archive key")
-  _assert_eq(leaderboard.total_assets_archive_key, 1002, "leaderboard should target the total-assets archive key")
-end
+  luassert.truthy(leaderboard.host_pending ~= true, "leaderboard should no longer be a host-pending noop")
+  luassert.is.equal("function", type(leaderboard.settle), "leaderboard should expose game-end settlement")
+  luassert.is.equal(1001, leaderboard.win_count_archive_key, "leaderboard should target the win-count archive key")
+  luassert.is.equal(1002, leaderboard.total_assets_archive_key, "leaderboard should target the total-assets archive key")
+  end)
 
-function TestV102ExtensionContract:test_skin_equip_contract_loads_without_ui_dependency()
+  it("test_skin_equip_contract_loads_without_ui_dependency", function()
   local skin_equip = require("src.rules.cosmetics")
 
-  _assert_eq(type(skin_equip.equip), "function", "skin equip should expose equip")
-  _assert_eq(type(skin_equip.unequip), "function", "skin equip should expose unequip")
-end
+  luassert.is.equal("function", type(skin_equip.equip), "skin equip should expose equip")
+  luassert.is.equal("function", type(skin_equip.unequip), "skin equip should expose unequip")
+  end)
 
-function TestV102ExtensionContract:test_skin_equip_applies_creature_key_to_role_unit()
+  it("test_skin_equip_applies_creature_key_to_role_unit", function()
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local skin_equip = require("src.rules.cosmetics")
   local calls = {}
@@ -256,7 +257,7 @@ function TestV102ExtensionContract:test_skin_equip_applies_creature_key_to_role_
       target = runtime_ports,
       key = "resolve_role",
       value = function(role_id)
-        _assert_eq(role_id, 11, "skin equip should resolve target role")
+        luassert.is.equal(11, role_id, "skin equip should resolve target role")
         return {
           get_ctrl_unit = function()
             return {
@@ -270,15 +271,13 @@ function TestV102ExtensionContract:test_skin_equip_applies_creature_key_to_role_
       end,
     },
   }, function()
-    _assert_eq(skin_equip.equip(11, "skin_key"), true, "skin equip should report model change success")
+    luassert.is.equal(true, skin_equip.equip(11, "skin_key"), "skin equip should report model change success")
   end)
 
-  _assert_eq(#calls, 1, "skin equip should call unit model setter")
-  _assert_eq(calls[1][1], "skin_key", "skin equip should pass creature key")
-end
-
-
-return TestV102ExtensionContract
+  luassert.is.equal(1, #calls, "skin equip should call unit model setter")
+  luassert.is.equal("skin_key", calls[1][1], "skin equip should pass creature key")
+  end)
+end)
 
 --[[ mutate4lua-manifest
 version=4
