@@ -378,7 +378,6 @@ return {
     "test/behavior/ui/view/test_panel_builder.lua",
     "tools/packages/acceptance/test/test_cli_entrypoints.lua",
     "tools/packages/acceptance/test/test_game_driver.lua",
-    "tools/packages/acceptance/test/test_regenerate.lua",
     "tools/packages/acceptance/test/test_turn_driver.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
@@ -391,6 +390,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/acceptance/test/test_regenerate.lua",
     "tools/packages/acceptance/test/test_scenario_manifest.lua",
     "tools/packages/acceptance/test/test_step_dsl.lua",
     "tools/packages/acceptance/test/test_runtime.lua",
