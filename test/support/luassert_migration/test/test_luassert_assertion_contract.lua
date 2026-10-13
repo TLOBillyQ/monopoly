@@ -245,6 +245,45 @@ function TestLuassertAssertionContract:test_loading_luassert_does_not_take_over_
     "luassert must stay a separate, locally used assertion object")
 end
 
+function TestLuassertAssertionContract:test_fresh_process_cache_loading_and_preload_rejection()
+  local scripts = {
+    {
+      marker = "REAL_CACHE_IDENTITY",
+      source = [[
+require("test.bootstrap").install_package_paths()
+local original = _G.assert
+local loader = require("test.support.luassert_loader")
+local object = assert(loader.load())
+assert(object == package.loaded.luassert and object == loader.load())
+assert(_G.assert == original)
+for _, name in ipairs({ "luassert", "say" }) do
+  local source = assert(package.searchpath(name, package.path)):gsub("\\", "/")
+  local prefix = loader.repo_root():gsub("\\", "/") .. "/.toolcache/luarocks/"
+  assert(source:find(prefix, 1, true) == 1)
+end
+object.is.same({ value = 1 }, { value = 1 })
+assert(not pcall(function() object.is_true(1) end))
+print("REAL_CACHE_IDENTITY")
+]],
+    },
+  }
+  for _, name in ipairs({ "luassert", "say" }) do
+    scripts[#scripts + 1] = {
+      marker = "REJECTED_" .. name,
+      source = 'require("test.bootstrap").install_package_paths()\n'
+        .. 'package.loaded["' .. name .. '"] = {}\n'
+        .. 'local object, err = require("test.support.luassert_loader").load()\n'
+        .. 'assert(object == nil and tostring(err):find("unverified preloaded module: ' .. name .. '", 1, true))\n'
+        .. 'print("REJECTED_' .. name .. '")\n',
+    }
+  end
+  for _, script in ipairs(scripts) do
+    local result = proc.run_command({ "lua", "-e", (script.source:gsub("\n", " ")) }, { cwd = loader.repo_root() })
+    _expect(result.code == 0 and tostring(result.output):find(script.marker, 1, true) ~= nil,
+      "fresh process contract failed: " .. script.marker .. "\n" .. tostring(result.output))
+  end
+end
+
 function TestLuassertAssertionContract:test_unverified_preloaded_modules_are_rejected()
   for _, name in ipairs({ "luassert", "say" }) do
     local saved = package.loaded[name]
