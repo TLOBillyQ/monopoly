@@ -1,5 +1,8 @@
 ---@diagnostic disable
 -- luacheck: ignore 113 211
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local function make_cases(helpers)
   local _ENV = helpers
 
@@ -20,8 +23,8 @@ local function _test_mandatory_payment_causes_bankruptcy()
   local before_eliminated = p2.eliminated
   _resolve_landing(g, p2, tile_ref, {})
 
-  assert(p2.eliminated == true, "player should be eliminated after failing to pay rent")
-  assert(before_eliminated == false, "player should not have been eliminated before")
+  luassert.truthy(p2.eliminated == true, "player should be eliminated after failing to pay rent")
+  luassert.truthy(before_eliminated == false, "player should not have been eliminated before")
 end
 
 local function _test_bankruptcy_resets_owned_tiles()
@@ -36,7 +39,7 @@ local function _test_bankruptcy_resets_owned_tiles()
       break
     end
   end
-  assert(tile2, "should have at least two land tiles")
+  luassert.truthy(tile2, "should have at least two land tiles")
 
   g:set_tile_owner(tile1, p1.id)
   g:set_tile_level(tile1, 2)
@@ -50,9 +53,9 @@ local function _test_bankruptcy_resets_owned_tiles()
 
   local st1 = _tile_state(g, tile1)
   local st2 = _tile_state(g, tile2)
-  assert(st1.owner_id == nil and st1.level == 0, "bankruptcy clears owned tile1")
-  assert(st2.owner_id == nil and st2.level == 0, "bankruptcy clears owned tile2")
-  assert(next(p1.properties) == nil, "bankruptcy clears player properties")
+  luassert.truthy(st1.owner_id == nil and st1.level == 0, "bankruptcy clears owned tile1")
+  luassert.truthy(st2.owner_id == nil and st2.level == 0, "bankruptcy clears owned tile2")
+  luassert.truthy(next(p1.properties) == nil, "bankruptcy clears player properties")
 end
 
 local function _test_bankruptcy_notifier_reads_grouped_ports()
@@ -75,10 +78,10 @@ local function _test_bankruptcy_notifier_reads_grouped_ports()
 
   bankruptcy.eliminate(g, p1)
 
-  assert(#calls == 1, "grouped bankruptcy notifier should be invoked once")
-  assert(calls[1].player_id == p1.id, "notifier should receive eliminated player")
-  assert(type(calls[1].owned_tile_ids) == "table", "notifier should receive owned_tile_ids list")
-  assert(calls[1].owned_tile_ids[1] == tile_ref.id, "notifier should receive cleared tile id")
+  luassert.truthy(#calls == 1, "grouped bankruptcy notifier should be invoked once")
+  luassert.truthy(calls[1].player_id == p1.id, "notifier should receive eliminated player")
+  luassert.truthy(type(calls[1].owned_tile_ids) == "table", "notifier should receive owned_tile_ids list")
+  luassert.truthy(calls[1].owned_tile_ids[1] == tile_ref.id, "notifier should receive cleared tile id")
 end
 
 local function _test_rent_bankruptcy_leaves_payer_cash_zero()
@@ -97,12 +100,12 @@ local function _test_rent_bankruptcy_leaves_payer_cash_zero()
   g:update_player_position(p2, idx)
   _resolve_landing(g, p2, tile_ref, {})
 
-  assert(p2.eliminated == true, "payer should be eliminated when rent unaffordable")
+  luassert.truthy(p2.eliminated == true, "payer should be eliminated when rent unaffordable")
   local p2_cash = g:player_cash(p2)
-  assert(p2_cash == 0,
+  luassert.truthy(p2_cash == 0,
     "bankrupt rent payer cash must be capped at zero, got " .. tostring(p2_cash))
   local p1_cash = g:player_cash(p1)
-  assert(p1_cash == p1_cash_before + p2_starting_cash,
+  luassert.truthy(p1_cash == p1_cash_before + p2_starting_cash,
     "owner should receive only payer's liquid (" .. tostring(p1_cash_before + p2_starting_cash)
       .. "), got " .. tostring(p1_cash))
 end
@@ -117,8 +120,8 @@ local function _test_hospital_insufficient_funds_does_not_leave_positive_cash()
   g:set_player_status(p1, "pending_location_effect", "hospital")
   g:player_apply_hospital_effects(p1)
 
-  assert(p1.eliminated == true, "player should be eliminated when hospital fee unpayable")
-  assert(g:player_cash(p1) == 0,
+  luassert.truthy(p1.eliminated == true, "player should be eliminated when hospital fee unpayable")
+  luassert.truthy(g:player_cash(p1) == 0,
     "bankrupt cash must be capped at zero, got " .. tostring(g:player_cash(p1)))
 end
 
@@ -140,13 +143,13 @@ local function _test_chance_pay_others_stops_after_bankruptcy()
   g:set_player_cash(p3, 0)
   g:set_player_cash(p4, 0)
 
-  local chance_handler = assert(g.registries.chances.handlers.pay_others, "missing pay_others handler")
+  local chance_handler = luassert.truthy(g.registries.chances.handlers.pay_others, "missing pay_others handler")
   chance_handler(g, p1, { effect = "pay_others", amount = 10 })
 
-  assert(p1.eliminated == true, "payer should be eliminated when cash becomes non-positive")
-  assert(g:player_cash(p2) == 10, "first recipient should receive transfer")
-  assert(g:player_cash(p3) == 10, "second recipient should receive transfer before bankruptcy stop")
-  assert(g:player_cash(p4) == 0, "later recipients should not receive transfer after bankruptcy")
+  luassert.truthy(p1.eliminated == true, "payer should be eliminated when cash becomes non-positive")
+  luassert.truthy(g:player_cash(p2) == 10, "first recipient should receive transfer")
+  luassert.truthy(g:player_cash(p3) == 10, "second recipient should receive transfer before bankruptcy stop")
+  luassert.truthy(g:player_cash(p4) == 0, "later recipients should not receive transfer after bankruptcy")
 end
 
 local function _test_chance_collect_from_others_bankrupts_unable_payer()
@@ -167,16 +170,16 @@ local function _test_chance_collect_from_others_bankrupts_unable_payer()
   g:set_player_cash(p3, 200)
   g:set_player_cash(p4, 200)
 
-  local handler = assert(g.registries.chances.handlers.collect_from_others, "missing collect_from_others handler")
+  local handler = luassert.truthy(g.registries.chances.handlers.collect_from_others, "missing collect_from_others handler")
   handler(g, p1, { effect = "collect_from_others", amount = 100 })
 
-  assert(p2.eliminated == true, "broke payer should be eliminated by collect_from_others")
+  luassert.truthy(p2.eliminated == true, "broke payer should be eliminated by collect_from_others")
   local p2_cash = g:player_cash(p2)
-  assert(p2_cash == 0,
+  luassert.truthy(p2_cash == 0,
     "bankrupt collect-from-others payer cash must be capped at zero, got " .. tostring(p2_cash))
-  assert(g:player_cash(p3) == 100, "solvent payer should pay full amount")
-  assert(g:player_cash(p4) == 100, "solvent payer should pay full amount")
-  assert(g:player_cash(p1) == 5 + 100 + 100,
+  luassert.truthy(g:player_cash(p3) == 100, "solvent payer should pay full amount")
+  luassert.truthy(g:player_cash(p4) == 100, "solvent payer should pay full amount")
+  luassert.truthy(g:player_cash(p1) == 5 + 100 + 100,
     "collector should receive each payer's actual liquid only, got "
       .. tostring(g:player_cash(p1)))
 end
@@ -189,12 +192,12 @@ local function _test_set_tile_owner_without_ui_port_does_not_crash()
 
   g:set_tile_owner(tile_ref, p1.id)
   local st_owned = _tile_state(g, tile_ref)
-  assert(st_owned.owner_id == p1.id, "set_tile_owner should work without ui_port")
+  luassert.truthy(st_owned.owner_id == p1.id, "set_tile_owner should work without ui_port")
 
   g:reset_tile(tile_ref)
   local st_reset = _tile_state(g, tile_ref)
-  assert(st_reset.owner_id == nil, "reset_tile should clear owner without ui_port")
-  assert(st_reset.level == 0, "reset_tile should clear level without ui_port")
+  luassert.truthy(st_reset.owner_id == nil, "reset_tile should clear owner without ui_port")
+  luassert.truthy(st_reset.level == 0, "reset_tile should clear level without ui_port")
 end
 
 local function _test_tile_owner_notifier_receives_owner_changes()
@@ -212,18 +215,18 @@ local function _test_tile_owner_notifier_receives_owner_changes()
   g:set_tile_owner(tile_ref, p1.id)
   g:reset_tile(tile_ref)
 
-  assert(#calls == 2, "tile_owner_notifier should receive owner set and reset")
-  assert(calls[1].tile_id == tile_ref.id and calls[1].owner_id == p1.id, "first notify should be owner set")
-  assert(calls[2].tile_id == tile_ref.id and calls[2].owner_id == nil, "second notify should be owner clear")
+  luassert.truthy(#calls == 2, "tile_owner_notifier should receive owner set and reset")
+  luassert.truthy(calls[1].tile_id == tile_ref.id and calls[1].owner_id == p1.id, "first notify should be owner set")
+  luassert.truthy(calls[2].tile_id == tile_ref.id and calls[2].owner_id == nil, "second notify should be owner clear")
 end
 
 -- 道具槽解析已不再经 validator 与 UI 槽位镜像（裁定独占 item_slot_click，槽位直读
 -- 行动者背包），这条用例只保留 validator 仍然负责的部分：ui_state 快照驱动输入闸。
 local function _test_dispatch_validator_accepts_ui_state_snapshot()
   local ui_state = { input_blocked = true }
-  assert(dispatch_validator.should_block_action(ui_state, { type = "ui_button" }) == true,
+  luassert.truthy(dispatch_validator.should_block_action(ui_state, { type = "ui_button" }) == true,
     "validator should block when ui_state.input_blocked")
-  assert(dispatch_validator.should_block_action(ui_state, { type = "item_slot_click", slot_index = 1 }) == false,
+  luassert.truthy(dispatch_validator.should_block_action(ui_state, { type = "item_slot_click", slot_index = 1 }) == false,
     "item slot clicks stay permitted under input lock so the click always gets a verdict")
 end
 
@@ -240,8 +243,8 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     meta = { player_id = g:current_player().id, item_id = 2001 },
   }
   local entry = intent_dispatcher.open_choice(g, choice_spec, {})
-  assert(entry.route_key == "remote", "intent_dispatcher should inject explicit route_key")
-  assert(entry.requires_confirm == false, "remote route should not require confirm")
+  luassert.truthy(entry.route_key == "remote", "intent_dispatcher should inject explicit route_key")
+  luassert.truthy(entry.requires_confirm == false, "remote route should not require confirm")
 
   local custom_entry = intent_dispatcher.open_choice(g, {
     kind = "item_target_player",
@@ -250,8 +253,8 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     route = { route_key = "secondary_confirm", requires_confirm = true },
     meta = { player_id = g:current_player().id, item_id = 2001 },
   }, {})
-  assert(custom_entry.route_key == "secondary_confirm", "explicit route should override inferred route")
-  assert(custom_entry.requires_confirm == true, "explicit requires_confirm should be kept")
+  luassert.truthy(custom_entry.route_key == "secondary_confirm", "explicit route should override inferred route")
+  luassert.truthy(custom_entry.requires_confirm == true, "explicit requires_confirm should be kept")
 
   local inline_entry = intent_dispatcher.open_choice(g, {
     kind = "item_phase_passive",
@@ -260,15 +263,15 @@ local function _test_intent_dispatcher_sets_choice_route_metadata()
     options = { { id = 2001, label = "路障卡" } },
     meta = { player_id = g:current_player().id, phase = "pre_action" },
   }, {})
-  assert(inline_entry.route_key == "base_inline", "item_phase_passive should use base_inline route")
-  assert(inline_entry.requires_confirm == false, "base_inline route should not require confirm")
+  luassert.truthy(inline_entry.route_key == "base_inline", "item_phase_passive should use base_inline route")
+  luassert.truthy(inline_entry.requires_confirm == false, "base_inline route should not require confirm")
 
   local unknown_entry = intent_dispatcher.open_choice(g, {
     kind = "unknown_choice_kind",
     title = "未知流程",
     options = { { id = 1, label = "A" } },
   }, {})
-  assert(unknown_entry.route_key == "base_inline", "unknown choice should fallback to base_inline route")
+  luassert.truthy(unknown_entry.route_key == "base_inline", "unknown choice should fallback to base_inline route")
 end
 
 local function _test_intent_dispatcher_rejects_missing_required_choice_meta()
@@ -282,10 +285,10 @@ local function _test_intent_dispatcher_rejects_missing_required_choice_meta()
     }, {})
   end)
 
-  assert(ok == false, "open_choice should reject missing required meta")
-  assert(tostring(err):find("market_buy requires meta.player_id", 1, true) ~= nil,
+  luassert.truthy(ok == false, "open_choice should reject missing required meta")
+  luassert.truthy(tostring(err):find("market_buy requires meta.player_id", 1, true) ~= nil,
     "open_choice should report the missing required meta key")
-  assert(g.turn.pending_choice == nil, "open_choice should not mutate pending_choice on schema failure")
+  luassert.truthy(g.turn.pending_choice == nil, "open_choice should not mutate pending_choice on schema failure")
 end
 
 local function _test_intent_dispatcher_rejects_missing_required_choice_meta_table()
@@ -298,10 +301,10 @@ local function _test_intent_dispatcher_rejects_missing_required_choice_meta_tabl
     }, {})
   end)
 
-  assert(ok == false, "open_choice should reject missing meta table for required_meta descriptors")
-  assert(tostring(err):find("market_buy requires meta", 1, true) ~= nil,
+  luassert.truthy(ok == false, "open_choice should reject missing meta table for required_meta descriptors")
+  luassert.truthy(tostring(err):find("market_buy requires meta", 1, true) ~= nil,
     "open_choice should report missing meta table before validating required keys")
-  assert(g.turn.pending_choice == nil, "dispatcher should not mutate pending choice when meta table is missing")
+  luassert.truthy(g.turn.pending_choice == nil, "dispatcher should not mutate pending choice when meta table is missing")
 end
 
 local function _test_intent_dispatcher_normalizes_market_choice_meta()
@@ -318,11 +321,11 @@ local function _test_intent_dispatcher_normalizes_market_choice_meta()
     },
   }, {})
 
-  assert(entry.meta.player_id == g:current_player().id, "market choice meta should normalize player_id")
-  assert(entry.owner_role_id == g:current_player().id, "market choice should backfill owner_role_id from meta")
-  assert(entry.active_tab == "item", "market choice should normalize unsupported tab to item")
-  assert(entry.page_index == 2, "market choice should normalize page_index")
-  assert(entry.page_count == 3, "market choice should normalize page_count")
+  luassert.truthy(entry.meta.player_id == g:current_player().id, "market choice meta should normalize player_id")
+  luassert.truthy(entry.owner_role_id == g:current_player().id, "market choice should backfill owner_role_id from meta")
+  luassert.truthy(entry.active_tab == "item", "market choice should normalize unsupported tab to item")
+  luassert.truthy(entry.page_index == 2, "market choice should normalize page_index")
+  luassert.truthy(entry.page_count == 3, "market choice should normalize page_count")
 end
 
 local function _test_intent_dispatcher_normalizes_item_choice_meta()
@@ -338,8 +341,8 @@ local function _test_intent_dispatcher_normalizes_item_choice_meta()
     },
   }, {})
 
-  assert(entry.meta.player_id == g:current_player().id, "item phase choice should normalize player_id")
-  assert(entry.owner_role_id == g:current_player().id, "item phase choice should backfill owner_role_id from meta")
+  luassert.truthy(entry.meta.player_id == g:current_player().id, "item phase choice should normalize player_id")
+  luassert.truthy(entry.owner_role_id == g:current_player().id, "item phase choice should backfill owner_role_id from meta")
 end
 
 local function _test_intent_dispatcher_normalizes_landing_optional_effect_meta()
@@ -357,9 +360,9 @@ local function _test_intent_dispatcher_normalizes_landing_optional_effect_meta()
     },
   }, {})
 
-  assert(entry.meta.player_id == g:current_player().id, "landing optional should normalize player_id")
-  assert(entry.meta.tile_id == tile_ref.id, "landing optional should normalize tile_id")
-  assert(entry.owner_role_id == g:current_player().id, "landing optional should backfill owner_role_id")
+  luassert.truthy(entry.meta.player_id == g:current_player().id, "landing optional should normalize player_id")
+  luassert.truthy(entry.meta.tile_id == tile_ref.id, "landing optional should normalize tile_id")
+  luassert.truthy(entry.owner_role_id == g:current_player().id, "landing optional should backfill owner_role_id")
 end
 
 local function _test_intent_dispatcher_rejects_unknown_market_choice_player()
@@ -373,10 +376,10 @@ local function _test_intent_dispatcher_rejects_unknown_market_choice_player()
     }, {})
   end)
 
-  assert(ok == false, "open_choice should reject unknown market player")
-  assert(tostring(err):find("missing player: 999999", 1, true) ~= nil,
+  luassert.truthy(ok == false, "open_choice should reject unknown market player")
+  luassert.truthy(tostring(err):find("missing player: 999999", 1, true) ~= nil,
     "open_choice should report missing market player at dispatcher boundary")
-  assert(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
+  luassert.truthy(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
 end
 
 local function _test_intent_dispatcher_rejects_unknown_landing_optional_effect_tile()
@@ -394,10 +397,10 @@ local function _test_intent_dispatcher_rejects_unknown_landing_optional_effect_t
     }, {})
   end)
 
-  assert(ok == false, "open_choice should reject unknown landing tile")
-  assert(tostring(err):find("missing tile: 999999", 1, true) ~= nil,
+  luassert.truthy(ok == false, "open_choice should reject unknown landing tile")
+  luassert.truthy(tostring(err):find("missing tile: 999999", 1, true) ~= nil,
     "open_choice should report missing tile at dispatcher boundary")
-  assert(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
+  luassert.truthy(g.turn.pending_choice == nil, "dispatcher validation failure should not mutate pending choice")
 end
 
   return {

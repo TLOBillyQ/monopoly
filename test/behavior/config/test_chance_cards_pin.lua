@@ -1,7 +1,10 @@
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 -- chance_cards.lua 数据契约 pin：整表逐条深等式 lock (#293 变异清扫)。
 -- 与 items pin 同因：多字节 UTF-8 下 mutate4lua 的「字段名 → nil」会错位
 -- 应用成新增垃圾键，只有严格 key set + value 深等能同时抓「多键」与「改值」。
-local lu = require("luaunit")
 local cards = require("src.config.content.chance_cards")
 
 local expected = {
@@ -38,20 +41,20 @@ local expected = {
   { id = 3034, description = "你发现密道，到达黑市。", weight = 200, negative = false, target = "self", effect = "forced_move", destination_tile_id = 39 },
 }
 
-TestChanceCardsPin = {}
+describe("TestChanceCardsPin", function()
 
-function TestChanceCardsPin:test_chance_card_catalog_matches_the_pinned_contract()
-  lu.assertEvalToTrue(#cards == #expected, "card count mismatch: got " .. tostring(#cards) .. " want " .. tostring(#expected))
-  local by_id = {}
-  for _, card in ipairs(cards) do
-    by_id[card.id] = card
-  end
-  for _, exp in ipairs(expected) do
-    local actual = by_id[exp.id]
-    lu.assertEvalToTrue(actual ~= nil, "chance catalog missing card id " .. tostring(exp.id))
-    lu.assertEquals(actual, exp, "chance card " .. tostring(exp.id) .. " deviates from the pinned contract")
-  end
-end
+  it("test_chance_card_catalog_matches_the_pinned_contract", function()
+    luassert.truthy(#cards == #expected, "card count mismatch: got " .. tostring(#cards) .. " want " .. tostring(#expected))
+    local by_id = {}
+    for _, card in ipairs(cards) do
+      by_id[card.id] = card
+    end
+    for _, exp in ipairs(expected) do
+      local actual = by_id[exp.id]
+      luassert.truthy(actual ~= nil, "chance catalog missing card id " .. tostring(exp.id))
+      luassert.is.same(exp, actual, "chance card " .. tostring(exp.id) .. " deviates from the pinned contract")
+    end
+  end)
 
 
-return TestChanceCardsPin
+end)
