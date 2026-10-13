@@ -10,7 +10,7 @@
 |---|---|
 | 修改 `src/**` 或 `test/**` | [`CODING_STANDARDS.md`](CODING_STANDARDS.md)，再读目标模块与对应测试 |
 | 领域词汇、对象命名或产品概念 | [`GLOSSARY.md`](GLOSSARY.md) |
-| 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md)，再以 `tools/packages/arch_view/config.json` 与 `test/guards/` 为执行真源 |
+| 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md)，再以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 为执行真源；旧 `arch_view/config.json` 仅为兼容投影 |
 | 决策理由、已批准例外或 ADR | [`docs/decisions.md`](docs/decisions.md) |
 | 工单登记、台账或 triage | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)、[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | 术语登记或领域模型维护 | [`docs/agents/domain.md`](docs/agents/domain.md) |
