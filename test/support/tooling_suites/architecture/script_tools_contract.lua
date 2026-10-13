@@ -9,6 +9,7 @@ local arch_common = require("arch_view.runtime.common")
 local arch_cli = require("packages.arch_view.runner")
 
 bootstrap.install_package_paths()
+local check = require("luassert")
 
 local project_root = path_lib.normalize_path(env_lib.current_dir())
 
@@ -26,15 +27,11 @@ local function _make_tmp_root(tag)
 end
 
 local function _assert_contains(text, expected, message)
-  if tostring(text or ""):find(expected, 1, true) == nil then
-    error((message or "missing expected text") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(text))
-  end
+  check.matches(expected, tostring(text or ""), 1, true, message)
 end
 
 local function _assert_not_contains(text, unexpected, message)
-  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
-    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
-  end
+  check.is_nil(tostring(text or ""):find(unexpected, 1, true), message)
 end
 
 local function _cleanup_tmp(tmp_root)
@@ -124,7 +121,7 @@ local function _test_encoding_check_accepts_utf8_chinese_strings()
       src_dir,
     })
 
-    assert(result.ok == true, "encoding check should allow utf-8 Chinese business strings")
+    check.is_true(result.ok == true, "encoding check should allow utf-8 Chinese business strings")
     _assert_contains(result.output, "encoding check ok",
       "encoding check should report success for Chinese business strings")
   end)
@@ -147,7 +144,7 @@ local function _test_encoding_check_reports_suspicious_english_comment()
       src_dir,
     })
 
-    assert(result.ok == false, "encoding check should fail on suspicious punctuation in English comments")
+    check.is_true(result.ok == false, "encoding check should fail on suspicious punctuation in English comments")
     _assert_contains(result.output, "U+2014",
       "encoding check should report the em dash codepoint")
     _assert_contains(result.output, 'replace with "-"',
@@ -170,7 +167,7 @@ local function _test_encoding_check_reports_invalid_utf8_bytes()
       src_dir,
     })
 
-    assert(result.ok == false, "encoding check should fail on invalid utf-8 bytes")
+    check.is_true(result.ok == false, "encoding check should fail on invalid utf-8 bytes")
     _assert_contains(result.output, "invalid UTF-8 byte sequence",
       "encoding check should report invalid utf-8 bytes")
     _assert_contains(result.output, "broken.lua:1:",
@@ -200,7 +197,7 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
       error(err)
     end
 
-    assert(fs_lib.path_exists(file_path) == true, "unicode file path should exist after write")
+    check.is_true(fs_lib.path_exists(file_path) == true, "unicode file path should exist after write")
 
     local content, read_err = fs_lib.read_file(file_path)
     if content == nil then
@@ -213,7 +210,7 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
     if files == nil then
       error(list_err)
     end
-    assert(#files == 1, "collect_lua_files should find the unicode fixture file")
+    check.equal(1, #files, "collect_lua_files should find the unicode fixture file")
     _assert_contains(files[1], "测试_文件.lua", "collect_lua_files should preserve unicode file names")
 
     ok, err = fs_lib.ensure_dir(path_lib.join_path(copy_source, "nested"))
@@ -229,7 +226,7 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
     if not ok then
       error(err)
     end
-    assert(fs_lib.path_exists(path_lib.join_path(copy_target, "nested/sample.lua")) == true,
+    check.is_true(fs_lib.path_exists(path_lib.join_path(copy_target, "nested/sample.lua")) == true,
       "copy_tree should support unicode target directories")
   end)
 end
@@ -257,13 +254,13 @@ local function _test_arch_common_reuses_unicode_safe_file_ops()
     if files == nil then
       error(list_err)
     end
-    assert(#files == 1, "arch_common should collect unicode lua files through shared utility")
+    check.equal(1, #files, "arch_common should collect unicode lua files through shared utility")
   end)
 end
 
 local function _test_command_exists_reports_present_and_missing_commands()
-  assert(proc_lib.command_exists("lua") == true, "lua should exist in the test environment")
-  assert(proc_lib.command_exists("monopoly_command_that_should_not_exist_12345") == false,
+  check.is_true(proc_lib.command_exists("lua") == true, "lua should exist in the test environment")
+  check.is_true(proc_lib.command_exists("monopoly_command_that_should_not_exist_12345") == false,
     "command_exists should return false for missing commands")
 end
 
@@ -274,13 +271,13 @@ end
 -- 调用方恰好按 `if root == nil` 判断才没炸——改成 `if root_err` 就炸。
 -- 所以这里钉死:trim 只返回一个值。
 local function _test_trim_strips_whitespace_and_returns_one_value()
-  assert(text_lib.trim("  padded  ") == "padded", "trim should strip leading and trailing whitespace")
-  assert(text_lib.trim("") == "", "trim should map empty string to empty string")
-  assert(text_lib.trim(nil) == "", "trim should map nil to empty string")
-  assert(text_lib.trim("\n\tmixed \r\n") == "mixed", "trim should strip mixed whitespace")
-  assert(text_lib.trim("in  ner") == "in  ner", "trim should not touch interior whitespace")
+  check.equal("padded", text_lib.trim("  padded  "), "trim should strip leading and trailing whitespace")
+  check.equal("", text_lib.trim(""), "trim should map empty string to empty string")
+  check.equal("", text_lib.trim(nil), "trim should map nil to empty string")
+  check.equal("mixed", text_lib.trim("\n\tmixed \r\n"), "trim should strip mixed whitespace")
+  check.equal("in  ner", text_lib.trim("in  ner"), "trim should not touch interior whitespace")
 
-  assert(select("#", text_lib.trim("  x  ")) == 1,
+  check.equal(1, select("#", text_lib.trim("  x  ")),
     "trim must return exactly one value; returning gsub's replacement count corrupts (value)/(nil, err) contracts")
 end
 
@@ -290,17 +287,17 @@ end
 -- _path_or_command_available 又原样 `return fs_lib.path_exists(text)` 把这对值
 -- 继续上传。谓词只该答"是/否"。
 local function _test_path_predicates_return_one_boolean()
-  assert(fs_lib.path_exists("tools") == true, "path_exists should find an existing directory")
-  assert(fs_lib.path_exists("tools/foundation/fs.lua") == true, "path_exists should find an existing file")
-  assert(fs_lib.path_exists("monopoly_missing_path_12345") == false, "path_exists should reject a missing path")
+  check.is_true(fs_lib.path_exists("tools") == true, "path_exists should find an existing directory")
+  check.is_true(fs_lib.path_exists("tools/foundation/fs.lua") == true, "path_exists should find an existing file")
+  check.is_true(fs_lib.path_exists("monopoly_missing_path_12345") == false, "path_exists should reject a missing path")
 
-  assert(fs_lib.is_dir("tools") == true, "is_dir should accept a directory")
-  assert(fs_lib.is_dir("tools/foundation/fs.lua") == false, "is_dir should reject a regular file")
-  assert(fs_lib.is_dir("monopoly_missing_path_12345") == false, "is_dir should reject a missing path")
+  check.is_true(fs_lib.is_dir("tools") == true, "is_dir should accept a directory")
+  check.is_true(fs_lib.is_dir("tools/foundation/fs.lua") == false, "is_dir should reject a regular file")
+  check.is_true(fs_lib.is_dir("monopoly_missing_path_12345") == false, "is_dir should reject a missing path")
 
-  assert(select("#", fs_lib.path_exists("tools")) == 1,
+  check.equal(1, select("#", fs_lib.path_exists("tools")),
     "path_exists must return exactly one value; leaking os.execute's exit code corrupts predicate contracts")
-  assert(select("#", fs_lib.is_dir("tools")) == 1,
+  check.equal(1, select("#", fs_lib.is_dir("tools")),
     "is_dir must return exactly one value; leaking os.execute's exit code corrupts predicate contracts")
 end
 
@@ -342,7 +339,7 @@ local function _test_cli_help_text_is_bilingual()
 
   -- 验证所有结果
   for _, item in ipairs(results) do
-    assert(item.result.ok == true, "help command should exit successfully for " .. table.concat(item.args, " "))
+    check.is_true(item.result.ok, "help command should exit successfully for " .. table.concat(item.args, " "))
     _assert_contains(item.result.output, "用法", "help output should include Chinese usage text")
     _assert_contains(item.result.output, "Usage", "help output should include English usage text")
   end
@@ -435,7 +432,7 @@ local function _test_deploy_comprehensive()
   _test_deploy_lua_matches_simplified_cli()
   -- 帮助在壳内结束,不会进入部署主流程或写入实际目标。
   local result = _run_lua({ "tools/cli.lua", "deploy", "--help" })
-  assert(result.ok == true, "deploy help should succeed")
+  check.is_true(result.ok == true, "deploy help should succeed")
   _assert_contains(result.output, "原生 Windows", "help should declare the native platform")
   _assert_not_contains(result.output, "WSL", "help should retire WSL interoperability")
 end
@@ -470,8 +467,8 @@ local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
       stdin_path = stdin_path,
     })
 
-    assert(result.ok == false, "run_command should surface non-zero exit codes")
-    assert(result.code ~= 0, "run_command should preserve the child exit code")
+    check.is_true(result.ok == false, "run_command should surface non-zero exit codes")
+    check.is_true(result.code ~= 0, "run_command should preserve the child exit code")
     _assert_contains(result.output, "stdin 中文 / utf8 stdin", "run_command should preserve utf8 stdin content")
     _assert_contains(result.output, "未知参数", "run_command should preserve Chinese stderr text")
     _assert_contains(result.output, "Unknown flag", "run_command should preserve English stderr text")
@@ -515,8 +512,8 @@ local function _test_arch_view_viewer_supports_unicode_output_path()
     local output = table.concat(messages, "\n")
     _assert_contains(output, "arch_view 视图已生成", "arch viewer logs should include Chinese text")
     _assert_contains(output, "arch_view viewer ok", "arch viewer logs should include English text")
-    assert(fs_lib.path_exists(path_lib.join_path(out_dir, "index.html")) == true, "arch viewer should write index.html")
-    assert(fs_lib.path_exists(path_lib.join_path(out_dir, "architecture.json")) == true, "arch viewer should write architecture.json")
+    check.is_true(fs_lib.path_exists(path_lib.join_path(out_dir, "index.html")) == true, "arch viewer should write index.html")
+    check.is_true(fs_lib.path_exists(path_lib.join_path(out_dir, "architecture.json")) == true, "arch viewer should write architecture.json")
   end)
 end
 
@@ -527,7 +524,7 @@ local function _test_mutate_wrapper_scan_output()
     "--scan",
   })
 
-  assert(result.ok == true, "mutate wrapper scan should succeed")
+  check.is_true(result.ok == true, "mutate wrapper scan should succeed")
   _assert_contains(result.output, "file: src/foundation/identity.lua",
     "mutate scan should report the normalized target path")
   _assert_contains(result.output, "sites: ",
@@ -538,11 +535,11 @@ local function _test_reference_tools_do_not_expose_bin_entrypoints()
   -- tree 形态下 root 即 luarocks tree,bin/ 住着其它工具的入口(dry4lua 等);
   -- arch_view 自身的契约改为检查 rock 安装清单不含 bin 条目。
   local version = arch_tool.version
-  assert(version ~= nil, "arch_view should report its installed version from ensure_tool")
+  check.is_not_nil(version, "arch_view should report its installed version from ensure_tool")
   local manifest_path = path_lib.join_path(arch_tool.root,
     "lib/luarocks/rocks-5.4/arch_view/" .. version .. "/rock_manifest")
   local manifest = assert(fs_lib.read_file(manifest_path))
-  assert(manifest:find("bin =", 1, true) == nil,
+  check.is_nil(manifest:find("bin =", 1, true),
     "reference 4lua tools should not expose bin entrypoints: " .. manifest_path)
 end
 
@@ -567,14 +564,14 @@ local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
     local bootstrap_result = proc_lib.run_command({ "lua", "-e", lua_snippet }, {
       cwd = outside_dir,
     })
-    assert(bootstrap_result.ok == true, "bootstrap helper should resolve repo_root outside the repo cwd")
+    check.is_true(bootstrap_result.ok, "bootstrap helper should resolve repo_root outside the repo cwd")
     _assert_contains(bootstrap_result.output, expected_root,
       "bootstrap helper should report the normalized repo root")
 
     local help_result = proc_lib.run_command({ "lua", script_path, "--help" }, {
       cwd = outside_dir,
     })
-    assert(help_result.ok == true, "tool entrypoint should resolve bootstrap dependencies outside the repo cwd")
+    check.is_true(help_result.ok, "tool entrypoint should resolve bootstrap dependencies outside the repo cwd")
     _assert_contains(help_result.output, "Usage",
       "tool help should still render when launched outside the repo cwd")
   end)
