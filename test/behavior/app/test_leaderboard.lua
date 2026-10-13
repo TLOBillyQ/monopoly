@@ -1,10 +1,13 @@
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为 Test* 类,after_each →
--- tearDown,断言从裸 assert 切到 lu.assertEvalToTrue,用例数与改写前一一对应
+-- tearDown,断言从裸 assert 切到 luassert.truthy,用例数与改写前一一对应
 -- (settle 7 例 + 迁自 property 车道的 accumulation properties 3 例 = 10 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local leaderboard = require("src.app.host_integrations.leaderboard")
 
@@ -238,7 +241,7 @@ do
       local game = _prop_game(case.players, case.winners)
       local winner_ids = _winner_id_set(case)
 
-      lu.assertEvalToTrue(leaderboard.settle(game) == true, "first settlement on enabled archives must run")
+      luassert.truthy(leaderboard.settle(game) == true, "first settlement on enabled archives must run")
 
       local expected_win_total, expected_asset_total = 0, 0
       for _, player in ipairs(case.players) do
@@ -248,9 +251,9 @@ do
         if not leaderboard.is_quit_reason(player.quit_reason) then
           expected_asset_delta = asset_total.player_total(game, player)
         end
-        lu.assertEvalToTrue(store[_slot(player.id, WIN)] == case.seed[_slot(player.id, WIN)] + expected_win_delta,
+        luassert.truthy(store[_slot(player.id, WIN)] == case.seed[_slot(player.id, WIN)] + expected_win_delta,
           "win archive must change by exactly the winner delta for player " .. player.id)
-        lu.assertEvalToTrue(store[_slot(player.id, ASSETS)] == case.seed[_slot(player.id, ASSETS)] + expected_asset_delta,
+        luassert.truthy(store[_slot(player.id, ASSETS)] == case.seed[_slot(player.id, ASSETS)] + expected_asset_delta,
           "asset archive must change by exactly the non-quit total for player " .. player.id)
         expected_win_total = expected_win_total + expected_win_delta
         expected_asset_total = expected_asset_total + expected_asset_delta
@@ -264,8 +267,8 @@ do
         actual_asset_total = actual_asset_total
           + (store[_slot(player.id, ASSETS)] - case.seed[_slot(player.id, ASSETS)])
       end
-      lu.assertEvalToTrue(actual_win_total == expected_win_total, "total wins added must equal the present winner count")
-      lu.assertEvalToTrue(actual_asset_total == expected_asset_total, "total assets added must equal the non-quit player sum")
+      luassert.truthy(actual_win_total == expected_win_total, "total wins added must equal the present winner count")
+      luassert.truthy(actual_asset_total == expected_asset_total, "total assets added must equal the non-quit player sum")
     end)
   end
 
@@ -280,12 +283,12 @@ do
         snapshot[key] = value
       end
 
-      lu.assertEvalToTrue(leaderboard.settle(game) == false, "repeat settlement must report skipped")
+      luassert.truthy(leaderboard.settle(game) == false, "repeat settlement must report skipped")
       for key, value in pairs(store) do
-        lu.assertEvalToTrue(snapshot[key] == value, "repeat settlement must not change archive " .. key)
+        luassert.truthy(snapshot[key] == value, "repeat settlement must not change archive " .. key)
       end
       for key, value in pairs(snapshot) do
-        lu.assertEvalToTrue(store[key] == value, "repeat settlement must not remove archive " .. key)
+        luassert.truthy(store[key] == value, "repeat settlement must not remove archive " .. key)
       end
     end)
   end
@@ -295,8 +298,8 @@ do
       local _, writes = _prop_install_archives(false, case.seed)
       local game = _prop_game(case.players, case.winners)
 
-      lu.assertEvalToTrue(leaderboard.settle(game) == false, "disabled archives must report skipped")
-      lu.assertEvalToTrue(writes.count == 0, "disabled archives must receive no writes")
+      luassert.truthy(leaderboard.settle(game) == false, "disabled archives must report skipped")
+      luassert.truthy(writes.count == 0, "disabled archives must receive no writes")
     end)
   end
 end
