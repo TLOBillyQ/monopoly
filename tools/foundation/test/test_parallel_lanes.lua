@@ -112,7 +112,7 @@ while os.time()<deadline do end
 local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()
 ]])
     assert(fs.write_file(root .. "/owned/sentinel.txt", "keep"))
-    local ok, results = parallel.run({ { label = "slow", cmd = { "lua", file, marker } } },
+    local ok, results = parallel.run({ { label = "slow", cmd = { native_lua, file, marker } } },
       { stream = false, timeout = 2, lane_dir = root .. "/owned" })
     lu.assertFalse(ok)
     lu.assertEquals(results[1].reason, "timeout")

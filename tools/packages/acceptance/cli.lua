@@ -26,7 +26,7 @@ function M.usage()
     "用法: lua tools/cli.lua acceptance [--serial|--parallel|--capabilities]",
     "默认串行；--parallel 使用原生 cmd 并行并按注册顺序汇总，空结果失败。",
     "start /b启动Windows PowerShell；内置.NET Add-Type/PInvoke Job Object收容自有子树。",
-    "--capabilities: 列出注册/执行/排除集合;Windows 默认排除 capability=acceptance-mutate 的真实 feature,不计为通过。"
+    "--capabilities: 列出注册/执行/排除集合;Windows 默认排除 capability=acceptance-mutate 的真实 feature,不计为通过。",
     "",
     "验收套件（按需车道）：先从 features/ 中文源重生成 gitignored 的 generated specs，",
     "再由 run_all 逐个 spawn 聚合。引擎核心由自研 acceptance4lua",
@@ -63,7 +63,7 @@ function M.main(args, env)
       require("test.bootstrap").install_package_paths()
       require("packages.acceptance.acceptance_features").select(function(line) io.write(line .. "\n") end)
       return 0
-    elseif value ~= "--serial" then
+    elseif value ~= "--serial" and value ~= "--parallel" then
       io.stderr:write("unknown option: " .. value .. "\n")
       return 2
     end
