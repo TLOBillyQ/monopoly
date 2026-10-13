@@ -12,21 +12,14 @@ local guard = require("test.guards.lib.luassert_migration_pilot_guard")
 
 local _PILOT = "test/behavior/foundation/test_scope.lua"
 
--- 一份合规的最小试点源码:loader + 局部断言对象 + 结构锚点 + 足够断言调用点。
-local function _clean_source(path)
+-- 合规最小源码仅声明断言来源,不要求旧结构。
+local function _clean_source()
   local lines = {
     'require("test.bootstrap").install_package_paths()',
     "",
     'local luassert = assert(require("test.support.luassert_loader").load())',
     "",
   }
-  for _, anchor in ipairs(guard.STRUCTURE_ANCHORS[path] or {}) do
-    lines[#lines + 1] = anchor.literal
-  end
-  local floor = guard.ASSERTION_CALL_FLOOR[path] or 0
-  for index = 1, floor do
-    lines[#lines + 1] = "  luassert.is.equal(" .. index .. ", " .. index .. ")"
-  end
   return table.concat(lines, "\n") .. "\n"
 end
 
@@ -47,14 +40,11 @@ function TestLuassertMigrationPilotGuard:test_synthetic_compliant_pilot_source_h
   lu.assertEquals(#violations, 0, _joined(violations))
 end
 
--- 试点范围是冻结数据:5 个文件,且每个文件都有结构锚点与断言调用下界。
--- 试点外新增文件必须显式改表,不能悄悄漂移。
-function TestLuassertMigrationPilotGuard:test_pilot_scope_is_frozen_and_fully_annotated()
+-- 冻结本票文件范围,允许下一阶段改变测试结构。
+function TestLuassertMigrationPilotGuard:test_pilot_scope_is_frozen_without_structure_pins()
   lu.assertEquals(#guard.PILOT_FILES, 5, _joined(guard.PILOT_FILES))
-  for _, path in ipairs(guard.PILOT_FILES) do
-    lu.assertNotNil(guard.STRUCTURE_ANCHORS[path], path .. " 缺结构锚点")
-    lu.assertNotNil(guard.ASSERTION_CALL_FLOOR[path], path .. " 缺断言调用下界")
-  end
+  lu.assertNil(guard.STRUCTURE_ANCHORS)
+  lu.assertNil(guard.ASSERTION_CALL_FLOOR)
 end
 
 function TestLuassertMigrationPilotGuard:test_still_requiring_luaunit_is_a_violation()
@@ -76,26 +66,20 @@ function TestLuassertMigrationPilotGuard:test_missing_loader_require_is_a_violat
   lu.assertEvalToTrue(_joined(violations):find("loader", 1, true) ~= nil, _joined(violations))
 end
 
-function TestLuassertMigrationPilotGuard:test_busted_compat_layer_is_a_violation()
-  local violations = _check(_PILOT, _clean_source(_PILOT) .. 'describe("旧 Test 表", function() end)\n')
-  lu.assertEquals(#violations, 1, _joined(violations))
-  lu.assertEvalToTrue(violations[1]:find("describe", 1, true) ~= nil, violations[1])
+function TestLuassertMigrationPilotGuard:test_busted_structure_migration_is_allowed()
+  local violations = _check(_PILOT, _clean_source(_PILOT)
+    .. 'local busted = require("busted")\ndescribe("scope", function() end)\n')
+  lu.assertEquals(#violations, 0, _joined(violations))
 end
 
-function TestLuassertMigrationPilotGuard:test_lost_structure_anchor_is_a_violation()
-  local anchor = guard.STRUCTURE_ANCHORS[_PILOT][1].literal
-  local violations = _check(_PILOT, (_clean_source(_PILOT):gsub(anchor:gsub("%W", "%%%0"), "-- removed")))
-  lu.assertEquals(#violations, 1, _joined(violations))
-  lu.assertEvalToTrue(violations[1]:find("结构锚点", 1, true) ~= nil, violations[1])
+function TestLuassertMigrationPilotGuard:test_helpers_and_return_structure_are_not_pinned()
+  local violations = _check(_PILOT, _clean_source(_PILOT))
+  lu.assertEquals(#violations, 0, _joined(violations))
 end
 
-function TestLuassertMigrationPilotGuard:test_assertion_call_floor_is_enforced()
-  local floor = guard.ASSERTION_CALL_FLOOR[_PILOT]
-  local source = _clean_source(_PILOT)
-  local trimmed = source:gsub("%f[%a]luassert%.[%a_%.]+", "")
-  local violations = _check(_PILOT, trimmed)
-  lu.assertEquals(#violations, 1, _joined(violations))
-  lu.assertEvalToTrue(violations[1]:find("下界 " .. floor, 1, true) ~= nil, violations[1])
+function TestLuassertMigrationPilotGuard:test_assertion_call_count_is_not_a_structure_rule()
+  local violations = _check(_PILOT, _clean_source(_PILOT) .. "luassert.is_true(true)\n")
+  lu.assertEquals(#violations, 0, _joined(violations))
 end
 
 function TestLuassertMigrationPilotGuard:test_loader_taking_over_the_global_assert_is_a_violation()

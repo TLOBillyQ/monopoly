@@ -15,6 +15,19 @@ local M = {}
 local _assert_obj = nil
 local _load_error = nil
 local _env = nil
+local _verified_modules = {}
+
+local function _is_dependency(name)
+  return name == "say" or name == "luassert" or tostring(name):match("^luassert%.") ~= nil
+end
+
+local function _identity_error()
+  for name, object in pairs(_verified_modules) do
+    if package.loaded[name] ~= object then
+      return "verified module identity changed: " .. name
+    end
+  end
+end
 
 local function _normalize(path)
   return tostring(path or ""):gsub("\\", "/")
@@ -66,13 +79,43 @@ local function _load()
     end
   end
 
-  return require("luassert")
+  for name, object in pairs(package.loaded) do
+    if _is_dependency(name) and object ~= nil and object ~= false then
+      return nil, "unverified preloaded module: " .. name
+    end
+  end
+
+  -- 放在 preload/searchers 之前,每个依赖都按缓存文件显式装载,不让伪 searcher
+  -- 或 package.preload 绕过来源检查。仅在本次同步 require 期间安装。
+  local loaded_names = {}
+  local function cache_searcher(name)
+    if not _is_dependency(name) then return nil end
+    local source, err = _resolve_in_cache(name, prefix)
+    if source == nil then error(err, 0) end
+    local chunk, load_err = loadfile(source)
+    if chunk == nil then error(load_err, 0) end
+    loaded_names[name] = true
+    return chunk, source
+  end
+  table.insert(package.searchers, 1, cache_searcher)
+  local ok, object = pcall(require, "luassert")
+  table.remove(package.searchers, 1)
+  if not ok then
+    for name in pairs(loaded_names) do package.loaded[name] = nil end
+    return nil, "cache module loading failed: " .. tostring(object)
+  end
+  for name in pairs(loaded_names) do
+    _verified_modules[name] = package.loaded[name]
+  end
+  return object
 end
 
 --- 加载真 luassert 断言对象。成功返回断言对象;失败返回 nil, err(原因带全,
 --- 不返回空表让调用方误以为可用)。
 function M.load()
   if _assert_obj ~= nil then
+    local err = _identity_error()
+    if err ~= nil then return nil, err end
     return _assert_obj
   end
   if _load_error ~= nil then

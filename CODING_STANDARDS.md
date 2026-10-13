@@ -37,7 +37,7 @@
 ### 断言对象怎么拿
 
 - 文件头两行固定:`require("test.bootstrap").install_package_paths()` 之后 `local luassert = assert(require("test.support.luassert_loader").load())`,断言只走这个局部对象。
-- loader 只从**项目工具缓存** `<repo>/.toolcache/luarocks/` 解析 `luassert`(及 rockspec 依赖 `say`),解析结果不在该目录下即失败;不落全局、不依赖 `luarocks` 的可执行位。
+- loader 只从**项目工具缓存** `<repo>/.toolcache/luarocks/` 装载 `luassert`、其子模块及 `say`。未验证的 `package.loaded` 预注入即失败;装载期间的优先 searcher 按缓存文件显式 loadfile,避免 preload/searcher 绕过;后续调用复核已加载对象身份。解析路径在缓存中不代表预加载对象来自缓存。
 - **不覆盖全局 `assert`**。旧运行器与 LuaUnit 的后端语义挂在全局 `assert` 上,覆盖它等于换执行后端而不是换断言词汇;`test/guards/lib/luassert_migration_pilot_guard.lua` 会扫 `_G.assert =` 一类写法。
 
 ### 译法对照(带陷阱)
@@ -71,8 +71,8 @@
 ### 试点范围与对账
 
 - 本票试点 5 个文件(见 `test/guards/lib/luassert_migration_pilot_guard.lua` 的 `PILOT_FILES`),迁移前后用例集合必须逐类一致:45 例(9 / 9 / 5 / 13 / 4 + 5),基线由 `test/support/luassert_migration/test/test_luassert_assertion_contract.lua` 对账。
-- 试点文件**不跳过特殊结构**:`setUp` 钩子、`multi_class_return.merge` 的多类 return、`runtime_baseline_guard` 补装、局部断言 helper 都原样保留;guard 的 `STRUCTURE_ANCHORS` 钉住这些锚点,锚点丢失即违规。
-- 每个试点文件的 `luassert` 调用点有下界(`ASSERTION_CALL_FLOOR`),防止「断言被删成空跑」也算绿。
+- 本票交付**不跳过特殊结构**:`setUp` 钩子、`multi_class_return.merge` 的多类 return、`runtime_baseline_guard` 补装、局部断言 helper 均保留,由迁移前后 diff 与真实 45 例对账验收,不设永久源码字面锚点、调用数量下界或 describe 禁令。
+- 45 例逐类对账是断言阶段的可撤契约;后续结构迁移须替换为新运行器的同集合证据,不保留旧 Test 类或 helper 的内容嗅探规则。断言有效性由真实正负语义与非零退出钉住。
 - `test/support/luax.lua` 不在本票范围内,其余 spec 继续用它。
 
 ### 诊断

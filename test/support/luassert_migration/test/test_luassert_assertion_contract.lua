@@ -245,6 +245,63 @@ function TestLuassertAssertionContract:test_loading_luassert_does_not_take_over_
     "luassert must stay a separate, locally used assertion object")
 end
 
+function TestLuassertAssertionContract:test_unverified_preloaded_modules_are_rejected()
+  for _, name in ipairs({ "luassert", "say" }) do
+    local saved = package.loaded[name]
+    package.loaded[name] = {}
+    local fresh_loader = assert(loadfile(loader.repo_root() .. "/test/support/luassert_loader.lua"))()
+    local ok, object, err = pcall(fresh_loader.load)
+    package.loaded[name] = saved
+    _expect(ok and object == nil and tostring(err):find("preloaded", 1, true) ~= nil,
+      name .. ": an unverified preloaded object must be rejected, got: " .. tostring(err))
+  end
+end
+
+function TestLuassertAssertionContract:test_cache_loading_bypasses_fake_preload_factories()
+  local saved, preloads = {}, {}
+  local function dependency(name)
+    return name == "say" or name == "luassert" or name:match("^luassert%.") ~= nil
+  end
+  for name, object in pairs(package.loaded) do
+    if dependency(name) then saved[name] = object end
+  end
+  for name in pairs(saved) do package.loaded[name] = nil end
+  local invoked = false
+  for _, name in ipairs({ "luassert", "say", "luassert.assert" }) do
+    preloads[name] = package.preload[name]
+    package.preload[name] = function() invoked = true; return {} end
+  end
+  local fresh_loader = assert(loadfile(loader.repo_root() .. "/test/support/luassert_loader.lua"))()
+  local ok, object, err = pcall(fresh_loader.load)
+  local passes, fails = false, false
+  if ok and object then
+    passes = pcall(function() object.is.same({ a = 1 }, { a = 1 }) end)
+    fails = not pcall(function() object.is_true(1) end)
+  end
+  local names = {}
+  for name in pairs(package.loaded) do if dependency(name) then names[#names + 1] = name end end
+  for _, name in ipairs(names) do package.loaded[name] = nil end
+  for name, value in pairs(saved) do package.loaded[name] = value end
+  for _, name in ipairs({ "luassert", "say", "luassert.assert" }) do
+    package.preload[name] = preloads[name]
+  end
+  _expect(ok and object ~= nil and not invoked and passes and fails,
+    "cache loading must bypass fake factories and retain real positive/negative assertions: " .. tostring(err))
+end
+
+function TestLuassertAssertionContract:test_verified_module_identity_cannot_be_replaced()
+  local real = _luassert()
+  for _, name in ipairs({ "luassert", "say" }) do
+    local saved = package.loaded[name]
+    package.loaded[name] = {}
+    local ok, object, err = pcall(loader.load)
+    package.loaded[name] = saved
+    _expect(ok and object == nil and tostring(err):find("identity", 1, true) ~= nil,
+      name .. ": replacing a verified module must fail, got: " .. tostring(err))
+    _expect(loader.load() == real, "restoring the verified identity must allow loading")
+  end
+end
+
 -- ---------------------------------------------------------------- 2. 语义矩阵
 -- 每条都是「正例成立 + 故意失败反例必须红」成对出现:只验正例等于没验边界,
 -- 断言的真实价值全在它什么时候会红。
