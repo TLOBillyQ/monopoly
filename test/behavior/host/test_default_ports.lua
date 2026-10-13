@@ -1,6 +1,10 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_equal(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local default_ports = require("src.host.default_ports")
 
 -- 原生 LuaUnit 试点(推翻自研 busted 兼容运行器决策的迁移):describe 嵌套按钩子边界拍平成两个
@@ -25,8 +29,8 @@ function TestDefaultPorts:test_end_game_routes_to_host_and_leaves_diagnostics()
       host_calls = host_calls + 1
     end,
   })
-  lu.assertEquals(ports.end_game(), true, "end_game should confirm a successful host call")
-  lu.assertEquals(host_calls, 1, "end_game should reach the host exactly once")
+  _assert_equal(ports.end_game(), true, "end_game should confirm a successful host call")
+  _assert_equal(host_calls, 1, "end_game should reach the host exactly once")
 
   local logger = require("src.foundation.log")
   local original_warn = logger.warn
@@ -46,9 +50,9 @@ function TestDefaultPorts:test_end_game_routes_to_host_and_leaves_diagnostics()
   end)
   logger.warn = original_warn
 
-  lu.assertEquals(ok_missing and missing_result == false, true, "missing game_end should report false, not raise")
-  lu.assertEquals(ok_raising and raising_result == false, true, "raising host game_end must be contained and report false")
-  lu.assertEquals(#warns, 2, "missing and raising host game_end should each leave one warn")
+  _assert_equal(ok_missing and missing_result == false, true, "missing game_end should report false, not raise")
+  _assert_equal(ok_raising and raising_result == false, true, "raising host game_end must be contained and report false")
+  _assert_equal(#warns, 2, "missing and raising host game_end should each leave one warn")
 end
 
 function TestDefaultPorts:test_wall_diff_seconds_prefers_game_api_then_falls_back()
@@ -68,10 +72,10 @@ function TestDefaultPorts:test_wall_diff_seconds_prefers_game_api_then_falls_bac
   }
   local ports = default_ports.build(runtime_ctx)
 
-  lu.assertEquals(ports.wall_diff_seconds(9, 7), 4, "wall diff should prefer GameAPI semantics when available")
+  _assert_equal(ports.wall_diff_seconds(9, 7), 4, "wall diff should prefer GameAPI semantics when available")
   ctx.env.GameAPI.get_timestamp_diff = nil
-  lu.assertEquals(ports.wall_diff_seconds(9, 7), 2, "wall diff should fall back to arithmetic when GameAPI diff is unavailable")
-  lu.assertEquals(ports.wall_diff_seconds("x", 7), 0, "wall diff should return 0 for non-numeric fallback inputs")
+  _assert_equal(ports.wall_diff_seconds(9, 7), 2, "wall diff should fall back to arithmetic when GameAPI diff is unavailable")
+  _assert_equal(ports.wall_diff_seconds("x", 7), 0, "wall diff should return 0 for non-numeric fallback inputs")
 end
 
 function TestDefaultPorts:test_cpu_now_seconds_prefers_game_api_then_falls_back()
@@ -84,10 +88,10 @@ function TestDefaultPorts:test_cpu_now_seconds_prefers_game_api_then_falls_back(
   local ports = default_ports.build(runtime_ctx)
 
   local now = ports.cpu_now_seconds()
-  lu.assertIsNumber(now, "cpu_now should produce a number even without GameAPI")
+  luassert.is_number(now, "cpu_now should produce a number even without GameAPI")
 
   ctx.env.GameAPI = { get_timestamp = function() return 12345 end }
-  lu.assertEquals(ports.cpu_now_seconds(), 12345, "cpu_now should prefer GameAPI timestamp when available")
+  _assert_equal(ports.cpu_now_seconds(), 12345, "cpu_now should prefer GameAPI timestamp when available")
 end
 
 function TestDefaultPorts:test_wall_now_hms_formats_from_game_api_parts()
@@ -108,11 +112,11 @@ function TestDefaultPorts:test_wall_now_hms_formats_from_game_api_parts()
   }
   local ports = default_ports.build(runtime_ctx)
 
-  lu.assertEquals(ports.wall_now_hms(), "10:30:45", "wall_now_hms should format from GameAPI parts")
+  _assert_equal(ports.wall_now_hms(), "10:30:45", "wall_now_hms should format from GameAPI parts")
   ctx.env.GameAPI.get_hour = nil
-  lu.assertEquals(ports.wall_now_hms(), "", "missing part should yield empty string")
+  _assert_equal(ports.wall_now_hms(), "", "missing part should yield empty string")
   ctx.env.GameAPI = nil
-  lu.assertEquals(ports.wall_now_hms(), "", "no GameAPI should yield empty string")
+  _assert_equal(ports.wall_now_hms(), "", "no GameAPI should yield empty string")
 end
 
 function TestDefaultPorts:test_rng_next_int_routes_to_the_host_random_int_and_guards_its_inputs()
@@ -130,19 +134,19 @@ function TestDefaultPorts:test_rng_next_int_routes_to_the_host_random_int_and_gu
     end,
   })
 
-  lu.assertEquals(ports.rng_next_int(1, 10), 5, "rng_next_int should return the host random value")
-  lu.assertEquals(seen.min, 1, "rng_next_int should pass the min bound through")
-  lu.assertEquals(seen.max, 10, "rng_next_int should pass the max bound through")
+  _assert_equal(ports.rng_next_int(1, 10), 5, "rng_next_int should return the host random value")
+  _assert_equal(seen.min, 1, "rng_next_int should pass the min bound through")
+  _assert_equal(seen.max, 10, "rng_next_int should pass the max bound through")
 
   local ok_missing_min, err_missing_min = pcall(ports.rng_next_int, nil, 10)
-  lu.assertFalse(ok_missing_min, "rng_next_int should assert on a missing min bound")
-  lu.assertEquals(string.find(tostring(err_missing_min), "rng.next_int requires min/max", 1, true) ~= nil, true,
+  luassert.is_false(ok_missing_min, "rng_next_int should assert on a missing min bound")
+  _assert_equal(string.find(tostring(err_missing_min), "rng.next_int requires min/max", 1, true) ~= nil, true,
     "missing-min error should carry the reason; got " .. tostring(err_missing_min))
 
   local ports_no_api = _ports_with_game_api({})
   local ok_no_api, err_no_api = pcall(ports_no_api.rng_next_int, 1, 10)
-  lu.assertFalse(ok_no_api, "rng_next_int should assert when the host lacks random_int")
-  lu.assertEquals(string.find(tostring(err_no_api), "missing game api random_int", 1, true) ~= nil, true,
+  luassert.is_false(ok_no_api, "rng_next_int should assert when the host lacks random_int")
+  _assert_equal(string.find(tostring(err_no_api), "missing game api random_int", 1, true) ~= nil, true,
     "missing-api error should carry the reason; got " .. tostring(err_no_api))
 end
 
@@ -163,12 +167,12 @@ function TestDefaultPorts:test_schedule_forwards_delay_and_callback_to_lua_api()
   ports.schedule(nil, function()
     called = true
   end)
-  lu.assertEquals(seen.delay, 0, "schedule should default a nil delay to 0")
-  lu.assertEquals(called, false, "schedule should not invoke the callback synchronously when LuaAPI is present")
+  _assert_equal(seen.delay, 0, "schedule should default a nil delay to 0")
+  _assert_equal(called, false, "schedule should not invoke the callback synchronously when LuaAPI is present")
 
   seen = nil
   ports.schedule(3, function() end)
-  lu.assertEquals(seen.delay, 3, "schedule should pass the explicit delay through")
+  _assert_equal(seen.delay, 3, "schedule should pass the explicit delay through")
 end
 
 function TestDefaultPorts:test_schedule_falls_back_to_sync_call_without_lua_api()
@@ -179,21 +183,21 @@ function TestDefaultPorts:test_schedule_falls_back_to_sync_call_without_lua_api(
   ports.schedule(1, function()
     called = true
   end)
-  lu.assertEquals(called, true, "schedule should invoke the callback synchronously without LuaAPI")
+  _assert_equal(called, true, "schedule should invoke the callback synchronously without LuaAPI")
 
   local ok, err = pcall(ports.schedule, 1, nil)
-  lu.assertEquals(ok, false, "schedule should assert on a missing callback")
-  lu.assertEquals(string.find(tostring(err), "schedule requires callback", 1, true) ~= nil, true,
+  _assert_equal(ok, false, "schedule should assert on a missing callback")
+  _assert_equal(string.find(tostring(err), "schedule requires callback", 1, true) ~= nil, true,
     "missing-callback error should carry the reason; got " .. tostring(err))
 end
 
 function TestDefaultPorts:test_resolve_camera_helper_returns_context_helper_or_nil()
   local ports = default_ports.build({ current = function() return nil end })
-  lu.assertEquals(ports.resolve_camera_helper(), nil, "no context should yield no camera helper")
+  _assert_equal(ports.resolve_camera_helper(), nil, "no context should yield no camera helper")
 
   local ctx = { camera_helper = { kind = "cam" } }
   local ports_with_helper = default_ports.build({ current = function() return ctx end })
-  lu.assertEquals(ports_with_helper.resolve_camera_helper().kind, "cam", "camera helper should come from the context")
+  _assert_equal(ports_with_helper.resolve_camera_helper().kind, "cam", "camera helper should come from the context")
 end
 
 function TestDefaultPorts:test_emit_event_delegates_to_the_host_trigger_and_reports_ok()
@@ -215,9 +219,9 @@ function TestDefaultPorts:test_emit_event_delegates_to_the_host_trigger_and_repo
   }, function()
     ok_result = ports.emit_event("my.event", { k = 1 })
   end)
-  lu.assertEquals(ok_result, true, "emit_event should report success when the host trigger succeeds")
-  lu.assertEquals(received.event_name, "my.event", "emit_event should pass the event name through")
-  lu.assertEquals(received.payload.k, 1, "emit_event should pass the payload through")
+  _assert_equal(ok_result, true, "emit_event should report success when the host trigger succeeds")
+  _assert_equal(received.event_name, "my.event", "emit_event should pass the event name through")
+  _assert_equal(received.payload.k, 1, "emit_event should pass the payload through")
 
   local raised_result
   support.with_patches({
@@ -231,7 +235,7 @@ function TestDefaultPorts:test_emit_event_delegates_to_the_host_trigger_and_repo
   }, function()
     raised_result = ports.emit_event("my.event", {})
   end)
-  lu.assertEquals(raised_result, false, "emit_event should return false when the host trigger raises")
+  _assert_equal(raised_result, false, "emit_event should return false when the host trigger raises")
 
   local missing_result
   support.with_patches({
@@ -243,7 +247,7 @@ function TestDefaultPorts:test_emit_event_delegates_to_the_host_trigger_and_repo
   }, function()
     missing_result = ports.emit_event("my.event", {})
   end)
-  lu.assertEquals(missing_result, false, "emit_event should return false without the host trigger")
+  _assert_equal(missing_result, false, "emit_event should return false without the host trigger")
 end
 
 function TestDefaultPorts:test_resolve_roles_returns_cached_when_populated()
@@ -261,8 +265,8 @@ function TestDefaultPorts:test_resolve_roles_returns_cached_when_populated()
 
   local roles = ports.resolve_roles()
 
-  lu.assertEquals(#roles, 1, "populated roles should come back as cached")
-  lu.assertEquals(roles[1].id, 1, "populated roles should not be replaced by a host query")
+  _assert_equal(#roles, 1, "populated roles should come back as cached")
+  _assert_equal(roles[1].id, 1, "populated roles should not be replaced by a host query")
 end
 
 function TestDefaultPorts:test_is_synthetic_player_answers_from_registry_and_defaults_false()
@@ -277,19 +281,19 @@ function TestDefaultPorts:test_is_synthetic_player_answers_from_registry_and_def
   }
   local ports = default_ports.build({ current = function() return ctx end })
 
-  lu.assertEquals(ports.is_synthetic_player(-2), true, "registered synthetic player should be reported")
-  lu.assertEquals(ports.is_synthetic_player(1), false, "host player should not be reported as synthetic")
+  _assert_equal(ports.is_synthetic_player(-2), true, "registered synthetic player should be reported")
+  _assert_equal(ports.is_synthetic_player(1), false, "host player should not be reported as synthetic")
 
   local bare = default_ports.build({ current = function() return { roles = {} } end })
-  lu.assertEquals(bare.is_synthetic_player(-2), false, "missing registry should yield false, not nil")
+  _assert_equal(bare.is_synthetic_player(-2), false, "missing registry should yield false, not nil")
 end
 
 function TestDefaultPorts:test_resolve_role_returns_nil_without_game_api()
   local ctx = { roles = {} }
   local ports = default_ports.build({ current = function() return ctx end })
 
-  lu.assertEquals(ports.resolve_role(1), nil, "no GameAPI should yield no resolved role (no error)")
-  lu.assertEquals(#ports.resolve_roles(), 0, "no GameAPI should yield an empty role list (no error)")
+  _assert_equal(ports.resolve_role(1), nil, "no GameAPI should yield no resolved role (no error)")
+  _assert_equal(#ports.resolve_roles(), 0, "no GameAPI should yield an empty role list (no error)")
 end
 
 function TestDefaultPorts:test_resolve_roles_refreshes_empty_roles_from_game_api()
@@ -307,9 +311,9 @@ function TestDefaultPorts:test_resolve_roles_refreshes_empty_roles_from_game_api
 
   local roles = ports.resolve_roles()
 
-  lu.assertEquals(#roles, 2, "resolve_roles should fall back to the host role query")
-  lu.assertEquals(roles[1].id, 1, "resolve_roles should return the queried roles")
-  lu.assertEquals(ctx.roles[1].id, 1, "resolve_roles should cache the queried roles back onto the context")
+  _assert_equal(#roles, 2, "resolve_roles should fall back to the host role query")
+  _assert_equal(roles[1].id, 1, "resolve_roles should return the queried roles")
+  _assert_equal(ctx.roles[1].id, 1, "resolve_roles should cache the queried roles back onto the context")
 end
 
 function TestDefaultPorts:test_resolve_roles_queries_game_api_when_roles_not_initialized()
@@ -326,8 +330,8 @@ function TestDefaultPorts:test_resolve_roles_queries_game_api_when_roles_not_ini
 
   local roles = ports.resolve_roles()
 
-  lu.assertEquals(#roles, 1, "resolve_roles should query the host when ctx.roles is not a table")
-  lu.assertEquals(roles[1].id, 7, "resolve_roles should return the queried role")
+  _assert_equal(#roles, 1, "resolve_roles should query the host when ctx.roles is not a table")
+  _assert_equal(roles[1].id, 7, "resolve_roles should return the queried role")
 end
 
 function TestDefaultPorts:test_is_effect_idle_reports_the_effect_track_state()
@@ -348,7 +352,7 @@ function TestDefaultPorts:test_is_effect_idle_reports_the_effect_track_state()
   }, function()
     idle_result = ports.is_effect_idle()
   end)
-  lu.assertEquals(idle_result, false, "is_effect_idle should delegate to the effect track's idle state")
+  _assert_equal(idle_result, false, "is_effect_idle should delegate to the effect track's idle state")
 end
 
 -- effect_track 是 UI 层可选依赖，探测壳的三条异常臂各自定型：
@@ -369,7 +373,7 @@ function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_require_ra
   end, function()
     result = ports.is_effect_idle()
   end)
-  lu.assertEquals(result, true, "is_effect_idle should treat an unloadable effect track as idle")
+  _assert_equal(result, true, "is_effect_idle should treat an unloadable effect track as idle")
 end
 
 function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_module_is_not_a_table()
@@ -380,7 +384,7 @@ function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_module_is_
   end, function()
     result = ports.is_effect_idle()
   end)
-  lu.assertEquals(result, true, "is_effect_idle should treat a non-table effect track as idle")
+  _assert_equal(result, true, "is_effect_idle should treat a non-table effect track as idle")
 end
 
 function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_is_idle_is_missing()
@@ -391,7 +395,7 @@ function TestDefaultPorts:test_is_effect_idle_falls_back_to_true_when_is_idle_is
   end, function()
     result = ports.is_effect_idle()
   end)
-  lu.assertEquals(result, true, "is_effect_idle should treat a missing is_idle probe as idle")
+  _assert_equal(result, true, "is_effect_idle should treat a missing is_idle probe as idle")
 end
 
 TestDefaultPortsCustomArchiveAccess = {}
@@ -412,13 +416,13 @@ end
 
 function TestDefaultPortsCustomArchiveAccess:test_archives_enabled_reflects_game_api_then_defaults_false()
   local ports = _ports_with_role(nil, { is_archives_enabled = function() return true end })
-  lu.assertEquals(ports.archives_enabled(), true, "archives_enabled should follow GameAPI when present")
+  _assert_equal(ports.archives_enabled(), true, "archives_enabled should follow GameAPI when present")
 
   local ports_off = _ports_with_role(nil, {})
-  lu.assertEquals(ports_off.archives_enabled(), false, "archives_enabled should default to false without GameAPI support")
+  _assert_equal(ports_off.archives_enabled(), false, "archives_enabled should default to false without GameAPI support")
 
   local ports_no_api = _ports_with_role(nil, nil)
-  lu.assertEquals(ports_no_api.archives_enabled(), false, "archives_enabled should be false (not error) when GameAPI is absent")
+  _assert_equal(ports_no_api.archives_enabled(), false, "archives_enabled should be false (not error) when GameAPI is absent")
 end
 
 function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_defaults_to_zero_for_non_numeric_archive()
@@ -428,7 +432,7 @@ function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_defaults_to_ze
   }
   local ports = _ports_with_role(role, {})
 
-  lu.assertEquals(ports.get_archive_int(9, 1001), 0, "non-numeric archive value should default to 0")
+  _assert_equal(ports.get_archive_int(9, 1001), 0, "non-numeric archive value should default to 0")
 end
 
 function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_reads_int_archive_from_resolved_role()
@@ -442,10 +446,10 @@ function TestDefaultPortsCustomArchiveAccess:test_get_archive_int_reads_int_arch
   }
   local ports = _ports_with_role(role, {})
 
-  lu.assertEquals(ports.get_archive_int(9, 1001), 42, "get_archive_int should return the role's stored value")
-  lu.assertEquals(seen[1].archive_type, 4, "get_archive_int should request the Int archive type")
-  lu.assertEquals(seen[1].key, 1001, "get_archive_int should pass the archive key through")
-  lu.assertEquals(ports.get_archive_int(404, 1001), 0, "get_archive_int should default to 0 for an unresolved role")
+  _assert_equal(ports.get_archive_int(9, 1001), 42, "get_archive_int should return the role's stored value")
+  _assert_equal(seen[1].archive_type, 4, "get_archive_int should request the Int archive type")
+  _assert_equal(seen[1].key, 1001, "get_archive_int should pass the archive key through")
+  _assert_equal(ports.get_archive_int(404, 1001), 0, "get_archive_int should default to 0 for an unresolved role")
 end
 
 function TestDefaultPortsCustomArchiveAccess:test_set_archive_int_writes_int_archive_on_resolved_role()
@@ -459,11 +463,11 @@ function TestDefaultPortsCustomArchiveAccess:test_set_archive_int_writes_int_arc
   }
   local ports = _ports_with_role(role, {})
 
-  lu.assertEquals(ports.set_archive_int(9, 1002, 80000), true, "set_archive_int should report success")
-  lu.assertEquals(written.archive_type, 4, "set_archive_int should target the Int archive type")
-  lu.assertEquals(written.key, 1002, "set_archive_int should pass the archive key")
-  lu.assertEquals(written.value, 80000, "set_archive_int should pass the new value")
-  lu.assertEquals(ports.set_archive_int(404, 1002, 1), false, "set_archive_int should fail safely for an unresolved role")
+  _assert_equal(ports.set_archive_int(9, 1002, 80000), true, "set_archive_int should report success")
+  _assert_equal(written.archive_type, 4, "set_archive_int should target the Int archive type")
+  _assert_equal(written.key, 1002, "set_archive_int should pass the archive key")
+  _assert_equal(written.value, 80000, "set_archive_int should pass the new value")
+  _assert_equal(ports.set_archive_int(404, 1002, 1), false, "set_archive_int should fail safely for an unresolved role")
 end
 
 -- ═══════════════════════════════════════════════════════════════════════
@@ -487,7 +491,7 @@ function TestDefaultPorts:test_mark_role_lose_calls_lose_on_the_role()
     end,
   }
   ports.mark_role_lose(role)
-  lu.assertEquals(marked, 1, "mark_role_lose should call role.lose once (#334 keeps the marker method)")
+  _assert_equal(marked, 1, "mark_role_lose should call role.lose once (#334 keeps the marker method)")
 end
 
 function TestDefaultPorts:test_mark_role_lose_warns_when_role_is_nil()
@@ -512,8 +516,8 @@ function TestDefaultPorts:test_mark_role_lose_warns_when_role_is_nil()
   }, function()
     ports.mark_role_lose(nil)
   end)
-  lu.assertEquals(#warns, 1, "nil role must leave exactly one warn (ADR 0046)")
-  lu.assertEquals(string.find(warns[1], "role is nil", 1, true) ~= nil, true,
+  _assert_equal(#warns, 1, "nil role must leave exactly one warn (ADR 0046)")
+  _assert_equal(string.find(warns[1], "role is nil", 1, true) ~= nil, true,
     "nil role warn should carry the skip reason; got " .. tostring(warns[1]))
 end
 
@@ -539,8 +543,8 @@ function TestDefaultPorts:test_mark_role_lose_warns_when_role_lacks_lose()
   }, function()
     ports.mark_role_lose({ id = 1 })
   end)
-  lu.assertEquals(#warns, 1, "a role without lose must leave exactly one warn (ADR 0046)")
-  lu.assertEquals(string.find(warns[1], "lacks lose", 1, true) ~= nil, true,
+  _assert_equal(#warns, 1, "a role without lose must leave exactly one warn (ADR 0046)")
+  _assert_equal(string.find(warns[1], "lacks lose", 1, true) ~= nil, true,
     "missing-lose warn should carry the skip reason; got " .. tostring(warns[1]))
 end
 
@@ -558,9 +562,9 @@ function TestDefaultPorts:test_call_role_die_default_is_wired_to_the_host_adapte
       return arg == nil
     end,
   }
-  lu.assertEquals(ports.call_role_die(role), true,
+  _assert_equal(ports.call_role_die(role), true,
     "call_role_die should default to the single-signature host adapter (ADR 0046)")
-  lu.assertEquals(ports.call_role_die({}), false,
+  _assert_equal(ports.call_role_die({}), false,
     "a role without die should fail through the adapter")
 end
 
