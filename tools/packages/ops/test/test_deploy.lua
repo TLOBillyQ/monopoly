@@ -23,7 +23,7 @@ local function _with_stubbed(field, value, fn)
 end
 
 local function _with_sandbox(fn)
-  local root = env_lib.make_temp_path("deploy_core_spec_", "")
+  local root = env_lib.make_temp_path("deploy_core_spec_中文 空格_", "")
   fs_lib.remove_path(root)
   local ok, err = xpcall(function()
     fn(root)
@@ -60,20 +60,6 @@ local function _make_project(root)
   _write_file(proj .. "/Data/Prefab.lua", "-- prefab\nreturn {}\n")
   _write_file(proj .. "/tools/placeholder.txt", "placeholder\n")
   return proj
-end
-
-local function _is_wsl()
-  local distro = os.getenv("WSL_DISTRO_NAME")
-  if distro ~= nil and tostring(distro):gsub("^%s+", ""):gsub("%s+$", "") ~= "" then
-    return true
-  end
-  local handle = io.open("/proc/version", "r")
-  if handle == nil then
-    return false
-  end
-  local text = handle:read("*a") or ""
-  handle:close()
-  return text:lower():find("microsoft", 1, true) ~= nil
 end
 
 TestDeployTextAndNames = {}
@@ -159,17 +145,6 @@ function TestDeployPlatformDetection:test_platform_name_returns_win_when_windows
   end)
 end
 
-function TestDeployPlatformDetection:test_platform_name_returns_wsl_when_wsl_host()
-  _with_stubbed("test_is_windows_host", function()
-    return false
-  end, function()
-    _with_stubbed("test_is_wsl_host", function()
-      return true
-    end, function()
-      lu.assertIs(deploy.resolve_platform_name(), "wsl")
-    end)
-  end)
-end
 
 function TestDeployPlatformDetection:test_platform_name_errors_on_other_platforms()
   local captured = nil
@@ -405,15 +380,6 @@ function TestDeployCliSurface:test_rejects_help_switch_without_usage_text()
     "--help must not print Chinese usage text: " .. result.output)
 end
 
-function TestDeployCliSurface:test_windows_only_error_on_other_platforms()
-  if _is_wsl() then
-    return
-  end
-  local result = _run_deploy_lua({})
-  lu.assertFalse(result.ok)
-  lu.assertEvalToTrue(result.output:find("Windows only", 1, true),
-    "non-win/non-wsl run must state the Windows-only target: " .. result.output)
-end
 
 function TestDeployCliSurface:test_cli_subcommand_help_shows_usage()
   local result = _run_cli_deploy({ "--help" })

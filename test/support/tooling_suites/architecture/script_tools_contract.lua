@@ -446,32 +446,13 @@ local function _test_deploy_lua_matches_simplified_cli()
   )
 end
 
-local function _running_under_wsl()
-  if os.getenv("WSL_DISTRO_NAME") ~= nil then
-    return true
-  end
-  local handle = io.open("/proc/version", "r")
-  if handle == nil then
-    return false
-  end
-  local version_text = handle:read("*a") or ""
-  handle:close()
-  return version_text:lower():find("microsoft", 1, true) ~= nil
-end
-
 local function _test_deploy_comprehensive()
   _test_deploy_lua_matches_simplified_cli()
-
-  if _running_under_wsl() then
-    return
-  end
-
-  -- 非 win/WSL 平台(mac / native Linux)不再是部署目标,脚本必须直接报错退出。
-  local result = _run_lua({ "tools/packages/ops/deploy.lua" })
-  assert(result.ok == false,
-    "deploy should fail on non-Windows/non-WSL platforms (Windows-only deploy target)")
-  _assert_contains(result.output, "Windows only",
-    "deploy failure should state the Windows-only deploy target")
+  -- 帮助在壳内结束,不会进入部署主流程或写入实际目标。
+  local result = _run_lua({ "tools/cli.lua", "deploy", "--help" })
+  assert(result.ok == true, "deploy help should succeed")
+  _assert_contains(result.output, "原生 Windows", "help should declare the native platform")
+  _assert_not_contains(result.output, "WSL", "help should retire WSL interoperability")
 end
 
 local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
