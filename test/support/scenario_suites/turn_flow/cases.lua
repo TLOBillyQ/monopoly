@@ -1,5 +1,8 @@
 ---@diagnostic disable
 -- luacheck: ignore 113 211
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local control = require("src.player.control")
 local function make_cases(helpers)
   local _ENV = helpers
@@ -27,13 +30,13 @@ local function _test_tick_headless_ports_cover_anim_phases()
     play_move_anim = function(_, anim_ctx)
       calls.move_anim = calls.move_anim + 1
       sequence[#sequence + 1] = "play_move_anim"
-      assert(anim_ctx and anim_ctx.seq == 101, "move anim ctx should be injected")
+      luassert.truthy(anim_ctx and anim_ctx.seq == 101, "move anim ctx should be injected")
       return 0
     end,
     play_action_anim = function(_, anim_ctx)
       calls.action_anim = calls.action_anim + 1
       sequence[#sequence + 1] = "play_action_anim"
-      assert(anim_ctx and anim_ctx.seq == 201, "action anim ctx should be injected")
+      luassert.truthy(anim_ctx and anim_ctx.seq == 201, "action anim ctx should be injected")
       return 0
     end,
     step_choice_timeout = function()
@@ -93,9 +96,9 @@ local function _test_tick_headless_ports_cover_anim_phases()
   }, function()
     gameplay_loop.tick(g, state, 0.1)
   end)
-  assert(calls.move_anim == 1, "headless move anim should use injected port")
-  assert(dispatched[1] and dispatched[1].type == "move_anim_done", "move anim should dispatch move_anim_done")
-  assert(dispatched[1] and dispatched[1].seq == 101, "move anim seq should be forwarded")
+  luassert.truthy(calls.move_anim == 1, "headless move anim should use injected port")
+  luassert.truthy(dispatched[1] and dispatched[1].type == "move_anim_done", "move anim should dispatch move_anim_done")
+  luassert.truthy(dispatched[1] and dispatched[1].seq == 101, "move anim seq should be forwarded")
 
   g.turn.phase = "wait_action_anim"
   g.turn.action_anim = { seq = 201 }
@@ -106,12 +109,12 @@ local function _test_tick_headless_ports_cover_anim_phases()
   }, function()
     gameplay_loop.tick(g, state, 0.1)
   end)
-  assert(calls.action_anim == 1, "headless action anim should use injected port")
-  assert(dispatched[2] and dispatched[2].type == "action_anim_done", "action anim should dispatch action_anim_done")
-  assert(dispatched[2] and dispatched[2].seq == 201, "action anim seq should be forwarded")
+  luassert.truthy(calls.action_anim == 1, "headless action anim should use injected port")
+  luassert.truthy(dispatched[2] and dispatched[2].type == "action_anim_done", "action anim should dispatch action_anim_done")
+  luassert.truthy(dispatched[2] and dispatched[2].seq == 201, "action anim seq should be forwarded")
 
-  assert(calls.countdown >= 2, "countdown should still step under custom ports")
-  assert(calls.refresh >= 2, "refresh_from_dirty should still be called under custom ports")
+  luassert.truthy(calls.countdown >= 2, "countdown should still step under custom ports")
+  luassert.truthy(calls.refresh >= 2, "refresh_from_dirty should still be called under custom ports")
 
   local expected_order = {
     "sync_input_blocked",
@@ -139,7 +142,7 @@ local function _test_tick_headless_ports_cover_anim_phases()
         break
       end
     end
-    assert(matched ~= nil, "missing expected tick order step: " .. tostring(name))
+    luassert.truthy(matched ~= nil, "missing expected tick order step: " .. tostring(name))
     search_start = matched + 1
   end
 end
@@ -182,7 +185,7 @@ local function _test_action_button_timeout_auto_advances()
     gameplay_loop.tick(g, state, dt)
   end)
 
-  assert(advanced == 1, "action button timeout should advance turn")
+  luassert.truthy(advanced == 1, "action button timeout should advance turn")
 end
 
 local function _test_action_button_timeout_manual_wait_action_auto_advances()
@@ -223,8 +226,8 @@ local function _test_action_button_timeout_manual_wait_action_auto_advances()
     end)
   end)
 
-  assert(g.turn.phase ~= "wait_action", "manual wait_action timeout should leave wait_action")
-  assert(g.last_turn and g.last_turn.total ~= nil, "manual wait_action timeout should auto roll")
+  luassert.truthy(g.turn.phase ~= "wait_action", "manual wait_action timeout should leave wait_action")
+  luassert.truthy(g.last_turn and g.last_turn.total ~= nil, "manual wait_action timeout should auto roll")
 end
 
 local function _test_action_button_timeout_manual_player_does_not_advance()
@@ -273,10 +276,10 @@ local function _test_action_button_timeout_manual_player_does_not_advance()
     end)
   end)
 
-  assert(advanced == 0, "manual player timeout should not advance turn")
-  assert(state.action_button_active == false, "manual player should keep action timer disabled")
-  assert(state.action_button_elapsed == 0, "manual player timeout should reset action timer")
-  assert(state.action_button_player_id == nil, "manual player timeout reset should clear tracked actor")
+  luassert.truthy(advanced == 0, "manual player timeout should not advance turn")
+  luassert.truthy(state.action_button_active == false, "manual player should keep action timer disabled")
+  luassert.truthy(state.action_button_elapsed == 0, "manual player timeout should reset action timer")
+  luassert.truthy(state.action_button_player_id == nil, "manual player timeout reset should clear tracked actor")
 end
 
 local function _test_action_button_timeout_blocked_when_input_locked()
@@ -321,9 +324,9 @@ local function _test_action_button_timeout_blocked_when_input_locked()
     end)
   end)
 
-  assert(advanced == 0, "input locked should block action button timeout")
-  assert(state.action_button_active == false, "input locked should disable action timer")
-  assert(state.action_button_elapsed == 0, "input locked should reset action timer")
+  luassert.truthy(advanced == 0, "input locked should block action button timeout")
+  luassert.truthy(state.action_button_active == false, "input locked should disable action timer")
+  luassert.truthy(state.action_button_elapsed == 0, "input locked should reset action timer")
 end
 
 local function _test_action_button_timeout_blocked_when_popup_active()
@@ -364,9 +367,9 @@ local function _test_action_button_timeout_blocked_when_popup_active()
     gameplay_loop.tick(g, state, dt)
   end)
 
-  assert(advanced == 0, "popup active should block action button timeout")
-  assert(state.action_button_active == false, "popup active should disable action timer")
-  assert(state.action_button_elapsed == 0, "popup active should reset action timer")
+  luassert.truthy(advanced == 0, "popup active should block action button timeout")
+  luassert.truthy(state.action_button_active == false, "popup active should disable action timer")
+  luassert.truthy(state.action_button_elapsed == 0, "popup active should reset action timer")
 end
 
 local function _test_auto_runner_auto_advances_ai_player()
@@ -386,14 +389,14 @@ local function _test_auto_runner_auto_advances_ai_player()
       current_player_id = g.players[2].id,
       current_player_computer_controlled = true,
     })
-    assert(a1 == nil, "should not trigger before reaching auto interval")
+    luassert.truthy(a1 == nil, "should not trigger before reaching auto interval")
     local a2 = gameplay_loop.step_auto_runner(g, state, 0.1, {
       game_finished = g.finished,
       current_player_index = g.turn.current_player_index,
       current_player_id = g.players[2].id,
       current_player_computer_controlled = true,
     })
-    assert(a2 and a2.type == "ui_button" and a2.id == "next", "ai player should auto dispatch next")
+    luassert.truthy(a2 and a2.type == "ui_button" and a2.id == "next", "ai player should auto dispatch next")
   end)
 end
 
@@ -412,7 +415,7 @@ local function _test_auto_runner_human_turn_not_auto_advanced()
       current_player_id = g.players[1].id,
       current_player_computer_controlled = false,
     })
-    assert(action == nil, "human turn should not auto dispatch next")
+    luassert.truthy(action == nil, "human turn should not auto dispatch next")
   end)
 end
 
@@ -456,7 +459,7 @@ local function _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout()
         dispatch_next = _dispatch_next,
       })
     end
-    assert(g.turn.current_player_index == 1, "ai rounds should return control to manual player")
+    luassert.truthy(g.turn.current_player_index == 1, "ai rounds should return control to manual player")
     local advanced_before = advanced
 
     state.action_button_active = true
@@ -473,11 +476,11 @@ local function _test_gameplay_loop_ai_rounds_do_not_force_manual_timeout()
       })
     end
 
-    assert(g.turn.current_player_index == 1, "manual player should not be auto advanced by timeout")
-    assert(advanced == advanced_before, "manual player timeout should not dispatch synthetic next")
-    assert(state.action_button_active == false and state.action_button_elapsed == 0,
+    luassert.truthy(g.turn.current_player_index == 1, "manual player should not be auto advanced by timeout")
+    luassert.truthy(advanced == advanced_before, "manual player timeout should not dispatch synthetic next")
+    luassert.truthy(state.action_button_active == false and state.action_button_elapsed == 0,
       "manual player timeout should reset action timer state")
-    assert(state.action_button_player_id == nil, "manual player timeout reset should clear tracked actor")
+    luassert.truthy(state.action_button_player_id == nil, "manual player timeout reset should clear tracked actor")
   end)
 end
 
@@ -505,7 +508,7 @@ local function _test_auto_runner_waits_for_auto_popup_delay()
       current_player_id = auto_player.id,
       current_player_computer_controlled = true,
     })
-    assert(blocked == nil, "auto popup should keep auto runner waiting before delay elapses")
+    luassert.truthy(blocked == nil, "auto popup should keep auto runner waiting before delay elapses")
 
     ui_runtime.ui_modal_elapsed = auto_decision_delay
     local action = gameplay_loop.step_auto_runner(g, state, auto_decision_delay, {
@@ -514,7 +517,7 @@ local function _test_auto_runner_waits_for_auto_popup_delay()
       current_player_id = auto_player.id,
       current_player_computer_controlled = true,
     })
-    assert(action and action.type == "ui_button" and action.id == "next",
+    luassert.truthy(action and action.type == "ui_button" and action.id == "next",
       "auto popup should stop blocking once the shared delay is reached")
   end)
 end
@@ -535,7 +538,7 @@ local function _test_auto_runner_not_advanced_when_input_blocked()
       current_player_id = g.players[2].id,
       current_player_computer_controlled = true,
     })
-    assert(action == nil, "blocked phase should not auto dispatch next")
+    luassert.truthy(action == nil, "blocked phase should not auto dispatch next")
   end)
 end
 
@@ -576,11 +579,11 @@ local function _test_tick_choice_timeout_manual_player_keeps_waiting()
     end,
   }).step(g, state, (constants.action_timeout_seconds or 0) + 0.1)
 
-  assert(dispatched ~= nil, "manual player timeout should dispatch optional completion action")
-  assert(dispatched.type == "complete_optional_action_phase",
+  luassert.truthy(dispatched ~= nil, "manual player timeout should dispatch optional completion action")
+  luassert.truthy(dispatched.type == "complete_optional_action_phase",
     "manual player timeout should dispatch optional completion")
-  assert(dispatched.choice_id == nil, "optional completion action should not expose choice_id")
-  assert(dispatched.actor_role_id == player.id, "optional completion should carry the choice owner actor")
+  luassert.truthy(dispatched.choice_id == nil, "optional completion action should not expose choice_id")
+  luassert.truthy(dispatched.actor_role_id == player.id, "optional completion should carry the choice owner actor")
 end
 
 local function _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout()
@@ -611,8 +614,8 @@ local function _test_tick_ui_sync_countdown_hides_manual_pending_choice_timeout(
 
   tick_ui_sync.update_countdown(g, state)
 
-  assert(g.turn.countdown_active == true, "manual pending choice should expose countdown")
-  assert(g.turn.countdown_seconds > 0, "manual pending choice countdown should be visible")
+  luassert.truthy(g.turn.countdown_active == true, "manual pending choice should expose countdown")
+  luassert.truthy(g.turn.countdown_seconds > 0, "manual pending choice countdown should be visible")
 end
 
 -- #523 探针直驱：缺屏告警的调用点已从 choice_timeout._step 移到 tick 帧
@@ -689,7 +692,7 @@ local function _test_tick_choice_timeout_warning_ignores_non_modal_or_non_local_
     }, ai_state, 2)
   end)
 
-  assert(#warned == 0, "non-modal or non-local pending choices should not log missing-ui warning")
+  luassert.truthy(#warned == 0, "non-modal or non-local pending choices should not log missing-ui warning")
 end
 
 local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
@@ -730,8 +733,8 @@ local function _test_tick_choice_timeout_warning_keeps_local_modal_choice()
     _drive_missing_ui_probe(g, state)
   end)
 
-  assert(#warned == 1, "local modal choice should still log missing-ui warning")
-  assert(string.find(warned[1], "runtime pending choice active without ui.choice_active", 1, true) ~= nil,
+  luassert.truthy(#warned == 1, "local modal choice should still log missing-ui warning")
+  luassert.truthy(string.find(warned[1], "runtime pending choice active without ui.choice_active", 1, true) ~= nil,
     "local modal warning should keep original message")
 end
 

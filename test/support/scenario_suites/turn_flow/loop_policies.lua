@@ -1,5 +1,8 @@
 ---@diagnostic disable
 -- luacheck: ignore 113 211
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local control = require("src.player.control")
 local function make_cases(helpers)
   local _ENV = helpers
@@ -7,8 +10,8 @@ local function make_cases(helpers)
 local function _test_turn_prompt_initialized_for_first_player()
   local g = _new_game()
 
-  assert((g.turn.turn_start_prompt_seq or 0) == 0, "first turn should not pre-seed prompt seq")
-  assert(g.turn.turn_start_prompt_player_id == nil,
+  luassert.truthy((g.turn.turn_start_prompt_seq or 0) == 0, "first turn should not pre-seed prompt seq")
+  luassert.truthy(g.turn.turn_start_prompt_player_id == nil,
     "first turn prompt target should be nil until runtime emits it")
 end
 
@@ -29,10 +32,10 @@ local function _test_turn_prompt_emitted_on_next_player_switch()
   })
   g.turn_runtime:run_turn()
 
-  assert(g.turn.current_player_index == expected_next_index, "inter-turn completion should switch player index")
-  assert((g.turn.turn_start_prompt_seq or 0) == before_seq + 1,
+  luassert.truthy(g.turn.current_player_index == expected_next_index, "inter-turn completion should switch player index")
+  luassert.truthy((g.turn.turn_start_prompt_seq or 0) == before_seq + 1,
     "inter-turn completion should emit one new prompt seq")
-  assert(g.turn.turn_start_prompt_player_id == expected_player.id,
+  luassert.truthy(g.turn.turn_start_prompt_player_id == expected_player.id,
     "inter-turn prompt target should be switched player")
 end
 
@@ -53,7 +56,7 @@ local function _test_auto_runner_depends_on_current_player_computer_controlled()
       current_player_index = g.turn.current_player_index,
       current_player_computer_controlled = true,
     })
-    assert(action1 and action1.type == "ui_button" and action1.id == "next",
+    luassert.truthy(action1 and action1.type == "ui_button" and action1.id == "next",
       "current player auto should dispatch next")
 
     state.turn_runtime.next_turn_locked = false
@@ -63,7 +66,7 @@ local function _test_auto_runner_depends_on_current_player_computer_controlled()
       current_player_index = g.turn.current_player_index,
       current_player_computer_controlled = false,
     })
-    assert(action2 == nil, "current player auto=false should not dispatch")
+    luassert.truthy(action2 == nil, "current player auto=false should not dispatch")
   end)
 end
 
@@ -100,7 +103,7 @@ local function _test_turn_dispatch_uses_clock_ports_without_game_api()
       id = "next",
       actor_role_id = current_player.id,
     })
-    assert(rejected.status == "rejected", "next should respect cooldown via clock port")
+    luassert.truthy(rejected.status == "rejected", "next should respect cooldown via clock port")
 
     now = 1.6
     local applied = turn_dispatch.dispatch_action(g, state, {
@@ -108,10 +111,10 @@ local function _test_turn_dispatch_uses_clock_ports_without_game_api()
       id = "next",
       actor_role_id = current_player.id,
     })
-    assert(applied.status == "applied", "next should pass when clock diff reaches cooldown")
+    luassert.truthy(applied.status == "applied", "next should pass when clock diff reaches cooldown")
   end)
 
-  assert(stepped == 1, "step_turn should run exactly once")
+  luassert.truthy(stepped == 1, "step_turn should run exactly once")
 end
 
 local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
@@ -131,16 +134,16 @@ local function _test_gameplay_loop_set_game_uses_narrow_runtime_ports()
 
   gameplay_loop.set_game(state, g)
 
-  assert(g.ui_port ~= state, "set_game should not inject raw state as catch-all runtime ui port")
-  assert(g.board_scene_port ~= state, "set_game should inject a narrow board_scene_port instead of raw state")
-  assert(g.board_scene_port:get_board_scene() == state.board_scene, "board_scene_port should expose board_scene getter")
-  assert(g.board_visual_feedback_port ~= nil, "set_game should inject board_visual_feedback_port dto")
+  luassert.truthy(g.ui_port ~= state, "set_game should not inject raw state as catch-all runtime ui port")
+  luassert.truthy(g.board_scene_port ~= state, "set_game should inject a narrow board_scene_port instead of raw state")
+  luassert.truthy(g.board_scene_port:get_board_scene() == state.board_scene, "board_scene_port should expose board_scene getter")
+  luassert.truthy(g.board_visual_feedback_port ~= nil, "set_game should inject board_visual_feedback_port dto")
 
   g.popup_port:push_popup({ kind = "test_popup" })
-  assert(state._last_popup and state._last_popup.kind == "test_popup", "popup_port should forward popup calls")
+  luassert.truthy(state._last_popup and state._last_popup.kind == "test_popup", "popup_port should forward popup calls")
 
   g.tile_owner_notifier:notify_owner_changed(11, 22)
-  assert(state._last_board_visual_sync and state._last_board_visual_sync.tile_ids[1] == 11,
+  luassert.truthy(state._last_board_visual_sync and state._last_board_visual_sync.tile_ids[1] == 11,
     "tile_owner_notifier should forward tile id through board visual sync")
 end
 
@@ -167,7 +170,7 @@ local function _test_gameplay_loop_refresh_drives_camera_follow_via_port()
 
   gameplay_loop.tick(g, state, 0.1)
 
-  assert(followed_player_id == g.players[2].id, "camera follow should be driven by use-case loop with current player id")
+  luassert.truthy(followed_player_id == g.players[2].id, "camera follow should be driven by use-case loop with current player id")
 end
 
 local function _test_gameplay_loop_camera_follow_skips_eliminated_current_player()
@@ -195,7 +198,7 @@ local function _test_gameplay_loop_camera_follow_skips_eliminated_current_player
 
   gameplay_loop.tick(g, state, 0.1)
 
-  assert(followed_player_id == g.players[2].id,
+  luassert.truthy(followed_player_id == g.players[2].id,
     "camera follow should move to next alive player when current player is eliminated")
 end
 
@@ -206,8 +209,8 @@ local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
   }, function()
     local ports = gameplay_loop_ports.resolve(nil)
     local clock = ports.clock
-    assert(clock.wall_now_seconds() == 0, "wall clock should not fallback to cpu clock when GameAPI timestamp is unavailable")
-    assert(clock.cpu_now_seconds() == 0, "default cpu clock should be environment-agnostic before runtime injection")
+    luassert.truthy(clock.wall_now_seconds() == 0, "wall clock should not fallback to cpu clock when GameAPI timestamp is unavailable")
+    luassert.truthy(clock.cpu_now_seconds() == 0, "default cpu clock should be environment-agnostic before runtime injection")
   end)
 
   local ports = gameplay_loop_ports.resolve({
@@ -219,10 +222,10 @@ local function _test_gameplay_loop_clock_ports_split_wall_and_cpu_semantics()
     },
   })
   local clock = ports.clock
-  assert(clock.wall_now_seconds() == 77, "wall clock should use injected wall source")
-  assert(clock.wall_diff_seconds(10, 9) == 0.6, "wall diff should use injected wall semantics")
-  assert(clock.cpu_now_seconds() == 3.5, "cpu clock should use injected cpu source")
-  assert(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
+  luassert.truthy(clock.wall_now_seconds() == 77, "wall clock should use injected wall source")
+  luassert.truthy(clock.wall_diff_seconds(10, 9) == 0.6, "wall diff should use injected wall semantics")
+  luassert.truthy(clock.cpu_now_seconds() == 3.5, "cpu clock should use injected cpu source")
+  luassert.truthy(clock.cpu_diff_seconds(10, 9) == 1, "cpu diff should stay arithmetic and source-agnostic")
 end
 
 local function _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy()
@@ -249,12 +252,12 @@ local function _test_choice_auto_policy_wait_and_timeout_both_cancel_market_buy(
     min_visible_seconds = 0.5,
     elapsed_seconds = state.pending_choice_elapsed,
   })
-  assert(from_wait and from_timeout, "auto policy should return actions for auto actor")
-  assert(from_wait.type == "choice_cancel", "wait_choice should keep market auto-cancel behavior")
-  assert(from_timeout.type == "choice_cancel", "tick_timeout should default to cancel when choice allows cancel")
-  assert(from_wait.choice_id == from_timeout.choice_id, "wait/timeout should target same choice")
-  assert(from_wait.option_id == nil, "wait_choice cancel should not carry option_id")
-  assert(from_timeout.option_id == nil, "timeout cancel should not carry option_id")
+  luassert.truthy(from_wait and from_timeout, "auto policy should return actions for auto actor")
+  luassert.truthy(from_wait.type == "choice_cancel", "wait_choice should keep market auto-cancel behavior")
+  luassert.truthy(from_timeout.type == "choice_cancel", "tick_timeout should default to cancel when choice allows cancel")
+  luassert.truthy(from_wait.choice_id == from_timeout.choice_id, "wait/timeout should target same choice")
+  luassert.truthy(from_wait.option_id == nil, "wait_choice cancel should not carry option_id")
+  luassert.truthy(from_timeout.option_id == nil, "timeout cancel should not carry option_id")
 end
 
 local function _test_choice_auto_policy_preconsumed_wait_choice_picks_first_option()
@@ -277,9 +280,9 @@ local function _test_choice_auto_policy_preconsumed_wait_choice_picks_first_opti
     elapsed_seconds = 1,
   })
 
-  assert(action ~= nil, "preconsumed choice should produce fallback action in wait_choice mode")
-  assert(action.type == "choice_select", "preconsumed choice should select instead of cancel")
-  assert(action.option_id == 5, "preconsumed choice should select the first option")
+  luassert.truthy(action ~= nil, "preconsumed choice should produce fallback action in wait_choice mode")
+  luassert.truthy(action.type == "choice_select", "preconsumed choice should select instead of cancel")
+  luassert.truthy(action.option_id == 5, "preconsumed choice should select the first option")
 end
 
 local function _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed()
@@ -291,13 +294,13 @@ local function _test_turn_timer_policy_detained_wait_steps_when_timeout_elapsed(
   g.turn.detained_wait_seconds = 0.5
 
   turn_timer_policy.update_detained_wait_timer(g, state, 0.2, function(game)
-    assert(game == g, "detained wait should step the current game")
+    luassert.truthy(game == g, "detained wait should step the current game")
     stepped = stepped + 1
   end)
 
-  assert(stepped == 1, "detained wait should step turn after timeout")
-  assert(g.turn.detained_wait_active == false, "detained wait should clear active flag after timeout")
-  assert(g.turn.detained_wait_elapsed == 0, "detained wait should reset elapsed after timeout")
+  luassert.truthy(stepped == 1, "detained wait should step turn after timeout")
+  luassert.truthy(g.turn.detained_wait_active == false, "detained wait should clear active flag after timeout")
+  luassert.truthy(g.turn.detained_wait_elapsed == 0, "detained wait should reset elapsed after timeout")
 end
 
   local function _test_turn_timer_policy_inter_turn_wait_steps_when_timeout_elapsed()
@@ -309,13 +312,13 @@ end
   g.turn.inter_turn_wait_seconds = 0.5
 
   turn_timer_policy.update_inter_turn_wait_timer(g, state, 0.2, function(game)
-    assert(game == g, "inter-turn wait should step the current game")
+    luassert.truthy(game == g, "inter-turn wait should step the current game")
     stepped = stepped + 1
   end)
 
-  assert(stepped == 1, "inter-turn wait should step turn after timeout")
-    assert(g.turn.inter_turn_wait_active == false, "inter-turn wait should clear active flag after timeout")
-    assert(g.turn.inter_turn_wait_elapsed == 0, "inter-turn wait should reset elapsed after timeout")
+  luassert.truthy(stepped == 1, "inter-turn wait should step turn after timeout")
+    luassert.truthy(g.turn.inter_turn_wait_active == false, "inter-turn wait should clear active flag after timeout")
+    luassert.truthy(g.turn.inter_turn_wait_elapsed == 0, "inter-turn wait should reset elapsed after timeout")
   end
 
 
@@ -326,8 +329,8 @@ local function _test_gameplay_loop_ports_rejects_legacy_flat_override()
     })
   end)
 
-  assert(ok == false, "legacy flat gameplay_loop_ports override should be rejected")
-  assert(tostring(err):find("legacy flat gameplay_loop_ports is not supported", 1, true) ~= nil,
+  luassert.truthy(ok == false, "legacy flat gameplay_loop_ports override should be rejected")
+  luassert.truthy(tostring(err):find("legacy flat gameplay_loop_ports is not supported", 1, true) ~= nil,
     "legacy flat gameplay_loop_ports override should explain grouped-port requirement")
 end
 
@@ -335,27 +338,27 @@ local function _test_build_noop_group_characterization()
   local loop_ports = require("src.turn.loop.ports")
 
   local group1 = loop_ports._build_noop_group({ "key1", "key2", "key3" }, nil)
-  assert(type(group1) == "table", "should return a table")
-  assert(type(group1.key1) == "function", "key1 should be a function")
-  assert(type(group1.key2) == "function", "key2 should be a function")
-  assert(type(group1.key3) == "function", "key3 should be a function")
+  luassert.truthy(type(group1) == "table", "should return a table")
+  luassert.truthy(type(group1.key1) == "function", "key1 should be a function")
+  luassert.truthy(type(group1.key2) == "function", "key2 should be a function")
+  luassert.truthy(type(group1.key3) == "function", "key3 should be a function")
   group1.key1()
   group1.key2()
   group1.key3()
 
   local override_fn = function() return "overridden" end
   local group2 = loop_ports._build_noop_group({ "key1", "key2" }, { key2 = override_fn })
-  assert(type(group2.key1) == "function", "key1 should be a function")
-  assert(group2.key2() == "overridden", "key2 should use override function")
+  luassert.truthy(type(group2.key1) == "function", "key1 should be a function")
+  luassert.truthy(group2.key2() == "overridden", "key2 should use override function")
 
   local group3 = loop_ports._build_noop_group({}, nil)
-  assert(type(group3) == "table", "should return empty table for empty keys")
+  luassert.truthy(type(group3) == "table", "should return empty table for empty keys")
   local count = 0
   for _ in pairs(group3) do count = count + 1 end
-  assert(count == 0, "group should have no keys when keys is empty")
+  luassert.truthy(count == 0, "group should have no keys when keys is empty")
 
   local group4 = loop_ports._build_noop_group({ "key1" }, nil)
-  assert(type(group4.key1) == "function", "key1 should be a function even with nil overrides")
+  luassert.truthy(type(group4.key1) == "function", "key1 should be a function even with nil overrides")
   group4.key1()
 end
 
@@ -378,8 +381,8 @@ local function _test_popup_countdown_uses_effective_modal_timeout()
     tick_ui_sync.update_countdown(g, state)
   end)
 
-  assert(g.turn.countdown_seconds == 2, "popup countdown should use popup effective timeout")
-  assert(g.turn.countdown_active == true, "popup countdown should stay active")
+  luassert.truthy(g.turn.countdown_seconds == 2, "popup countdown should use popup effective timeout")
+  luassert.truthy(g.turn.countdown_active == true, "popup countdown should stay active")
 end
 
 local function _test_market_countdown_uses_double_action_timeout()
@@ -405,14 +408,14 @@ local function _test_market_countdown_uses_double_action_timeout()
 
   tick_ui_sync.update_countdown(g, state)
   local market_timeout = choice_timeout.resolve_choice_timeout_seconds(g, state, state.pending_choice)
-  assert(market_timeout == timing.scope_timeouts.market_buy,
+  luassert.truthy(market_timeout == timing.scope_timeouts.market_buy,
     "market choice timeout should use scope_timeouts.market_buy, got " .. tostring(market_timeout))
 
   -- countdown_seconds 由 ui_sync 计算（market_timeout - elapsed），向上取整
   -- DeadlineService 优先：market_buy 60s，elapsed 12.2 → remaining 47.8 → ceil 48
   -- 旧路径：60 - 12.2 = 47.8 → ceil 48
-  assert(g.turn.countdown_seconds == 48, "market countdown should be 60-12.2=47.8 ceil to 48, got " .. tostring(g.turn.countdown_seconds))
-  assert(g.turn.countdown_active == true, "market countdown should stay active")
+  luassert.truthy(g.turn.countdown_seconds == 48, "market countdown should be 60-12.2=47.8 ceil to 48, got " .. tostring(g.turn.countdown_seconds))
+  luassert.truthy(g.turn.countdown_active == true, "market countdown should stay active")
 end
 
 local function _test_dispatch_gate_blocks_next_when_choice_active()
@@ -437,8 +440,8 @@ local function _test_dispatch_gate_blocks_next_when_choice_active()
     actor_role_id = current_player.id,
   })
 
-  assert(should_block_next == true, "choice active should block next")
-  assert(should_block_choice == false, "choice active should not block choice confirm")
+  luassert.truthy(should_block_next == true, "choice active should block next")
+  luassert.truthy(should_block_choice == false, "choice active should not block choice confirm")
 end
 
 local function _test_game_startup_role_roster_retries_before_debug_players_fallback()
@@ -470,15 +473,15 @@ local function _test_game_startup_role_roster_retries_before_debug_players_fallb
     state.game_factory()
   end)
 
-  assert(type(created_opts) == "table", "game startup should create game options")
-  assert(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4,
+  luassert.truthy(type(created_opts) == "table", "game startup should create game options")
+  luassert.truthy(type(created_opts.role_roster) == "table" and #created_opts.role_roster == 4,
     "game startup should build a 4-slot role_roster after retry")
-  assert(created_opts.role_roster[1].role_id == 101, "role_roster should include retried role id")
-  assert(created_opts.role_roster[1].name == "Role101", "role_roster should include retried role name")
-  assert(created_opts.role_roster[2].synthetic == true and created_opts.role_roster[3].synthetic == true
+  luassert.truthy(created_opts.role_roster[1].role_id == 101, "role_roster should include retried role id")
+  luassert.truthy(created_opts.role_roster[1].name == "Role101", "role_roster should include retried role name")
+  luassert.truthy(created_opts.role_roster[2].synthetic == true and created_opts.role_roster[3].synthetic == true
     and created_opts.role_roster[4].synthetic == true,
     "game startup should synthesize missing slots when retry succeeds")
-  assert(created_opts.players == nil, "game startup should keep role_roster startup when retry succeeds")
+  luassert.truthy(created_opts.players == nil, "game startup should keep role_roster startup when retry succeeds")
 end
 
   return {
