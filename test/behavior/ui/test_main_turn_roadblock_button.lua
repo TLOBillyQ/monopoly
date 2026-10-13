@@ -1,3 +1,6 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- Pins the roadblock-stop main-button timeline (acceptance main_turn_buttons_015).
 --
 -- A roadblock stops the mover mid-move, plays a trigger animation, and then opens
@@ -11,9 +14,9 @@
 -- the hit queues a `roadblock_trigger` action anim, that anim runs in a phase the
 -- UI treats as input-blocked, and an input-blocked base screen shows no buttons.
 
-local lu = require("luaunit")
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local compose_game = require("src.app.compose_game")
 local default_ports = require("src.turn.output.default_ports")
 local movement_events = require("src.rules.movement_events")
@@ -69,44 +72,44 @@ local function _landing_choice()
     route_key = "base_inline", meta = { optional_action = "落地选择" } }
 end
 
-TestMainTurnRoadblockButton = {}
+describe("TestMainTurnRoadblockButton", function()
 
-function TestMainTurnRoadblockButton:test_a_roadblock_hit_queues_a_roadblock_trigger_action_anim()
+it("test_a_roadblock_hit_queues_a_roadblock_trigger_action_anim", function()
   local game = _new_animated_game()
   local player = game:current_player()
 
   movement_events.emit_roadblock_hit(game, player, 7, { name = "测试地块" })
 
   local anim = game.turn.action_anim
-  lu.assertEvalToTrue(anim ~= nil, "路障截停应排入一条行动动画")
+  luassert.truthy(anim ~= nil, "路障截停应排入一条行动动画")
   _assert_eq(anim.kind, "roadblock_trigger", "路障截停动画类型")
   _assert_eq(anim.player_id, player.id, "路障截停动画归属玩家")
   _assert_eq(anim.tile_index, 7, "路障截停动画落点")
-end
+end)
 
-function TestMainTurnRoadblockButton:test_the_action_anim_phase_is_an_input_blocked_phase()
+it("test_the_action_anim_phase_is_an_input_blocked_phase", function()
   _assert_eq(loop_runtime.is_phase_input_blocked("wait_action_anim"), true,
     "路障触发动画播放期间输入应被锁住(输入锁相位集真源在 turn.loop.runtime)")
-end
+end)
 
-function TestMainTurnRoadblockButton:test_hides_all_three_buttons_while_the_roadblock_trigger_animation_plays()
+it("test_hides_all_three_buttons_while_the_roadblock_trigger_animation_plays", function()
   -- Input-blocked outranks the pending landing choice: no button is offered
   -- while the trigger animation is still on screen.
   _assert_eq(_buttons({ input_blocked = true }, _landing_choice()), "-/-/-",
     "路障触发动画期间三个主按钮都不出")
-end
+end)
 
-function TestMainTurnRoadblockButton:test_hides_all_three_buttons_while_the_landing_choice_popup_is_up()
+it("test_hides_all_three_buttons_while_the_landing_choice_popup_is_up", function()
   -- 买地 / 加盖 弹窗 raises popup_active, which reads as a settlement overlay.
   _assert_eq(_buttons({ popup_active = true }, _landing_choice()), "-/-/-",
     "落地选择弹窗期间三个主按钮都不出")
-end
+end)
 
-TestMainTurnRoadblockButton["test_brings_结束_back_once_the_forced_landing_choices_are_resolved"] = function(self)
+it("test_brings_结束_back_once_the_forced_landing_choices_are_resolved", function()
   -- Animation done, popup closed, the landing optional action left to close out.
   _assert_eq(_buttons({}, _landing_choice()), "-/end/-",
     "落地选择处理完毕后由结束按钮收尾")
-end
+end)
 
 
-return TestMainTurnRoadblockButton
+end)

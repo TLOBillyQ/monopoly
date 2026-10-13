@@ -1,6 +1,7 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("luassert")
 -- market/auto.lua 直测:AI 跳过/玩家购买的入口分流、黑市排序契约
 -- (缺价按 0 且升序)、pending_choice 透传与 skip 事件文案。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 
 local auto = require("src.rules.market.auto")
@@ -10,7 +11,6 @@ local purchase = require("src.rules.market.purchase")
 local purchase_settlement = require("src.rules.market.purchase_settlement")
 local event_feed = require("src.rules.ports.event_feed")
 
-TestMarketAuto = {}
 
 local function _drive(overrides)
   local captured = {}
@@ -41,56 +41,52 @@ local function _drive(overrides)
 end
 
 -- AI 玩家:只发 skip 事件,不购买;tip=false 与文案契约钉住。
-function TestMarketAuto:test_ai_player_publishes_skip_feed_without_purchase()
-  local captured = _drive({ is_computer_controlled = true })
-  lu.assertEvalToTrue(captured.feed ~= nil, "an AI player must publish a skip feed")
-  lu.assertEvalToTrue(captured.feed.kind == "market_auto_skipped",
-    "the skip kind must be pinned to the logged market kind, not the unlogged choice_skipped")
-  lu.assertEvalToTrue(captured.feed.tip == false, "the skip must not be a tip")
-  lu.assertEvalToTrue(captured.feed.text == "P1 (AI) 到达黑市，选择不购买",
-    "the skip text must be pinned")
-  lu.assertEvalToTrue(captured.product_id == nil and captured.resolve == nil,
-    "an AI player must not purchase or settle")
-end
+describe("TestMarketAuto", function()
+  it("test_ai_player_publishes_skip_feed_without_purchase", function()
+    local captured = _drive({ is_computer_controlled = true })
+    luassert.truthy(captured.feed ~= nil, "an AI player must publish a skip feed")
+    luassert.truthy(captured.feed.kind == "market_auto_skipped", "the skip kind must be pinned to the logged market kind, not the unlogged choice_skipped")
+    luassert.truthy(captured.feed.tip == false, "the skip must not be a tip")
+    luassert.truthy(captured.feed.text == "P1 (AI) 到达黑市，选择不购买", "the skip text must be pinned")
+    luassert.truthy(captured.product_id == nil and captured.resolve == nil, "an AI player must not purchase or settle")
+  end)
 
 -- 玩家:按价格升序购买最低价条目。3 元素列表让「左操作数价格被
 -- 恒 0 化」的变异(or→and / entry_price(a)→nil)买到中间价,必须被杀。
-function TestMarketAuto:test_player_buys_the_cheapest_entry()
-  local captured = _drive({
-    list = {
-      { price = 300, product_id = "b" },
-      { price = 200, product_id = "c" },
-      { price = 100, product_id = "a" },
-    },
-  })
-  lu.assertEvalToTrue(captured.product_id == "a", "the cheapest entry must be purchased")
-end
+  it("test_player_buys_the_cheapest_entry", function()
+    local captured = _drive({
+      list = {
+        { price = 300, product_id = "b" },
+        { price = 200, product_id = "c" },
+        { price = 100, product_id = "a" },
+      },
+    })
+    luassert.truthy(captured.product_id == "a", "the cheapest entry must be purchased")
+  end)
 
 -- 缺价条目按 0 计,排到最前(杀缺省 0→1 变异)。
-function TestMarketAuto:test_missing_price_entries_sort_to_the_front()
-  local captured = _drive({
-    list = { { price = 100, product_id = "p" }, { product_id = "m" } },
-  })
-  lu.assertEvalToTrue(captured.product_id == "m",
-    "a missing price must count as zero and sort first")
-end
+  it("test_missing_price_entries_sort_to_the_front", function()
+    local captured = _drive({
+      list = { { price = 100, product_id = "p" }, { product_id = "m" } },
+    })
+    luassert.truthy(captured.product_id == "m", "a missing price must count as zero and sort first")
+  end)
 
 -- pending_choice 原样透传给结算。
-function TestMarketAuto:test_pending_choice_flows_into_settlement()
-  local captured = _drive({
-    list = { { price = 10, product_id = "z" } },
-  })
-  lu.assertEvalToTrue(captured.resolve ~= nil, "a purchase must settle")
-  lu.assertEvalToTrue(captured.resolve.choice ~= nil and captured.resolve.choice.id == "pc1",
-    "the pending choice must flow into settlement")
-  lu.assertEvalToTrue(captured.resolve.chosen.product_id == "z", "the chosen entry must be passed")
-end
+  it("test_pending_choice_flows_into_settlement", function()
+    local captured = _drive({
+      list = { { price = 10, product_id = "z" } },
+    })
+    luassert.truthy(captured.resolve ~= nil, "a purchase must settle")
+    luassert.truthy(captured.resolve.choice ~= nil and captured.resolve.choice.id == "pc1", "the pending choice must flow into settlement")
+    luassert.truthy(captured.resolve.chosen.product_id == "z", "the chosen entry must be passed")
+  end)
 
 -- 空列表静默返回,不发事件不购买。
-function TestMarketAuto:test_empty_list_returns_without_side_effects()
-  local captured = _drive({})
-  lu.assertEvalToTrue(captured.product_id == nil and captured.resolve == nil
-    and captured.feed == nil, "an empty list must do nothing")
-end
+  it("test_empty_list_returns_without_side_effects", function()
+    local captured = _drive({})
+    luassert.truthy(captured.product_id == nil and captured.resolve == nil
+      and captured.feed == nil, "an empty list must do nothing")
+  end)
 
-return TestMarketAuto
+end)

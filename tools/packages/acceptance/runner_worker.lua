@@ -1,51 +1,29 @@
-local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
-local env = bootstrap.install(debug.getinfo(1, "S").source)
-local acceptance_tool = assert(bootstrap.ensure_tool("acceptance4lua", env))
-
-local path_lib = require("foundation.path")
+-- The worker never launches bootstrap discovery against its protocol stdin.
+local interpreter = os.getenv("ACCEPTANCE_LUA_BIN") or os.getenv("LUA54_BIN") or arg[-1]
+assert(interpreter and _VERSION == "Lua 5.4", "worker requires Lua 5.4")
+local source = debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")
+local bootstrap = dofile(assert(source:match("^(.*)/[^/]+$")) .. "/../../foundation/bootstrap.lua")
+local env = bootstrap.install(source)
 local json = require("acceptance4lua.json")
-local runner = require("acceptance4lua.runner")
-local spawn_env = require("packages.acceptance.spawn_env")
-
-local runner_opts = spawn_env.runner_opts(env, acceptance_tool)
-
-local function _response_for_job(job)
-  local generated_path = path_lib.join_path(job.generated_dir, "test_feature_acceptance.lua")
-  local opts = { feature_json = job.feature_json, cwd = env.repo_root }
-  for key, value in pairs(runner_opts) do opts[key] = value end
-  local result = runner.run_generated(generated_path, opts)
-
-  local outcome = "infrastructure_error"
-  local error_text = result.error or ""
-  if error_text == "" then
-    outcome = result.passed and "test_success" or "test_failure"
-  end
-
-  return {
-    id = job.id,
-    outcome = outcome,
-    output = result.output or "",
-    error = error_text,
-    duration = result.duration or 0,
-  }
-end
-
+local run_all = require("packages.acceptance.run_all")
+local path = require("foundation.path")
 for line in io.lines() do
   if line ~= "" then
-    local ok, job = pcall(json.decode, line)
-    local response
-    if ok then
-      response = _response_for_job(job)
-    else
-      response = {
-        id = "",
-        outcome = "infrastructure_error",
-        output = "",
-        error = tostring(job),
-        duration = 0,
-      }
-    end
-    io.write(json.encode_compact(response), "\n")
-    io.flush()
+  local id = ""
+  local started = os.clock()
+  local ok, response = xpcall(function()
+    local job = json.decode(line)
+    assert(type(job) == "table", "job must be an object")
+    id = job.id or ""
+    assert(type(job.generated_dir) == "string" and job.generated_dir ~= "", "missing generated_dir")
+    assert(type(job.feature_json) == "string" and job.feature_json ~= "", "missing feature_json")
+    local result = require("foundation.proc").run_command(run_all.command(
+      path.join_path(job.generated_dir, "test_feature_acceptance.lua"), job.feature_json, interpreter), { cwd = env.repo_root, stdin_path = "NUL" })
+    return run_all.decode_result(result)
+  end, debug.traceback)
+  if not ok then response = { outcome = "infrastructure_error", error = tostring(response), output = "" } end
+  response.id, response.duration = id, os.clock() - started
+  io.write(json.encode_compact(response), "\n")
+  io.flush()
   end
 end

@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local P = require("test.support.shared_support")
 local _assert_eq = P.assert_eq
 local _with_patches = P.with_patches
@@ -26,21 +27,20 @@ local function _make_ctx(overrides)
   return ctx
 end
 
-TestEffectChanceDraw = {}
-
-function TestEffectChanceDraw:test_can_apply_returns_true_for_chance_tile()
+describe("TestEffectChanceDraw", function()
+it("test_can_apply_returns_true_for_chance_tile", function()
   local ctx = _make_ctx()
   local result = effect_chance.executors.chance_draw_and_resolve.can_apply(ctx)
   _assert_eq(result, true, "should apply for chance tile")
-end
+end)
 
-function TestEffectChanceDraw:test_can_apply_returns_false_for_non_chance_tile()
+it("test_can_apply_returns_false_for_non_chance_tile", function()
   local ctx = _make_ctx({ tile = { type = "shop" } })
   local result = effect_chance.executors.chance_draw_and_resolve.can_apply(ctx)
   _assert_eq(result, false, "should not apply for non-chance tile")
-end
+end)
 
-function TestEffectChanceDraw:test_apply_publishes_event_and_popup()
+it("test_apply_publishes_event_and_popup", function()
   local events = {}
   local popups = {}
   local anims = {}
@@ -69,9 +69,9 @@ function TestEffectChanceDraw:test_apply_publishes_event_and_popup()
   _assert_eq(popups[1].opts.popup_opts.policy, "defer", "popup policy should defer")
   _assert_eq(#anims, 1, "should queue one action anim")
   _assert_eq(anims[1].kind, "chance", "anim kind should be chance")
-end
+end)
 
-function TestEffectChanceDraw:test_apply_passes_weighted_pick_card_to_resolver()
+it("test_apply_passes_weighted_pick_card_to_resolver", function()
   -- rng 返回恰等于前两张权重和的边界值:累积扫描应在第二张命中(>= 语义)。
   -- 变异体(累加改减/比较边界/权重缺省 or->and/取卡兜底 or->and)都会把
   -- 错误卡传给 resolver,此断言将它们全部杀回。
@@ -104,9 +104,9 @@ function TestEffectChanceDraw:test_apply_passes_weighted_pick_card_to_resolver()
   end)
 
   _assert_eq(resolved_card, chance_cfg[2], "加权命中的卡应传给 resolver,而非首张/越界回退卡")
-end
+end)
 
-function TestEffectChanceDraw:test_apply_uses_rng_to_pick_card()
+it("test_apply_uses_rng_to_pick_card", function()
   local pick_called = false
   local pick_min, pick_max = nil, nil
 
@@ -139,10 +139,10 @@ function TestEffectChanceDraw:test_apply_uses_rng_to_pick_card()
 
   _assert_eq(pick_called, true, "should call rng.next_int")
   _assert_eq(pick_min, 1, "rng min should be 1")
-  lu.assertEvalToTrue(pick_max > 0, "rng max should be positive total_weight")
-end
+  luassert.truthy(pick_max > 0, "rng max should be positive total_weight")
+end)
 
-function TestEffectChanceDraw:test_apply_falls_back_to_first_drawable_when_weighted_scan_overshoots()
+it("test_apply_falls_back_to_first_drawable_when_weighted_scan_overshoots", function()
   -- rng 越界(返回 total_weight + 1)时权重扫描累加不到 pick,应回落到首张可抽卡而不是空手。
   local game = {
     rng = {
@@ -171,9 +171,9 @@ function TestEffectChanceDraw:test_apply_falls_back_to_first_drawable_when_weigh
   end)
 
   _assert_eq(resolved_card, chance_cfg[1], "越界 pick 应回落到首张可抽卡")
-end
+end)
 
-function TestEffectChanceDraw:test_apply_handles_nil_card_gracefully()
+it("test_apply_handles_nil_card_gracefully", function()
   local events = {}
 
   local game = {
@@ -202,9 +202,9 @@ function TestEffectChanceDraw:test_apply_handles_nil_card_gracefully()
       effect_chance.executors.chance_draw_and_resolve.apply(ctx)
     end)
     chance_cfg[1] = orig_cfg
-    lu.assertEvalToTrue(ok, "should not error on nil card: " .. tostring(err))
+    luassert.truthy(ok, "should not error on nil card: " .. tostring(err))
   end)
-end
+end)
 
 
-return TestEffectChanceDraw
+end)

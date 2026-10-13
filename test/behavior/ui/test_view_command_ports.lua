@@ -1,8 +1,10 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- src/ui/ports/view_command.lua 的 dispatch 行为规约。首跑变异的幸存集中在
 -- 两类：panel action 转发从未被端到端调用（skin_panel / skin_gallery 的
 -- handler 构造换成 nil、require 换成 nil 都活着）,以及 dispatch 的返回值
 -- 契约没人断言（handled=true / 未认领=false 的 true/false 常量突变全活）。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 
@@ -31,31 +33,31 @@ local function _dispatch_panel_action(module, intent_type)
     local ports = view_command_ports.build()
     handled = ports.dispatch(state, { type = intent_type, action = "equip", actor_role_id = 3 })
   end)
-  lu.assertEvalToTrue(seen ~= nil, intent_type .. " must reach the panel handle_action")
-  lu.assertEquals(seen.state, state, intent_type .. " must forward the state handle")
-  lu.assertEquals(seen.action, "equip", intent_type .. " must forward intent.action")
-  lu.assertEquals(seen.role_id, 3, intent_type .. " must forward intent.actor_role_id")
+  luassert.truthy(seen ~= nil, intent_type .. " must reach the panel handle_action")
+  luassert.is.same( state,seen.state, intent_type .. " must forward the state handle")
+  luassert.is.same( "equip",seen.action, intent_type .. " must forward intent.action")
+  luassert.is.same( 3,seen.role_id, intent_type .. " must forward intent.actor_role_id")
   return handled
 end
 
-TestViewCommandPorts = {}
+describe("TestViewCommandPorts", function()
 
-TestViewCommandPorts["test_skin_panel_action 抵达 skin_panel 并报告已处理"] = function(self)
-  lu.assertEquals(_dispatch_panel_action(skin_panel, "skin_panel_action"), true,
+it("test_skin_panel_action 抵达 skin_panel 并报告已处理", function()
+  luassert.is.same( true,_dispatch_panel_action(skin_panel, "skin_panel_action"),
     "skin_panel_action dispatch must report handled")
-end
+end)
 
-TestViewCommandPorts["test_item_atlas_action 抵达 item_atlas 并报告已处理"] = function(self)
-  lu.assertEquals(_dispatch_panel_action(item_atlas, "item_atlas_action"), true,
+it("test_item_atlas_action 抵达 item_atlas 并报告已处理", function()
+  luassert.is.same( true,_dispatch_panel_action(item_atlas, "item_atlas_action"),
     "item_atlas_action dispatch must report handled")
-end
+end)
 
-TestViewCommandPorts["test_skin_gallery_action 抵达 skin_gallery 并报告已处理"] = function(self)
-  lu.assertEquals(_dispatch_panel_action(skin_gallery, "skin_gallery_action"), true,
+it("test_skin_gallery_action 抵达 skin_gallery 并报告已处理", function()
+  luassert.is.same( true,_dispatch_panel_action(skin_gallery, "skin_gallery_action"),
     "skin_gallery_action dispatch must report handled")
-end
+end)
 
-TestViewCommandPorts["test_open_skin_panel / open_gallery_panel 打开画廊入口并报告已处理"] = function(self)
+it("test_open_skin_panel / open_gallery_panel 打开画廊入口并报告已处理", function()
   local opened_skin = nil
   local opened_gallery = nil
   local state = {}
@@ -64,16 +66,16 @@ TestViewCommandPorts["test_open_skin_panel / open_gallery_panel 打开画廊入�
     { target = skin_gallery, key = "open_gallery", value = function(_, role_id) opened_gallery = role_id end },
   }, function()
     local ports = view_command_ports.build()
-    lu.assertEquals(ports.dispatch(state, { type = "open_skin_panel", actor_role_id = 2 }), true,
+    luassert.is.same( true,ports.dispatch(state, { type = "open_skin_panel", actor_role_id = 2 }),
       "open_skin_panel dispatch must report handled")
-    lu.assertEquals(ports.dispatch(state, { type = "open_gallery_panel", actor_role_id = 6 }), true,
+    luassert.is.same( true,ports.dispatch(state, { type = "open_gallery_panel", actor_role_id = 6 }),
       "open_gallery_panel dispatch must report handled")
   end)
-  lu.assertEquals(opened_skin, 2, "open_skin_panel must forward the acting role to open_skin")
-  lu.assertEquals(opened_gallery, 6, "open_gallery_panel must forward the acting role to open_gallery")
-end
+  luassert.is.same( 2,opened_skin, "open_skin_panel must forward the acting role to open_skin")
+  luassert.is.same( 6,opened_gallery, "open_gallery_panel must forward the acting role to open_gallery")
+end)
 
-TestViewCommandPorts["test_popup_confirm 按操作者关闭弹窗并报告已处理"] = function(self)
+it("test_popup_confirm 按操作者关闭弹窗并报告已处理", function()
   local dismissed = nil
   _with_patches({
     { target = popup_presenter, key = "dismiss_popup", value = function(_, actor_role_id)
@@ -81,31 +83,31 @@ TestViewCommandPorts["test_popup_confirm 按操作者关闭弹窗并报告已处
     end },
   }, function()
     local ports = view_command_ports.build()
-    lu.assertEquals(ports.dispatch({}, { type = "popup_confirm", actor_role_id = 4 }), true,
+    luassert.is.same( true,ports.dispatch({}, { type = "popup_confirm", actor_role_id = 4 }),
       "popup_confirm dispatch must report handled")
   end)
-  lu.assertEquals(dismissed, 4, "popup_confirm must forward the acting role to dismiss_popup")
-end
+  luassert.is.same( 4,dismissed, "popup_confirm must forward the acting role to dismiss_popup")
+end)
 
-TestViewCommandPorts["test_没有 port_handler 的指令不被认领,返回 false"] = function(self)
+it("test_没有 port_handler 的指令不被认领,返回 false", function()
   local ports = view_command_ports.build()
-  lu.assertEquals(ports.dispatch({}, { type = "choice_select" }), false,
+  luassert.is.same( false,ports.dispatch({}, { type = "choice_select" }),
     "game-handled commands must not be claimed by the view-command port")
-  lu.assertEquals(ports.dispatch({}, { type = "not_a_real_command_xyz" }), false,
+  luassert.is.same( false,ports.dispatch({}, { type = "not_a_real_command_xyz" }),
     "unknown commands must not be claimed by the view-command port")
-end
+end)
 
-TestViewCommandPorts["test_policy 解析出未实现的 handler key 时不谎报已处理"] = function(self)
+it("test_policy 解析出未实现的 handler key 时不谎报已处理", function()
   _with_patches({
     { target = command_policy, key = "port_handler", value = function() return "not_a_port_handler" end },
   }, function()
     local ports = view_command_ports.build()
-    lu.assertEquals(ports.dispatch({}, { type = "whatever" }), false,
+    luassert.is.same( false,ports.dispatch({}, { type = "whatever" }),
       "a handler key the port does not implement must return false, not handled")
   end)
-end
+end)
 
-TestViewCommandPorts["test_角色带事件通道时开启日志不产生告警"] = function(self)
+it("test_角色带事件通道时开启日志不产生告警", function()
   local warnings = {}
   local visible = nil
   local switched = nil
@@ -127,17 +129,17 @@ TestViewCommandPorts["test_角色带事件通道时开启日志不产生告警"]
     end },
   }, function()
     local ports = view_command_ports.build()
-    lu.assertEquals(ports.dispatch(state, { type = "toggle_action_log", actor_role_id = 9 }), true,
+    luassert.is.same( true,ports.dispatch(state, { type = "toggle_action_log", actor_role_id = 9 }),
       "toggle_action_log dispatch must report handled")
   end)
 
-  lu.assertEquals(#warnings, 0,
+  luassert.is.same( 0,#warnings,
     "a role exposing send_ui_custom_event must not trigger the missing-channel warn; got: "
       .. table.concat(warnings, " | "))
-  lu.assertEvalToTrue(visible ~= nil and visible.enabled == true, "the toggle must enable the role event log")
-  lu.assertEvalToTrue(switched ~= nil, "enabling must switch the debug canvas for the role")
-  lu.assertEquals(switched.canvas_key, canvas.CANVAS_DEBUG, "the switched canvas must be the debug canvas")
-end
+  luassert.truthy(visible ~= nil and visible.enabled == true, "the toggle must enable the role event log")
+  luassert.truthy(switched ~= nil, "enabling must switch the debug canvas for the role")
+  luassert.is.same( canvas.CANVAS_DEBUG,switched.canvas_key, "the switched canvas must be the debug canvas")
+end)
 
 
-return TestViewCommandPorts
+end)
