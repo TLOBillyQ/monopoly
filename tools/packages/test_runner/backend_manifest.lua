@@ -577,11 +577,11 @@ return {
     "tools/packages/mutate/test/test_lua54_guard.lua",
     "tools/packages/mutate/test/test_mutate4lua_tooling_contract.lua",
     "tools/packages/ops/test/test_deploy.lua",
-    "tools/packages/ops/test/test_deploy_native.lua",
     "tools/packages/spec_lane/test/test_spec_lane.lua",
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/ops/test/test_deploy_native.lua",
     "tools/packages/crap/test/test_crap_cli_lua54_guard.lua",
     "tools/foundation/test/test_windows_primitives.lua",
     "tools/foundation/test/test_parallel_lanes.lua",

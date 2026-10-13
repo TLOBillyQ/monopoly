@@ -1,11 +1,11 @@
 if arg then rawset(arg, 0, "tools/packages/ops/test/test_deploy_native.lua") end
 require("test.bootstrap").install_package_paths()
-local lu = require("luaunit")
+local check = require("luassert")
 local env = require("foundation.env")
 local fs = require("foundation.fs")
 local deploy = require("tools.packages.ops.deploy")
 
-TestDeployNative = {}
+describe("native deploy copy sandbox", function()
 
 local function sandbox(fn)
   local root = env.make_temp_path("deploy_native_中文 空格_", "")
@@ -15,31 +15,31 @@ local function sandbox(fn)
   if not ok then error(err) end
 end
 
-function TestDeployNative:test_missing_source_preserves_existing_target()
+it("missing source preserves existing target", function()
   sandbox(function(root)
     assert(fs.write_file(root .. "/target/保留.txt", "keep"))
-    lu.assertError(function()
+    check.has_error(function()
       deploy.copy_directory_tree(root .. "/missing", root .. "/target")
     end)
-    lu.assertEquals(fs.read_raw(root .. "/target/保留.txt"), "keep")
+    check.same(fs.read_raw(root .. "/target/保留.txt"), "keep")
   end)
-end
+end)
 
-function TestDeployNative:test_real_mirror_preserves_bytes_and_removes_stale_files()
+it("real mirror preserves bytes and removes stale files", function()
   sandbox(function(root)
     assert(fs.write_file(root .. "/source/子 目录/中文.lua", "return '中文'\n"))
     assert(fs.write_file(root .. "/source/.hidden", "\0binary\255"))
     fs.ensure_dir(root .. "/source/空目录")
     assert(fs.write_file(root .. "/target/stale.txt", "stale"))
     deploy.copy_directory_tree(root .. "/source", root .. "/target")
-    lu.assertEquals(fs.read_raw(root .. "/target/子 目录/中文.lua"), "return '中文'\n")
-    lu.assertEquals(fs.read_raw(root .. "/target/.hidden"), "\0binary\255")
-    lu.assertTrue(fs.is_dir(root .. "/target/空目录"))
-    lu.assertFalse(fs.path_exists(root .. "/target/stale.txt"))
+    check.same(fs.read_raw(root .. "/target/子 目录/中文.lua"), "return '中文'\n")
+    check.same(fs.read_raw(root .. "/target/.hidden"), "\0binary\255")
+    check.is_true(fs.is_dir(root .. "/target/空目录"))
+    check.is_false(fs.path_exists(root .. "/target/stale.txt"))
     deploy.copy_directory_tree(root .. "/source", root .. "/target")
-    lu.assertEquals(fs.read_raw(root .. "/target/.hidden"), "\0binary\255")
+    check.same(fs.read_raw(root .. "/target/.hidden"), "\0binary\255")
   end)
-end
+end)
 
 -- 仅在子进程 PATH 的隔离目录放置受控 robocopy.cmd;真实 cmd 退出,
 -- 真正的逐文件复制仍由公共 copy_directory_tree 完成。
@@ -51,48 +51,48 @@ local function controlled_copy(root, code)
   local command = 'set "PATH=' .. root:gsub("/", "\\") .. '\\bin;' .. os.getenv("SystemRoot")
     .. '\\System32" & "' .. executable .. '" "' .. root .. '/driver.lua" "' .. root .. '/source" "' .. root .. '/target"'
   local result = proc.run_command(command)
-  lu.assertTrue(result.ok, result.output)
-  lu.assertTrue(fs.path_exists(root .. "/invoked.txt"))
+  check.is_true(result.ok, result.output)
+  check.is_true(fs.path_exists(root .. "/invoked.txt"))
 end
 
 for code = 0, 7 do
-  TestDeployNative["test_robocopy_exit_" .. code .. "_is_success"] = function()
+  it("robocopy exit " .. code .. " is success", function()
     sandbox(function(root)
       assert(fs.write_file(root .. "/source/中文.lua", "source"))
       assert(fs.write_file(root .. "/target/保留.txt", "keep"))
       controlled_copy(root, code)
-      lu.assertEquals(fs.read_raw(root .. "/target/保留.txt"), "keep")
-      lu.assertFalse(fs.path_exists(root .. "/target/中文.lua"))
+      check.same(fs.read_raw(root .. "/target/保留.txt"), "keep")
+      check.is_false(fs.path_exists(root .. "/target/中文.lua"))
     end)
-  end
+  end)
 end
 
 for _, code in ipairs({ 8, 16 }) do
-  TestDeployNative["test_robocopy_exit_" .. code .. "_copies_real_files"] = function()
+  it("robocopy exit " .. code .. " copies real files", function()
     sandbox(function(root)
       assert(fs.write_file(root .. "/source/子 目录/中文.lua", "fallback\0bytes"))
       assert(fs.write_file(root .. "/source/.hidden", "hidden"))
       fs.ensure_dir(root .. "/source/空目录")
       assert(fs.write_file(root .. "/target/stale.txt", "stale"))
       controlled_copy(root, code)
-      lu.assertEquals(fs.read_raw(root .. "/target/子 目录/中文.lua"), "fallback\0bytes")
-      lu.assertEquals(fs.read_raw(root .. "/target/.hidden"), "hidden")
-      lu.assertTrue(fs.is_dir(root .. "/target/空目录"))
-      lu.assertFalse(fs.path_exists(root .. "/target/stale.txt"))
+      check.same(fs.read_raw(root .. "/target/子 目录/中文.lua"), "fallback\0bytes")
+      check.same(fs.read_raw(root .. "/target/.hidden"), "hidden")
+      check.is_true(fs.is_dir(root .. "/target/空目录"))
+      check.is_false(fs.path_exists(root .. "/target/stale.txt"))
     end)
-  end
+  end)
 end
 
-function TestDeployNative:test_project_root_resolves_current_repository()
-  lu.assertEquals(deploy.resolve_project_root(), env.current_dir())
-end
+it("project root resolves current repository", function()
+  check.same(deploy.resolve_project_root(), env.current_dir())
+end)
 
-function TestDeployNative:test_default_target_retains_native_location()
+it("default target retains native location", function()
   local home = deploy.resolve_home_dir():gsub("/$", "")
-  lu.assertEquals(deploy.resolve_default_target_path("win"), home .. "/Desktop/dev/eggy/LuaSource_大富翁")
-end
+  check.same(deploy.resolve_default_target_path("win"), home .. "/Desktop/dev/eggy/LuaSource_大富翁")
+end)
 
-function TestDeployNative:test_unavailable_robocopy_copies_real_files()
+it("unavailable robocopy copies real files", function()
   sandbox(function(root)
     local proc = require("foundation.proc")
     local executable = assert(proc.run_command({ "where.exe", "lua.exe" }).output:match("([^\r\n]+)"))
@@ -106,13 +106,13 @@ function TestDeployNative:test_unavailable_robocopy_copies_real_files()
     assert(fs.write_file(root .. "/bin/where.exe", bytes))
     local result = proc.run_command('set "PATH=' .. root:gsub("/", "\\") .. '\\bin" & "' .. executable
       .. '" "' .. root .. '/driver.lua" "' .. root .. '/source" "' .. root .. '/target"')
-    lu.assertTrue(result.ok, result.output)
-    lu.assertEquals(fs.read_raw(root .. "/target/中文.lua"), "real fallback")
-    lu.assertFalse(fs.path_exists(root .. "/target/stale.txt"))
+    check.is_true(result.ok, result.output)
+    check.same(fs.read_raw(root .. "/target/中文.lua"), "real fallback")
+    check.is_false(fs.path_exists(root .. "/target/stale.txt"))
   end)
-end
+end)
 
-function TestDeployNative:test_project_root_resolves_from_other_working_directory()
+it("project root resolves from other working directory", function()
   sandbox(function(root)
     local proc = require("foundation.proc")
     local repo = env.current_dir()
@@ -120,9 +120,9 @@ function TestDeployNative:test_project_root_resolves_from_other_working_director
       .. "..package.path; io.write(require('tools.packages.ops.deploy').resolve_project_root())"
     assert(fs.write_file(root .. "/root_driver.lua", script))
     local result = proc.run_command({ "lua", root .. "/root_driver.lua" }, { cwd = root })
-    lu.assertTrue(result.ok, result.output)
-    lu.assertEquals(result.output, repo)
+    check.is_true(result.ok, result.output)
+    check.same(result.output, repo)
   end)
-end
+end)
 
-return TestDeployNative
+end)
