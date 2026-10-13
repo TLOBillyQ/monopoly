@@ -143,19 +143,20 @@ function M.check(entries)
   return violations
 end
 
---- IO 壳:读真实试点文件与 loader,交给纯核。相对路径按仓根解析(与车道 cwd 同口径)。
+--- IO 壳:读真实试点文件与 loader,交给纯核。仓根由源文件定位,不依赖 cwd。
 function M.run()
   local fs_lib = require("foundation.fs")
+  local env = require("foundation.bootstrap").install(debug.getinfo(1, "S").source)
   local entries = {}
   for _, path in ipairs({ M.LOADER_PATH }) do
-    local source, err = fs_lib.read_file(path)
+    local source, err = fs_lib.read_file(env.repo_root .. "/" .. path)
     if source == nil then
       return { ok = false, error = "luassert_migration_pilot_guard error: " .. tostring(err) }
     end
     entries[#entries + 1] = { path = path, source = source }
   end
   for _, path in ipairs(M.PILOT_FILES) do
-    local source, err = fs_lib.read_file(path)
+    local source, err = fs_lib.read_file(env.repo_root .. "/" .. path)
     if source == nil then
       return { ok = false, error = "luassert_migration_pilot_guard error: " .. tostring(err) }
     end
