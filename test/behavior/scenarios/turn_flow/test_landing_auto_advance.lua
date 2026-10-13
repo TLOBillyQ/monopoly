@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -28,9 +28,9 @@ local function _set_all_market_goods_unbuyable(game)
   end
 end
 
-TestLandingAutoAdvance = {}
+describe("TestLandingAutoAdvance", function()
 
-function TestLandingAutoAdvance:test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait()
+local function _test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait()
   local game = _new_manual_game()
   local player = game.players[1]
   local market_index = assert(support.first_tile_by_type(game.board, "market"))
@@ -45,7 +45,7 @@ function TestLandingAutoAdvance:test_sold_out_market_landing_skips_choice_and_co
   luassert.is_true(game.turn.inter_turn_wait_active)
 end
 
-function TestLandingAutoAdvance:test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice()
+local function _test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice()
   local game = _new_manual_game()
   local player = game.players[1]
   local owner = game.players[2]
@@ -67,7 +67,7 @@ function TestLandingAutoAdvance:test_free_rent_card_on_enemy_land_is_consumed_wi
   _assert_identity(game:player_cash(owner), owner_cash)
 end
 
-function TestLandingAutoAdvance:test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice()
+local function _test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice()
   local game = _new_manual_game()
   local player = game.players[1]
   local owner = game.players[2]
@@ -101,7 +101,7 @@ function TestLandingAutoAdvance:test_declining_strong_card_uses_free_rent_and_do
   _assert_identity(game:player_cash(owner), owner_cash)
 end
 
-function TestLandingAutoAdvance:test_accepting_strong_card_prompt_executes_the_selected_card()
+local function _test_accepting_strong_card_prompt_executes_the_selected_card()
   local game = _new_manual_game()
   local player = game.players[1]
   local owner = game.players[2]
@@ -129,7 +129,7 @@ function TestLandingAutoAdvance:test_accepting_strong_card_prompt_executes_the_s
   _assert_identity(support.tile_state(game, land_tile).owner_id, player.id, "强征应把地块转到出牌者名下")
 end
 
-function TestLandingAutoAdvance:test_unknown_rent_card_kind_falls_through_to_paying_rent()
+local function _test_unknown_rent_card_kind_falls_through_to_paying_rent()
   local game = _new_manual_game()
   local player = game.players[1]
   local owner = game.players[2]
@@ -164,4 +164,9 @@ function TestLandingAutoAdvance:test_unknown_rent_card_kind_falls_through_to_pay
 end
 
 
-return TestLandingAutoAdvance
+it("test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait", _test_sold_out_market_landing_skips_choice_and_continues_to_inter_turn_wait)
+it("test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice", _test_free_rent_card_on_enemy_land_is_consumed_without_waiting_for_choice)
+it("test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice", _test_declining_strong_card_uses_free_rent_and_does_not_open_second_choice)
+it("test_accepting_strong_card_prompt_executes_the_selected_card", _test_accepting_strong_card_prompt_executes_the_selected_card)
+it("test_unknown_rent_card_kind_falls_through_to_paying_rent", _test_unknown_rent_card_kind_falls_through_to_paying_rent)
+end)

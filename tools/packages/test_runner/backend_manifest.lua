@@ -218,7 +218,6 @@ return {
     "test/behavior/scenarios/item_phase/test_reopen_timeout.lua",
     "test/behavior/scenarios/item_phase/test_repro_full_loop.lua",
     "test/behavior/scenarios/startup/test_runtime_bootstrap.lua",
-    "test/behavior/scenarios/turn_flow/test_landing_auto_advance.lua",
     "test/behavior/scenarios/ui_sync/test_auto_player_landing_choice_event_path.lua",
     "test/behavior/scenarios/ui_sync/test_auto_player_market_modal_race.lua",
     "test/behavior/state/test_board_state.lua",
@@ -603,6 +602,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/scenarios/turn_flow/test_landing_auto_advance.lua",
     "test/behavior/scenarios/movement_obstacles/test_obstacles.lua",
     "test/behavior/app/test_compose_game.lua",
     "test/behavior/app/test_game_defaults.lua",
