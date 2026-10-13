@@ -1,3 +1,6 @@
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local gameplay_cases = require("test.support.scenario_suites.shared.cases")
 local support = require("test.support.shared_support")
 local gameplay_loop_ports = require("src.turn.loop.ports")
@@ -145,11 +148,11 @@ local function _test_landing_visual_release_flushes_before_scheduler_advances_tu
   end
 
   gameplay_loop.tick(game, state, 0.1)
-  assert(sequence[1] == "release", "landing visual release should flush before any scheduler advance")
-  assert(sequence[2] == nil, "landing visual release tick should not advance turn in the same frame")
+  luassert.truthy(sequence[1] == "release", "landing visual release should flush before any scheduler advance")
+  luassert.truthy(sequence[2] == nil, "landing visual release tick should not advance turn in the same frame")
 
   gameplay_loop.tick(game, state, 0.1)
-  assert(sequence[2] == "advance", "scheduler should advance on the first tick after landing visual release")
+  luassert.truthy(sequence[2] == "advance", "scheduler should advance on the first tick after landing visual release")
 end
 
   local function _test_camera_policy_retargets_when_player_changes_without_ui_refresh()
@@ -173,8 +176,8 @@ end
     game.turn.current_player_index = 2
     turn_camera_policy.sync_follow(game, state, ports, false)
 
-    assert(followed[1] == game.players[1].id, "initial follow should target the current player")
-    assert(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
+    luassert.truthy(followed[1] == game.players[1].id, "initial follow should target the current player")
+    luassert.truthy(followed[2] == game.players[2].id, "camera should retarget on player change even without a full ui refresh")
   end
 
 local function _test_camera_sync_other_path_calls_set_camera_property_after_lock()
@@ -248,9 +251,9 @@ local function _test_camera_sync_other_path_calls_set_camera_property_after_lock
     local result = camera_sync.follow_camera(state, 2)
 
     -- Assertions
-    assert(result == true, "follow_camera should succeed when presentation follow target exists")
-    assert(result == true, "follow_camera should succeed when presentation follow target exists")
-    assert(set_camera_lock_position_called == true, "set_camera_lock_position should be called in OTHER path")
+    luassert.truthy(result == true, "follow_camera should succeed when presentation follow target exists")
+    luassert.truthy(result == true, "follow_camera should succeed when presentation follow target exists")
+    luassert.truthy(set_camera_lock_position_called == true, "set_camera_lock_position should be called in OTHER path")
 
     local has_dist = false
     local has_height = false
@@ -264,10 +267,10 @@ local function _test_camera_sync_other_path_calls_set_camera_property_after_lock
       if call[1] == 16 and call[2] == -90 then has_yaw = true end
     end
 
-    assert(has_dist, "set_camera_property should be called with DIST (7, 30)")
-    assert(has_height, "set_camera_property should be called with OBSERVER_HEIGHT (11, 10)")
-    assert(has_pitch, "set_camera_property should be called with PITCH (15, 45)")
-    assert(has_yaw, "set_camera_property should be called with YAW (16, -90)")
+    luassert.truthy(has_dist, "set_camera_property should be called with DIST (7, 30)")
+    luassert.truthy(has_height, "set_camera_property should be called with OBSERVER_HEIGHT (11, 10)")
+    luassert.truthy(has_pitch, "set_camera_property should be called with PITCH (15, 45)")
+    luassert.truthy(has_yaw, "set_camera_property should be called with YAW (16, -90)")
   end)
 
   -- Cleanup - CRITICAL: always reset ports even if test fails
@@ -341,11 +344,11 @@ local function _test_camera_sync_prefers_presentation_follow_target_over_ctrl_un
 
   local ok, err = pcall(function()
     local result = camera_sync.follow_camera(state, 2)
-    assert(result == true, "follow_camera should succeed when presentation follow target exists")
-    assert(#locked_positions == 1, "follow_camera should lock once")
-    assert(locked_positions[1].x == 12, "follow_camera should prefer presentation follow target x")
-    assert(locked_positions[1].y == 34, "follow_camera should prefer presentation follow target y")
-    assert(locked_positions[1].z == 56, "follow_camera should prefer presentation follow target z")
+    luassert.truthy(result == true, "follow_camera should succeed when presentation follow target exists")
+    luassert.truthy(#locked_positions == 1, "follow_camera should lock once")
+    luassert.truthy(locked_positions[1].x == 12, "follow_camera should prefer presentation follow target x")
+    luassert.truthy(locked_positions[1].y == 34, "follow_camera should prefer presentation follow target y")
+    luassert.truthy(locked_positions[1].z == 56, "follow_camera should prefer presentation follow target z")
   end)
 
   runtime_ports.reset_for_tests()
@@ -414,10 +417,10 @@ local function _test_camera_sync_self_path_does_not_call_set_camera_property()
     local result = camera_sync.follow_camera(state, 1)
 
     -- Assertions
-    assert(result == true, "follow_camera should succeed in SELF path")
-    assert(result == true, "follow_camera should succeed in SELF path")
-    assert(reset_camera_called == true, "reset_camera should be called in SELF path")
-    assert(#set_camera_property_calls == 0, "set_camera_property should NOT be called in SELF path")
+    luassert.truthy(result == true, "follow_camera should succeed in SELF path")
+    luassert.truthy(result == true, "follow_camera should succeed in SELF path")
+    luassert.truthy(reset_camera_called == true, "reset_camera should be called in SELF path")
+    luassert.truthy(#set_camera_property_calls == 0, "set_camera_property should NOT be called in SELF path")
   end)
 
   -- Cleanup - CRITICAL: always reset ports even if test fails
@@ -503,7 +506,7 @@ local function _test_camera_sync_sync_camera_position_also_restores_props()
       if call[1] == 7 and call[2] == 30 then has_dist = true end
     end
 
-    assert(has_dist, "set_camera_property should be called with DIST (7, 30) in sync_camera_position")
+    luassert.truthy(has_dist, "set_camera_property should be called with DIST (7, 30) in sync_camera_position")
   end)
 
   -- Cleanup - CRITICAL: always reset ports even if test fails

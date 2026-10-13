@@ -1,5 +1,6 @@
 local suite = require("test.support.scenario_suites.movement.relocation")
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 
 TestRelocation = {}
@@ -18,8 +19,8 @@ function TestRelocationDirect:test_relocate_without_destination_errors()
     game:player_relocate(game.players[1], {})
   end)
 
-  lu.assertFalse(ok, "relocate without a destination should fail")
-  lu.assertEvalToTrue(tostring(err):find("missing relocation destination", 1, true) ~= nil,
+  luassert.is_false(ok, "relocate without a destination should fail")
+  luassert.truthy(tostring(err):find("missing relocation destination", 1, true) ~= nil,
     "relocate error should name the missing destination")
 end
 
