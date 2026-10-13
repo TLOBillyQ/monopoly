@@ -57,4 +57,28 @@ function TestMutatorStatusFormat:test_formats_status_lines_as_stable_key_value_t
 end
 
 
+-- Public argument validation returns before any filesystem or worker operation.
+local mutator = require("acceptance4lua.mutator")
+
+function TestMutatorStatusFormat:test_rejects_an_unknown_level_value_before_touching_the_filesystem()
+  local report, err = mutator.run({
+    feature = "/nonexistent/path/intentionally-bad.feature",
+    work_dir = "/tmp/will-not-be-created",
+    level = "nonsense",
+  })
+  lu.assertNil(report)
+  lu.assertNotNil(err)
+  lu.assertEvalToTrue(tostring(err):match("invalid level"))
+end
+
+function TestMutatorStatusFormat:test_rejects_non_string_level_values()
+  local report, err = mutator.run({
+    feature = "/dev/null",
+    work_dir = "/tmp",
+    level = 42,
+  })
+  lu.assertNil(report)
+  lu.assertEvalToTrue(tostring(err):match("invalid level"))
+end
+
 return TestMutatorStatusFormat

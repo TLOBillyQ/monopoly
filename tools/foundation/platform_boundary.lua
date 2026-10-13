@@ -170,7 +170,7 @@ function boundary.test_verdict(path)
       local verdict = boundary.evaluate(capability, {})
       if verdict.status then
         verdict.identity = identity
-        verdict.cases = identity:match("test_mutator_level%.lua$") and 14 or 2
+        verdict.cases = identity:match("test_mutator_level%.lua$") and 12 or 2
         return verdict
       end
     end

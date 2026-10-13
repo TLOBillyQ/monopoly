@@ -50,7 +50,11 @@ local function _discover_spec_files_for_roots(roots)
   for _, root in ipairs(roots or {}) do
     for _, path in ipairs(_discover_spec_files(root)) do
       if not seen[path] then
-        files[#files + 1] = path
+        local verdict = require("foundation.platform_boundary").test_verdict(path)
+        if verdict then
+          io.write("[tooling] excluded status=unavailable file=" .. verdict.identity
+            .. " cases=" .. verdict.cases .. " capability=acceptance-mutate reason=" .. verdict.entry.reason .. "\n")
+        else files[#files + 1] = path end
         seen[path] = true
       end
     end

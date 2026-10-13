@@ -100,7 +100,7 @@ function TestPlatformBoundary:test_retained_test_capabilities_partition_only_the
     lu.assertEquals(boundary.test_capabilities[verdict.identity], "acceptance-mutate")
     cases = cases + verdict.cases
   end
-  lu.assertEquals(cases, 16)
+  lu.assertEquals(cases, 14)
   lu.assertNil(boundary.test_verdict("tools/packages/acceptance_mutate/test/test_mutator_status_format.lua"))
   lu.assertNil(boundary.test_verdict("tools/packages/acceptance_mutate/test/test_mutator_report_skipped.lua"))
 end
