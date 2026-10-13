@@ -20,7 +20,6 @@ return {
     "test/behavior/app/test_share_task.lua",
     "test/behavior/app/test_sign_in.lua",
     "test/behavior/app/test_startup_profile.lua",
-    "test/behavior/app/test_transaction_context.lua",
     "test/behavior/app/test_ui_bootstrap.lua",
     "test/behavior/config/test_achievement_progress_events.lua",
     "test/behavior/config/test_achievements.lua",
@@ -593,6 +592,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/test_transaction_context.lua",
     "test/behavior/app/test_state_factory.lua",
     "test/behavior/app/test_game_factory.lua",
     "test/behavior/scenarios/ui_sync/test_auto_player_market_modal_race.lua",

@@ -2,18 +2,17 @@
 -- #293 复核:这 9 个 survivor 同属一个缺口族——回调错误路径与校验断言未测,
 -- 补本文件后逐条击杀(equip/unequip/applier 错误告警 + 4 处非法参数断言)。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 
 local log_capture = require("test.support.log_capture")
 local context = require("src.app.cosmetics.transaction_context")
 
-TestTransactionContext = {}
+describe("TestTransactionContext", function()
+  before_each(function()
+    context.reset_for_tests()
+  end)
 
-function TestTransactionContext:setUp()
-  context.reset_for_tests()
-end
-
-function TestTransactionContext:test_unequip_adapter_error_logs_warn_with_error_text()
+local function _test_unequip_adapter_error_logs_warn_with_error_text()
   context.configure_unequip(function() error("unequip boom") end)
   local ok, _, captured = log_capture.capture(function()
     context.call_unequip_adapter("p1")
@@ -26,7 +25,7 @@ function TestTransactionContext:test_unequip_adapter_error_logs_warn_with_error_
     "warn should carry the adapter error text: " .. joined)
 end
 
-function TestTransactionContext:test_equip_adapter_error_returns_false_without_warn()
+local function _test_equip_adapter_error_returns_false_without_warn()
   context.configure_equip(function() error("equip boom") end)
   local ok, _, captured = log_capture.capture(function()
     luassert.truthy(context.call_equip_adapter("p1", {}) == false,
@@ -37,25 +36,25 @@ function TestTransactionContext:test_equip_adapter_error_returns_false_without_w
     "failed equip should not log a warn: " .. table.concat(captured.lines, ";"))
 end
 
-function TestTransactionContext:test_configure_equip_rejects_non_function()
+local function _test_configure_equip_rejects_non_function()
   luassert.has_error.match(function()
     context.configure_equip("not_a_function")
   end, "invalid skin equip callback", 1, true)
 end
 
-function TestTransactionContext:test_configure_unequip_rejects_non_function()
+local function _test_configure_unequip_rejects_non_function()
   luassert.has_error.match(function()
     context.configure_unequip({})
   end, "invalid skin unequip callback", 1, true)
 end
 
-function TestTransactionContext:test_configure_transaction_result_applier_rejects_non_function()
+local function _test_configure_transaction_result_applier_rejects_non_function()
   luassert.has_error.match(function()
     context.configure_transaction_result_applier(42)
   end, "invalid skin transaction result applier", 1, true)
 end
 
-function TestTransactionContext:test_result_applier_error_logs_warn_with_error_text()
+local function _test_result_applier_error_logs_warn_with_error_text()
   context.configure_transaction_result_applier(function() error("applier boom") end)
   local ok, _, captured = log_capture.capture(function()
     context.call_transaction_result_applier({}, {})
@@ -68,13 +67,13 @@ function TestTransactionContext:test_result_applier_error_logs_warn_with_error_t
     "warn should carry the applier error text: " .. joined)
 end
 
-function TestTransactionContext:test_configure_archive_rejects_non_table()
+local function _test_configure_archive_rejects_non_table()
   luassert.has_error.match(function()
     context.configure_archive("not_a_table")
   end, "invalid skin archive", 1, true)
 end
 
-function TestTransactionContext:test_archive_call_swallows_adapter_error()
+local function _test_archive_call_swallows_adapter_error()
   context.configure_archive({
     read = function() error("archive boom") end,
   })
@@ -82,4 +81,12 @@ function TestTransactionContext:test_archive_call_swallows_adapter_error()
     "failed archive call should return nil")
 end
 
-return TestTransactionContext
+it("test_unequip_adapter_error_logs_warn_with_error_text", _test_unequip_adapter_error_logs_warn_with_error_text)
+it("test_equip_adapter_error_returns_false_without_warn", _test_equip_adapter_error_returns_false_without_warn)
+it("test_configure_equip_rejects_non_function", _test_configure_equip_rejects_non_function)
+it("test_configure_unequip_rejects_non_function", _test_configure_unequip_rejects_non_function)
+it("test_configure_transaction_result_applier_rejects_non_function", _test_configure_transaction_result_applier_rejects_non_function)
+it("test_result_applier_error_logs_warn_with_error_text", _test_result_applier_error_logs_warn_with_error_text)
+it("test_configure_archive_rejects_non_table", _test_configure_archive_rejects_non_table)
+it("test_archive_call_swallows_adapter_error", _test_archive_call_swallows_adapter_error)
+end)
