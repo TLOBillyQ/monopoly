@@ -8,7 +8,8 @@
 --   L25  if not (lua_api and type(lua_api.global_register_custom_event) == "function") then
 --   L26    return false
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local host_runtime = require("src.host.init")
 local runtime_context = require("src.host.context")
 
@@ -43,9 +44,9 @@ function TestInitMutation:test_rejects_a_non_string_event_name_even_when_handler
   end)
   -- Original L20: (type(123)~="string"=true) OR (type(fn)~="function"=false) -> true -> return false.
   -- Mutant  and:  true AND false -> false -> falls through -> registers -> returns true.
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "non-string event_name must be rejected (return false); got " .. tostring(result))
-  lu.assertEvalToTrue(#registered == 0,
+  luassert.truthy(#registered == 0,
     "rejected registration must not reach LuaAPI; saw " .. #registered .. " calls")
 end
 
@@ -61,7 +62,7 @@ function TestInitMutation:test_returns_false_when_luaapi_lacks_a_callable_global
   end)
   -- Original L25: not(lua_api AND type(42)=="function"=false) = not(false) = true -> return false.
   -- Mutant  or:   not(lua_api OR ...) = not(truthy) = false -> proceeds -> 42(...) -> crash.
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "missing callable hook must return false; got " .. tostring(result))
 end
 
@@ -71,7 +72,7 @@ function TestInitMutation:test_returns_false_not_true_when_no_runtime_context_lu
     return host_runtime.register_custom_event("evt", function() end)
   end)
   -- Original L26: return false. Mutant false->true: return true.
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "unavailable LuaAPI must yield false; L26 mutation flips it to true. Got " .. tostring(result))
 end
 
@@ -82,7 +83,7 @@ function TestInitMutation:test_returns_true_only_on_the_genuine_happy_path_posit
   local result = _with_current(ctx, function()
     return host_runtime.register_custom_event("evt", function() end)
   end)
-  lu.assertEvalToTrue(result == true, "healthy registration must return true; got " .. tostring(result))
+  luassert.truthy(result == true, "healthy registration must return true; got " .. tostring(result))
 end
 
 function TestInitMutation:test_schedule_forwards_with_zero_default_delay()
@@ -97,10 +98,10 @@ function TestInitMutation:test_schedule_forwards_with_zero_default_delay()
   local fn = function() end
   local result = host_runtime.schedule(nil, fn)
   runtime_ports.schedule = saved_schedule
-  lu.assertEvalToTrue(seen ~= nil and seen.delay == 0,
+  luassert.truthy(seen ~= nil and seen.delay == 0,
     "schedule should default a nil delay to 0; got " .. tostring(seen and seen.delay))
-  lu.assertEvalToTrue(seen.fn == fn, "schedule should forward the callback")
-  lu.assertEvalToTrue(result == true, "schedule should return the port result")
+  luassert.truthy(seen.fn == fn, "schedule should forward the callback")
+  luassert.truthy(result == true, "schedule should return the port result")
 end
 function TestInitMutation:test_trigger_event_rejects_a_non_table_event_desc()
   -- register_trigger_event 与 register_custom_event 同款守卫:desc 非 table 时
@@ -118,9 +119,9 @@ function TestInitMutation:test_trigger_event_rejects_a_non_table_event_desc()
   local result = _with_current(ctx, function()
     return host_runtime.register_trigger_event("ET_SPEC_ROLE_EXIT_GAME", function() end) -- string desc
   end)
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "non-table event_desc must be rejected (return false); got " .. tostring(result))
-  lu.assertEvalToTrue(#registered == 0,
+  luassert.truthy(#registered == 0,
     "rejected registration must not reach LuaAPI; saw " .. #registered .. " calls")
 end
 
@@ -129,7 +130,7 @@ function TestInitMutation:test_trigger_event_returns_false_when_luaapi_lacks_cal
   local result = _with_current(ctx, function()
     return host_runtime.register_trigger_event({ "evt" }, function() end)
   end)
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "missing callable hook must return false; got " .. tostring(result))
 end
 
@@ -137,7 +138,7 @@ function TestInitMutation:test_trigger_event_returns_false_when_no_runtime_conte
   local result = _with_current(nil, function()
     return host_runtime.register_trigger_event({ "evt" }, function() end)
   end)
-  lu.assertEvalToTrue(result == false,
+  luassert.truthy(result == false,
     "unavailable LuaAPI must yield false; got " .. tostring(result))
 end
 
@@ -160,9 +161,9 @@ function TestInitMutation:test_trigger_event_returns_true_and_forwards_desc_on_h
     return { host_runtime.register_trigger_event(desc, handler) }
   end)
   local result, trigger = results[1], results[2]
-  lu.assertEvalToTrue(result == true, "healthy registration must return true; got " .. tostring(result))
-  lu.assertEvalToTrue(trigger == "trigger-handle", "trigger handle must be forwarded; got " .. tostring(trigger))
-  lu.assertEvalToTrue(seen ~= nil and seen.desc == desc and seen.handler == handler,
+  luassert.truthy(result == true, "healthy registration must return true; got " .. tostring(result))
+  luassert.truthy(trigger == "trigger-handle", "trigger handle must be forwarded; got " .. tostring(trigger))
+  luassert.truthy(seen ~= nil and seen.desc == desc and seen.handler == handler,
     "registration must forward desc and handler unchanged")
 end
 
