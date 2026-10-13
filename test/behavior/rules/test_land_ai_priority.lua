@@ -14,6 +14,13 @@ local _resolve_landing = support.resolve_landing
 local choice_resolver = require("src.rules.choice.resolver")
 
 local _config_reset = require("test.support.config_reset")
+local saved_agent_module
+before_each(function()
+  saved_agent_module = package.loaded["src.computer.agent"]
+end)
+after_each(function()
+  package.loaded["src.computer.agent"] = saved_agent_module
+end)
 
 local function _require_upvalue(fn, expected_name)
   luassert.truthy(debug and type(debug.getupvalue) == "function", "debug.getupvalue should be available for characterization tests")
