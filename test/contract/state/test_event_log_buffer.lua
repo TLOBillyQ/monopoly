@@ -1,21 +1,21 @@
-local lu = require("luaunit")
+local luassert = assert
 
 local event_log = require("src.state.event_log")
 
-TestEventLogBuffer = {}
+describe("TestEventLogBuffer", function()
 
-function TestEventLogBuffer:test_appends_directly_without_active_buffer()
+it("test_appends_directly_without_active_buffer", function()
   local log = event_log.new()
 
   event_log.append(log, { kind = "direct", text = "line1" })
 
   local entries = event_log.get_entries(log)
-  lu.assertEquals(#entries, 1)
-  lu.assertEquals(entries[1].text, "line1")
-  lu.assertEquals(entries[1].seq, 1)
-end
+  luassert.is.equal(1, #entries)
+  luassert.is.equal("line1", entries[1].text)
+  luassert.is.equal(1, entries[1].seq)
+end)
 
-function TestEventLogBuffer:test_push_then_append_writes_entries_directly_and_tracks_pending()
+it("test_push_then_append_writes_entries_directly_and_tracks_pending", function()
   local log = event_log.new()
   local hold = {}
 
@@ -25,21 +25,21 @@ function TestEventLogBuffer:test_push_then_append_writes_entries_directly_and_tr
   event_log.append(log, { kind = "k", text = "c" })
 
   local entries = event_log.get_entries(log)
-  lu.assertEquals(#entries, 3)
-  lu.assertEquals(entries[1].text, "a")
-  lu.assertEquals(entries[2].text, "b")
-  lu.assertEquals(entries[3].text, "c")
-  lu.assertEquals(event_log.get_seq(log), 3)
-  lu.assertEquals(#hold.pending, 3)
+  luassert.is.equal(3, #entries)
+  luassert.is.equal("a", entries[1].text)
+  luassert.is.equal("b", entries[2].text)
+  luassert.is.equal("c", entries[3].text)
+  luassert.is.equal(3, event_log.get_seq(log))
+  luassert.is.equal(3, #hold.pending)
 
   event_log.flush_buffer(hold)
 
-  lu.assertEquals(#event_log.get_entries(log), 3)
-  lu.assertNil(hold.pending)
-  lu.assertNil(hold._event_log_ref)
-end
+  luassert.is.equal(3, #event_log.get_entries(log))
+  luassert.is_nil(hold.pending)
+  luassert.is_nil(hold._event_log_ref)
+end)
 
-function TestEventLogBuffer:test_pop_after_append_leaves_entries_written_and_clears_pending_ref()
+it("test_pop_after_append_leaves_entries_written_and_clears_pending_ref", function()
   local log = event_log.new()
   local hold = {}
 
@@ -48,12 +48,12 @@ function TestEventLogBuffer:test_pop_after_append_leaves_entries_written_and_cle
   event_log.append(log, { kind = "k", text = "y" })
   event_log.pop_buffer(hold)
 
-  lu.assertEquals(#event_log.get_entries(log), 2)
-  lu.assertEquals(event_log.get_seq(log), 2)
-  lu.assertNil(hold._event_log_ref)
-end
+  luassert.is.equal(2, #event_log.get_entries(log))
+  luassert.is.equal(2, event_log.get_seq(log))
+  luassert.is_nil(hold._event_log_ref)
+end)
 
-function TestEventLogBuffer:test_nested_push_routes_pending_tracking_to_top_buffer()
+it("test_nested_push_routes_pending_tracking_to_top_buffer", function()
   local log = event_log.new()
   local hold_a = {}
   local hold_b = {}
@@ -62,17 +62,16 @@ function TestEventLogBuffer:test_nested_push_routes_pending_tracking_to_top_buff
   event_log.push_buffer(log, hold_b)
   event_log.append(log, { kind = "k", text = "inner" })
 
-  lu.assertEquals(#event_log.get_entries(log), 1)
-  lu.assertEquals(#hold_b.pending, 1)
-  lu.assertNil(hold_a.pending[1])
+  luassert.is.equal(1, #event_log.get_entries(log))
+  luassert.is.equal(1, #hold_b.pending)
+  luassert.is_nil(hold_a.pending[1])
 
   event_log.flush_buffer(hold_b)
   event_log.append(log, { kind = "k", text = "outer" })
 
-  lu.assertEquals(#event_log.get_entries(log), 2)
-  lu.assertEquals(#hold_a.pending, 1)
-  lu.assertEquals(hold_a.pending[1].text, "outer")
-end
+  luassert.is.equal(2, #event_log.get_entries(log))
+  luassert.is.equal(1, #hold_a.pending)
+  luassert.is.equal("outer", hold_a.pending[1].text)
+end)
 
-
-return TestEventLogBuffer
+end)

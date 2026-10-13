@@ -1,5 +1,5 @@
 -- luacheck: ignore 211
-local lu = require("luaunit")
+local luassert = assert
 local support = require("test.support.shared_support")
 local shared_support = require("test.support.shared_support")
 
@@ -11,17 +11,20 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local turn_roll = require("src.turn.phases.roll")
 local turn_move = require("src.turn.phases.move")
 
-TestUsecaseBoundary = {}
+describe("TestUsecaseBoundary", function()
+  after_each(function()
+    support.restore_runtime_services()
+  end)
 
-function TestUsecaseBoundary:test_turn_action_port_resolve_defaults()
+  it("test_turn_action_port_resolve_defaults", function()
   local resolved = turn_action_port.resolve({}, nil)
   local res = resolved.dispatch_action({}, {}, { type = "noop" }, {})
-  lu.assertIs(res.status, "rejected", "default dispatch_action should reject")
-  lu.assertIs(resolved.should_block_action({}, { type = "noop" }), false,
+  luassert.is.equal("rejected", res.status, "default dispatch_action should reject")
+  luassert.is.equal(false, resolved.should_block_action({}, { type = "noop" }),
     "default should_block_action should be false")
-end
+  end)
 
-function TestUsecaseBoundary:test_turn_action_port_override_precedence()
+  it("test_turn_action_port_override_precedence", function()
   local calls = 0
   local state = {
     turn_action_port = {
@@ -46,13 +49,13 @@ function TestUsecaseBoundary:test_turn_action_port_override_precedence()
     },
   })
   local res = resolved.dispatch_action({}, {}, { type = "noop" }, {})
-  lu.assertIs(res.status, "override", "override port should take precedence over state port")
-  lu.assertIs(calls, 1, "dispatch should call override implementation once")
-  lu.assertIs(resolved.should_block_action({}, { type = "noop" }), true,
+  luassert.is.equal("override", res.status, "override port should take precedence over state port")
+  luassert.is.equal(1, calls, "dispatch should call override implementation once")
+  luassert.is.equal(true, resolved.should_block_action({}, { type = "noop" }),
     "override should_block_action should take precedence")
-end
+  end)
 
-function TestUsecaseBoundary:test_turn_action_port_normalize_auto_intent_contract()
+  it("test_turn_action_port_normalize_auto_intent_contract", function()
   local state = {}
   local intent = { type = "ui_button", id = "auto", actor_role_id = 7 }
   support.with_patches({
@@ -60,31 +63,31 @@ function TestUsecaseBoundary:test_turn_action_port_normalize_auto_intent_contrac
     { key = "UIManager", value = { client_role = nil } },
   }, function()
     local out = turn_action_port.normalize_auto_intent(state, intent)
-    lu.assertIs(out.type, "ui_button", "normalize should preserve type")
-    lu.assertIs(out.id, "auto", "normalize should preserve button id")
-    lu.assertIs(out.actor_role_id, 7, "normalize should preserve actor role fallback")
+    luassert.is.equal("ui_button", out.type, "normalize should preserve type")
+    luassert.is.equal("auto", out.id, "normalize should preserve button id")
+    luassert.is.equal(7, out.actor_role_id, "normalize should preserve actor role fallback")
   end)
-end
+  end)
 
-function TestUsecaseBoundary:test_turn_action_port_normalize_auto_intent_rejects_missing_actor()
+  it("test_turn_action_port_normalize_auto_intent_rejects_missing_actor", function()
   local state = {}
   local intent = { type = "ui_button", id = "auto" }
   support.with_patches({
     { key = "UIManager", value = { client_role = nil } },
   }, function()
     local out = turn_action_port.normalize_auto_intent(state, intent)
-    lu.assertIs(out, nil, "normalize should reject auto intent without actor context")
+    luassert.is.equal(nil, out, "normalize should reject auto intent without actor context")
   end)
-end
+  end)
 
-function TestUsecaseBoundary:test_gameplay_loop_clock_contract_split_sources()
+  it("test_gameplay_loop_clock_contract_split_sources", function()
   runtime_ports.reset_for_tests()
   local default_ports = gameplay_loop_ports.resolve(nil)
   local default_clock = default_ports.clock
-  lu.assertIs(default_clock.wall_now_seconds(), 0, "default wall clock should be environment-agnostic zero fallback")
-  lu.assertIs(default_clock.wall_diff_seconds(9, 7), 2, "default wall diff should stay arithmetic fallback")
-  lu.assertIs(default_clock.cpu_now_seconds(), 0, "default cpu clock should be environment-agnostic zero fallback")
-  lu.assertIs(default_clock.cpu_diff_seconds(9, 7), 2, "default cpu diff should remain arithmetic")
+  luassert.is.equal(0, default_clock.wall_now_seconds(), "default wall clock should be environment-agnostic zero fallback")
+  luassert.is.equal(2, default_clock.wall_diff_seconds(9, 7), "default wall diff should stay arithmetic fallback")
+  luassert.is.equal(0, default_clock.cpu_now_seconds(), "default cpu clock should be environment-agnostic zero fallback")
+  luassert.is.equal(2, default_clock.cpu_diff_seconds(9, 7), "default cpu diff should remain arithmetic")
 
   runtime_ports.configure({
     wall_now_seconds = function() return 42 end,
@@ -109,14 +112,14 @@ function TestUsecaseBoundary:test_gameplay_loop_clock_contract_split_sources()
     },
   })
   local clock = injected_ports.clock
-  lu.assertIs(clock.wall_now_seconds(), 42, "injected wall clock should be used when provided")
-  lu.assertIs(clock.wall_diff_seconds(9, 7), 20, "injected wall diff should preserve injected semantics")
-  lu.assertIs(clock.cpu_now_seconds(), 1.5, "injected cpu clock should be used when provided")
-  lu.assertIs(clock.cpu_diff_seconds(9, 7), 2, "injected cpu diff should remain arithmetic")
+  luassert.is.equal(42, clock.wall_now_seconds(), "injected wall clock should be used when provided")
+  luassert.is.equal(20, clock.wall_diff_seconds(9, 7), "injected wall diff should preserve injected semantics")
+  luassert.is.equal(1.5, clock.cpu_now_seconds(), "injected cpu clock should be used when provided")
+  luassert.is.equal(2, clock.cpu_diff_seconds(9, 7), "injected cpu diff should remain arithmetic")
   runtime_ports.reset_for_tests()
-end
+  end)
 
-function TestUsecaseBoundary:test_choice_contract_copies_explicit_fields_once()
+  it("test_choice_contract_copies_explicit_fields_once", function()
   local choice_contract = require("src.config.choice.contract")
   local source = {
     route_key = "target",
@@ -137,40 +140,40 @@ function TestUsecaseBoundary:test_choice_contract_copies_explicit_fields_once()
   }
   local target = {}
   choice_contract.copy_explicit_fields(source, target)
-  lu.assertIs(target.route_key, "target", "contract should copy route_key")
-  lu.assertIs(target.pre_confirm_on_select, false, "contract should copy select pre-confirm flag")
-  lu.assertIs(target.owner_role_id, 8, "contract should copy owner_role_id")
-  lu.assertIs(target.page_count, 3, "contract should copy market paging fields")
-  lu.assertIs(target.phase, nil, "contract should keep phase in meta")
-  lu.assertIs(target.queue, nil, "contract should keep queue in meta")
-  lu.assertIs(target.effect_ids, nil, "contract should keep effect_ids in meta")
-  lu.assertIs(target.move_result, nil, "contract should keep move_result in meta")
-end
+  luassert.is.equal("target", target.route_key, "contract should copy route_key")
+  luassert.is.equal(false, target.pre_confirm_on_select, "contract should copy select pre-confirm flag")
+  luassert.is.equal(8, target.owner_role_id, "contract should copy owner_role_id")
+  luassert.is.equal(3, target.page_count, "contract should copy market paging fields")
+  luassert.is.equal(nil, target.phase, "contract should keep phase in meta")
+  luassert.is.equal(nil, target.queue, "contract should keep queue in meta")
+  luassert.is.equal(nil, target.effect_ids, "contract should keep effect_ids in meta")
+  luassert.is.equal(nil, target.move_result, "contract should keep move_result in meta")
+  end)
 
-function TestUsecaseBoundary:test_gameplay_loop_output_port_defaults_to_ui_runtime_only()
+  it("test_gameplay_loop_output_port_defaults_to_ui_runtime_only", function()
   local resolved = gameplay_loop_ports.resolve(nil)
   local state = {}
   local changed = resolved.output.invalidate_ui_model(state)
-  lu.assertIs(changed, true, "default output.invalidate_ui_model should mark ui_runtime dirty")
-  lu.assertIs(state.ui_dirty, nil, "default output.invalidate_ui_model should not mark legacy state.ui_dirty")
-  lu.assertIs(state.ui_runtime and state.ui_runtime.ui_dirty, true,
+  luassert.is.equal(true, changed, "default output.invalidate_ui_model should mark ui_runtime dirty")
+  luassert.is.equal(nil, state.ui_dirty, "default output.invalidate_ui_model should not mark legacy state.ui_dirty")
+  luassert.is.equal(true, state.ui_runtime and state.ui_runtime.ui_dirty,
     "default output.invalidate_ui_model should write ui_runtime")
   local changed_again = resolved.output.invalidate_ui_model(state)
-  lu.assertIs(changed_again, false,
+  luassert.is.equal(false, changed_again,
     "default output.invalidate_ui_model should be idempotent when ui_runtime already dirty")
-end
+  end)
 
-function TestUsecaseBoundary:test_output_state_adapter_exposes_invalidate_ui_model_only()
+  it("test_output_state_adapter_exposes_invalidate_ui_model_only", function()
   local output_state_adapter = require("src.turn.output.state_adapter")
   local output = output_state_adapter.build_runtime_output_ports()
   local state = {}
   local changed = output.invalidate_ui_model(state)
-  lu.assertIs(changed, true, "runtime output.invalidate_ui_model should mark ui_runtime dirty")
-  lu.assertIs(state.ui_runtime and state.ui_runtime.ui_dirty, true,
+  luassert.is.equal(true, changed, "runtime output.invalidate_ui_model should mark ui_runtime dirty")
+  luassert.is.equal(true, state.ui_runtime and state.ui_runtime.ui_dirty,
     "invalidate_ui_model should write ui_runtime dirty state")
-end
+  end)
 
-function TestUsecaseBoundary:test_gameplay_loop_output_port_override_precedence()
+  it("test_gameplay_loop_output_port_override_precedence", function()
   local calls = 0
   local resolved = gameplay_loop_ports.resolve({
     output = {
@@ -183,13 +186,13 @@ function TestUsecaseBoundary:test_gameplay_loop_output_port_override_precedence(
   })
   local state = {}
   local changed = resolved.output.invalidate_ui_model(state)
-  lu.assertIs(changed, true, "override output.invalidate_ui_model should return override result")
-  lu.assertIs(calls, 1, "override output.invalidate_ui_model should be called once")
-  lu.assertIs(state.override_called, true, "override output.invalidate_ui_model should receive state")
-  lu.assertIs(state.ui_dirty, nil, "override output.invalidate_ui_model should bypass default ui_dirty bridge")
-end
+  luassert.is.equal(true, changed, "override output.invalidate_ui_model should return override result")
+  luassert.is.equal(1, calls, "override output.invalidate_ui_model should be called once")
+  luassert.is.equal(true, state.override_called, "override output.invalidate_ui_model should receive state")
+  luassert.is.equal(nil, state.ui_dirty, "override output.invalidate_ui_model should bypass default ui_dirty bridge")
+  end)
 
-function TestUsecaseBoundary:test_gameplay_loop_output_port_override_requires_invalidate_ui_model()
+  it("test_gameplay_loop_output_port_override_requires_invalidate_ui_model", function()
   local calls = 0
   local resolved = gameplay_loop_ports.resolve({
     output = {
@@ -202,12 +205,12 @@ function TestUsecaseBoundary:test_gameplay_loop_output_port_override_requires_in
   })
   local state = {}
   local changed = resolved.output.invalidate_ui_model(state)
-  lu.assertIs(changed, true, "invalidate_ui_model override should satisfy invalidate_ui_model")
-  lu.assertIs(calls, 1, "invalidate_ui_model override should be called once")
-  lu.assertIs(state.override_called, true, "invalidate_ui_model override should receive state")
-end
+  luassert.is.equal(true, changed, "invalidate_ui_model override should satisfy invalidate_ui_model")
+  luassert.is.equal(1, calls, "invalidate_ui_model override should be called once")
+  luassert.is.equal(true, state.override_called, "invalidate_ui_model override should receive state")
+  end)
 
-function TestUsecaseBoundary:test_sync_input_blocked_does_not_invalidate_ui_model_on_unblock()
+  it("test_sync_input_blocked_does_not_invalidate_ui_model_on_unblock", function()
   local state = {
     ui = {
       input_blocked = true,
@@ -234,19 +237,19 @@ function TestUsecaseBoundary:test_sync_input_blocked_does_not_invalidate_ui_mode
 
   local changed = gameplay_loop_runtime.sync_input_blocked(state, "wait_action", ports)
 
-  lu.assertIs(changed, true, "sync_input_blocked should still report a changed gate state")
-  lu.assertIs(state.ui.input_blocked, false, "sync_input_blocked should release input block outside blocked phases")
-  lu.assertIs(invalidations, 0, "sync_input_blocked should not invalidate ui_model on unblock")
-end
+  luassert.is.equal(true, changed, "sync_input_blocked should still report a changed gate state")
+  luassert.is.equal(false, state.ui.input_blocked, "sync_input_blocked should release input block outside blocked phases")
+  luassert.is.equal(0, invalidations, "sync_input_blocked should not invalidate ui_model on unblock")
+  end)
 
-function TestUsecaseBoundary:test_bankruptcy_feedback_port_defaults_to_no_op_port()
+  it("test_bankruptcy_feedback_port_defaults_to_no_op_port", function()
   local game = support.new_game({ ai = {} })
   local player = game.players[1]
   local handled = bankruptcy_feedback_port.on_tiles_cleared(game, player, { 1, 2 })
-  lu.assertIs(handled, false, "default bankruptcy feedback port should be a no-op false fallback")
-end
+  luassert.is.equal(false, handled, "default bankruptcy feedback port should be a no-op false fallback")
+  end)
 
-function TestUsecaseBoundary:test_turn_roll_uses_anim_gate_port_without_ui_port()
+  it("test_turn_roll_uses_anim_gate_port_without_ui_port", function()
   local game = support.new_game({ ai = {} })
   local player = game:current_player()
   game.ui_port = nil
@@ -262,12 +265,12 @@ function TestUsecaseBoundary:test_turn_roll_uses_anim_gate_port_without_ui_port(
     total = 3,
   })
 
-  lu.assertIs(next_state, "wait_action_anim", "turn_roll should use anim_gate_port when deciding action anim wait")
-  lu.assertIs(next_args.next_state, "roll", "turn_roll should resume into roll after action anim")
-  lu.assertIs(game.turn.action_anim.kind, "roll", "turn_roll should still queue roll animation")
-end
+  luassert.is.equal("wait_action_anim", next_state, "turn_roll should use anim_gate_port when deciding action anim wait")
+  luassert.is.equal("roll", next_args.next_state, "turn_roll should resume into roll after action anim")
+  luassert.is.equal("roll", game.turn.action_anim.kind, "turn_roll should still queue roll animation")
+  end)
 
-function TestUsecaseBoundary:test_turn_move_uses_anim_gate_port_without_ui_port()
+  it("test_turn_move_uses_anim_gate_port_without_ui_port", function()
   local game = support.new_game({ ai = {} })
   local player = game:current_player()
   game.ui_port = nil
@@ -283,19 +286,19 @@ function TestUsecaseBoundary:test_turn_move_uses_anim_gate_port_without_ui_port(
     total = 1,
   })
 
-  lu.assertIs(next_state, "wait_move_anim", "turn_move should use anim_gate_port when deciding move anim wait")
-  lu.assertIs(next_args.next_state, "move_followup", "turn_move should resume into move_followup after move anim")
-  lu.assertIs(game.turn.move_anim.player_id, player.id, "turn_move should still queue move animation")
-  lu.assertIs(game.last_turn.move_result, nil, "turn_move should not publish move_result before move anim completes")
-end
+  luassert.is.equal("wait_move_anim", next_state, "turn_move should use anim_gate_port when deciding move anim wait")
+  luassert.is.equal("move_followup", next_args.next_state, "turn_move should resume into move_followup after move anim")
+  luassert.is.equal(player.id, game.turn.move_anim.player_id, "turn_move should still queue move animation")
+  luassert.is.equal(nil, game.last_turn.move_result, "turn_move should not publish move_result before move anim completes")
+  end)
 
-function TestUsecaseBoundary:test_chance_uses_injected_rng_without_lua_api_rand()
+  it("test_chance_uses_injected_rng_without_lua_api_rand", function()
   local game = support.new_game({ ai = {} })
   local player = game:current_player()
   local chance_idx = game.board:find_first_by_type("chance")
-  lu.assertNotNil(chance_idx, "missing chance tile")
+  luassert.is_not_nil(chance_idx, "missing chance tile")
   local chance_tile = game.board:get_tile(chance_idx)
-  lu.assertNotNil(chance_tile, "missing chance tile ref")
+  luassert.is_not_nil(chance_tile, "missing chance tile ref")
   game:update_player_position(player, chance_idx)
   game.anim_gate_port = {
     wait_action_anim = true,
@@ -303,8 +306,8 @@ function TestUsecaseBoundary:test_chance_uses_injected_rng_without_lua_api_rand(
   }
   game.rng = {
     next_int = function(_, min, max)
-      lu.assertIs(min, 1, "chance should start rng range at 1")
-      lu.assertTrue(max > 0, "chance should use a positive rng upper bound")
+      luassert.is.equal(1, min, "chance should start rng range at 1")
+      luassert.is_true(max > 0, "chance should use a positive rng upper bound")
       return 1
     end,
   }
@@ -320,11 +323,9 @@ function TestUsecaseBoundary:test_chance_uses_injected_rng_without_lua_api_rand(
     shared_support.resolve_landing(game, player, chance_tile, {})
   end)
 
-  lu.assertIs(game.turn.action_anim and game.turn.action_anim.kind, "chance",
+  luassert.is.equal("chance", game.turn.action_anim and game.turn.action_anim.kind,
     "chance should queue chance anim through injected rng")
-  lu.assertIs(game.turn.action_anim.card_id, 3001,
+  luassert.is.equal(3001, game.turn.action_anim.card_id,
     "chance should deterministically pick the first card from injected rng")
-end
-
-
-return TestUsecaseBoundary
+  end)
+end)

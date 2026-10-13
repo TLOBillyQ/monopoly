@@ -44,11 +44,14 @@ function M.check(entries)
   local violations = {}
   for _, entry in ipairs(entries or {}) do
     local path, source = entry.path, tostring(entry.source or "")
-    if path == M.LOADER_PATH then
-      _check_forbidden(path, source, _LOADER_FORBIDDEN, violations)
-    else
-      _check_forbidden(path, source, _FORBIDDEN, violations)
-      for _, required in ipairs(_REQUIRED) do
+    _check_forbidden(path, source, _LOADER_FORBIDDEN, violations)
+    if path ~= M.LOADER_PATH then
+      -- Busted's cache loader verifies direct luassert requires as well as
+      -- the injected object. The legacy phase alone requires explicit loader.
+      local forbidden = _FORBIDDEN
+      if entry.backend == "busted" then forbidden = { _FORBIDDEN[1], _FORBIDDEN[2] } end
+      _check_forbidden(path, source, forbidden, violations)
+      for _, required in ipairs(entry.backend == "busted" and {} or _REQUIRED) do
         if not source:find(required.literal, 1, true) then
           violations[#violations + 1] = string.format("%s: %s(缺 %q)", path, required.message, required.literal)
         end
@@ -69,15 +72,15 @@ function M.run()
     migrated[path] = true
   end
   for _, path in ipairs(paths) do
-    -- Real busted owns the verified luassert object for migrated files. Loader
-    -- provenance remains mandatory for every pilot still on the old backend.
-    if not migrated[path] then
+    -- Busted verifies its assertion object before loading specs. Migrated
+    -- sources still forbid replacing global assert; legacy sources use loader.
     local source, err = fs_lib.read_file(env.repo_root .. "/" .. path)
     if source == nil then
       return { ok = false, error = "luassert_migration_pilot_guard error: " .. tostring(err) }
     end
-    entries[#entries + 1] = { path = path, source = source }
-    end
+    entries[#entries + 1] = {
+      path = path, source = source, backend = migrated[path] and "busted" or "legacy",
+    }
   end
   local violations = M.check(entries)
   if #violations > 0 then return { ok = false, error = table.concat(violations, "\n") } end

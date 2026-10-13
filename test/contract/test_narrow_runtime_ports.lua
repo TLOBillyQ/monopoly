@@ -1,5 +1,5 @@
 ---@diagnostic disable: undefined-global, undefined-field
-local lu = require("luaunit")
+local luassert = assert
 
 local support = require("test.support.shared_support")
 
@@ -7,9 +7,9 @@ local action_anim_port = require("src.foundation.ports.action_anim")
 local turn_roll = require("src.turn.phases.roll")
 local turn_move = require("src.turn.phases.move")
 
-TestNarrowRuntimePorts = {}
+describe("TestNarrowRuntimePorts", function()
 
-function TestNarrowRuntimePorts:test_action_anim_port_requires_anim_gate_port()
+  it("test_action_anim_port_requires_anim_gate_port", function()
   local game = support.new_game({ ai = {} })
   game.anim_gate_port = nil
   game.ui_port = {
@@ -20,13 +20,13 @@ function TestNarrowRuntimePorts:test_action_anim_port_requires_anim_gate_port()
     action_anim_port.is_enabled(game)
   end)
 
-  lu.assertEquals(ok, false, "action_anim_port should reject missing anim_gate_port")
-  lu.assertNotNil(err, "action_anim_port should report missing anim_gate_port")
-  lu.assertTrue(tostring(err):find("missing anim_gate_port", 1, true) ~= nil,
+  luassert.is.equal(false, ok, "action_anim_port should reject missing anim_gate_port")
+  luassert.is_not_nil(err, "action_anim_port should report missing anim_gate_port")
+  luassert.is_true(tostring(err):find("missing anim_gate_port", 1, true) ~= nil,
     "action_anim_port should report missing anim_gate_port")
-end
+  end)
 
-function TestNarrowRuntimePorts:test_turn_roll_rejects_missing_anim_gate_port_even_with_ui_port()
+  it("test_turn_roll_rejects_missing_anim_gate_port_even_with_ui_port", function()
   local game = support.new_game({ ai = {} })
   local player = game:current_player()
   game.anim_gate_port = nil
@@ -43,13 +43,13 @@ function TestNarrowRuntimePorts:test_turn_roll_rejects_missing_anim_gate_port_ev
     })
   end)
 
-  lu.assertEquals(ok, false, "turn_roll should reject missing anim_gate_port")
-  lu.assertNotNil(err, "turn_roll should report missing anim_gate_port")
-  lu.assertTrue(tostring(err):find("missing anim_gate_port", 1, true) ~= nil,
+  luassert.is.equal(false, ok, "turn_roll should reject missing anim_gate_port")
+  luassert.is_not_nil(err, "turn_roll should report missing anim_gate_port")
+  luassert.is_true(tostring(err):find("missing anim_gate_port", 1, true) ~= nil,
     "turn_roll should report missing anim_gate_port")
-end
+  end)
 
-function TestNarrowRuntimePorts:test_turn_move_rejects_missing_anim_gate_port_even_with_ui_port()
+  it("test_turn_move_rejects_missing_anim_gate_port_even_with_ui_port", function()
   local game = support.new_game({ ai = {} })
   local player = game:current_player()
   game.last_turn = game.last_turn or {}
@@ -66,11 +66,9 @@ function TestNarrowRuntimePorts:test_turn_move_rejects_missing_anim_gate_port_ev
     })
   end)
 
-  lu.assertEquals(ok, false, "turn_move should reject missing anim_gate_port")
-  lu.assertNotNil(err, "turn_move should report missing anim_gate_port")
-  lu.assertTrue(tostring(err):find("missing anim_gate_port", 1, true) ~= nil,
+  luassert.is.equal(false, ok, "turn_move should reject missing anim_gate_port")
+  luassert.is_not_nil(err, "turn_move should report missing anim_gate_port")
+  luassert.is_true(tostring(err):find("missing anim_gate_port", 1, true) ~= nil,
     "turn_move should report missing anim_gate_port")
-end
-
-
-return TestNarrowRuntimePorts
+  end)
+end)
