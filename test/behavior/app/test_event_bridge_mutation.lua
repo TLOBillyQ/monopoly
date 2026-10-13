@@ -3,9 +3,10 @@
 -- callback, invoke it, and observe that state.game is set from get_current_game.
 --
 -- 原生 LuaUnit 改写:无钩子 describe → 文件级 TestEventBridgeMutation 单类
--- (不拆类),语句位裸 assert → lu.assertEvalToTrue。用例数与改写前一一对应(1 例)。
+-- (不拆类),语句位裸 assert → luassert.truthy。用例数与改写前一一对应(1 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local runtime_context = require("src.host.context")
 local visual_hold = require("src.ui.visual_hold")
 local event_bridge = require("src.app.event_bridge")
@@ -50,8 +51,8 @@ function TestEventBridgeMutation:test_uninstall_removes_both_registered_event_ca
   runtime_context.set_current(saved_ctx)
 
   local events = require("src.foundation.events")
-  lu.assertNil(active_callbacks[triggers_by_name[events.land.tile_upgraded]])
-  lu.assertNil(active_callbacks[triggers_by_name[events.intent.need_choice]])
+  luassert.is_nil(active_callbacks[triggers_by_name[events.land.tile_upgraded]])
+  luassert.is_nil(active_callbacks[triggers_by_name[events.intent.need_choice]])
 end
 
 function TestEventBridgeMutation:test_uninstall_is_idempotent()
@@ -65,7 +66,7 @@ function TestEventBridgeMutation:test_uninstall_is_idempotent()
 
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEquals(#unregistered, 2)
+  luassert.is.equal(2, #unregistered)
 end
 
 function TestEventBridgeMutation:test_repeated_install_does_not_register_duplicate_events()
@@ -85,7 +86,7 @@ function TestEventBridgeMutation:test_repeated_install_does_not_register_duplica
 
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEquals(register_count, 2)
+  luassert.is.equal(2, register_count)
 end
 
 function TestEventBridgeMutation:test_stores_the_get_current_game_result_on_state_game_when_an_event_fires_L16_nil()
@@ -121,9 +122,9 @@ function TestEventBridgeMutation:test_stores_the_get_current_game_result_on_stat
   visual_hold.run_or_defer = saved_run_or_defer
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEvalToTrue(fired, "at least one event must have been registered to invoke")
+  luassert.truthy(fired, "at least one event must have been registered to invoke")
   -- L16 `get_current_game()` -> nil would leave state.game = nil.
-  lu.assertEvalToTrue(state.game == sentinel_game,
+  luassert.truthy(state.game == sentinel_game,
     "state.game must be the get_current_game() result; got " .. tostring(state.game))
 end
 
@@ -131,15 +132,15 @@ end
 -- survivor 全属此族;补钉后逐条击杀。
 
 function TestEventBridgeMutation:test_install_asserts_missing_state_L9_nil()
-  lu.assertErrorMsgContains("missing state", function()
+  luassert.has_error.match(function()
     event_bridge.install(nil, function() end)
-  end)
+  end, "missing state", 1, true)
 end
 
 function TestEventBridgeMutation:test_install_asserts_missing_get_current_game_L10_nil()
-  lu.assertErrorMsgContains("missing get_current_game", function()
+  luassert.has_error.match(function()
     event_bridge.install({}, nil)
-  end)
+  end, "missing get_current_game", 1, true)
 end
 
 function TestEventBridgeMutation:test_install_asserts_when_event_registration_fails_L26_nil()
@@ -157,8 +158,8 @@ function TestEventBridgeMutation:test_install_asserts_when_event_registration_fa
     event_bridge.install({}, function() end)
   end)
   runtime_context.set_current(saved_ctx)
-  lu.assertEvalToTrue(ok == false, "failed registration should assert")
-  lu.assertEvalToTrue(tostring(err):find("global_register_custom_event", 1, true) ~= nil,
+  luassert.truthy(ok == false, "failed registration should assert")
+  luassert.truthy(tostring(err):find("global_register_custom_event", 1, true) ~= nil,
     "assert should name the missing LuaAPI function: " .. tostring(err))
 end
 
@@ -191,9 +192,9 @@ function TestEventBridgeMutation:test_run_or_defer_carries_the_runtime_event_sou
   visual_hold.run_or_defer = saved_run_or_defer
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEvalToTrue(fired, "at least one event must have been registered to invoke")
+  luassert.truthy(fired, "at least one event must have been registered to invoke")
   -- L15 `"runtime_event"` -> nil would leave the source label nil.
-  lu.assertEvalToTrue(seen_source == "runtime_event",
+  luassert.truthy(seen_source == "runtime_event",
     "run_or_defer must carry the runtime_event source; got " .. tostring(seen_source))
 end
 
