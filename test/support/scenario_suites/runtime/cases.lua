@@ -1,5 +1,8 @@
 ---@diagnostic disable
 -- luacheck: ignore 113 122
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local control = require("src.player.control")
 local function make_cases(helpers)
   local _ENV = helpers
@@ -19,14 +22,14 @@ local function _test_turn_start_does_not_pollute_action_log()
   event_log.clear(g.state.event_log)
   turn_decision.log_turn_start(g)
   local text = event_log.get_text(g.state.event_log)
-  assert(string.find(text, "第1回合开始：", 1, true) == nil,
+  luassert.truthy(string.find(text, "第1回合开始：", 1, true) == nil,
     "turn start should not enter the action log")
-  assert(string.find(text, g.players[1].name, 1, true) == nil,
+  luassert.truthy(string.find(text, g.players[1].name, 1, true) == nil,
     "turn start should not add a player status line")
-  assert(string.find(text, "金币=", 1, true) == nil, "turn start event should not include player balance")
-  assert(string.find(text, "状态:", 1, true) == nil, "turn start event should not include player status details")
-  assert(string.find(text, "背包:", 1, true) == nil, "turn start event should not include player items")
-  assert(string.find(text, "地产:", 1, true) == nil, "turn start event should not include player properties")
+  luassert.truthy(string.find(text, "金币=", 1, true) == nil, "turn start event should not include player balance")
+  luassert.truthy(string.find(text, "状态:", 1, true) == nil, "turn start event should not include player status details")
+  luassert.truthy(string.find(text, "背包:", 1, true) == nil, "turn start event should not include player items")
+  luassert.truthy(string.find(text, "地产:", 1, true) == nil, "turn start event should not include player properties")
 end
 
 local function _test_intent_dispatcher_does_not_log_waiting_choice_event()
@@ -42,7 +45,7 @@ local function _test_intent_dispatcher_does_not_log_waiting_choice_event()
     meta = { player_id = g:current_player().id, item_id = 2001 },
   }, {})
   local text = event_log.get_text(g.state.event_log)
-  assert(string.find(text, "等待选择：遥控骰子：选择点数", 1, true) == nil,
+  luassert.truthy(string.find(text, "等待选择：遥控骰子：选择点数", 1, true) == nil,
     "open_choice should not log the waiting-choice phase")
 end
 
@@ -63,8 +66,8 @@ local function _test_intent_dispatcher_dispatches_descriptor_meta_validator_with
           end,
           meta_validator = function(_, meta, choice_spec)
             validated = true
-            assert(meta.normalized == true, "descriptor meta_validator should receive normalized meta")
-            assert(choice_spec.kind == "custom_probe", "descriptor meta_validator should receive choice spec")
+            luassert.truthy(meta.normalized == true, "descriptor meta_validator should receive normalized meta")
+            luassert.truthy(choice_spec.kind == "custom_probe", "descriptor meta_validator should receive choice spec")
           end,
         }
       end,
@@ -78,8 +81,8 @@ local function _test_intent_dispatcher_dispatches_descriptor_meta_validator_with
     meta = {},
   }, {})
 
-  assert(validated == true, "dispatcher should run descriptor meta_validator even without required_meta")
-  assert(entry.meta and entry.meta.normalized == true, "dispatcher should keep normalized meta on custom descriptor choices")
+  luassert.truthy(validated == true, "dispatcher should run descriptor meta_validator even without required_meta")
+  luassert.truthy(entry.meta and entry.meta.normalized == true, "dispatcher should keep normalized meta on custom descriptor choices")
 end
 
 local function _test_intent_dispatcher_allows_missing_choice_registry()
@@ -93,8 +96,8 @@ local function _test_intent_dispatcher_allows_missing_choice_registry()
     meta = { probe = true },
   }, {})
 
-  assert(entry.kind == "custom_probe_without_registry", "dispatcher should still open choices without registry descriptors")
-  assert(entry.meta and entry.meta.probe == true, "dispatcher should preserve original meta when registry is missing")
+  luassert.truthy(entry.kind == "custom_probe_without_registry", "dispatcher should still open choices without registry descriptors")
+  luassert.truthy(entry.meta and entry.meta.probe == true, "dispatcher should preserve original meta when registry is missing")
 end
 
 local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
@@ -125,7 +128,7 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
       break
     end
   end
-  assert(found_normal_skip, "true cancel should emit skip-choice event")
+  luassert.truthy(found_normal_skip, "true cancel should emit skip-choice event")
 
   local tax_events = {}
   local tax_choice = {
@@ -146,7 +149,7 @@ local function _test_choice_cancel_logs_skip_event_but_tax_cancel_does_not()
     end,
   })
   for _, event in ipairs(tax_events) do
-    assert(not (event.text and string.find(event.text, "跳过选择", 1, true)),
+    luassert.truthy(not (event.text and string.find(event.text, "跳过选择", 1, true)),
       "tax cancel fallback should not emit skip-choice event")
   end
 end
@@ -177,7 +180,7 @@ local function _test_end_turn_logs_phase_event_to_event_feed()
       break
     end
   end
-  assert(found_end_turn, "end_turn should publish turn_end event with landing tile")
+  luassert.truthy(found_end_turn, "end_turn should publish turn_end event with landing tile")
 end
 
 local function _test_clear_obstacles_zero_does_not_log_event_noise()
@@ -185,7 +188,7 @@ local function _test_clear_obstacles_zero_does_not_log_event_noise()
   local player = g.players[1]
   item_effects.apply_post(g, player, item_ids.clear_obstacles, { branch_parity = 12 })
   local text = event_log.get_text(g.state.event_log)
-  assert(string.find(text, "清除前方障碍数：0", 1, true) == nil,
+  luassert.truthy(string.find(text, "清除前方障碍数：0", 1, true) == nil,
     "clear obstacles zero result should not enter event feed")
 end
 
@@ -201,7 +204,7 @@ local function _test_ai_obstacle_probe_does_not_enter_event_feed()
 
   item_strategy.auto_pre_action(g, player, "pre_action", { is_computer_controlled = true })
   local text = event_log.get_text(g.state.event_log)
-  assert(string.find(text, "前方发现障碍，准备使用清障卡", 1, true) == nil,
+  luassert.truthy(string.find(text, "前方发现障碍，准备使用清障卡", 1, true) == nil,
     "AI obstacle probe should not enter event feed")
 end
 
@@ -226,11 +229,11 @@ local function _test_runtime_context_split_install_stages()
     })
 
     runtime_context.install_environment(ctx)
-    assert(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
+    luassert.truthy(SetTimeOut ~= lua_api.call_delay_time, "install_environment should stay validation-only")
 
     local installed_helpers = runtime_context.install_runtime_helpers(ctx)
-    assert(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
-    assert(camera_helper == nil, "install_runtime_helpers should not export globals by default")
+    luassert.truthy(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return camera helper")
+    luassert.truthy(camera_helper == nil, "install_runtime_helpers should not export globals by default")
   end)
 end
 
@@ -253,11 +256,11 @@ local function _test_runtime_context_install_helpers_without_globals()
     })
     runtime_context.install_environment(ctx)
     local installed_helpers = runtime_context.install_runtime_helpers(ctx, { install_globals = false })
-    assert(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
-    assert(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
+    luassert.truthy(installed_helpers ~= nil and installed_helpers.camera_helper ~= nil, "install_runtime_helpers should return helpers")
+    luassert.truthy(all_roles == nil, "install_runtime_helpers install_globals=false should not write all_roles")
 
     runtime_context.install_runtime_helper_globals(helpers)
-    assert(all_roles == helpers.roles, "install_runtime_helper_globals should expose roles")
+    luassert.truthy(all_roles == helpers.roles, "install_runtime_helper_globals should expose roles")
   end)
 end
 
@@ -288,13 +291,13 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
     state = _build_startup_state(function()
       return current_game
     end)
-    assert(next(events) == nil, "build_state should not register custom events")
+    luassert.truthy(next(events) == nil, "build_state should not register custom events")
 
     game_startup_event_bridge.install(state, function()
       return current_game
     end)
-    assert(type(events[monopoly_event.land.tile_upgraded]) == "function", "bridge should register tile_upgraded")
-    assert(type(events[monopoly_event.intent.need_choice]) == "function", "bridge should register need_choice")
+    luassert.truthy(type(events[monopoly_event.land.tile_upgraded]) == "function", "bridge should register tile_upgraded")
+    luassert.truthy(type(events[monopoly_event.intent.need_choice]) == "function", "bridge should register need_choice")
 
     local opened = nil
     -- #524 时序裁定：事件路径（on_need_choice）只记账不开屏，开屏收敛到
@@ -325,8 +328,8 @@ local function _test_game_startup_build_state_is_pure_and_bridge_installs_events
     }, function()
       events[monopoly_event.intent.need_choice](nil, nil, { choice = choice_payload })
     end)
-    assert(runtime_state.get_pending_choice_id(state) == 11, "bridge should sync pending_choice_id from event")
-    assert(opened == nil, "bridge must NOT open choice modal from event; dirty refresh owns opening (#524)")
+    luassert.truthy(runtime_state.get_pending_choice_id(state) == 11, "bridge should sync pending_choice_id from event")
+    luassert.truthy(opened == nil, "bridge must NOT open choice modal from event; dirty refresh owns opening (#524)")
   end)
 end
 
@@ -347,8 +350,8 @@ local function _test_runtime_context_install_environment_fails_fast()
     local ok, err = pcall(function()
       runtime_context.install_environment(ctx)
     end)
-    assert(ok == false, "install_environment should fail when LuaAPI is incomplete")
-    assert(tostring(err):find("missing LuaAPI.global_send_custom_event") ~= nil,
+    luassert.truthy(ok == false, "install_environment should fail when LuaAPI is incomplete")
+    luassert.truthy(tostring(err):find("missing LuaAPI.global_send_custom_event") ~= nil,
       "install_environment should report missing LuaAPI.global_send_custom_event")
   end)
 end

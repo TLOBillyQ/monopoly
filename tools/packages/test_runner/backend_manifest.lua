@@ -574,6 +574,7 @@ return {
     "tools/foundation/test/test_path_join.lua",
     "tools/foundation/test/test_platform_boundary.lua",
     "tools/foundation/test/test_tap_summary.lua",
+    "tools/packages/test_runner/test/test_verified_modules.lua",
     "test/behavior/foundation/test_class.lua",
     "test/behavior/foundation/test_config_reset_isolation.lua",
     "test/behavior/foundation/test_events_pin.lua",
