@@ -8,7 +8,7 @@
 -- 用例数与改写前一一对应(17 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
@@ -86,21 +86,19 @@ local function _archive(owned, equipped)
   }
 end
 
-TestCosmeticsTransaction = {}
+describe("TestCosmeticsTransaction", function()
+  before_each(function()
+    transaction.reset_for_tests()
+    transaction.configure_catalog_for_tests(_catalog())
+  end)
 
-function TestCosmeticsTransaction:setUp()
-  transaction.reset_for_tests()
-  transaction.configure_catalog_for_tests(_catalog())
-end
+  after_each(function()
+    transaction.reset_for_tests()
+    paid_purchase_port.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestCosmeticsTransaction:tearDown()
-  transaction.reset_for_tests()
-  paid_purchase_port.reset_for_tests()
-  -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
-  support.restore_runtime_services()
-end
-
-function TestCosmeticsTransaction:test_open_restores_owned_and_auto_equips_archived_skin()
+local function _test_open_restores_owned_and_auto_equips_archived_skin()
   local state = _state()
   local archive = _archive({ ["1"] = { "skin_1" } }, { ["1"] = "skin_1" })
   local equipped = {}
@@ -118,7 +116,7 @@ function TestCosmeticsTransaction:test_open_restores_owned_and_auto_equips_archi
   _assert_eq(equipped[1] and equipped[1].product_id, "skin_1", "open should apply equipped skin to host adapter")
 end
 
-function TestCosmeticsTransaction:test_page_commands_return_results_and_support_aliases()
+local function _test_page_commands_return_results_and_support_aliases()
   transaction.configure_catalog_for_tests(_catalog_size(7))
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -143,7 +141,7 @@ function TestCosmeticsTransaction:test_page_commands_return_results_and_support_
   _assert_eq(state.ui.skin_panel.page_index, 1, "page_prev should clamp at min page")
 end
 
-function TestCosmeticsTransaction:test_page_prev_from_second_page_moves_back_one_page()
+local function _test_page_prev_from_second_page_moves_back_one_page()
   -- #293:L160 `-1` -> `0` 只在非钳制位置可分;钳制位两种变异观测相同。
   transaction.configure_catalog_for_tests(_catalog_size(7))
   local state = _state()
@@ -155,7 +153,7 @@ function TestCosmeticsTransaction:test_page_prev_from_second_page_moves_back_one
   _assert_eq(state.ui.skin_panel.page_index, 1, "page_prev should move back one page")
 end
 
-function TestCosmeticsTransaction:test_open_and_close_results_carry_dirty_and_role_fallback_fields()
+local function _test_open_and_close_results_carry_dirty_and_role_fallback_fields()
   -- #293:open 的 slot_view_dirty 与 close 的 role_id 回落未断言。
   local state = _state()
   local opened = transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -165,7 +163,7 @@ function TestCosmeticsTransaction:test_open_and_close_results_carry_dirty_and_ro
   _assert_eq(closed.role_id, 1, "close without role_id should fall back to panel.role_id")
 end
 
-function TestCosmeticsTransaction:test_unlock_result_carries_ownership_and_dirty_fields()
+local function _test_unlock_result_carries_ownership_and_dirty_fields()
   -- #293:unlock 结果的 ownership_changed/slot_view_dirty 未断言。
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -179,7 +177,7 @@ function TestCosmeticsTransaction:test_unlock_result_carries_ownership_and_dirty
   _assert_eq(unlock.slot_view_dirty, true, "unlock should dirty slots")
 end
 
-function TestCosmeticsTransaction:test_unequip_result_fields_and_notification()
+local function _test_unequip_result_fields_and_notification()
   -- #293:unequip 结果的 unequipped/slot_view_dirty/host_action_attempted/
   -- notification 未断言;无适配器时 host_action_attempted 应显式 false。
   local state = _state()
@@ -194,7 +192,7 @@ function TestCosmeticsTransaction:test_unequip_result_fields_and_notification()
   _assert_eq(unequip.notification, "已脱下皮肤", "unequip should notify")
 end
 
-function TestCosmeticsTransaction:test_unlock_commands_support_request_slot_aliases_sources_and_string_fallbacks()
+local function _test_unlock_commands_support_request_slot_aliases_sources_and_string_fallbacks()
   transaction.configure_catalog_for_tests(_catalog_size(3))
   local state = _state()
   local archive = _archive()
@@ -231,7 +229,7 @@ function TestCosmeticsTransaction:test_unlock_commands_support_request_slot_alia
   _assert_eq(string_gift_result.product_id, "skin_1", "string gift should default to slot 1")
 end
 
-function TestCosmeticsTransaction:test_unknown_transaction_returns_stable_rejection_with_panel()
+local function _test_unknown_transaction_returns_stable_rejection_with_panel()
   local state = _state()
   state.ui.skin_panel = {
     open = true,
@@ -247,7 +245,7 @@ function TestCosmeticsTransaction:test_unknown_transaction_returns_stable_reject
   luassert.truthy(result.panel == existing_panel, "unknown transaction should still expose the ensured panel")
 end
 
-function TestCosmeticsTransaction:test_locked_purchase_rejects_missing_paid_purchase_contexts()
+local function _test_locked_purchase_rejects_missing_paid_purchase_contexts()
   local missing_game = { ui = {} }
   transaction.handle_skin_transaction(missing_game, 1, { type = "open" })
   _assert_rejected(
@@ -277,7 +275,7 @@ function TestCosmeticsTransaction:test_locked_purchase_rejects_missing_paid_purc
   )
 end
 
-function TestCosmeticsTransaction:test_locked_purchase_preserves_paid_gateway_rejection_reasons_and_clears_pending()
+local function _test_locked_purchase_preserves_paid_gateway_rejection_reasons_and_clears_pending()
   local state = _state()
   local starts = 0
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -305,7 +303,7 @@ function TestCosmeticsTransaction:test_locked_purchase_preserves_paid_gateway_re
   _assert_eq(starts, 2, "failed paid gateway starts should clear pending state")
 end
 
-function TestCosmeticsTransaction:test_locked_purchase_uses_default_paid_gateway_rejection_reason()
+local function _test_locked_purchase_uses_default_paid_gateway_rejection_reason()
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
 
@@ -325,7 +323,7 @@ function TestCosmeticsTransaction:test_locked_purchase_uses_default_paid_gateway
   end)
 end
 
-function TestCosmeticsTransaction:test_locked_purchase_rejects_paid_gateway_errors()
+local function _test_locked_purchase_rejects_paid_gateway_errors()
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
 
@@ -345,7 +343,7 @@ function TestCosmeticsTransaction:test_locked_purchase_rejects_paid_gateway_erro
   end)
 end
 
-function TestCosmeticsTransaction:test_complete_skin_purchase_rejects_duplicate_or_mismatched_callback()
+local function _test_complete_skin_purchase_rejects_duplicate_or_mismatched_callback()
   local state = _state()
   local captured = nil
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -373,7 +371,7 @@ function TestCosmeticsTransaction:test_complete_skin_purchase_rejects_duplicate_
   _assert_eq(duplicate.reason, "pending_purchase_missing", "duplicate callback should have stable reason")
 end
 
-function TestCosmeticsTransaction:test_complete_skin_purchase_success_marks_purchase_complete_fields()
+local function _test_complete_skin_purchase_success_marks_purchase_complete_fields()
   -- #293:complete_skin_purchase 成功路径的 action/fulfilled/ownership 字段
   -- 未被断言,三个字段位变异存活;补钉后击杀。
   local state = _state()
@@ -396,7 +394,7 @@ function TestCosmeticsTransaction:test_complete_skin_purchase_success_marks_purc
   _assert_eq(result.ownership_changed, true, "ownership should be marked changed")
 end
 
-function TestCosmeticsTransaction:test_complete_skin_purchase_rejects_unknown_product_reason()
+local function _test_complete_skin_purchase_rejects_unknown_product_reason()
   -- #293:pending 商品在目录中消失 → missing_product 拒绝路径未测。
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -418,7 +416,7 @@ function TestCosmeticsTransaction:test_complete_skin_purchase_rejects_unknown_pr
   transaction.configure_catalog_for_tests(_catalog())
 end
 
-function TestCosmeticsTransaction:test_purchase_start_rejects_unlock_gift_with_notification()
+local function _test_purchase_start_rejects_unlock_gift_with_notification()
   -- #293:unlock ~= "purchase" 的拒绝带 notification,路径未测。
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -445,7 +443,7 @@ function TestCosmeticsTransaction:test_purchase_start_rejects_unlock_gift_with_n
   transaction.configure_catalog_for_tests(_catalog())
 end
 
-function TestCosmeticsTransaction:test_purchase_start_rejects_missing_product_id_with_notification()
+local function _test_purchase_start_rejects_missing_product_id_with_notification()
   -- #293:product_id 缺失的拒绝带 notification,路径未测。
   local state = _state()
   transaction.configure_catalog_for_tests({
@@ -458,7 +456,7 @@ function TestCosmeticsTransaction:test_purchase_start_rejects_missing_product_id
   transaction.configure_catalog_for_tests(_catalog())
 end
 
-function TestCosmeticsTransaction:test_purchase_start_failed_rejects_with_notification()
+local function _test_purchase_start_failed_rejects_with_notification()
   -- #293:付费网关拒绝时的 reason/notification 路径未测。
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -478,7 +476,7 @@ function TestCosmeticsTransaction:test_purchase_start_failed_rejects_with_notifi
   end)
 end
 
-function TestCosmeticsTransaction:test_purchase_start_marks_host_action_attempted()
+local function _test_purchase_start_marks_host_action_attempted()
   -- #293:accepted 结果的 host_action_attempted 字段未测。
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
@@ -497,7 +495,7 @@ function TestCosmeticsTransaction:test_purchase_start_marks_host_action_attempte
   end)
 end
 
-function TestCosmeticsTransaction:test_pin_native_paid_path_builds_a_skin_paid_entry_and_fulfills_without_any_ui_on_success()
+local function _test_pin_native_paid_path_builds_a_skin_paid_entry_and_fulfills_without_any_ui_on_success()
   -- 皮肤付费购买只有一条 transaction_purchase 原生 _start_via_paid_port 路径:
   -- 拼 paid entry -> paid_purchase_port.start -> entry.on_purchase 履约。
   local state = _state()
@@ -535,7 +533,7 @@ function TestCosmeticsTransaction:test_pin_native_paid_path_builds_a_skin_paid_e
     "native fulfillment equips the purchased skin")
 end
 
-function TestCosmeticsTransaction:test_locked_purchase_rejects_invalid_purchase_inputs_and_duplicate_starts()
+local function _test_locked_purchase_rejects_invalid_purchase_inputs_and_duplicate_starts()
   local missing_slot_state = _state()
   transaction.handle_skin_transaction(missing_slot_state, 1, { type = "open" })
   _assert_rejected(
@@ -591,7 +589,7 @@ function TestCosmeticsTransaction:test_locked_purchase_rejects_invalid_purchase_
   end)
 end
 
-function TestCosmeticsTransaction:test_purchase_module_guards_internal_public_entrypoints()
+local function _test_purchase_module_guards_internal_public_entrypoints()
   local state = _state()
   transaction.handle_skin_transaction(state, 1, { type = "open" })
   local panel = state.ui.skin_panel
@@ -608,7 +606,7 @@ function TestCosmeticsTransaction:test_purchase_module_guards_internal_public_en
   luassert.truthy(panel.pending_skin_purchase_by_role["1"] ~= nil, "nil role clear should leave existing pending state intact")
 end
 
-function TestCosmeticsTransaction:test_is_slot_equipped_guards_panel_role_and_slot_state()
+local function _test_is_slot_equipped_guards_panel_role_and_slot_state()
   luassert.truthy(transaction.is_slot_equipped(nil, 1) == false, "nil root state should not report equipped")
   luassert.truthy(transaction.is_slot_equipped({ ui = {} }, 1) == false, "missing panel should not report equipped")
 
@@ -630,7 +628,7 @@ function TestCosmeticsTransaction:test_is_slot_equipped_guards_panel_role_and_sl
   luassert.truthy(transaction.is_slot_equipped(state, 1) == false, "selection should be scoped to panel role")
 end
 
-function TestCosmeticsTransaction:test_slot_view_models_expose_transaction_owned_slot_state()
+local function _test_slot_view_models_expose_transaction_owned_slot_state()
   transaction.configure_catalog_for_tests({
     { product_id = "skin_1", name = "购买皮肤", unlock = "purchase", currency = "金豆", price = 198 },
     { product_id = "skin_2", name = "已装备皮肤", unlock = "purchase", currency = "金豆", price = 198 },
@@ -671,7 +669,7 @@ function TestCosmeticsTransaction:test_slot_view_models_expose_transaction_owned
     "transaction should expose the currently equipped product")
 end
 
-function TestCosmeticsTransaction:test_activate_slot_owns_equip_or_unequip_decision()
+local function _test_activate_slot_owns_equip_or_unequip_decision()
   local state = _state()
   transaction.configure_equip(function()
     return true
@@ -693,7 +691,7 @@ function TestCosmeticsTransaction:test_activate_slot_owns_equip_or_unequip_decis
   _assert_eq(transaction.equipped_product(state), nil, "activate_slot unequip should clear the selection")
 end
 
-function TestCosmeticsTransaction:test_activate_slot_honors_explicit_role_over_panel_owner()
+local function _test_activate_slot_honors_explicit_role_over_panel_owner()
   local state = _state()
   transaction.configure_equip(function()
     return true
@@ -709,7 +707,7 @@ function TestCosmeticsTransaction:test_activate_slot_honors_explicit_role_over_p
     "panel owner should stay unequipped when another role activates")
 end
 
-function TestCosmeticsTransaction:test_owned_skin_equips_without_paid_purchase_and_unequip_clears_archive()
+local function _test_owned_skin_equips_without_paid_purchase_and_unequip_clears_archive()
   local state = _state()
   local archive = _archive({ ["1"] = { "skin_2" } }, {})
   local paid_starts = 0
@@ -744,7 +742,7 @@ function TestCosmeticsTransaction:test_owned_skin_equips_without_paid_purchase_a
 end
 
 
-function TestCosmeticsTransaction:test_equip_slot_rejects_when_panel_state_missing()
+local function _test_equip_slot_rejects_when_panel_state_missing()
   _assert_rejected(
     transaction.handle_skin_transaction({}, 1, { type = "equip_slot", slot_index = 1 }),
     "missing_state"
@@ -752,4 +750,32 @@ function TestCosmeticsTransaction:test_equip_slot_rejects_when_panel_state_missi
 end
 
 
-return TestCosmeticsTransaction
+it("test_open_restores_owned_and_auto_equips_archived_skin", _test_open_restores_owned_and_auto_equips_archived_skin)
+it("test_page_commands_return_results_and_support_aliases", _test_page_commands_return_results_and_support_aliases)
+it("test_page_prev_from_second_page_moves_back_one_page", _test_page_prev_from_second_page_moves_back_one_page)
+it("test_open_and_close_results_carry_dirty_and_role_fallback_fields", _test_open_and_close_results_carry_dirty_and_role_fallback_fields)
+it("test_unlock_result_carries_ownership_and_dirty_fields", _test_unlock_result_carries_ownership_and_dirty_fields)
+it("test_unequip_result_fields_and_notification", _test_unequip_result_fields_and_notification)
+it("test_unlock_commands_support_request_slot_aliases_sources_and_string_fallbacks", _test_unlock_commands_support_request_slot_aliases_sources_and_string_fallbacks)
+it("test_unknown_transaction_returns_stable_rejection_with_panel", _test_unknown_transaction_returns_stable_rejection_with_panel)
+it("test_locked_purchase_rejects_missing_paid_purchase_contexts", _test_locked_purchase_rejects_missing_paid_purchase_contexts)
+it("test_locked_purchase_preserves_paid_gateway_rejection_reasons_and_clears_pending", _test_locked_purchase_preserves_paid_gateway_rejection_reasons_and_clears_pending)
+it("test_locked_purchase_uses_default_paid_gateway_rejection_reason", _test_locked_purchase_uses_default_paid_gateway_rejection_reason)
+it("test_locked_purchase_rejects_paid_gateway_errors", _test_locked_purchase_rejects_paid_gateway_errors)
+it("test_complete_skin_purchase_rejects_duplicate_or_mismatched_callback", _test_complete_skin_purchase_rejects_duplicate_or_mismatched_callback)
+it("test_complete_skin_purchase_success_marks_purchase_complete_fields", _test_complete_skin_purchase_success_marks_purchase_complete_fields)
+it("test_complete_skin_purchase_rejects_unknown_product_reason", _test_complete_skin_purchase_rejects_unknown_product_reason)
+it("test_purchase_start_rejects_unlock_gift_with_notification", _test_purchase_start_rejects_unlock_gift_with_notification)
+it("test_purchase_start_rejects_missing_product_id_with_notification", _test_purchase_start_rejects_missing_product_id_with_notification)
+it("test_purchase_start_failed_rejects_with_notification", _test_purchase_start_failed_rejects_with_notification)
+it("test_purchase_start_marks_host_action_attempted", _test_purchase_start_marks_host_action_attempted)
+it("test_pin_native_paid_path_builds_a_skin_paid_entry_and_fulfills_without_any_ui_on_success", _test_pin_native_paid_path_builds_a_skin_paid_entry_and_fulfills_without_any_ui_on_success)
+it("test_locked_purchase_rejects_invalid_purchase_inputs_and_duplicate_starts", _test_locked_purchase_rejects_invalid_purchase_inputs_and_duplicate_starts)
+it("test_purchase_module_guards_internal_public_entrypoints", _test_purchase_module_guards_internal_public_entrypoints)
+it("test_is_slot_equipped_guards_panel_role_and_slot_state", _test_is_slot_equipped_guards_panel_role_and_slot_state)
+it("test_slot_view_models_expose_transaction_owned_slot_state", _test_slot_view_models_expose_transaction_owned_slot_state)
+it("test_activate_slot_owns_equip_or_unequip_decision", _test_activate_slot_owns_equip_or_unequip_decision)
+it("test_activate_slot_honors_explicit_role_over_panel_owner", _test_activate_slot_honors_explicit_role_over_panel_owner)
+it("test_owned_skin_equips_without_paid_purchase_and_unequip_clears_archive", _test_owned_skin_equips_without_paid_purchase_and_unequip_clears_archive)
+it("test_equip_slot_rejects_when_panel_state_missing", _test_equip_slot_rejects_when_panel_state_missing)
+end)
