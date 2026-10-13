@@ -1,11 +1,6 @@
--- 原生 LuaUnit 迁移:四个顶层 describe(placeholder dispatch / failures / spec
--- binding / inline-capture patterns)均无钩子、无嵌套,全部拍平进单一类 TestRuntime,
--- 用例数与改写前一致(7 + 5 + 1 + 5 = 16 例);inline-capture describe 体内的
--- _pattern helper 提升为文件级 local;assert.has_no.errors 经 luax 补件等价映射。
+-- Runtime public-seam assertions use the trusted project luassert module.
 require("test.bootstrap").install_package_paths()
 local luassert = assert(require("test.support.luassert_loader").load())
-local lu = require("luaunit")
-local luax = require("test.support.luax")
 local runtime = require("packages.acceptance.runtime")
 
 -- Build a one-scenario IR by hand. The parser keeps Chinese placeholder names in

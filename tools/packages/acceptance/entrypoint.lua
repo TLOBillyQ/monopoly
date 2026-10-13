@@ -51,6 +51,7 @@ function entrypoint.generate_file(ir_path, output_path)
     'local embedded_ir = json.decode(' .. string.format("%q", json.encode(ir_or_err)) .. ')',
     'local ir = runtime.load_ir(embedded_ir)',
     'describe("Acceptance: " .. tostring(ir.name), function()',
+    '  after_each(function() require("test.env_runtime").refresh_runtime_services() end)',
     '  runtime.define_specs(ir, steps.handlers(), it)',
     'end)',
     '',

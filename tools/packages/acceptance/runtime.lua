@@ -217,7 +217,7 @@ local function _run_step(ir, world, example, step, handlers)
 
   local ok, success, err = pcall(handler, world, bound_or_err, step, resolved_text)
   if not ok then
-    return nil, success
+    return nil, success, true
   end
   if success == false or err ~= nil then
     return nil, err or "step failed: " .. tostring(step.text)
@@ -247,10 +247,10 @@ function runtime.run_execution(ir, scenario, example, handlers)
     steps[#steps + 1] = step
   end
 
-  local success, failure = true, nil
+  local success, failure, infrastructure = true, nil, false
   for _, step in ipairs(steps) do
-    local ok, err = _run_step(ir, world, example or {}, step, handlers)
-    if not ok then success, failure = nil, err; break end
+    local ok, err, thrown = _run_step(ir, world, example or {}, step, handlers)
+    if not ok then success, failure, infrastructure = nil, err, thrown; break end
   end
   local cleanup_errors = {}
   for index = #cleanups, 1, -1 do
@@ -258,7 +258,7 @@ function runtime.run_execution(ir, scenario, example, handlers)
     if not ok then cleanup_errors[#cleanup_errors + 1] = tostring(err) end
   end
   if #cleanup_errors > 0 then error("acceptance cleanup failed: " .. table.concat(cleanup_errors, "; "), 0) end
-  return success, failure
+  return success, failure, infrastructure
 end
 
 function runtime.run_feature(ir, handlers)
@@ -302,8 +302,9 @@ function runtime.define_specs(ir, handlers, define_it)
       define_it(name, function()
         local execution = { scenario = scenario_index, example = example_index, name = name }
         runtime.executions[#runtime.executions + 1] = execution
-        local ok, err = runtime.run_execution(ir, scenario, example, handlers)
-        execution.status = ok and "success" or "failure"
+        local ok, err, infrastructure = runtime.run_execution(ir, scenario, example, handlers)
+        execution.status = ok and "success" or infrastructure and "error" or "failure"
+        if infrastructure then error(err, 0) end
         require("luassert").is_true(ok == true, tostring(err or "acceptance step failed"))
       end)
     end

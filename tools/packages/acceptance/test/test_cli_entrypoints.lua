@@ -290,6 +290,61 @@ function TestApsCliEntrypoints:test_generated_chinese_examples_execute_in_genuin
   end)
 end
 
+function TestApsCliEntrypoints:test_executor_distinguishes_errors_and_restores_example_lifecycle()
+  _with_sandbox("executor_lifecycle", function(root)
+    local function execute(name, text)
+      local spec = path_lib.join_path(root, name .. ".lua")
+      _write(spec, text)
+      local result = _run("tools/packages/acceptance/execute.lua", { spec })
+      return result, json.decode(result.output)
+    end
+    local negatives = {
+      throw = [[local runtime=require("packages.acceptance.runtime")
+        describe("异常",function() runtime.define_specs({scenarios={{name="例子",steps={{text="异常"}}}}},
+          {["异常"]=function() error("ordinary handler exception") end},it) end)]],
+      hook = [[describe("钩子",function() before_each(function() error("hook exception") end)
+        it("例子",function() end) end)]],
+      leak = [[describe("泄漏",function() it("例子",function()
+        require("src.rules.ports.paid_purchase").reset_for_tests() end) end)]],
+    }
+    for name, text in pairs(negatives) do
+      local result, response = execute(name, text)
+      lu.assertEquals(result.code, 1, result.output)
+      lu.assertEquals(response.outcome, "infrastructure_error", result.output)
+      lu.assertEquals(response.counts.failed, 0, result.output)
+      lu.assertEquals(response.counts.errors, 1, result.output)
+    end
+    local result, response = execute("assertion", [[local runtime=require("packages.acceptance.runtime")
+      describe("断言",function() runtime.define_specs({scenarios={{name="例子",steps={{text="断言"}}}}},
+        {["断言"]=function() require("luassert").equal(1,2) end},it) end)]])
+    lu.assertEquals(result.code, 1, result.output)
+    lu.assertEquals(response.outcome, "test_failure", result.output)
+    lu.assertEquals(response.counts.failed, 1, result.output)
+    lu.assertEquals(response.counts.errors, 0, result.output)
+    lu.assertEquals(response.executions[1].status, "failure", result.output)
+    result, response = execute("cleanup", [[local runtime=require("packages.acceptance.runtime")
+      describe("清理",function() runtime.define_specs({scenarios={{name="例子",steps={{text="清理"}}}}},
+        {["清理"]=function(world) world.defer(function() error("cleanup exception") end); return true end},it) end)]])
+    lu.assertEquals(result.code, 1, result.output)
+    lu.assertEquals(response.counts.errors, 1, result.output)
+    lu.assertEquals(response.executions[1].status, "error", result.output)
+    result, response = execute("rng", [[
+      local assert=require("luassert")
+      describe("每例随机基线",function()
+        local first
+        before_each(function()
+          local value=math.random()
+          if first then assert.equal(first,value) else first=value end
+        end)
+        it("扰动随机状态",function() for _=1,10 do math.random() end end)
+        it("下一例在钩子前恢复",function() end)
+      end)]])
+    lu.assertEquals(result.code, 0, result.output)
+    lu.assertEquals(response.counts.cases, 2, result.output)
+    lu.assertEquals(response.counts.passed, 2, result.output)
+  end)
+end
+
 function TestApsCliEntrypoints:test_generator_exits_2_without_arguments()
   local usage = _run(GENERATOR, {})
   lu.assertEquals(usage.code, 2, usage.output)
