@@ -2,7 +2,7 @@
 if arg then rawset(arg, 0, "test/support/harness/test/test_harness_fail_fast.lua") end
 require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local check = require("luassert")
 local harness = require("test.support.harness")
 
 local function quiet_opts(extra)
@@ -47,23 +47,23 @@ end
 -- 原生 LuaUnit 迁移:单个 describe 拍平成一个 TestHarnessFailFast 类,
 -- 用例数与改写前一一对应(3 例)。
 
-TestHarnessFailFast = {}
+describe("harness fail fast", function()
 
-function TestHarnessFailFast:test_stops_at_first_failing_case_across_suites_when_stop_on_first_failure_is_set()
+it("stops at first failing case across suites when stop on first failure is set", function()
   local calls = {}
   local result = harness.run_all(failing_suites(calls), quiet_opts({ stop_on_first_failure = true }))
-  lu.assertTrue(result.failed)
-  lu.assertEquals(calls, { "c1" })
-end
+  check.is_true(result.failed)
+  check.same(calls, { "c1" })
+end)
 
-function TestHarnessFailFast:test_runs_every_case_after_a_failure_by_default_no_early_stop()
+it("runs every case after a failure by default no early stop", function()
   local calls = {}
   local result = harness.run_all(failing_suites(calls), quiet_opts())
-  lu.assertTrue(result.failed)
-  lu.assertEquals(calls, { "c1", "c2", "c3" })
-end
+  check.is_true(result.failed)
+  check.same(calls, { "c1", "c2", "c3" })
+end)
 
-function TestHarnessFailFast:test_runs_every_case_when_all_pass_even_with_fail_fast_enabled()
+it("runs every case when all pass even with fail fast enabled", function()
   local calls = {}
   local suites = {
     {
@@ -76,9 +76,8 @@ function TestHarnessFailFast:test_runs_every_case_when_all_pass_even_with_fail_f
     },
   }
   local result = harness.run_all(suites, quiet_opts({ stop_on_first_failure = true }))
-  lu.assertFalse(result.failed)
-  lu.assertEquals(calls, { "p1", "p2" })
-end
+  check.is_false(result.failed)
+  check.same(calls, { "p1", "p2" })
+end)
 
-
-return TestHarnessFailFast
+end)
