@@ -1,0 +1,6 @@
+local cases = require("test.support.scenario_suites.shared.cases")
+describe("shared scenario assertions", function()
+  it("keeps identity assertions in a real dynamic case", function()
+    cases._test_find_player_by_id_accepts_mixed_representation()
+  end)
+end)

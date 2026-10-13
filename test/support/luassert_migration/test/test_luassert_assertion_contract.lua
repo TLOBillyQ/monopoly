@@ -213,14 +213,7 @@ local _PILOT_FILES = {
 
 -- 切断言前的基线(migration 前实测:files=5 cases=45 passed=45 failed=0
 -- errors=0)。多类文件仍出两个类——multi_class_return.merge 是特殊结构,不跳过。
-local _PILOT_CLASS_CASES = {
-  TestScope = 9,
-  TestTables = 9,
-  TestClass = 5,
-  TestMemo = 13,
-  TestBoundaryAssertionsT36 = 4,
-  TestBoundaryAssertionsT36InventoryGuardMessageClosure = 5,
-}
+local _PILOT_FILE_CASES = { 9, 9, 5, 13, 9 }
 
 TestLuassertAssertionContract = {}
 
@@ -645,22 +638,17 @@ function TestLuassertAssertionContract:test_pilot_case_set_is_unchanged_by_the_a
     string.format("expected 45/0/0, got passed=%d failed=%d errors=%d",
       counts.passed, counts.failed, counts.errors))
 
-  -- 逐类对账:类名与用例数都要与切断言前一致,多类文件的第二个类不许消失。
-  local cases_by_class = {}
-  for _, record in ipairs(_records(output)) do
-    local class_name = record.name:match("^([^. ]+)[. ]")
-    if class_name ~= nil then
-      cases_by_class[class_name] = (cases_by_class[class_name] or 0) + 1
-    end
-  end
-  for class_name, expected_cases in pairs(_PILOT_CLASS_CASES) do
-    _expect(cases_by_class[class_name] == expected_cases,
-      string.format("%s: cases=%s, expected %d", class_name,
-        tostring(cases_by_class[class_name]), expected_cases))
-  end
-  for class_name, actual_cases in pairs(cases_by_class) do
-    _expect(_PILOT_CLASS_CASES[class_name] ~= nil,
-      string.format("unexpected pilot class %s (%d cases) — the frozen scope moved", class_name, actual_cases))
+  -- 按显式文件身份真跑，允许 Test 类迁移成 describe，仍保住多类文件全部九例。
+  for index, file in ipairs(_PILOT_FILES) do
+    local single = proc.run_command({ require("foundation.lua54").lua54_bin(),
+      "tools/packages/test_runner/runner.lua", "--output=TAP", "--", file },
+      { cwd = loader.repo_root() })
+    _expect(single.code == 0, file .. ": migrated file must stay green:\n" .. tostring(single.output))
+    local actual = _counts(single.output)
+    local expected = _PILOT_FILE_CASES[index]
+    _expect(actual.files == 1 and actual.cases == expected and actual.passed == expected
+      and actual.failed == 0 and actual.errors == 0,
+      file .. ": expected complete " .. expected .. " case set:\n" .. tostring(single.output))
   end
 end
 
