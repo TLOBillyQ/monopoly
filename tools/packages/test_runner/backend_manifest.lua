@@ -488,8 +488,6 @@ return {
     "test/behavior/ui/view/test_board_slice.lua",
     "test/behavior/ui/view/test_choice_options.lua",
     "test/behavior/ui/view/test_item_slice.lua",
-    "test/behavior/ui/view/test_model_api_core.lua",
-    "test/behavior/ui/view/test_model_api_env.lua",
     "test/behavior/ui/view/test_panel_builder.lua",
     "test/contract/foundation/test_log.lua",
     "test/contract/rules/ports/test_event_feed.lua",
@@ -581,6 +579,8 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/ui/view/test_model_api_core.lua",
+    "test/behavior/ui/view/test_model_api_env.lua",
     "test/behavior/ui/test_with_client_role.lua",
     "test/behavior/ui/test_local_actor_resolver_seam.lua",
     "test/behavior/ui/test_ports_init.lua",
