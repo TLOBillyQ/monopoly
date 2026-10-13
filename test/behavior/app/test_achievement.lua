@@ -3,7 +3,7 @@
 -- 用例数与改写前一一对应(23 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -36,17 +36,17 @@ local function _assert_progress_calls(calls, expected_ids, expected_amount, labe
   end
 end
 
-TestAchievement = {}
+describe("TestAchievement", function()
 
-function TestAchievement:tearDown()
+  after_each(function()
   achievement.reset_for_tests()
   achievement_progress_port.reset_for_tests()
   runtime_ports.reset_for_tests()
   -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
   support.restore_runtime_services()
-end
+  end)
 
-function TestAchievement:test_exposes_the_full_editor_achievement_catalog()
+local function _test_exposes_the_full_editor_achievement_catalog()
   _assert_eq(achievement.count(), 43, "achievement count")
   _assert_eq(achievement.ids_are_contiguous(1, 43), true, "achievement ids should be contiguous")
 
@@ -58,7 +58,7 @@ function TestAchievement:test_exposes_the_full_editor_achievement_catalog()
   _assert_eq(counts["隐藏"], 8, "hidden achievement count")
 end
 
-function TestAchievement:test_finds_achievements_by_editor_id()
+local function _test_finds_achievements_by_editor_id()
   local first = achievement.find(1)
   luassert.truthy(first ~= nil, "achievement 1 should exist")
   _assert_eq(first.name, "最强大富翁I", "achievement 1 name")
@@ -76,7 +76,7 @@ function TestAchievement:test_finds_achievements_by_editor_id()
   _assert_eq(achievement.find(0), nil, "unknown achievement should not resolve")
 end
 
-function TestAchievement:test_routes_direct_progress_additions_to_the_configured_host_adapter()
+local function _test_routes_direct_progress_additions_to_the_configured_host_adapter()
   local calls = {}
   local progress = {}
   achievement.configure_progress_adapter({
@@ -97,7 +97,7 @@ function TestAchievement:test_routes_direct_progress_additions_to_the_configured
   _assert_eq(achievement.current_progress(1), 2, "progress reads should come from host adapter")
 end
 
-function TestAchievement:test_routes_progress_through_the_first_resolved_runtime_role_when_no_test_adapter_is_configured()
+local function _test_routes_progress_through_the_first_resolved_runtime_role_when_no_test_adapter_is_configured()
   local calls = {}
   local progress = {}
   local role = {
@@ -126,7 +126,7 @@ function TestAchievement:test_routes_progress_through_the_first_resolved_runtime
   _assert_eq(achievement.snapshot(), progress, "runtime role should serve snapshots")
 end
 
-function TestAchievement:test_rejects_invalid_progress_args_before_calling_the_host_adapter()
+local function _test_rejects_invalid_progress_args_before_calling_the_host_adapter()
   local calls = 0
   achievement.configure_progress_adapter({
     add_achievement_progress = function()
@@ -140,7 +140,7 @@ function TestAchievement:test_rejects_invalid_progress_args_before_calling_the_h
   _assert_eq(calls, 0, "invalid progress should not call host")
 end
 
-function TestAchievement:test_treats_explicit_host_progress_refusal_as_failure()
+local function _test_treats_explicit_host_progress_refusal_as_failure()
   achievement.configure_progress_adapter({
     add_achievement_progress = function()
       return false
@@ -150,13 +150,13 @@ function TestAchievement:test_treats_explicit_host_progress_refusal_as_failure()
   _assert_eq(achievement.add_progress(1, 1), false, "host refusal should fail progress routing")
 end
 
-function TestAchievement:test_rejects_malformed_contiguous_id_ranges_without_throwing()
+local function _test_rejects_malformed_contiguous_id_ranges_without_throwing()
   _assert_eq(achievement.ids_are_contiguous(nil, 45), false, "missing start id should be rejected")
   _assert_eq(achievement.ids_are_contiguous(1, nil), false, "missing end id should be rejected")
   _assert_eq(achievement.ids_are_contiguous(45, 1), false, "reversed id range should be rejected")
 end
 
-function TestAchievement:test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement()
+local function _test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement()
   local calls = {}
   local progress = {}
   achievement.configure_progress_adapter({
@@ -179,7 +179,7 @@ function TestAchievement:test_fans_cumulative_gameplay_events_out_to_every_mappe
   end
 end
 
-function TestAchievement:test_advances_single_mapped_gameplay_events_by_one_point()
+local function _test_advances_single_mapped_gameplay_events_by_one_point()
   local calls = {}
   achievement.configure_progress_adapter({
     add_achievement_progress = function(id, amount)
@@ -194,7 +194,7 @@ function TestAchievement:test_advances_single_mapped_gameplay_events_by_one_poin
   _assert_eq(calls[1].amount, 1, "single event progress delta")
 end
 
-function TestAchievement:test_does_not_advance_unmapped_or_failed_gameplay_events()
+local function _test_does_not_advance_unmapped_or_failed_gameplay_events()
   local calls = {}
   achievement.configure_progress_adapter({
     add_achievement_progress = function(id, amount)
@@ -209,7 +209,7 @@ function TestAchievement:test_does_not_advance_unmapped_or_failed_gameplay_event
   _assert_eq(#calls, 0, "ignored events should not call host adapter")
 end
 
-function TestAchievement:test_reports_mapped_gameplay_events_as_unadvanced_when_every_host_call_fails()
+local function _test_reports_mapped_gameplay_events_as_unadvanced_when_every_host_call_fails()
   local calls = 0
   achievement.configure_progress_adapter({
     add_achievement_progress = function()
@@ -222,7 +222,7 @@ function TestAchievement:test_reports_mapped_gameplay_events_as_unadvanced_when_
   _assert_eq(calls, 4, "mapped event should attempt every achievement id")
 end
 
-function TestAchievement:test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot()
+local function _test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot()
   local progress = { [1] = 7 }
   achievement.configure_progress_adapter({
     snapshot = function()
@@ -242,12 +242,12 @@ function TestAchievement:test_returns_adapter_snapshots_only_when_the_host_provi
   _assert_eq(next(achievement.snapshot()), nil, "non-table snapshot should return empty snapshot")
 end
 
-function TestAchievement:test_rejects_progress_when_no_host_adapter_is_available()
+local function _test_rejects_progress_when_no_host_adapter_is_available()
   _assert_eq(achievement.add_progress(1, 1), false, "Lua should not fake achievement progress")
   _assert_eq(next(achievement.snapshot()), nil, "achievement snapshot should stay empty")
 end
 
-function TestAchievement:test_routes_runtime_gameplay_events_to_the_matching_host_role()
+local function _test_routes_runtime_gameplay_events_to_the_matching_host_role()
   local calls = {}
   local role = {
     add_achievement_progress = function(id, amount)
@@ -272,7 +272,7 @@ function TestAchievement:test_routes_runtime_gameplay_events_to_the_matching_hos
   _assert_eq(calls[1].amount, 500, "cash achievement amount")
 end
 
-function TestAchievement:test_maps_every_runtime_achievement_fact_to_the_configured_gameplay_event()
+local function _test_maps_every_runtime_achievement_fact_to_the_configured_gameplay_event()
   local calls = {}
   local role = _make_progress_role(calls)
   local player = { id = 7 }
@@ -404,7 +404,7 @@ function TestAchievement:test_maps_every_runtime_achievement_fact_to_the_configu
   end
 end
 
-function TestAchievement:test_records_direct_runtime_events_through_host_capable_role_subjects()
+local function _test_records_direct_runtime_events_through_host_capable_role_subjects()
   local calls = {}
   local role = _make_progress_role(calls)
 
@@ -413,7 +413,7 @@ function TestAchievement:test_records_direct_runtime_events_through_host_capable
   _assert_progress_calls(calls, { 1, 2, 3, 4 }, 1, "direct role game win")
 end
 
-function TestAchievement:test_rejects_runtime_facts_with_invalid_amounts_or_unknown_event_variants()
+local function _test_rejects_runtime_facts_with_invalid_amounts_or_unknown_event_variants()
   local calls = {}
   local role = _make_progress_role(calls)
   local player = { id = 7 }
@@ -437,7 +437,7 @@ function TestAchievement:test_rejects_runtime_facts_with_invalid_amounts_or_unkn
   _assert_eq(#calls, 0, "invalid runtime facts should not call the role")
 end
 
-function TestAchievement:test_rejects_malformed_runtime_skin_equip_facts_before_resolving_a_role()
+local function _test_rejects_malformed_runtime_skin_equip_facts_before_resolving_a_role()
   local calls = {}
   local resolve_calls = 0
   local role = _make_progress_role(calls)
@@ -456,7 +456,7 @@ function TestAchievement:test_rejects_malformed_runtime_skin_equip_facts_before_
   _assert_eq(#calls, 0, "malformed skin facts should not call the role")
 end
 
-function TestAchievement:test_does_not_fall_back_to_another_role_for_player_specific_runtime_events()
+local function _test_does_not_fall_back_to_another_role_for_player_specific_runtime_events()
   local calls = 0
   runtime_ports.configure({
     resolve_roles = function()
@@ -480,7 +480,7 @@ function TestAchievement:test_does_not_fall_back_to_another_role_for_player_spec
   _assert_eq(calls, 0, "fallback role should not receive player-specific progress")
 end
 
-function TestAchievement:test_maps_runtime_skin_equips_by_configured_skin_name()
+local function _test_maps_runtime_skin_equips_by_configured_skin_name()
   local calls = {}
   local role = {
     add_achievement_progress = function(id, amount)
@@ -503,8 +503,30 @@ function TestAchievement:test_maps_runtime_skin_equips_by_configured_skin_name()
   _assert_eq(calls[1].amount, 1, "skin equip amount")
 end
 
--- ===== 迁自 test/property/test_achievement.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
-do
+it("test_exposes_the_full_editor_achievement_catalog", _test_exposes_the_full_editor_achievement_catalog)
+it("test_finds_achievements_by_editor_id", _test_finds_achievements_by_editor_id)
+it("test_routes_direct_progress_additions_to_the_configured_host_adapter", _test_routes_direct_progress_additions_to_the_configured_host_adapter)
+it("test_routes_progress_through_the_first_resolved_runtime_role_when_no_test_adapter_is_configured", _test_routes_progress_through_the_first_resolved_runtime_role_when_no_test_adapter_is_configured)
+it("test_rejects_invalid_progress_args_before_calling_the_host_adapter", _test_rejects_invalid_progress_args_before_calling_the_host_adapter)
+it("test_treats_explicit_host_progress_refusal_as_failure", _test_treats_explicit_host_progress_refusal_as_failure)
+it("test_rejects_malformed_contiguous_id_ranges_without_throwing", _test_rejects_malformed_contiguous_id_ranges_without_throwing)
+it("test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement", _test_fans_cumulative_gameplay_events_out_to_every_mapped_achievement)
+it("test_advances_single_mapped_gameplay_events_by_one_point", _test_advances_single_mapped_gameplay_events_by_one_point)
+it("test_does_not_advance_unmapped_or_failed_gameplay_events", _test_does_not_advance_unmapped_or_failed_gameplay_events)
+it("test_reports_mapped_gameplay_events_as_unadvanced_when_every_host_call_fails", _test_reports_mapped_gameplay_events_as_unadvanced_when_every_host_call_fails)
+it("test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot", _test_returns_adapter_snapshots_only_when_the_host_provides_a_table_snapshot)
+it("test_rejects_progress_when_no_host_adapter_is_available", _test_rejects_progress_when_no_host_adapter_is_available)
+it("test_routes_runtime_gameplay_events_to_the_matching_host_role", _test_routes_runtime_gameplay_events_to_the_matching_host_role)
+it("test_maps_every_runtime_achievement_fact_to_the_configured_gameplay_event", _test_maps_every_runtime_achievement_fact_to_the_configured_gameplay_event)
+it("test_records_direct_runtime_events_through_host_capable_role_subjects", _test_records_direct_runtime_events_through_host_capable_role_subjects)
+it("test_rejects_runtime_facts_with_invalid_amounts_or_unknown_event_variants", _test_rejects_runtime_facts_with_invalid_amounts_or_unknown_event_variants)
+it("test_rejects_malformed_runtime_skin_equip_facts_before_resolving_a_role", _test_rejects_malformed_runtime_skin_equip_facts_before_resolving_a_role)
+it("test_does_not_fall_back_to_another_role_for_player_specific_runtime_events", _test_does_not_fall_back_to_another_role_for_player_specific_runtime_events)
+it("test_maps_runtime_skin_equips_by_configured_skin_name", _test_maps_runtime_skin_equips_by_configured_skin_name)
+end)
+
+-- ===== 迁自 test/property/test_achievement.lua（#190）=====
+describe("TestAchievementProgressProperties", function()
   local property = require("test.support.property")
   local event_progress = require("src.config.content.achievement_progress_events")
 
@@ -553,13 +575,11 @@ do
     }
   end
 
-  TestAchievementProgressProperties = {}
-
-  function TestAchievementProgressProperties:tearDown()
+  after_each(function()
     achievement.reset_for_tests()
-  end
+  end)
 
-  function TestAchievementProgressProperties:test_mapped_id_lists_are_read_only_snapshots_from_the_caller_perspective()
+  local function _test_mapped_id_lists_are_read_only_snapshots_from_the_caller_perspective()
     property.for_all(function(rng)
       return rng:pick(EVENTS).name
     end, function(event_name)
@@ -572,7 +592,7 @@ do
     end)
   end
 
-  function TestAchievementProgressProperties:test_gameplay_event_routing_adds_exactly_one_explicit_event_delta_to_every_mapped_achievement()
+  local function _test_gameplay_event_routing_adds_exactly_one_explicit_event_delta_to_every_mapped_achievement()
     property.for_all(function(rng)
       local event = rng:pick(EVENTS)
       return {
@@ -601,7 +621,7 @@ do
     end)
   end
 
-  function TestAchievementProgressProperties:test_gameplay_event_routing_uses_the_configured_default_when_no_event_value_is_supplied()
+  local function _test_gameplay_event_routing_uses_the_configured_default_when_no_event_value_is_supplied()
     property.for_all(function(rng)
       local event = rng:pick(EVENTS)
       return {
@@ -628,10 +648,20 @@ do
       end
     end)
   end
-end
+  it("test_mapped_id_lists_are_read_only_snapshots_from_the_caller_perspective", _test_mapped_id_lists_are_read_only_snapshots_from_the_caller_perspective)
+  it("test_gameplay_event_routing_adds_exactly_one_explicit_event_delta_to_every_mapped_achievement", _test_gameplay_event_routing_adds_exactly_one_explicit_event_delta_to_every_mapped_achievement)
+  it("test_gameplay_event_routing_uses_the_configured_default_when_no_event_value_is_supplied", _test_gameplay_event_routing_uses_the_configured_default_when_no_event_value_is_supplied)
+end)
 
+describe("TestAchievement", function()
+  after_each(function()
+    achievement.reset_for_tests()
+    achievement_progress_port.reset_for_tests()
+    runtime_ports.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestAchievement:test_rejects_runtime_event_with_nil_subject()
+local function _test_rejects_runtime_event_with_nil_subject()
   local calls = {}
   local role = _make_progress_role(calls)
   runtime_ports.configure({
@@ -645,7 +675,7 @@ function TestAchievement:test_rejects_runtime_event_with_nil_subject()
   _assert_eq(#calls, 0, "nil subject should not call the role")
 end
 
-function TestAchievement:test_resolves_player_id_through_role_id_field_first()
+local function _test_resolves_player_id_through_role_id_field_first()
   -- #293:_resolve_player_id 的 role_id → id → get_roleid 链首臂未测;
   -- 带 role_id 的 subject 必须走第一臂,其余臂变异可分。
   local resolved = {}
@@ -661,7 +691,7 @@ function TestAchievement:test_resolves_player_id_through_role_id_field_first()
   _assert_eq(resolved[1], 7, "player id must come from the role_id field first")
 end
 
-function TestAchievement:test_resolves_player_id_through_get_roleid_method_last()
+local function _test_resolves_player_id_through_get_roleid_method_last()
   -- #293:_resolve_player_id 链末臂 get_roleid 未测;无 role_id/id 字段、
   -- 只有 get_roleid 方法的 subject 必须走末臂。
   local resolved = {}
@@ -681,11 +711,7 @@ function TestAchievement:test_resolves_player_id_through_get_roleid_method_last(
 end
 
 
--- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
--- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
--- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
--- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
-return require("test.support.multi_class_return").merge(
-  TestAchievement,
-  TestAchievementProgressProperties
-)
+it("test_rejects_runtime_event_with_nil_subject", _test_rejects_runtime_event_with_nil_subject)
+it("test_resolves_player_id_through_role_id_field_first", _test_resolves_player_id_through_role_id_field_first)
+it("test_resolves_player_id_through_get_roleid_method_last", _test_resolves_player_id_through_get_roleid_method_last)
+end)
