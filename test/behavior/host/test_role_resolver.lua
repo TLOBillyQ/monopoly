@@ -1,23 +1,23 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local role_resolver = require("src.host.role_resolver")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
-TestRoleResolver = {}
+describe("TestRoleResolver", function()
 
-function TestRoleResolver:test_returns_nil_when_no_gameapi_and_no_port_resolver()
+local function _test_returns_nil_when_no_gameapi_and_no_port_resolver()
   local result = role_resolver.resolve_role_with(nil, nil)
   luassert.truthy(result == nil, "expected nil with no game engine")
 end
 
-function TestRoleResolver:test_returns_nil_for_valid_player_id_with_no_game_engine()
+local function _test_returns_nil_for_valid_player_id_with_no_game_engine()
   local result = role_resolver.resolve_role_with("player_1", nil)
   luassert.truthy(result == nil, "expected nil without game engine resolution")
 end
 
-function TestRoleResolver:test_returns_nil_when_predicate_rejects_resolved_nil_role()
+local function _test_returns_nil_when_predicate_rejects_resolved_nil_role()
   local called = false
   local result = role_resolver.resolve_role_with(nil, function(r)
     called = true
@@ -27,7 +27,7 @@ function TestRoleResolver:test_returns_nil_when_predicate_rejects_resolved_nil_r
   luassert.truthy(not called, "predicate should not be called when role is nil")
 end
 
-function TestRoleResolver:test_returns_the_port_role_and_skips_the_host_when_no_predicate_is_given()
+local function _test_returns_the_port_role_and_skips_the_host_when_no_predicate_is_given()
   local role = { id = "port_role" }
   local host_consulted = false
   with_patches({
@@ -43,7 +43,7 @@ function TestRoleResolver:test_returns_the_port_role_and_skips_the_host_when_no_
   end)
 end
 
-function TestRoleResolver:test_falls_back_to_the_host_role_when_the_predicate_rejects_the_port_role()
+local function _test_falls_back_to_the_host_role_when_the_predicate_rejects_the_port_role()
   local port_role = { kind = "port" }
   local host_role = { kind = "host" }
   local seen_player_id = nil
@@ -60,7 +60,7 @@ function TestRoleResolver:test_falls_back_to_the_host_role_when_the_predicate_re
   end)
 end
 
-function TestRoleResolver:test_returns_nil_when_the_host_get_role_throws()
+local function _test_returns_nil_when_the_host_get_role_throws()
   with_patches({
     { target = runtime_ports, key = "resolve_role", value = function() return nil end },
     { key = "GameAPI", value = { get_role = function() error("host role boom") end } },
@@ -70,7 +70,7 @@ function TestRoleResolver:test_returns_nil_when_the_host_get_role_throws()
   end)
 end
 
-function TestRoleResolver:test_treats_a_truthy_but_not_true_predicate_result_as_a_rejection()
+local function _test_treats_a_truthy_but_not_true_predicate_result_as_a_rejection()
   local port_role = { id = "only_role" }
   with_patches({
     { target = runtime_ports, key = "resolve_role", value = function() return port_role end },
@@ -82,7 +82,7 @@ function TestRoleResolver:test_treats_a_truthy_but_not_true_predicate_result_as_
   end)
 end
 
-function TestRoleResolver:test_accepts_the_role_only_when_the_predicate_returns_exactly_true()
+local function _test_accepts_the_role_only_when_the_predicate_returns_exactly_true()
   local port_role = { id = "role" }
   with_patches({
     { target = runtime_ports, key = "resolve_role", value = function() return port_role end },
@@ -92,7 +92,7 @@ function TestRoleResolver:test_accepts_the_role_only_when_the_predicate_returns_
   end)
 end
 
-function TestRoleResolver:test_resolves_the_host_role_when_the_port_yields_nil_and_no_predicate_is_given()
+local function _test_resolves_the_host_role_when_the_port_yields_nil_and_no_predicate_is_given()
   local host_role = { id = "host_only" }
   with_patches({
     { target = runtime_ports, key = "resolve_role", value = function() return nil end },
@@ -104,7 +104,7 @@ function TestRoleResolver:test_resolves_the_host_role_when_the_port_yields_nil_a
   end)
 end
 
-function TestRoleResolver:test_treats_a_falsy_gameapi_as_absent_instead_of_indexing_it()
+local function _test_treats_a_falsy_gameapi_as_absent_instead_of_indexing_it()
   with_patches({
     { target = runtime_ports, key = "resolve_role", value = function() return nil end },
     { key = "GameAPI", value = false },
@@ -114,12 +114,12 @@ function TestRoleResolver:test_treats_a_falsy_gameapi_as_absent_instead_of_index
   end, { skip_runtime_context_refresh = true })
 end
 
-function TestRoleResolver:test_returns_empty_table_when_no_gameapi_and_no_port_resolver()
+local function _test_returns_empty_table_when_no_gameapi_and_no_port_resolver()
   local result = role_resolver.resolve_roles()
   luassert.truthy(type(result) == "table", "expected table")
 end
 
-function TestRoleResolver:test_returns_the_runtime_port_roster_verbatim_when_it_is_non_empty()
+local function _test_returns_the_runtime_port_roster_verbatim_when_it_is_non_empty()
   local roster = { { id = 1 }, { id = 2 } }
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return roster end },
@@ -128,7 +128,7 @@ function TestRoleResolver:test_returns_the_runtime_port_roster_verbatim_when_it_
   end)
 end
 
-function TestRoleResolver:test_returns_a_single_element_port_roster_directly_rather_than_the_host_fallback()
+local function _test_returns_a_single_element_port_roster_directly_rather_than_the_host_fallback()
   local port_roster = { { id = "solo" } }
   local host_roster = { { id = "other" } }
   with_patches({
@@ -140,7 +140,7 @@ function TestRoleResolver:test_returns_a_single_element_port_roster_directly_rat
   end)
 end
 
-function TestRoleResolver:test_falls_back_to_gameapi_get_all_valid_roles_when_the_port_roster_is_empty()
+local function _test_falls_back_to_gameapi_get_all_valid_roles_when_the_port_roster_is_empty()
   local fallback = { { id = 9 } }
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
@@ -151,7 +151,7 @@ function TestRoleResolver:test_falls_back_to_gameapi_get_all_valid_roles_when_th
   end)
 end
 
-function TestRoleResolver:test_falls_back_to_the_host_roster_when_the_port_returns_a_non_table()
+local function _test_falls_back_to_the_host_roster_when_the_port_returns_a_non_table()
   local fallback = { { id = 5 } }
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return false end },
@@ -162,7 +162,7 @@ function TestRoleResolver:test_falls_back_to_the_host_roster_when_the_port_retur
   end)
 end
 
-function TestRoleResolver:test_ignores_a_non_table_host_fallback_and_returns_the_empty_roster()
+local function _test_ignores_a_non_table_host_fallback_and_returns_the_empty_roster()
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
     { key = "GameAPI", value = { get_all_valid_roles = function() return "not a table" end } },
@@ -173,7 +173,7 @@ function TestRoleResolver:test_ignores_a_non_table_host_fallback_and_returns_the
   end)
 end
 
-function TestRoleResolver:test_returns_the_empty_roster_when_the_gameapi_fallback_errors()
+local function _test_returns_the_empty_roster_when_the_gameapi_fallback_errors()
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
     { key = "GameAPI", value = { get_all_valid_roles = function() error("host roles boom") end } },
@@ -184,7 +184,7 @@ function TestRoleResolver:test_returns_the_empty_roster_when_the_gameapi_fallbac
   end)
 end
 
-function TestRoleResolver:test_returns_a_fresh_empty_table_when_the_port_yields_nil_and_no_host_is_available()
+local function _test_returns_a_fresh_empty_table_when_the_port_yields_nil_and_no_host_is_available()
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return nil end },
   }, function()
@@ -194,7 +194,7 @@ function TestRoleResolver:test_returns_a_fresh_empty_table_when_the_port_yields_
   end)
 end
 
-function TestRoleResolver:test_treats_a_falsy_gameapi_as_absent_when_falling_back()
+local function _test_treats_a_falsy_gameapi_as_absent_when_falling_back()
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
     { key = "GameAPI", value = false },
@@ -206,4 +206,23 @@ function TestRoleResolver:test_treats_a_falsy_gameapi_as_absent_when_falling_bac
 end
 
 
-return TestRoleResolver
+it("test_returns_nil_when_no_gameapi_and_no_port_resolver", _test_returns_nil_when_no_gameapi_and_no_port_resolver)
+it("test_returns_nil_for_valid_player_id_with_no_game_engine", _test_returns_nil_for_valid_player_id_with_no_game_engine)
+it("test_returns_nil_when_predicate_rejects_resolved_nil_role", _test_returns_nil_when_predicate_rejects_resolved_nil_role)
+it("test_returns_the_port_role_and_skips_the_host_when_no_predicate_is_given", _test_returns_the_port_role_and_skips_the_host_when_no_predicate_is_given)
+it("test_falls_back_to_the_host_role_when_the_predicate_rejects_the_port_role", _test_falls_back_to_the_host_role_when_the_predicate_rejects_the_port_role)
+it("test_returns_nil_when_the_host_get_role_throws", _test_returns_nil_when_the_host_get_role_throws)
+it("test_treats_a_truthy_but_not_true_predicate_result_as_a_rejection", _test_treats_a_truthy_but_not_true_predicate_result_as_a_rejection)
+it("test_accepts_the_role_only_when_the_predicate_returns_exactly_true", _test_accepts_the_role_only_when_the_predicate_returns_exactly_true)
+it("test_resolves_the_host_role_when_the_port_yields_nil_and_no_predicate_is_given", _test_resolves_the_host_role_when_the_port_yields_nil_and_no_predicate_is_given)
+it("test_treats_a_falsy_gameapi_as_absent_instead_of_indexing_it", _test_treats_a_falsy_gameapi_as_absent_instead_of_indexing_it)
+it("test_returns_empty_table_when_no_gameapi_and_no_port_resolver", _test_returns_empty_table_when_no_gameapi_and_no_port_resolver)
+it("test_returns_the_runtime_port_roster_verbatim_when_it_is_non_empty", _test_returns_the_runtime_port_roster_verbatim_when_it_is_non_empty)
+it("test_returns_a_single_element_port_roster_directly_rather_than_the_host_fallback", _test_returns_a_single_element_port_roster_directly_rather_than_the_host_fallback)
+it("test_falls_back_to_gameapi_get_all_valid_roles_when_the_port_roster_is_empty", _test_falls_back_to_gameapi_get_all_valid_roles_when_the_port_roster_is_empty)
+it("test_falls_back_to_the_host_roster_when_the_port_returns_a_non_table", _test_falls_back_to_the_host_roster_when_the_port_returns_a_non_table)
+it("test_ignores_a_non_table_host_fallback_and_returns_the_empty_roster", _test_ignores_a_non_table_host_fallback_and_returns_the_empty_roster)
+it("test_returns_the_empty_roster_when_the_gameapi_fallback_errors", _test_returns_the_empty_roster_when_the_gameapi_fallback_errors)
+it("test_returns_a_fresh_empty_table_when_the_port_yields_nil_and_no_host_is_available", _test_returns_a_fresh_empty_table_when_the_port_yields_nil_and_no_host_is_available)
+it("test_treats_a_falsy_gameapi_as_absent_when_falling_back", _test_treats_a_falsy_gameapi_as_absent_when_falling_back)
+end)

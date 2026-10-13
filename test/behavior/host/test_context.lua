@@ -4,7 +4,7 @@
 -- install_globals 有效路径(杀 ~= -> ==)、globals 安装字面值、
 -- synthetic_actor_registry 懒建(not 移除 / call->nil)。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local runtime_context = require("src.host.context")
 
 local function _assert_eq(actual, expected, message)
@@ -23,9 +23,9 @@ local function _lua_api()
   }
 end
 
-TestContext = {}
+describe("TestContext", function()
 
-function TestContext:test_install_runtime_helpers_rejects_a_context_without_env()
+local function _test_install_runtime_helpers_rejects_a_context_without_env()
   -- kills _refresh_roles' `ctx ~= nil and ctx.env ~= nil` `and` -> `or`
   -- (mutant passes the guard and silently swallows the missing env)
   -- and its "missing runtime context" -> nil.
@@ -34,14 +34,14 @@ function TestContext:test_install_runtime_helpers_rejects_a_context_without_env(
   end, "missing runtime context")
 end
 
-function TestContext:test_install_runtime_helpers_rejects_a_nil_context()
+local function _test_install_runtime_helpers_rejects_a_nil_context()
   -- kills install_runtime_helpers' own "missing runtime context" -> nil.
   luassert.has_error(function()
     runtime_context.install_runtime_helpers(nil)
   end, "missing runtime context")
 end
 
-function TestContext:test_install_environment_rejects_a_nil_context()
+local function _test_install_environment_rejects_a_nil_context()
   -- kills install_environment's `and` -> `or` (mutant indexes nil and raises
   -- a different error) and "missing runtime context" -> nil.
   luassert.has_error(function()
@@ -49,20 +49,20 @@ function TestContext:test_install_environment_rejects_a_nil_context()
   end, "missing runtime context")
 end
 
-function TestContext:test_install_environment_rejects_env_without_luaapi()
+local function _test_install_environment_rejects_env_without_luaapi()
   -- kills _validate_lua_api_methods' "missing LuaAPI" -> nil.
   luassert.has_error(function()
     runtime_context.install_environment({ env = {} })
   end, "missing LuaAPI")
 end
 
-function TestContext:test_install_environment_returns_env_for_a_valid_context()
+local function _test_install_environment_returns_env_for_a_valid_context()
   local env = { LuaAPI = _lua_api() }
   _assert_eq(runtime_context.install_environment({ env = env }), env,
     "a valid context returns its env")
 end
 
-function TestContext:test_install_environment_requires_trigger_unregistration()
+local function _test_install_environment_requires_trigger_unregistration()
   local lua_api = _lua_api()
   lua_api.global_unregister_trigger_event = nil
   luassert.has_error(function()
@@ -70,21 +70,21 @@ function TestContext:test_install_environment_requires_trigger_unregistration()
   end, "missing LuaAPI.global_unregister_trigger_event")
 end
 
-function TestContext:test_install_globals_rejects_a_nil_context()
+local function _test_install_globals_rejects_a_nil_context()
   -- kills install_globals' `and` -> `or` and "missing runtime context" -> nil.
   luassert.has_error(function()
     runtime_context.install_globals(nil)
   end, "missing runtime context")
 end
 
-function TestContext:test_install_runtime_helper_globals_rejects_nil_helpers()
+local function _test_install_runtime_helper_globals_rejects_nil_helpers()
   -- kills install_runtime_helper_globals' "missing helpers" -> nil.
   luassert.has_error(function()
     runtime_context.install_runtime_helper_globals(nil)
   end, "missing helpers")
 end
 
-function TestContext:test_a_table_error_object_from_get_all_valid_roles_still_yields_empty_roles()
+local function _test_a_table_error_object_from_get_all_valid_roles_still_yields_empty_roles()
   -- kills _resolve_game_api_roles' `not ok or type(valid_roles) ~= "table"`
   -- `or` -> `and`: a pcall failure carrying a TABLE error object passes the
   -- mutant's type check and would be returned as if it were roles.
@@ -101,7 +101,7 @@ function TestContext:test_a_table_error_object_from_get_all_valid_roles_still_yi
   _assert_eq(helpers.roles.code, nil, "the error object must not leak into roles")
 end
 
-function TestContext:test_installs_helpers_refreshes_roles_and_publishes_globals()
+local function _test_installs_helpers_refreshes_roles_and_publishes_globals()
   -- kills install_globals' `~=` -> `==` pair (valid ctx must pass the guard),
   -- the `{ install_globals = true }` true -> false (globals must appear),
   -- and _ensure_runtime_helper_fields' `not` removal / registry call -> nil.
@@ -127,4 +127,14 @@ function TestContext:test_installs_helpers_refreshes_roles_and_publishes_globals
 end
 
 
-return TestContext
+it("test_install_runtime_helpers_rejects_a_context_without_env", _test_install_runtime_helpers_rejects_a_context_without_env)
+it("test_install_runtime_helpers_rejects_a_nil_context", _test_install_runtime_helpers_rejects_a_nil_context)
+it("test_install_environment_rejects_a_nil_context", _test_install_environment_rejects_a_nil_context)
+it("test_install_environment_rejects_env_without_luaapi", _test_install_environment_rejects_env_without_luaapi)
+it("test_install_environment_returns_env_for_a_valid_context", _test_install_environment_returns_env_for_a_valid_context)
+it("test_install_environment_requires_trigger_unregistration", _test_install_environment_requires_trigger_unregistration)
+it("test_install_globals_rejects_a_nil_context", _test_install_globals_rejects_a_nil_context)
+it("test_install_runtime_helper_globals_rejects_nil_helpers", _test_install_runtime_helper_globals_rejects_nil_helpers)
+it("test_a_table_error_object_from_get_all_valid_roles_still_yields_empty_roles", _test_a_table_error_object_from_get_all_valid_roles_still_yields_empty_roles)
+it("test_installs_helpers_refreshes_roles_and_publishes_globals", _test_installs_helpers_refreshes_roles_and_publishes_globals)
+end)
