@@ -3,7 +3,7 @@
 -- Survivors from #293 batch 2.
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -15,17 +15,17 @@ local gameplay_loop = require("src.turn.loop")
 local presentation_ports = require("src.ui.ports")
 local frame_timer = require("src.host.frame_timer")
 
-TestGameplayStart = {}
+describe("TestGameplayStart", function()
 
 -- ── M.prime_first_turn ────────────────────────────────────────────
 
-function TestGameplayStart:test_prime_first_turn_returns_false_when_turn_is_nil()
+local function _test_prime_first_turn_returns_false_when_turn_is_nil()
   local game = {}
   local result = gameplay_start.prime_first_turn(game)
   _assert_eq(result, false, "prime_first_turn should return false when game.turn is nil")
 end
 
-function TestGameplayStart:test_prime_first_turn_returns_false_when_turn_count_not_zero()
+local function _test_prime_first_turn_returns_false_when_turn_count_not_zero()
   local game = {
     advance_turn = function() end,
     turn = { turn_count = 3, phase = "start", pending_choice = nil },
@@ -34,7 +34,7 @@ function TestGameplayStart:test_prime_first_turn_returns_false_when_turn_count_n
   _assert_eq(result, false, "prime_first_turn should return false when turn_count is not 0")
 end
 
-function TestGameplayStart:test_prime_first_turn_returns_false_when_phase_not_start()
+local function _test_prime_first_turn_returns_false_when_phase_not_start()
   local game = {
     advance_turn = function() end,
     turn = { turn_count = 0, phase = "moving", pending_choice = nil },
@@ -43,7 +43,7 @@ function TestGameplayStart:test_prime_first_turn_returns_false_when_phase_not_st
   _assert_eq(result, false, "prime_first_turn should return false when phase is not start")
 end
 
-function TestGameplayStart:test_prime_first_turn_returns_false_when_pending_choice_exists()
+local function _test_prime_first_turn_returns_false_when_pending_choice_exists()
   local game = {
     advance_turn = function() end,
     turn = { turn_count = 0, phase = "start", pending_choice = { kind = "dice" } },
@@ -52,7 +52,7 @@ function TestGameplayStart:test_prime_first_turn_returns_false_when_pending_choi
   _assert_eq(result, false, "prime_first_turn should return false when pending_choice is not nil")
 end
 
-function TestGameplayStart:test_prime_first_turn_advances_and_returns_true_for_fresh_turn()
+local function _test_prime_first_turn_advances_and_returns_true_for_fresh_turn()
   local advanced = false
   local game_ref = {}
   game_ref[1] = {
@@ -68,7 +68,7 @@ end
 
 -- ── M.start early-return & tick handle ───────────────────────────
 
-function TestGameplayStart:test_start_returns_existing_game_when_already_created()
+local function _test_start_returns_existing_game_when_already_created()
   local existing_game = { id = "started_game" }
   local current_game_ref = { existing_game }
   local state = { tick_handle = {} }
@@ -77,7 +77,7 @@ function TestGameplayStart:test_start_returns_existing_game_when_already_created
   _assert_eq(result, existing_game, "start should return existing game when current_game_ref[1] is set")
 end
 
-function TestGameplayStart:test_start_stores_tick_handle()
+local function _test_start_stores_tick_handle()
   local capture = { repeat_every_calls = 0 }
   local tick_handle = { id = "tick" }
   local fake_game = {
@@ -106,7 +106,7 @@ function TestGameplayStart:test_start_stores_tick_handle()
   _assert_eq(capture.repeat_every_calls, 1, "tick loop should be registered exactly once on first start")
 end
 
-function TestGameplayStart:test_start_stop_start_replaces_tick_without_duplicate_callback()
+local function _test_start_stop_start_replaces_tick_without_duplicate_callback()
   local capture = { callbacks = {}, stopped_handles = {} }
   local fake_game = {
     turn = { turn_count = 1, phase = "moving", pending_choice = nil },
@@ -150,7 +150,7 @@ end
 
 -- ── M.start port assignment ───────────────────────────────────────
 
-function TestGameplayStart:test_start_assigns_turn_action_port_with_dispatch_and_block()
+local function _test_start_assigns_turn_action_port_with_dispatch_and_block()
   local fake_game = {
     turn = { turn_count = 1, phase = "moving", pending_choice = nil },
   }
@@ -171,7 +171,7 @@ function TestGameplayStart:test_start_assigns_turn_action_port_with_dispatch_and
   end)
 end
 
-function TestGameplayStart:test_start_assigns_presentation_runtime()
+local function _test_start_assigns_presentation_runtime()
   local fake_game = {
     turn = { turn_count = 1, phase = "moving", pending_choice = nil },
   }
@@ -190,7 +190,7 @@ end
 
 -- ── Tick callback reads current_game_ref[1] ───────────────────────
 
-function TestGameplayStart:test_tick_callback_reads_current_game_ref_correctly()
+local function _test_tick_callback_reads_current_game_ref_correctly()
   local capture = { tick_cb = nil, tick_values = {} }
   local game_v1 = { id = "v1" }
   local game_v2 = { id = "v2" }
@@ -228,4 +228,15 @@ function TestGameplayStart:test_tick_callback_reads_current_game_ref_correctly()
 end
 
 
-return TestGameplayStart
+it("test_prime_first_turn_returns_false_when_turn_is_nil", _test_prime_first_turn_returns_false_when_turn_is_nil)
+it("test_prime_first_turn_returns_false_when_turn_count_not_zero", _test_prime_first_turn_returns_false_when_turn_count_not_zero)
+it("test_prime_first_turn_returns_false_when_phase_not_start", _test_prime_first_turn_returns_false_when_phase_not_start)
+it("test_prime_first_turn_returns_false_when_pending_choice_exists", _test_prime_first_turn_returns_false_when_pending_choice_exists)
+it("test_prime_first_turn_advances_and_returns_true_for_fresh_turn", _test_prime_first_turn_advances_and_returns_true_for_fresh_turn)
+it("test_start_returns_existing_game_when_already_created", _test_start_returns_existing_game_when_already_created)
+it("test_start_stores_tick_handle", _test_start_stores_tick_handle)
+it("test_start_stop_start_replaces_tick_without_duplicate_callback", _test_start_stop_start_replaces_tick_without_duplicate_callback)
+it("test_start_assigns_turn_action_port_with_dispatch_and_block", _test_start_assigns_turn_action_port_with_dispatch_and_block)
+it("test_start_assigns_presentation_runtime", _test_start_assigns_presentation_runtime)
+it("test_tick_callback_reads_current_game_ref_correctly", _test_tick_callback_reads_current_game_ref_correctly)
+end)
