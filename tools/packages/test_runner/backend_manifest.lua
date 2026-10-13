@@ -50,7 +50,6 @@ return {
     "test/behavior/config/test_tiles_pin.lua",
     "test/behavior/config/test_timing_pin.lua",
     "test/behavior/config/test_tip_policy_pin.lua",
-    "test/behavior/contract/test_ui_role_avatar.lua",
     "test/behavior/foundation/ports/test_anim_port_factory.lua",
     "test/behavior/foundation/ports/test_share_panel_port.lua",
     "test/behavior/foundation/test_chain_args_mutation.lua",
@@ -607,6 +606,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/contract/test_ui_role_avatar.lua",
     "test/behavior/scenarios/movement_relocation/test_relocation.lua",
     "test/behavior/scenarios/runtime_context/test_context.lua",
     "test/behavior/scenarios/turn_flow/test_interrupts.lua",

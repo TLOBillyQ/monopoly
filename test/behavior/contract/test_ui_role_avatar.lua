@@ -3,7 +3,7 @@
 -- lives in test/contract/test_ui_role_avatar.lua; these cases pin the full guard
 -- surface (nil / non-integer / non-positive / valid, plus resolve_from_role).
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
@@ -12,9 +12,9 @@ local _with_patches = support.with_patches
 local role_avatar = require("src.ui.view.role_avatar")
 local logger = require("src.foundation.log")
 
-TestUiRoleAvatar = {}
+describe("TestUiRoleAvatar", function()
 
-function TestUiRoleAvatar:test_sanitize_image_key_covers_nil_non_integer_non_positive_and_valid_keys()
+local function test_sanitize_image_key_covers_nil_non_integer_non_positive_and_valid_keys()
   local warns = 0
   _with_patches({
     { target = logger, key = "warn", value = function() warns = warns + 1 end },
@@ -28,7 +28,7 @@ function TestUiRoleAvatar:test_sanitize_image_key_covers_nil_non_integer_non_pos
   luassert.truthy(warns >= 2, "non-integer and negative keys should each warn (got " .. warns .. ")")
 end
 
-function TestUiRoleAvatar:test_resolve_from_role_guards_missing_role_missing_getter_and_getter_errors()
+local function test_resolve_from_role_guards_missing_role_missing_getter_and_getter_errors()
   _assert_eq(role_avatar.resolve_from_role(nil), nil, "nil role resolves to nil")
   _assert_eq(role_avatar.resolve_from_role({}), nil, "role without get_head_icon resolves to nil")
   _assert_eq(role_avatar.resolve_from_role({ get_head_icon = function() error("boom") end }), nil,
@@ -37,12 +37,12 @@ function TestUiRoleAvatar:test_resolve_from_role_guards_missing_role_missing_get
     "a valid getter resolves the sanitized key")
 end
 
-function TestUiRoleAvatar:test_sanitize_one_key_is_still_valid()
+local function test_sanitize_one_key_is_still_valid()
   -- 杀 L35 `as_int <= 0` 的 0->1:key=1 是合法正整数,不得被误判进非正分支。
   _assert_eq(role_avatar.sanitize_image_key(1), 1, "key 1 should pass through")
 end
 
-function TestUiRoleAvatar:test_sanitize_zero_never_warns()
+local function test_sanitize_zero_never_warns()
   -- 杀 L36 内层 `as_int < 0` 的 <-><= 与 0->1:key=0 必须静默返回 nil,
   -- 不能触发 warn。用字符串 "0" 输入——其去重槽 "string:0" 与 covers 测试
   -- 的数字 0 槽("number:0")不同,变异触发 warn 后可观测(顺序耦合隔离)。
@@ -55,7 +55,7 @@ function TestUiRoleAvatar:test_sanitize_zero_never_warns()
   _assert_eq(warns, 0, "zero key must not warn")
 end
 
-function TestUiRoleAvatar:test_invalid_key_warn_deduplicates_and_pins_payload()
+local function test_invalid_key_warn_deduplicates_and_pins_payload()
   -- 杀 L22 warned_values[key]=true 的 true->false(去重失效)与 L23 消息->nil:
   -- 同值重复必须只 warn 一次,且载荷首参钉死。
   local warns = {}
@@ -72,7 +72,7 @@ function TestUiRoleAvatar:test_invalid_key_warn_deduplicates_and_pins_payload()
   _assert_eq(warns[1][1], "头像ImageKey解析失败:", "warn payload label should be pinned")
 end
 
-function TestUiRoleAvatar:test_tostring_failure_falls_back_safely()
+local function test_tostring_failure_falls_back_safely()
   -- 杀 L12 "<tostring failed>"->nil:__tostring 抛错的值必须走兜底串,
   -- 不能让 `type:..text` 拼接撞 nil。
   local bad_value = setmetatable({}, {
@@ -90,4 +90,10 @@ function TestUiRoleAvatar:test_tostring_failure_falls_back_safely()
 end
 
 
-return TestUiRoleAvatar
+it("test_sanitize_image_key_covers_nil_non_integer_non_positive_and_valid_keys", test_sanitize_image_key_covers_nil_non_integer_non_positive_and_valid_keys)
+it("test_resolve_from_role_guards_missing_role_missing_getter_and_getter_errors", test_resolve_from_role_guards_missing_role_missing_getter_and_getter_errors)
+it("test_sanitize_one_key_is_still_valid", test_sanitize_one_key_is_still_valid)
+it("test_sanitize_zero_never_warns", test_sanitize_zero_never_warns)
+it("test_invalid_key_warn_deduplicates_and_pins_payload", test_invalid_key_warn_deduplicates_and_pins_payload)
+it("test_tostring_failure_falls_back_safely", test_tostring_failure_falls_back_safely)
+end)
