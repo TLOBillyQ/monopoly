@@ -15,7 +15,19 @@
 local source = require("acceptance4lua.source")
 local number_utils = require("src.foundation.number")
 
-local runtime = {}
+local runtime = { executions = {} }
+
+function runtime.load_ir(embedded)
+  if runtime.override_ir then return runtime.override_ir end
+  local override = os.getenv("ACCEPTANCE_FEATURE_JSON")
+  if override and override ~= "" then
+    local file = assert(io.open(override, "rb"))
+    local text = file:read("*a")
+    file:close()
+    return require("acceptance4lua.json").decode(text)
+  end
+  return embedded
+end
 
 local function _shape(text)
   return (tostring(text or ""):gsub("<[^<>]+>", "<>"))
@@ -205,7 +217,7 @@ local function _run_step(ir, world, example, step, handlers)
 
   local ok, success, err = pcall(handler, world, bound_or_err, step, resolved_text)
   if not ok then
-    return nil, success
+    return nil, success, true
   end
   if success == false or err ~= nil then
     return nil, err or "step failed: " .. tostring(step.text)
@@ -225,7 +237,8 @@ local function _execution_name(scenario, example_index)
 end
 
 function runtime.run_execution(ir, scenario, example, handlers)
-  local world = {}
+  local cleanups = {}
+  local world = { defer = function(fn) cleanups[#cleanups + 1] = fn end }
   local steps = {}
   for _, step in ipairs(ir.background or {}) do
     steps[#steps + 1] = step
@@ -234,13 +247,18 @@ function runtime.run_execution(ir, scenario, example, handlers)
     steps[#steps + 1] = step
   end
 
+  local success, failure, infrastructure = true, nil, false
   for _, step in ipairs(steps) do
-    local ok, err = _run_step(ir, world, example or {}, step, handlers)
-    if not ok then
-      return nil, err
-    end
+    local ok, err, thrown = _run_step(ir, world, example or {}, step, handlers)
+    if not ok then success, failure, infrastructure = nil, err, thrown; break end
   end
-  return true
+  local cleanup_errors = {}
+  for index = #cleanups, 1, -1 do
+    local ok, err = pcall(cleanups[index])
+    if not ok then cleanup_errors[#cleanup_errors + 1] = tostring(err) end
+  end
+  if #cleanup_errors > 0 then error("acceptance cleanup failed: " .. table.concat(cleanup_errors, "; "), 0) end
+  return success, failure, infrastructure
 end
 
 function runtime.run_feature(ir, handlers)
@@ -276,12 +294,18 @@ end
 function runtime.define_specs(ir, handlers, define_it)
   define_it = define_it or rawget(_G, "it")
   assert(define_it ~= nil, "missing it function")
-  for _, scenario in ipairs(ir.scenarios or {}) do
+  assert(type(ir) == "table" and type(ir.scenarios) == "table" and #ir.scenarios > 0,
+    "no acceptance scenarios registered")
+  for scenario_index, scenario in ipairs(ir.scenarios) do
     for example_index, example in ipairs(_execution_examples(scenario)) do
       local name = _execution_name(scenario, example_index)
       define_it(name, function()
-        local ok, err = runtime.run_execution(ir, scenario, example, handlers)
-        assert(ok, err)
+        local execution = { scenario = scenario_index, example = example_index, name = name }
+        runtime.executions[#runtime.executions + 1] = execution
+        local ok, err, infrastructure = runtime.run_execution(ir, scenario, example, handlers)
+        execution.status = ok and "success" or infrastructure and "error" or "failure"
+        if infrastructure then error(err, 0) end
+        require("luassert").is_true(ok == true, tostring(err or "acceptance step failed"))
       end)
     end
   end

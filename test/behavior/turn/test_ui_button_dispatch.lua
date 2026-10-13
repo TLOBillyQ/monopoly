@@ -1,7 +1,10 @@
-local lu = require("luaunit")
+local check = require("luassert")
+local function _str_contains(actual, expected, message)
+  check.is_truthy(actual:find(expected, 1, true), message)
+end
 local action_dispatcher = require("src.turn.actions.action_dispatcher")
 
-TestUiButtonDispatch = {}
+describe("TestUiButtonDispatch", function()
 
 local function _state()
   return {
@@ -34,27 +37,7 @@ local function _game()
   return game
 end
 
-function TestUiButtonDispatch:test_next_routes_through_game_dispatch_action()
-  local game = _game()
-  local action = { type = "ui_button", id = "next", actor_role_id = 1 }
-
-  local result = action_dispatcher.dispatch_action(game, _state(), action)
-
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertEquals(game.dispatched, { action })
-end
-
-function TestUiButtonDispatch:test_unknown_button_is_rejected()
-  local result = action_dispatcher.dispatch_action(_game(), _state(), {
-    type = "ui_button",
-    id = "unknown",
-    actor_role_id = 1,
-  })
-
-  lu.assertEquals(result, { status = "rejected" })
-end
-
-function TestUiButtonDispatch:test_cancel_redispatches_the_current_cancelable_choice()
+it("test_cancel_redispatches_the_current_cancelable_choice", function()
   local game = _game()
   game.turn.pending_choice = { id = "choice-1", allow_cancel = true }
 
@@ -64,32 +47,52 @@ function TestUiButtonDispatch:test_cancel_redispatches_the_current_cancelable_ch
     actor_role_id = 1,
   })
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertEquals(game.dispatched[1].type, "choice_cancel")
-  lu.assertEquals(game.dispatched[1].choice_id, "choice-1")
-end
+  check.same(result, { status = "applied" })
+  check.same(game.dispatched[1].type, "choice_cancel")
+  check.same(game.dispatched[1].choice_id, "choice-1")
+end)
 
-function TestUiButtonDispatch:test_cancel_rejects_missing_or_non_cancelable_choices()
+it("test_cancel_rejects_missing_or_non_cancelable_choices", function()
   local game = _game()
   local action = { type = "ui_button", id = "cancel", actor_role_id = 1 }
 
-  lu.assertEquals(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
+  check.same(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
   game.turn.pending_choice = { id = "choice-2", allow_cancel = false }
-  lu.assertEquals(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
-end
+  check.same(action_dispatcher.dispatch_action(game, _state(), action), { status = "rejected" })
+end)
 
-function TestUiButtonDispatch:test_step_turn_requires_game()
-  local ok, err = pcall(action_dispatcher.step_turn, nil)
-
-  lu.assertFalse(ok)
-  lu.assertStrContains(tostring(err), "missing game")
-end
-
-function TestUiButtonDispatch:test_dispatch_action_requires_action()
+it("test_dispatch_action_requires_action", function()
   local ok, err = pcall(action_dispatcher.dispatch_action, {}, _state(), nil)
 
-  lu.assertFalse(ok)
-  lu.assertStrContains(tostring(err), "missing action")
-end
+  check.is_false(ok)
+  _str_contains(tostring(err), "missing action")
+end)
 
-return TestUiButtonDispatch
+it("test_next_routes_through_game_dispatch_action", function()
+  local game = _game()
+  local action = { type = "ui_button", id = "next", actor_role_id = 1 }
+
+  local result = action_dispatcher.dispatch_action(game, _state(), action)
+
+  check.same(result, { status = "applied" })
+  check.same(game.dispatched, { action })
+end)
+
+it("test_step_turn_requires_game", function()
+  local ok, err = pcall(action_dispatcher.step_turn, nil)
+
+  check.is_false(ok)
+  _str_contains(tostring(err), "missing game")
+end)
+
+it("test_unknown_button_is_rejected", function()
+  local result = action_dispatcher.dispatch_action(_game(), _state(), {
+    type = "ui_button",
+    id = "unknown",
+    actor_role_id = 1,
+  })
+
+  check.same(result, { status = "rejected" })
+end)
+
+end)

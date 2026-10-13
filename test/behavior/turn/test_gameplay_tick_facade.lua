@@ -1,10 +1,10 @@
-local lu = require("luaunit")
+local check = require("luassert")
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local gameplay_loop = require("src.turn.loop.init")
 local runtime_state = require("src.state.runtime")
 
-TestGameplayTickFacade = {}
+describe("TestGameplayTickFacade", function()
 
 local function _new_subject()
   local game = support.new_game({ players = { "P1", "P2" }, ai = {} })
@@ -14,46 +14,30 @@ local function _new_subject()
   return game, state
 end
 
-function TestGameplayTickFacade:test_release_pulse_marks_turn_dirty_and_syncs_status_during_visual_hold()
+it("test_auto_runner_receives_tick_context_from_the_public_tick", function()
   local game, state = _new_subject()
-  local refreshed_dirty
-  local status_syncs = 0
-  runtime_state.set_landing_visual_hold_active(state, true)
-  runtime_state.mark_landing_visual_release_pulse(state)
-  state.gameplay_loop_ports.ui_sync.refresh_from_dirty = function(_, _, dirty)
-    refreshed_dirty = dirty
-    return false
-  end
-  state.gameplay_loop_ports.anim.sync_status_3d = function()
-    status_syncs = status_syncs + 1
-  end
+  local captured
+  support.with_patches({
+    {
+      target = gameplay_loop,
+      key = "step_auto_runner",
+      value = function(received_game, received_state, dt, context)
+        captured = { game = received_game, state = received_state, dt = dt, context = context }
+      end,
+    },
+  }, function()
+    gameplay_loop.tick(game, state, 0.25)
+  end)
 
-  gameplay_loop.tick(game, state, 0)
+  check.equal(captured.game, game)
+  check.equal(captured.state, state)
+  check.same(captured.dt, 0.25)
+  check.equal(captured.context.game, game)
+  check.equal(captured.context.state, state)
+  check.same(captured.context.current_player_id, game:current_player().id)
+end)
 
-  lu.assertTrue(refreshed_dirty.any)
-  lu.assertTrue(refreshed_dirty.turn)
-  lu.assertEquals(status_syncs, 1)
-end
-
-function TestGameplayTickFacade:test_visual_hold_skips_status_sync_but_keeps_event_log_flowing()
-  local game, state = _new_subject()
-  local status_syncs = 0
-  local event_log_syncs = 0
-  runtime_state.set_landing_visual_hold_active(state, true)
-  state.gameplay_loop_ports.anim.sync_status_3d = function()
-    status_syncs = status_syncs + 1
-  end
-  state.gameplay_loop_ports.debug.sync_event_log = function()
-    event_log_syncs = event_log_syncs + 1
-  end
-
-  gameplay_loop.tick(game, state, 0)
-
-  lu.assertEquals(status_syncs, 0)
-  lu.assertEquals(event_log_syncs, 1)
-end
-
-function TestGameplayTickFacade:test_blocked_refreshed_ui_reapplies_input_lock()
+it("test_blocked_refreshed_ui_reapplies_input_lock", function()
   local game, state = _new_subject()
   local lock_applications = 0
   local ui_sync = state.gameplay_loop_ports.ui_sync
@@ -67,10 +51,10 @@ function TestGameplayTickFacade:test_blocked_refreshed_ui_reapplies_input_lock()
 
   gameplay_loop.tick(game, state, 0)
 
-  lu.assertEquals(lock_applications, 1)
-end
+  check.same(lock_applications, 1)
+end)
 
-function TestGameplayTickFacade:test_missing_ui_probe_samples_after_the_dirty_refresh()
+it("test_missing_ui_probe_samples_after_the_dirty_refresh", function()
   -- #523 时序 pin：缺屏探针必须在 refresh_from_dirty 之后采样——同帧
   -- 「先探后开」的误报（阻塞期创建、放行帧首开的窗口）不得回归。
   local game, state = _new_subject()
@@ -90,12 +74,12 @@ function TestGameplayTickFacade:test_missing_ui_probe_samples_after_the_dirty_re
     if tag == "refresh" then refresh_at = index end
     if tag == "probe" then probe_at = index end
   end
-  lu.assertNotNil(refresh_at, "the dirty refresh runs in the tick")
-  lu.assertNotNil(probe_at, "the missing-ui probe runs in the tick")
-  lu.assertTrue(probe_at > refresh_at, "the probe samples after the dirty refresh")
-end
+  check.is_not_nil(refresh_at, "the dirty refresh runs in the tick")
+  check.is_not_nil(probe_at, "the missing-ui probe runs in the tick")
+  check.is_true(probe_at > refresh_at, "the probe samples after the dirty refresh")
+end)
 
-function TestGameplayTickFacade:test_pending_choice_opened_in_the_same_frame_does_not_warn()
+it("test_pending_choice_opened_in_the_same_frame_does_not_warn", function()
   -- #523 复现路径回归 pin（验收第 1 条）：窗口在 dirty 刷新内首开
   --（refresh 落 choice_active/screen_key 模拟 open_choice_modal 的门控
   -- 副作用），同帧探针必须看到 open=true 不告警；探针若被移回刷新之前
@@ -134,30 +118,46 @@ function TestGameplayTickFacade:test_pending_choice_opened_in_the_same_frame_doe
   }, function()
     gameplay_loop.tick(game, state, 0)
   end)
-  lu.assertEquals(#warned, 0, "a choice opened in the same frame's refresh never warns")
-end
+  check.same(#warned, 0, "a choice opened in the same frame's refresh never warns")
+end)
 
-function TestGameplayTickFacade:test_auto_runner_receives_tick_context_from_the_public_tick()
+it("test_release_pulse_marks_turn_dirty_and_syncs_status_during_visual_hold", function()
   local game, state = _new_subject()
-  local captured
-  support.with_patches({
-    {
-      target = gameplay_loop,
-      key = "step_auto_runner",
-      value = function(received_game, received_state, dt, context)
-        captured = { game = received_game, state = received_state, dt = dt, context = context }
-      end,
-    },
-  }, function()
-    gameplay_loop.tick(game, state, 0.25)
-  end)
+  local refreshed_dirty
+  local status_syncs = 0
+  runtime_state.set_landing_visual_hold_active(state, true)
+  runtime_state.mark_landing_visual_release_pulse(state)
+  state.gameplay_loop_ports.ui_sync.refresh_from_dirty = function(_, _, dirty)
+    refreshed_dirty = dirty
+    return false
+  end
+  state.gameplay_loop_ports.anim.sync_status_3d = function()
+    status_syncs = status_syncs + 1
+  end
 
-  lu.assertIs(captured.game, game)
-  lu.assertIs(captured.state, state)
-  lu.assertEquals(captured.dt, 0.25)
-  lu.assertIs(captured.context.game, game)
-  lu.assertIs(captured.context.state, state)
-  lu.assertEquals(captured.context.current_player_id, game:current_player().id)
-end
+  gameplay_loop.tick(game, state, 0)
 
-return TestGameplayTickFacade
+  check.is_true(refreshed_dirty.any)
+  check.is_true(refreshed_dirty.turn)
+  check.same(status_syncs, 1)
+end)
+
+it("test_visual_hold_skips_status_sync_but_keeps_event_log_flowing", function()
+  local game, state = _new_subject()
+  local status_syncs = 0
+  local event_log_syncs = 0
+  runtime_state.set_landing_visual_hold_active(state, true)
+  state.gameplay_loop_ports.anim.sync_status_3d = function()
+    status_syncs = status_syncs + 1
+  end
+  state.gameplay_loop_ports.debug.sync_event_log = function()
+    event_log_syncs = event_log_syncs + 1
+  end
+
+  gameplay_loop.tick(game, state, 0)
+
+  check.same(status_syncs, 0)
+  check.same(event_log_syncs, 1)
+end)
+
+end)

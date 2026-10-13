@@ -1,12 +1,12 @@
-local lu = require("luaunit")
+local luassert = assert
 local validator = require("src.turn.actions.validator")
 local tick_ui_gate = require("src.turn.waits.ui_gate")
 local ui_gate_sync = require("src.ui.ports.ui_sync")._gate
 local canvas_store = require("src.ui.state.canvas_store")
 
-TestUiGate = {}
+describe("TestUiGate", function()
 
-function TestUiGate:test_ui_gate_resolve_state_uses_port_contract()
+  it("test_ui_gate_resolve_state_uses_port_contract", function()
   local state = {
     game = {
       turn = {
@@ -30,15 +30,15 @@ function TestUiGate:test_ui_gate_resolve_state_uses_port_contract()
   }
 
   local gate_state = validator.resolve_gate_state(state, ui_sync_ports)
-  lu.assertIs(gate_state.input_blocked, true, "input_blocked should come from resolve_ui_gate contract")
-  lu.assertIs(gate_state.choice_active, true, "choice_active should come from resolve_ui_gate contract")
-  lu.assertIs(gate_state.market_active, false, "market_active should come from resolve_ui_gate contract")
-  lu.assertIs(gate_state.popup_active, true, "popup_active should come from resolve_ui_gate contract")
-  lu.assertIs(gate_state.phase, "wait_action_anim", "phase should still come from game turn")
-  lu.assertIs(gate_state.detained_wait_active, true, "detained_wait_active should still come from game turn")
-end
+  luassert.is.equal(true, gate_state.input_blocked, "input_blocked should come from resolve_ui_gate contract")
+  luassert.is.equal(true, gate_state.choice_active, "choice_active should come from resolve_ui_gate contract")
+  luassert.is.equal(false, gate_state.market_active, "market_active should come from resolve_ui_gate contract")
+  luassert.is.equal(true, gate_state.popup_active, "popup_active should come from resolve_ui_gate contract")
+  luassert.is.equal("wait_action_anim", gate_state.phase, "phase should still come from game turn")
+  luassert.is.equal(true, gate_state.detained_wait_active, "detained_wait_active should still come from game turn")
+  end)
 
-function TestUiGate:test_ui_gate_modal_timeout_prefers_gate_payload()
+  it("test_ui_gate_modal_timeout_prefers_gate_payload", function()
   local seconds = tick_ui_gate.resolve_modal_timeout_seconds({}, {
     resolve_ui_gate = function()
       return {
@@ -46,10 +46,10 @@ function TestUiGate:test_ui_gate_modal_timeout_prefers_gate_payload()
       }
     end,
   })
-  lu.assertIs(seconds, 3.25, "modal timeout should prefer resolve_ui_gate popup_auto_close_seconds")
-end
+  luassert.is.equal(3.25, seconds, "modal timeout should prefer resolve_ui_gate popup_auto_close_seconds")
+  end)
 
-function TestUiGate:test_ui_gate_set_input_blocked_marks_base_dirty_only()
+  it("test_ui_gate_set_input_blocked_marks_base_dirty_only", function()
   local state = {
     ui = {
       input_blocked = false,
@@ -65,11 +65,9 @@ function TestUiGate:test_ui_gate_set_input_blocked_marks_base_dirty_only()
   local changed = ui_gate_sync.set_input_blocked(state, true, common)
   local dirty = canvas_store.consume_dirty(state)
 
-  lu.assertIs(changed, true, "set_input_blocked should report changed when value flips")
-  lu.assertIs(state.ui.input_blocked, true, "set_input_blocked should write ui gate state")
-  lu.assertIs(dirty.base, true, "set_input_blocked should mark base render dirty")
-  lu.assertNil(state.ui_runtime, "set_input_blocked should not allocate ui_runtime or mark ui_model dirty")
-end
-
-
-return TestUiGate
+  luassert.is.equal(true, changed, "set_input_blocked should report changed when value flips")
+  luassert.is.equal(true, state.ui.input_blocked, "set_input_blocked should write ui gate state")
+  luassert.is.equal(true, dirty.base, "set_input_blocked should mark base render dirty")
+  luassert.is_nil(state.ui_runtime, "set_input_blocked should not allocate ui_runtime or mark ui_model dirty")
+  end)
+end)

@@ -1,7 +1,6 @@
 ---@diagnostic disable: undefined-global, undefined-field
 require("test.bootstrap").install_package_paths()
-
-local lu = require("luaunit")
+local luassert = assert
 
 -- 本仓自己的 arch 规则表断言(#596)。
 --
@@ -18,20 +17,18 @@ local function _read_config()
   return raw
 end
 
-TestArchConfigRules = {}
-
--- ui.state 拥有展示状态,ui.coord 消费它并驱动视图/宿主副作用;层序把两者都算
--- ui(3),所以这条方向约束不在层门禁覆盖范围内,必须由显式规则承担
--- (docs/architecture.md「ui 内部」一节)。
-function TestArchConfigRules:test_ui_state_must_not_depend_on_ui_coord()
-  local raw = _read_config()
-  lu.assertEvalToTrue(raw:find("ui_state_no_coord", 1, true) ~= nil,
-    "arch 配置必须声明 ui_state_no_coord 规则,否则 ui.state 反向依赖 ui.coord 无人拦截")
-  -- 配置里存的是 Lua 模式串字面量(单个 %),用 plain find 精确比对。
-  lu.assertEvalToTrue(raw:find("^src%.ui%.state%..+", 1, true) ~= nil,
-    "ui_state_no_coord 的 from 必须覆盖整个 src.ui.state 子树")
-  lu.assertEvalToTrue(raw:find("^src%.ui%.coord%..+", 1, true) ~= nil,
-    "ui_state_no_coord 的 to 必须覆盖整个 src.ui.coord 子树")
-end
-
-return TestArchConfigRules
+describe("TestArchConfigRules", function()
+  -- ui.state 拥有展示状态,ui.coord 消费它并驱动视图/宿主副作用;层序把两者都算
+  -- ui(3),所以这条方向约束不在层门禁覆盖范围内,必须由显式规则承担
+  -- (docs/architecture.md「ui 内部」一节)。
+  it("test_ui_state_must_not_depend_on_ui_coord", function()
+    local raw = _read_config()
+    luassert.truthy(raw:find("ui_state_no_coord", 1, true) ~= nil,
+      "arch 配置必须声明 ui_state_no_coord 规则,否则 ui.state 反向依赖 ui.coord 无人拦截")
+    -- 配置里存的是 Lua 模式串字面量(单个 %),用 plain find 精确比对。
+    luassert.truthy(raw:find("^src%.ui%.state%..+", 1, true) ~= nil,
+      "ui_state_no_coord 的 from 必须覆盖整个 src.ui.state 子树")
+    luassert.truthy(raw:find("^src%.ui%.coord%..+", 1, true) ~= nil,
+      "ui_state_no_coord 的 to 必须覆盖整个 src.ui.coord 子树")
+  end)
+end)
