@@ -1,6 +1,9 @@
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 -- market.lua 数据契约 pin:整表逐条深等(#293 变异清扫)。
 -- 商品目录(档位/价格/货币/限额)被商店流程消费,改表必须改契约。
-local lu = require("luaunit")
 local market = require("src.config.content.market")
 
 local expected = {
@@ -25,21 +28,21 @@ local expected = {
   { order = 19, product_id = 2014, name = "查税卡",    page = "道具商店", kind = "item", currency = "金豆",  price = 58,   limit = 10 },
 }
 
-TestMarketPin = {}
+describe("TestMarketPin", function()
 
-function TestMarketPin:test_market_catalog_matches_the_pinned_contract()
-  lu.assertEvalToTrue(#market == #expected, "market row count must match")
-  for i, want in ipairs(expected) do
-    lu.assertEvalToTrue(market[i] ~= nil, "row " .. i .. " must exist")
-    lu.assertEvalToTrue(market[i].order == want.order, "row " .. i .. " order")
-    lu.assertEvalToTrue(market[i].product_id == want.product_id, "row " .. i .. " product_id")
-    lu.assertEvalToTrue(market[i].name == want.name, "row " .. i .. " name")
-    lu.assertEvalToTrue(market[i].page == want.page, "row " .. i .. " page")
-    lu.assertEvalToTrue(market[i].kind == want.kind, "row " .. i .. " kind")
-    lu.assertEvalToTrue(market[i].currency == want.currency, "row " .. i .. " currency")
-    lu.assertEvalToTrue(market[i].price == want.price, "row " .. i .. " price")
-    lu.assertEvalToTrue(market[i].limit == want.limit, "row " .. i .. " limit")
-  end
-end
+  it("test_market_catalog_matches_the_pinned_contract", function()
+    luassert.truthy(#market == #expected, "market row count must match")
+    for i, want in ipairs(expected) do
+      luassert.truthy(market[i] ~= nil, "row " .. i .. " must exist")
+      luassert.truthy(market[i].order == want.order, "row " .. i .. " order")
+      luassert.truthy(market[i].product_id == want.product_id, "row " .. i .. " product_id")
+      luassert.truthy(market[i].name == want.name, "row " .. i .. " name")
+      luassert.truthy(market[i].page == want.page, "row " .. i .. " page")
+      luassert.truthy(market[i].kind == want.kind, "row " .. i .. " kind")
+      luassert.truthy(market[i].currency == want.currency, "row " .. i .. " currency")
+      luassert.truthy(market[i].price == want.price, "row " .. i .. " price")
+      luassert.truthy(market[i].limit == want.limit, "row " .. i .. " limit")
+    end
+  end)
 
-return TestMarketPin
+end)
