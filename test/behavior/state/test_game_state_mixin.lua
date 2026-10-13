@@ -1,8 +1,11 @@
+require("test.bootstrap").install_package_paths()
+-- busted injects the extensible assertion object into each file environment.
+-- luacheck: ignore 143
+local luassert = assert
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local with_patches = support.with_patches
 
 local function _clear_module(module_name)
@@ -24,45 +27,44 @@ local function _with_game_state_mixins(player_mixin, board_mixin, turn_mixin, fn
   })
 end
 
-TestGameStateMixin = {}
+describe("TestGameStateMixin", function()
 
-function TestGameStateMixin:test_installs_distinct_mixins()
-  _with_game_state_mixins({
-    player_only = function()
-      return "player"
-    end,
-  }, {
-    board_only = function()
-      return "board"
-    end,
-  }, {
-    turn_only = function()
-      return "turn"
-    end,
-  }, function()
-    local game_state = require("src.state.game_state")
-    lu.assertEvalToTrue(type(game_state.player_only) == "function", "player mixin should install")
-    lu.assertEvalToTrue(type(game_state.board_only) == "function", "board mixin should install")
-    lu.assertEvalToTrue(type(game_state.turn_only) == "function", "turn mixin should install")
+  it("test_installs_distinct_mixins", function()
+    _with_game_state_mixins({
+      player_only = function()
+        return "player"
+      end,
+    }, {
+      board_only = function()
+        return "board"
+      end,
+    }, {
+      turn_only = function()
+        return "turn"
+      end,
+    }, function()
+      local game_state = require("src.state.game_state")
+      luassert.truthy(type(game_state.player_only) == "function", "player mixin should install")
+      luassert.truthy(type(game_state.board_only) == "function", "board mixin should install")
+      luassert.truthy(type(game_state.turn_only) == "function", "turn mixin should install")
+    end)
   end)
-end
 
-function TestGameStateMixin:test_rejects_mixin_key_collision()
-  _with_game_state_mixins({
-    shared_key = function()
-      return "player"
-    end,
-  }, {
-    shared_key = function()
-      return "board"
-    end,
-  }, {}, function()
-    local ok, err = pcall(require, "src.state.game_state")
-    _assert_eq(ok, false, "duplicate mixin key should fail module assembly")
-    lu.assertEvalToTrue(string.find(tostring(err), "game_state mixin collision: board.shared_key", 1, true) ~= nil,
-      "collision error should include conflicting mixin key, err=" .. tostring(err))
+  it("test_rejects_mixin_key_collision", function()
+    _with_game_state_mixins({
+      shared_key = function()
+        return "player"
+      end,
+    }, {
+      shared_key = function()
+        return "board"
+      end,
+    }, {}, function()
+      local ok, err = pcall(require, "src.state.game_state")
+      _assert_eq(ok, false, "duplicate mixin key should fail module assembly")
+      luassert.truthy(string.find(tostring(err), "game_state mixin collision: board.shared_key", 1, true) ~= nil, "collision error should include conflicting mixin key, err=" .. tostring(err))
+    end)
   end)
-end
 
 
-return TestGameStateMixin
+end)
