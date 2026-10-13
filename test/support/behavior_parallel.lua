@@ -115,6 +115,11 @@ local function _parse_output(content)
     elseif line:match("^not ok %d") then
       result.failed = result.failed + 1
       result.failure_lines[#result.failure_lines + 1] = line
+    elseif line:match("^not ok %- failed to load ") then
+      result.failure_lines[#result.failure_lines + 1] = line
+    elseif line:match("^# ") and result.failure_lines[#result.failure_lines]
+        and result.failure_lines[#result.failure_lines]:match("^not ok %- failed to load ") then
+      result.failure_lines[#result.failure_lines + 1] = line
     elseif line:match("^# BASELINE LEAK") then
       -- 共享端口基线守卫(#217)的点名行:worker 内 errors 计数只影响退出码,
       -- 明细靠这里透传进 failures 段。

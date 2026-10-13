@@ -25,11 +25,12 @@ end
 
 function TestParallelLanes:test_success_failure_missing_command_and_empty_output_are_distinct()
   fixture(function(root)
-    local success = script(root, "ok", 'print("中文 success"); os.exit(0)')
+    local writer = script(root, "writer", 'local d=os.time()+2; while os.time()<d do end; print("中文 success")')
+    local success = 'start "" /b lua "' .. writer:gsub("/", "\\") .. '"'
     local failure = script(root, "bad", 'print("out"); io.stderr:write("err\\n"); os.exit(4)')
     local silent = script(root, "empty", "os.exit(0)")
     local ok, results = parallel.run({
-      { label = "ok", cmd = shell.build_command({ "lua", success }) },
+      { label = "ok", cmd = success },
       { label = "bad", cmd = shell.build_command({ "lua", failure }) },
       { label = "missing", cmd = shell.build_command({ root .. "/missing_91.exe" }) },
       { label = "empty", cmd = shell.build_command({ "lua", silent }) },
@@ -39,6 +40,8 @@ function TestParallelLanes:test_success_failure_missing_command_and_empty_output
     lu.assertEquals(results[1].label, "ok")
     lu.assertTrue(results[1].ok)
     lu.assertEquals(results[1].exit_code, 0)
+    lu.assertNotEquals(results[1].owner_pid, nil)
+    lu.assertNotEquals(results[1].child_pid, nil)
     lu.assertStrContains(results[1].output, "中文 success")
     lu.assertEquals(results[2].reason, "exit")
     lu.assertEquals(results[2].exit_code, 4)
@@ -55,9 +58,11 @@ end
 function TestParallelLanes:test_parallel_and_serial_preserve_order_results_and_chinese_arguments()
   fixture(function(root)
     local file = script(root, "echo args", 'for i=1,#arg do print(arg[i]) end; os.exit(tonumber(arg[1]))')
+    local first = { "lua", file, "0", "", "中文 space", 'quote"and&pipe|', "%PATH%", "bang!caret^", "tail\\" }
+    local second = { "lua", file, "5", "参数 空格" }
     local lanes = {
-      { label = "first", cmd = shell.build_command({ "lua", file, "0", "中文 space" }) },
-      { label = "second", cmd = shell.build_command({ "lua", file, "5", "参数 空格" }) },
+      { label = "first", cmd = first },
+      { label = "second", cmd = second },
     }
     local ok, results = parallel.run(lanes, { stream = false, timeout = 20 })
     lu.assertFalse(ok)
