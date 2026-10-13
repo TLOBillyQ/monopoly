@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local player_colors = require("src.ui.view.player_colors")
 local assets = require("src.ui.render.support.assets")
 local runtime = require("src.ui.render.support.runtime_ui")
@@ -9,7 +10,7 @@ local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 
 local function _assert_eq(actual, expected, msg)
-  assert(actual == expected, (msg or "") .. " expected=" .. tostring(expected) .. " actual=" .. tostring(actual))
+  luassert.is.equal(expected, actual, msg)
 end
 
 TestPlayerColors = {}
@@ -93,7 +94,7 @@ function TestPlayerColors:test_capture_player_colors_prefers_base_panel_colors()
     })
   end)
 
-  lu.assertEvalToTrue(captured ~= nil, "capture should set owner colors from base panel")
+  luassert.truthy(captured ~= nil, "capture should set owner colors from base panel")
   _assert_eq(captured["p1"], sampled[1], "p1 should use base panel color #1")
   _assert_eq(captured["p2"], sampled[2], "p2 should use base panel color #2")
   _assert_eq(captured["p3"], sampled[3], "p3 should use base panel color #3")
@@ -175,7 +176,7 @@ function TestPlayerColors:test_assets_init_assigns_all_configured_item_slot_icon
   _assert_eq(role_iterations, 1, "asset init should run for global role scope")
   _assert_eq(#slot_images, 5, "asset init should set five item slot images")
   _assert_eq(slot_images[1].node_name, permanent_nodes.item_slots[1], "first slot node should match schema")
-  lu.assertEvalToTrue(state.runtime_asset_context ~= nil, "asset init should store the resolver context on state")
+  luassert.truthy(state.runtime_asset_context ~= nil, "asset init should store the resolver context on state")
 end
 
 

@@ -1,8 +1,9 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local with_client_role = require("src.ui.render.support.with_client_role")
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 -- describe("with_client_role") 拍平为文件级 TestWithClientRole,文件内自研
@@ -57,21 +58,19 @@ function TestWithClientRole:test_clears_client_role_and_re_raises_when_fn_errors
   local ok, err = pcall(with_client_role, runtime, "p", function() error("boom") end)
   _assert_eq(ok, false, "error propagated")
   _assert_eq(cleared, true, "role cleared despite error")
-  lu.assertEvalToTrue(tostring(err):find("boom"), "original error preserved: " .. tostring(err))
+  luassert.truthy(tostring(err):find("boom"), "original error preserved: " .. tostring(err))
 end
 
 function TestWithClientRole:test_rejects_missing_runtime_with_message()
   -- #293: L2 assert 消息变异(消息串翻 nil)——缺 runtime 必须报出标识消息。
-  local luax = require("test.support.luax")
-  luax.has_error(function()
+  luassert.has_error(function()
     with_client_role(nil, "p", function() end)
   end, "missing runtime")
 end
 
 function TestWithClientRole:test_rejects_missing_fn_with_message()
   -- #293: L3 assert 消息变异(消息串翻 nil)——缺 fn 必须报出标识消息。
-  local luax = require("test.support.luax")
-  luax.has_error(function()
+  luassert.has_error(function()
     with_client_role({}, "p", nil)
   end, "missing fn")
 end

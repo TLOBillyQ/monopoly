@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 
 TestPrefabDataKeys = {}
 
@@ -9,9 +10,9 @@ local UNIT_KEYS_READ_BY_SRC = { "地雷A", "路障", "导弹", "清障机器人"
 
 function TestPrefabDataKeys:test_unit_keys_read_by_src_exist_in_exported_prefab()
   local prefab = require("Data.Prefab")
-  lu.assertEvalToTrue(type(prefab.unit) == "table", "Data/Prefab.lua must export a unit table")
+  luassert.truthy(type(prefab.unit) == "table", "Data/Prefab.lua must export a unit table")
   for _, key in ipairs(UNIT_KEYS_READ_BY_SRC) do
-    lu.assertEvalToTrue(prefab.unit[key] ~= nil,
+    luassert.truthy(prefab.unit[key] ~= nil,
       "Data/Prefab.lua unit table lost key " .. key .. " (editor export drift?)")
   end
 end

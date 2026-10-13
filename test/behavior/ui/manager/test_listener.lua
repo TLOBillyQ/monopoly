@@ -1,5 +1,6 @@
 -- listener.lua branch-dense coverage: destroy paths and host_events.unregister_custom_event stubbing.
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local Listener = require("src.ui.manager.listener")
 local host_events = require("src.ui.seams.host_events")
@@ -63,11 +64,11 @@ function TestListener:test_destroy_removes_middle_callback_and_keeps_handler_dat
   listener:destroy()
 
   local handler_data = context.event_handlers["click"][node_id]
-  lu.assertEvalToTrue(handler_data ~= nil, "handler_data should remain when callbacks still exist")
-  lu.assertEvalToTrue(#handler_data.callbacks == 2, "middle callback should be removed")
-  lu.assertEvalToTrue(handler_data.callbacks[1] == cb1, "first callback should stay")
-  lu.assertEvalToTrue(handler_data.callbacks[2] == cb3, "third callback should stay")
-  lu.assertEvalToTrue(#unregister_calls == 0, "should not unregister when handlers remain")
+  luassert.truthy(handler_data ~= nil, "handler_data should remain when callbacks still exist")
+  luassert.truthy(#handler_data.callbacks == 2, "middle callback should be removed")
+  luassert.truthy(handler_data.callbacks[1] == cb1, "first callback should stay")
+  luassert.truthy(handler_data.callbacks[2] == cb3, "third callback should stay")
+  luassert.truthy(#unregister_calls == 0, "should not unregister when handlers remain")
 end
 
 function TestListener:test_destroy_removes_last_callback_and_cleans_up_handler_data()
@@ -83,11 +84,11 @@ function TestListener:test_destroy_removes_last_callback_and_cleans_up_handler_d
   local listener = _make_listener("click", cb, node_id)
   listener:destroy()
 
-  lu.assertEvalToTrue(context.event_handlers["click"][node_id] == nil,
+  luassert.truthy(context.event_handlers["click"][node_id] == nil,
     "handler_data for node should be removed when its callbacks become empty")
-  lu.assertEvalToTrue(context.event_handlers["click"][other_node_id] ~= nil,
+  luassert.truthy(context.event_handlers["click"][other_node_id] ~= nil,
     "other node handler_data should remain")
-  lu.assertEvalToTrue(#unregister_calls == 0, "should not unregister when other node handlers exist")
+  luassert.truthy(#unregister_calls == 0, "should not unregister when other node handlers exist")
 end
 
 function TestListener:test_destroy_removes_last_node_handler_and_unregisters_custom_event()
@@ -101,9 +102,9 @@ function TestListener:test_destroy_removes_last_node_handler_and_unregisters_cus
   local listener = _make_listener("click", cb, node_id)
   listener:destroy()
 
-  lu.assertEvalToTrue(context.event_handlers["click"] == nil, "event handler should be removed")
-  lu.assertEvalToTrue(#unregister_calls == 1, "global_unregister_custom_event should be called once")
-  lu.assertEvalToTrue(unregister_calls[1] == 12345, "unregister should receive the stored trigger")
+  luassert.truthy(context.event_handlers["click"] == nil, "event handler should be removed")
+  luassert.truthy(#unregister_calls == 1, "global_unregister_custom_event should be called once")
+  luassert.truthy(unregister_calls[1] == 12345, "unregister should receive the stored trigger")
 end
 
 function TestListener:test_destroy_is_a_no_op_when_the_event_has_no_handler_data_for_the_node()
@@ -116,9 +117,9 @@ function TestListener:test_destroy_is_a_no_op_when_the_event_has_no_handler_data
   local listener = _make_listener("click", function() end, 42)
   listener:destroy()
 
-  lu.assertEvalToTrue(context.event_handlers["click"] ~= nil, "event handler should survive")
-  lu.assertEvalToTrue(context.event_handlers["click"][other_node_id] ~= nil, "other node handler_data should remain")
-  lu.assertEvalToTrue(#unregister_calls == 0, "should not unregister when node has no handler_data")
+  luassert.truthy(context.event_handlers["click"] ~= nil, "event handler should survive")
+  luassert.truthy(context.event_handlers["click"][other_node_id] ~= nil, "other node handler_data should remain")
+  luassert.truthy(#unregister_calls == 0, "should not unregister when node has no handler_data")
 end
 
 function TestListener:test_destroy_is_a_no_op_when_handler_data_carries_no_callbacks()
@@ -131,9 +132,9 @@ function TestListener:test_destroy_is_a_no_op_when_handler_data_carries_no_callb
   local listener = _make_listener("click", function() end, node_id)
   listener:destroy()
 
-  lu.assertEvalToTrue(context.event_handlers["click"][node_id] ~= nil,
+  luassert.truthy(context.event_handlers["click"][node_id] ~= nil,
     "callback-less handler_data should be left alone")
-  lu.assertEvalToTrue(#unregister_calls == 0, "should not unregister when handler_data has no callbacks")
+  luassert.truthy(#unregister_calls == 0, "should not unregister when handler_data has no callbacks")
 end
 
 function TestListener:test_destroy_leaves_other_callbacks_intact_when_its_own_callback_is_already_gone()
@@ -148,10 +149,10 @@ function TestListener:test_destroy_leaves_other_callbacks_intact_when_its_own_ca
   listener:destroy()
 
   local handler_data = context.event_handlers["click"][node_id]
-  lu.assertEvalToTrue(handler_data ~= nil, "handler_data should remain")
-  lu.assertEvalToTrue(#handler_data.callbacks == 1 and handler_data.callbacks[1] == cb_other,
+  luassert.truthy(handler_data ~= nil, "handler_data should remain")
+  luassert.truthy(#handler_data.callbacks == 1 and handler_data.callbacks[1] == cb_other,
     "an unknown callback should remove nothing")
-  lu.assertEvalToTrue(#unregister_calls == 0, "should not unregister while callbacks remain")
+  luassert.truthy(#unregister_calls == 0, "should not unregister while callbacks remain")
 end
 
 function TestListener:test_destroy_is_a_no_op_when_event_handler_missing()
@@ -160,8 +161,8 @@ function TestListener:test_destroy_is_a_no_op_when_event_handler_missing()
     listener:destroy()
   end)
 
-  lu.assertEvalToTrue(ok, "destroy should tolerate missing event handler")
-  lu.assertEvalToTrue(#unregister_calls == 0, "should not unregister when handler missing")
+  luassert.truthy(ok, "destroy should tolerate missing event handler")
+  luassert.truthy(#unregister_calls == 0, "should not unregister when handler missing")
 end
 
 

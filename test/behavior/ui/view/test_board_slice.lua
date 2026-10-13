@@ -1,9 +1,13 @@
 -- Coverage for the view-model projection modules src.ui.view.board_slice and
 -- src.ui.view.item_slice: contiguous count/rent projection onto tile states,
 -- and the standalone item-slot builder that trims empty inventory entries.
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local board_slice = require("src.ui.view.board_slice")
 local item_slice = require("src.ui.view.item_slice")
+local function assert_equal(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 
 TestBoardSlice = {}
 
@@ -35,10 +39,10 @@ function TestBoardSlice:test_projects_contiguous_counts_and_rents_per_owner()
   local turn = { phase = "pre_action" }
 
   local result = board_slice.build(game, env, turn)
-  lu.assertEquals(result.tile_states[1].contiguous_count, 2, "p1 tile 1 should see count 2")
-  lu.assertEquals(result.tile_states[2].contiguous_count, 2, "p1 tile 2 should see count 2")
-  lu.assertEquals(result.tile_states[1].contiguous_rent, 100, "p1 tile 1 should see summed contiguous rent")
-  lu.assertEquals(result.tile_states[2].contiguous_rent, 100, "p1 tile 2 should see summed contiguous rent")
+  assert_equal(result.tile_states[1].contiguous_count, 2, "p1 tile 1 should see count 2")
+  assert_equal(result.tile_states[2].contiguous_count, 2, "p1 tile 2 should see count 2")
+  assert_equal(result.tile_states[1].contiguous_rent, 100, "p1 tile 1 should see summed contiguous rent")
+  assert_equal(result.tile_states[2].contiguous_rent, 100, "p1 tile 2 should see summed contiguous rent")
 
   local game2 = {
     board = {
@@ -53,8 +57,8 @@ function TestBoardSlice:test_projects_contiguous_counts_and_rents_per_owner()
     return game2.board.tile_lookup[tile_id]
   end
   local result2 = board_slice.build(game2, { game = game2 }, turn)
-  lu.assertEquals(result2.tile_states[1].contiguous_count, nil, "unowned tile should have nil count")
-  lu.assertEquals(result2.tile_states[1].contiguous_rent, nil, "unowned tile should have nil rent")
+  assert_equal(result2.tile_states[1].contiguous_count, nil, "unowned tile should have nil count")
+  assert_equal(result2.tile_states[1].contiguous_rent, nil, "unowned tile should have nil rent")
 end
 
 local function _slice_game(path_ids)
@@ -80,13 +84,13 @@ function TestBoardSlice:test_build_projects_tile_fields_from_config()
   -- tile 必须按 tiles_cfg 投影全量字段。
   local game = _slice_game({ 1, 2 })
   local result = board_slice.build(game, { game = game }, { phase = "pre_action" })
-  lu.assertEquals(result.tiles[1].id, 1, "tile id must project")
-  lu.assertEquals(result.tiles[1].name, "福州路", "tile name must come from cfg")
-  lu.assertEquals(result.tiles[1].type, "land", "tile type must come from cfg")
-  lu.assertEquals(result.tiles[1].price, 1000, "tile price must come from cfg")
-  lu.assertEquals(result.tiles[1].row, 9, "tile row must come from cfg")
-  lu.assertEquals(result.tiles[1].col, 8, "tile col must come from cfg")
-  lu.assertEquals(#result.tiles, 2, "one projected tile per path entry")
+  assert_equal(result.tiles[1].id, 1, "tile id must project")
+  assert_equal(result.tiles[1].name, "福州路", "tile name must come from cfg")
+  assert_equal(result.tiles[1].type, "land", "tile type must come from cfg")
+  assert_equal(result.tiles[1].price, 1000, "tile price must come from cfg")
+  assert_equal(result.tiles[1].row, 9, "tile row must come from cfg")
+  assert_equal(result.tiles[1].col, 8, "tile col must come from cfg")
+  assert_equal(#result.tiles, 2, "one projected tile per path entry")
 end
 
 function TestBoardSlice:test_build_populates_board_envelope_fields()
@@ -104,15 +108,15 @@ function TestBoardSlice:test_build_populates_board_envelope_fields()
     turn_start_prompt_player_id = "p7",
   }
   local result = board_slice.build(game, { game = game }, turn)
-  lu.assertEquals(result.players, game.players, "players must reference the game roster")
-  lu.assertEquals(result.phase, "wait_action", "phase must pass through")
-  lu.assertEquals(result.move_anim, move_anim, "move anim must pass through")
-  lu.assertEquals(result.action_anim, action_anim, "action anim must pass through")
-  lu.assertEquals(result.move_followup_pending, true, "truthy followup pending must coerce to true")
-  lu.assertEquals(result.turn_start_prompt_seq, 0, "missing prompt seq must default to zero")
-  lu.assertEquals(result.turn_start_prompt_player_id, "p7", "prompt player id must pass through")
-  lu.assertEquals(result.tile_count, 1, "tile count must match the projected path")
-  lu.assertEquals(result.overlays[1], "overlay_a", "overlays must come from the board")
+  assert_equal(result.players, game.players, "players must reference the game roster")
+  assert_equal(result.phase, "wait_action", "phase must pass through")
+  assert_equal(result.move_anim, move_anim, "move anim must pass through")
+  assert_equal(result.action_anim, action_anim, "action anim must pass through")
+  assert_equal(result.move_followup_pending, true, "truthy followup pending must coerce to true")
+  assert_equal(result.turn_start_prompt_seq, 0, "missing prompt seq must default to zero")
+  assert_equal(result.turn_start_prompt_player_id, "p7", "prompt player id must pass through")
+  assert_equal(result.tile_count, 1, "tile count must match the projected path")
+  assert_equal(result.overlays[1], "overlay_a", "overlays must come from the board")
 end
 
 function TestBoardSlice:test_build_overlays_come_from_board()
@@ -120,7 +124,7 @@ function TestBoardSlice:test_build_overlays_come_from_board()
   -- board 的 get_overlays 结果。
   local game = _slice_game({ 1 })
   local result = board_slice.build(game, { game = game }, { phase = "x" })
-  lu.assertEquals(result.overlays[1], "overlay_a", "overlays must be the board overlays")
+  assert_equal(result.overlays[1], "overlay_a", "overlays must be the board overlays")
 end
 
 function TestBoardSlice:test_update_caches_board_tiles_and_tracks_count()
@@ -128,11 +132,11 @@ function TestBoardSlice:test_update_caches_board_tiles_and_tracks_count()
   -- 反映最近一次 build 的投影结果。
   local game = _slice_game({ 1, 2 })
   board_slice.build(game, { game = game }, { phase = "x" })
-  lu.assertEquals(board_slice.tile_count(), 2, "tile count must reflect the last build")
+  assert_equal(board_slice.tile_count(), 2, "tile count must reflect the last build")
   local game2 = _slice_game({ 1 })
   local second = board_slice.build(game2, { game = game2 }, { phase = "x" })
-  lu.assertEquals(#second.tiles, 1, "a new path must rebuild the projection")
-  lu.assertEquals(board_slice.tile_count(), 1, "tile count must follow the new build")
+  assert_equal(#second.tiles, 1, "a new path must rebuild the projection")
+  assert_equal(board_slice.tile_count(), 1, "tile count must follow the new build")
 end
 
 function TestBoardSlice:test_single_owned_tile_projects_count_one_and_level_zero_rent()
@@ -156,8 +160,8 @@ function TestBoardSlice:test_single_owned_tile_projects_count_one_and_level_zero
     return game.board.tile_lookup[tile_id]
   end
   local result = board_slice.build(game, { game = game }, { phase = "x" })
-  lu.assertEquals(result.tile_states[1].contiguous_count, 1, "single owned tile must see count 1")
-  lu.assertEquals(result.tile_states[1].contiguous_rent, 50, "level zero rent must be the level zero tier")
+  assert_equal(result.tile_states[1].contiguous_count, 1, "single owned tile must see count 1")
+  assert_equal(result.tile_states[1].contiguous_rent, 50, "level zero rent must be the level zero tier")
 end
 
 function TestBoardSlice:test_update_reuses_the_cached_projection_for_the_same_path()
@@ -166,8 +170,8 @@ function TestBoardSlice:test_update_reuses_the_cached_projection_for_the_same_pa
   local game = _slice_game({ 1 })
   local first = board_slice.build(game, { game = game }, { phase = "x" })
   local second = board_slice.build(game, { game = game }, { phase = "x" })
-  lu.assertEvalToTrue(second.tiles == first.tiles, "same path must reuse the cached tiles table")
-  lu.assertEquals(board_slice.tile_count(), 1, "tile count must stay one")
+  luassert.truthy(second.tiles == first.tiles, "same path must reuse the cached tiles table")
+  assert_equal(board_slice.tile_count(), 1, "tile count must stay one")
 end
 
 function TestBoardSlice:test_standalone_slots_map_bag_index_directly_without_compaction()
@@ -184,10 +188,10 @@ function TestBoardSlice:test_standalone_slots_map_bag_index_directly_without_com
     },
   }, 3)
 
-  lu.assertEquals(slots[1], 11, "slot 1 maps bag index 1")
-  lu.assertEquals(slots[2], nil, "bag entry without id leaves slot 2 empty (no compaction)")
-  lu.assertEquals(slots[3], 22, "the card after the empty entry keeps slot 3")
-  lu.assertEquals(slots[4], nil, "slot builder should trim beyond slot count")
+  assert_equal(slots[1], 11, "slot 1 maps bag index 1")
+  assert_equal(slots[2], nil, "bag entry without id leaves slot 2 empty (no compaction)")
+  assert_equal(slots[3], 22, "the card after the empty entry keeps slot 3")
+  assert_equal(slots[4], nil, "slot builder should trim beyond slot count")
 end
 
 

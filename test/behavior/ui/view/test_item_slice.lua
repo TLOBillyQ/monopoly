@@ -4,12 +4,13 @@
 -- ③ build_delegated_by_player(读取玩家控制快照的托管位);
 -- ④ resolve_item_choice_owner_id(pending 优先、choice 次之、当前玩家兜底)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local item_slice = require("src.ui.view.item_slice")
 local control = require("src.player.control")
 
 local function _assert_eq(a, b, msg)
-  lu.assertEvalToTrue(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 local function _player(id, items)

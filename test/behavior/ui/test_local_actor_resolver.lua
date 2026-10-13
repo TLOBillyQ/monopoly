@@ -1,7 +1,8 @@
 -- local_actor_resolver(#341/#601):解析链只到 client_role 为止——事件解析不出
 -- 身份即返回 nil,不得把 A 的点击当成 B 的。「上一次点击者缓存」随 #601 整体
 -- 退役:解析既不读缓存也不再写缓存,state 上不再出现 local_actor_role_id。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local local_actor_resolver = require("src.ui.render.support.local_actor_resolver")
 local runtime = require("src.ui.render.support.runtime_ui")
@@ -27,7 +28,7 @@ function TestLocalActorResolver:test_anonymous_event_returns_nil_even_with_stale
   _with_no_client_role(function()
     resolved = local_actor_resolver.resolve_from_event(state, {})
   end)
-  lu.assertEvalToTrue(resolved == nil,
+  luassert.truthy(resolved == nil,
     "anonymous event must resolve to nil; got " .. tostring(resolved))
 end
 
@@ -38,8 +39,8 @@ function TestLocalActorResolver:test_event_role_resolves_without_writing_any_cac
   _with_no_client_role(function()
     resolved = local_actor_resolver.resolve_from_event(state, { role = _role(3) })
   end)
-  lu.assertEvalToTrue(resolved == 3, "an explicit event role must still resolve")
-  lu.assertEvalToTrue(state.local_actor_role_id == nil,
+  luassert.truthy(resolved == 3, "an explicit event role must still resolve")
+  luassert.truthy(state.local_actor_role_id == nil,
     "resolution must not write the retired local actor cache")
 end
 
@@ -50,7 +51,7 @@ function TestLocalActorResolver:test_client_role_still_resolves_without_event_ro
   }, function()
     resolved = local_actor_resolver.resolve_from_event({}, {})
   end)
-  lu.assertEvalToTrue(resolved == 5,
+  luassert.truthy(resolved == 5,
     "client_role fallback must still resolve before the nil outcome")
 end
 
@@ -59,7 +60,7 @@ function TestLocalActorResolver:test_resolve_turn_bound_uses_the_same_chain()
   _with_no_client_role(function()
     resolved = local_actor_resolver.resolve_turn_bound({ local_actor_role_id = 4 }, {})
   end)
-  lu.assertEvalToTrue(resolved == nil,
+  luassert.truthy(resolved == nil,
     "turn-bound resolution must also ignore any stale cache field")
 end
 

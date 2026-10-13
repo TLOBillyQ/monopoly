@@ -1,5 +1,6 @@
 -- eimage.lua branch-dense coverage: 颜色/贴图更新的 client_role 定向分支、全角色广播分支与 reset_size 开关。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local EImage = require("src.ui.manager.eimage")
 local support = require("test.support.ui_manager_nodes_support")
@@ -24,9 +25,9 @@ end
 function TestEImage:test_init_defaults_color_texture_and_transition_time()
   local image = EImage:new(501, "img")
 
-  lu.assertEvalToTrue(image.image_color == 0xffffff, "new image color should default to white")
-  lu.assertEvalToTrue(image.image_texture == -1, "new image texture should default to -1")
-  lu.assertEvalToTrue(image.transition_time == 0.0, "new image transition_time should default to 0.0")
+  luassert.truthy(image.image_color == 0xffffff, "new image color should default to white")
+  luassert.truthy(image.image_texture == -1, "new image texture should default to -1")
+  luassert.truthy(image.transition_time == 0.0, "new image transition_time should default to 0.0")
 end
 
 function TestEImage:test_image_color_targets_only_the_client_role_and_carries_transition_time()
@@ -38,12 +39,12 @@ function TestEImage:test_image_color_targets_only_the_client_role_and_carries_tr
   image.image_color = 0x123456
 
   local calls = support.calls_of(self.role_a, "set_image_color")
-  lu.assertEvalToTrue(#calls == 1, "client role should receive set_image_color once")
-  lu.assertEvalToTrue(calls[1].args[1] == 502, "host call should carry the eui node id")
-  lu.assertEvalToTrue(calls[1].args[2] == 0x123456, "host call should carry the new color")
-  lu.assertEvalToTrue(calls[1].args[3] == 0.25, "host call should carry the transition time")
-  lu.assertEvalToTrue(#self.role_b.calls == 0, "other roles should not receive the color update")
-  lu.assertEvalToTrue(image.image_color == 0x123456, "image_color getter should report the stored value")
+  luassert.truthy(#calls == 1, "client role should receive set_image_color once")
+  luassert.truthy(calls[1].args[1] == 502, "host call should carry the eui node id")
+  luassert.truthy(calls[1].args[2] == 0x123456, "host call should carry the new color")
+  luassert.truthy(calls[1].args[3] == 0.25, "host call should carry the transition time")
+  luassert.truthy(#self.role_b.calls == 0, "other roles should not receive the color update")
+  luassert.truthy(image.image_color == 0x123456, "image_color getter should report the stored value")
 end
 
 function TestEImage:test_image_color_broadcasts_to_all_roles_when_no_client_role()
@@ -54,8 +55,8 @@ function TestEImage:test_image_color_broadcasts_to_all_roles_when_no_client_role
 
   for _, role in ipairs({ self.role_a, self.role_b }) do
     local calls = support.calls_of(role, "set_image_color")
-    lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == 0x00ff00, "every role should receive the color update")
-    lu.assertEvalToTrue(calls[1].args[3] == 0.0, "every role should receive the default transition time")
+    luassert.truthy(#calls == 1 and calls[1].args[2] == 0x00ff00, "every role should receive the color update")
+    luassert.truthy(calls[1].args[3] == 0.0, "every role should receive the default transition time")
   end
 end
 
@@ -67,12 +68,12 @@ function TestEImage:test_image_texture_keeps_size_for_the_client_role()
   image.image_texture = 88
 
   local calls = support.calls_of(self.role_a, "set_image_texture_by_key_with_auto_resize")
-  lu.assertEvalToTrue(#calls == 1, "client role should receive the texture call once")
-  lu.assertEvalToTrue(calls[1].args[1] == 504, "host call should carry the eui node id")
-  lu.assertEvalToTrue(calls[1].args[2] == 88, "host call should carry the texture key")
-  lu.assertEvalToTrue(calls[1].args[3] == false, "setting image_texture should not reset size")
-  lu.assertEvalToTrue(#self.role_b.calls == 0, "other roles should not receive the texture update")
-  lu.assertEvalToTrue(image.image_texture == 88, "image_texture getter should report the stored value")
+  luassert.truthy(#calls == 1, "client role should receive the texture call once")
+  luassert.truthy(calls[1].args[1] == 504, "host call should carry the eui node id")
+  luassert.truthy(calls[1].args[2] == 88, "host call should carry the texture key")
+  luassert.truthy(calls[1].args[3] == false, "setting image_texture should not reset size")
+  luassert.truthy(#self.role_b.calls == 0, "other roles should not receive the texture update")
+  luassert.truthy(image.image_texture == 88, "image_texture getter should report the stored value")
 end
 
 function TestEImage:test_image_texture_broadcasts_to_all_roles_when_no_client_role()
@@ -83,8 +84,8 @@ function TestEImage:test_image_texture_broadcasts_to_all_roles_when_no_client_ro
 
   for _, role in ipairs({ self.role_a, self.role_b }) do
     local calls = support.calls_of(role, "set_image_texture_by_key_with_auto_resize")
-    lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == 9, "every role should receive the texture update")
-    lu.assertEvalToTrue(calls[1].args[3] == false, "broadcast texture update should not reset size")
+    luassert.truthy(#calls == 1 and calls[1].args[2] == 9, "every role should receive the texture update")
+    luassert.truthy(calls[1].args[3] == false, "broadcast texture update should not reset size")
   end
 end
 
@@ -95,9 +96,9 @@ function TestEImage:test_set_texture_keep_size_stores_the_key_without_resetting_
   image:set_texture_keep_size(11)
 
   local calls = support.calls_of(self.role_a, "set_image_texture_by_key_with_auto_resize")
-  lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == 11, "texture key should be pushed to the host")
-  lu.assertEvalToTrue(calls[1].args[3] == false, "keep-size should pass reset_size=false")
-  lu.assertEvalToTrue(image.image_texture == 11, "texture key should be stored on the node")
+  luassert.truthy(#calls == 1 and calls[1].args[2] == 11, "texture key should be pushed to the host")
+  luassert.truthy(calls[1].args[3] == false, "keep-size should pass reset_size=false")
+  luassert.truthy(image.image_texture == 11, "texture key should be stored on the node")
 end
 
 function TestEImage:test_set_texture_native_size_resets_size()
@@ -108,9 +109,9 @@ function TestEImage:test_set_texture_native_size_resets_size()
   image:set_texture_native_size(12)
 
   local calls = support.calls_of(self.role_a, "set_image_texture_by_key_with_auto_resize")
-  lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == 12, "texture key should be pushed to the client role")
-  lu.assertEvalToTrue(calls[1].args[3] == true, "native-size should pass reset_size=true")
-  lu.assertEvalToTrue(image.image_texture == 12, "texture key should be stored on the node")
+  luassert.truthy(#calls == 1 and calls[1].args[2] == 12, "texture key should be pushed to the client role")
+  luassert.truthy(calls[1].args[3] == true, "native-size should pass reset_size=true")
+  luassert.truthy(image.image_texture == 12, "texture key should be stored on the node")
 end
 
 function TestEImage:test_reset_size_replays_the_current_texture_with_reset_flag_for_all_roles()
@@ -122,9 +123,9 @@ function TestEImage:test_reset_size_replays_the_current_texture_with_reset_flag_
 
   for _, role in ipairs({ self.role_a, self.role_b }) do
     local calls = support.calls_of(role, "set_image_texture_by_key_with_auto_resize")
-    lu.assertEvalToTrue(#calls == 2, "reset_size should issue a second texture call per role")
-    lu.assertEvalToTrue(calls[2].args[2] == 13, "reset_size should replay the stored texture key")
-    lu.assertEvalToTrue(calls[2].args[3] == true, "reset_size should pass reset_size=true")
+    luassert.truthy(#calls == 2, "reset_size should issue a second texture call per role")
+    luassert.truthy(calls[2].args[2] == 13, "reset_size should replay the stored texture key")
+    luassert.truthy(calls[2].args[3] == true, "reset_size should pass reset_size=true")
   end
 end
 
@@ -134,8 +135,8 @@ function TestEImage:test_transition_time_setter_stores_the_fixed_value_without_h
 
   image.transition_time = 1.5
 
-  lu.assertEvalToTrue(image.transition_time == 1.5, "transition_time getter should report the stored value")
-  lu.assertEvalToTrue(#self.role_a.calls == 0, "setting transition_time alone should not touch the host")
+  luassert.truthy(image.transition_time == 1.5, "transition_time getter should report the stored value")
+  luassert.truthy(#self.role_a.calls == 0, "setting transition_time alone should not touch the host")
 end
 
 

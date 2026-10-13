@@ -1,5 +1,5 @@
-local lu = require("luaunit")
-local luax = require("test.support.luax")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local runtime_ui = require("src.ui.render.support.runtime_ui")
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
@@ -18,11 +18,11 @@ do
           error("boom_err_marker")
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate from with_client_role")
-      lu.assertEvalToTrue(type(captured) == "string", "expected captured error to be a string, got " .. type(captured))
-      lu.assertEvalToTrue(captured:find(marker, 1, true) ~= nil,
+      luassert.truthy(ok == false, "expected error to propagate from with_client_role")
+      luassert.truthy(type(captured) == "string", "expected captured error to be a string, got " .. type(captured))
+      luassert.truthy(captured:find(marker, 1, true) ~= nil,
         "expected marker '" .. marker .. "' in rethrown error: " .. tostring(captured))
-      lu.assertEvalToTrue(captured:find("boom_err_marker", 1, true) ~= nil,
+      luassert.truthy(captured:find("boom_err_marker", 1, true) ~= nil,
         "expected original error text in rethrown error: " .. tostring(captured))
     end)
   end
@@ -38,9 +38,9 @@ do
           error(sentinel)
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(type(captured) == "string", "expected captured error to be a string")
-      lu.assertEvalToTrue(captured:find(sentinel, 1, true) ~= nil,
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(type(captured) == "string", "expected captured error to be a string")
+      luassert.truthy(captured:find(sentinel, 1, true) ~= nil,
         "expected raw err propagated when traceback absent: " .. tostring(captured))
     end)
   end
@@ -56,8 +56,8 @@ do
           error(sentinel)
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(captured:find(sentinel, 1, true) ~= nil,
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(captured:find(sentinel, 1, true) ~= nil,
         "expected raw err when traceback is non-function: " .. tostring(captured))
     end)
   end
@@ -72,7 +72,7 @@ do
           error("transient_fn_error")
         end)
       end)
-      lu.assertEvalToTrue(UIManager.client_role == "previous_role_id",
+      luassert.truthy(UIManager.client_role == "previous_role_id",
         "expected previous_role_id restored after fn error, got " .. tostring(UIManager.client_role))
     end)
   end
@@ -82,19 +82,19 @@ end
 do
   -- 守卫消息钉(runtime_ui 缺参断言):消息->nil 变异后 has_error 消息不匹配即露馅。
   TestRuntimeUiTraceback["test_with_client_role_asserts_descriptive_error_without_fn"] = function(self)
-    luax.has_error(function()
+    luassert.has_error(function()
       runtime_ui.with_client_role("role-A", nil)
     end, "missing fn")
   end
 
   TestRuntimeUiTraceback["test_for_each_role_or_global_asserts_descriptive_error_without_fn"] = function(self)
-    luax.has_error(function()
+    luassert.has_error(function()
       runtime_ui.for_each_role_or_global(nil)
     end, "missing fn")
   end
 
   TestRuntimeUiTraceback["test_query_nodes_asserts_descriptive_error_without_name"] = function(self)
-    luax.has_error(function()
+    luassert.has_error(function()
       runtime_ui.query_nodes(nil)
     end, "missing ui node name")
   end
@@ -105,7 +105,7 @@ do
     _with_patches({
       { key = "UIManager", value = { query_nodes_by_name = nil } },
     }, function()
-      luax.has_error(function()
+      luassert.has_error(function()
         runtime_ui.query_nodes("test")
       end, "missing UIManager.query_nodes_by_name")
     end)
@@ -116,20 +116,20 @@ do
     _with_patches({
       { key = "UIManager", value = { query_nodes_by_name = function() return nil end } },
     }, function()
-      luax.has_error(function()
+      luassert.has_error(function()
         runtime_ui.query_nodes("test")
       end, "missing ui node: test")
     end)
   end
 
   TestRuntimeUiTraceback["test_set_node_texture_keep_size_asserts_without_node"] = function(self)
-    luax.has_error(function()
+    luassert.has_error(function()
       runtime_ui.set_node_texture_keep_size(nil, "ICON")
     end, "missing image node")
   end
 
   TestRuntimeUiTraceback["test_set_node_texture_keep_size_asserts_without_image_key"] = function(self)
-    luax.has_error(function()
+    luassert.has_error(function()
       runtime_ui.set_node_texture_keep_size({}, nil)
     end, "missing image key")
   end
@@ -150,9 +150,9 @@ do
           error("swallowed_msg_marker")
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(type(captured) == "string", "expected string error, got " .. type(captured))
-      lu.assertEvalToTrue(captured:find("swallowed_msg_marker", 1, true) ~= nil,
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(type(captured) == "string", "expected string error, got " .. type(captured))
+      luassert.truthy(captured:find("swallowed_msg_marker", 1, true) ~= nil,
         "original message must survive even when host traceback drops it: " .. tostring(captured))
     end)
   end
@@ -169,10 +169,10 @@ do
           error(err_obj)
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(type(captured) == "string",
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(type(captured) == "string",
         "non-string err must be rethrown as text, got " .. type(captured))
-      lu.assertEvalToTrue(captured:find(expected, 1, true) ~= nil,
+      luassert.truthy(captured:find(expected, 1, true) ~= nil,
         "tostring(err) must survive: " .. tostring(captured))
     end)
   end
@@ -189,10 +189,10 @@ do
           error(err_obj)
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(type(captured) == "string",
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(type(captured) == "string",
         "non-string err must be rethrown as text, got " .. type(captured))
-      lu.assertEvalToTrue(captured:find(expected, 1, true) ~= nil,
+      luassert.truthy(captured:find(expected, 1, true) ~= nil,
         "tostring(err) must survive without traceback global: " .. tostring(captured))
     end)
   end
@@ -210,10 +210,10 @@ do
           error("role_ctx_boom")
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(tostring(captured):find("4242", 1, true) ~= nil,
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(tostring(captured):find("4242", 1, true) ~= nil,
         "rethrown error must carry role id: " .. tostring(captured))
-      lu.assertEvalToTrue(tostring(captured):find("role_ctx_boom", 1, true) ~= nil,
+      luassert.truthy(tostring(captured):find("role_ctx_boom", 1, true) ~= nil,
         "original message must survive alongside role id: " .. tostring(captured))
     end)
   end
@@ -228,8 +228,8 @@ do
           error("role_fallback_boom")
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(tostring(captured):find("plain_role_text", 1, true) ~= nil,
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(tostring(captured):find("plain_role_text", 1, true) ~= nil,
         "rethrown error must carry tostring(role) fallback: " .. tostring(captured))
     end)
   end
@@ -244,10 +244,10 @@ do
           error("no_role_boom")
         end)
       end)
-      lu.assertEvalToTrue(ok == false, "expected error to propagate")
-      lu.assertEvalToTrue(tostring(captured):find("[role=", 1, true) == nil,
+      luassert.truthy(ok == false, "expected error to propagate")
+      luassert.truthy(tostring(captured):find("[role=", 1, true) == nil,
         "nil role must not add a role prefix: " .. tostring(captured))
-      lu.assertEvalToTrue(tostring(captured):find("no_role_boom", 1, true) ~= nil,
+      luassert.truthy(tostring(captured):find("no_role_boom", 1, true) ~= nil,
         "original message must survive: " .. tostring(captured))
     end)
   end

@@ -1,11 +1,12 @@
 -- #293 批3 pin:src/ui/schema/remote_choice.lua 为纯数据表,幸存者均为
 -- 字段值换 nil。逐字段钉死数据契约(遥控骰子屏的节点名与六选项槽)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local remote_choice = require("src.ui.schema.remote_choice")
 
 local function _assert_eq(a, b, msg)
-  lu.assertEvalToTrue(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 TestRemoteChoiceSchema = {}

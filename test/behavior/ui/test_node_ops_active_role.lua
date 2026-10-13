@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local P = require("test.support.shared_support")
 local _with_patches = P.with_patches
 
@@ -19,9 +20,9 @@ function TestNodeOpsActiveRole:test_active_role_truthy_skips_for_each_role_or_gl
   }, function()
     node_ops.set_text(nil, "node-name", "after-immediate")
   end)
-  lu.assertEvalToTrue(for_each_calls == 0,
+  luassert.truthy(for_each_calls == 0,
     "L23 active_role truthy must NOT call for_each_role_or_global; got " .. tostring(for_each_calls))
-  lu.assertEvalToTrue(node.text == "after-immediate",
+  luassert.truthy(node.text == "after-immediate",
     "immediate branch must apply mutator to queried node; got " .. tostring(node.text))
 end
 
@@ -42,10 +43,10 @@ function TestNodeOpsActiveRole:test_active_role_nil_get_client_role_returns_nil_
   }, function()
     node_ops.set_text(nil, "node-name-deferred", "after-deferred")
   end)
-  lu.assertEvalToTrue(for_each_calls == 1,
+  luassert.truthy(for_each_calls == 1,
     "L23 active_role nil must call for_each_role_or_global exactly once; got " .. tostring(for_each_calls))
-  lu.assertEvalToTrue(node.text == "after-deferred", "deferred branch must still apply mutator via callback")
-  lu.assertEvalToTrue(query_node_calls == 1, "exactly one query_nodes lookup inside deferred callback")
+  luassert.truthy(node.text == "after-deferred", "deferred branch must still apply mutator via callback")
+  luassert.truthy(query_node_calls == 1, "exactly one query_nodes lookup inside deferred callback")
 end
 
 function TestNodeOpsActiveRole:test_get_client_role_missing_entirely_deferred_branch_skip_or_nil_fallback()
@@ -61,7 +62,7 @@ function TestNodeOpsActiveRole:test_get_client_role_missing_entirely_deferred_br
   }, function()
     node_ops.set_text(nil, "node-no-helper", "after-no-helper")
   end)
-  lu.assertEvalToTrue(for_each_calls == 1,
+  luassert.truthy(for_each_calls == 1,
     "L23 with get_client_role==nil must short-circuit via `and` to nil → deferred; got " .. tostring(for_each_calls))
 end
 
@@ -80,9 +81,9 @@ function TestNodeOpsActiveRole:test_active_role_truthy_skips_for_each_role_or_gl
   }, function()
     node_ops.set_item_slot_image("slot_X", "IMG_X")
   end)
-  lu.assertEvalToTrue(for_each_calls == 0,
+  luassert.truthy(for_each_calls == 0,
     "L107 active_role truthy must NOT call for_each_role_or_global; got " .. tostring(for_each_calls))
-  lu.assertEvalToTrue(#texture_calls == 1 and texture_calls[1] == "IMG_X",
+  luassert.truthy(#texture_calls == 1 and texture_calls[1] == "IMG_X",
     "immediate branch must apply texture once via _apply_item_slot")
 end
 
@@ -102,9 +103,9 @@ function TestNodeOpsActiveRole:test_active_role_nil_deferred_via_for_each_role_o
   }, function()
     node_ops.set_item_slot_image("slot_Y", "IMG_Y")
   end)
-  lu.assertEvalToTrue(for_each_calls == 1,
+  luassert.truthy(for_each_calls == 1,
     "L107 active_role nil must call for_each_role_or_global once; got " .. tostring(for_each_calls))
-  lu.assertEvalToTrue(#texture_calls == 1 and texture_calls[1] == "IMG_Y",
+  luassert.truthy(#texture_calls == 1 and texture_calls[1] == "IMG_Y",
     "deferred branch must apply texture via callback")
 end
 
@@ -120,7 +121,7 @@ function TestNodeOpsActiveRole:test_get_client_role_missing_entirely_deferred_br
   }, function()
     node_ops.set_item_slot_image("slot_Z", "IMG_Z")
   end)
-  lu.assertEvalToTrue(for_each_calls == 1,
+  luassert.truthy(for_each_calls == 1,
     "L107 with get_client_role==nil must short-circuit via `and` to nil → deferred; got " .. tostring(for_each_calls))
 end
 

@@ -1,7 +1,10 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = P.with_patches
-local luax = require("test.support.luax")
 
 local runtime = require("src.ui.render.support.runtime_ui")
 local node_ops = require("src.ui.render.support.node_ops")
@@ -9,7 +12,7 @@ local base_contract = require("src.ui.schema.base_contract")
 local debug_nodes = require("src.ui.schema.debug")
 
 local function _ok(val, msg)
-  assert(val, msg or "expected truthy")
+  luassert.truthy(val, msg or "expected truthy")
 end
 
 TestNodeOps = {}
@@ -136,7 +139,7 @@ function TestNodeOps:test_rejects_nil_slot_name()
   local ok = pcall(node_ops.set_item_slot_image, nil, "ICON")
   _ok(not ok, "should reject nil slot name")
   -- 消息钉:变异把 "missing slot name" -> nil 后无消息,has_error 必须露馅。
-  luax.has_error(function()
+  luassert.has_error(function()
     node_ops.set_item_slot_image(nil, "ICON")
   end, "missing slot name")
 end
@@ -362,7 +365,7 @@ function TestNodeOps:test_rejects_nil_name()
   local ok = pcall(node_ops.set_text, nil, nil, "x")
   _ok(not ok, "should reject nil name")
   -- 消息钉:变异把 "missing ui node name" -> nil 后无消息,has_error 必须露馅。
-  luax.has_error(function()
+  luassert.has_error(function()
     node_ops.set_text(nil, nil, "x")
   end, "missing ui node name")
 end

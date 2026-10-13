@@ -1,7 +1,8 @@
 -- elabel.lua 映射覆盖:每个字段 -> (推送方法名, 参数序),从 ELabel 属性入口穿过去断言宿主收到的调用。
 -- 「推给谁」的分支决策(client_role 定向 / allroles 广播)由 host_push.push 独占,已在 host_push_spec
 -- 单点钉死;本 spec 只守映射表,不重复广播分支,单角色触发一次推送即可定位断言。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local ELabel = require("src.ui.manager.elabel")
 local support = require("test.support.ui_manager_nodes_support")
@@ -66,13 +67,13 @@ local cases = {
 }
 
 local function _assert_call(call, expected_method, node_id, expected_args)
-  lu.assertEvalToTrue(call.method == expected_method,
+  luassert.truthy(call.method == expected_method,
     ("expected host method %s, got %s"):format(expected_method, tostring(call.method)))
-  lu.assertEvalToTrue(call.args[1] == node_id, "first host arg should be the node id")
-  lu.assertEvalToTrue(call.args.n == #expected_args + 1,
+  luassert.truthy(call.args[1] == node_id, "first host arg should be the node id")
+  luassert.truthy(call.args.n == #expected_args + 1,
     ("%s should receive %d args"):format(expected_method, #expected_args + 1))
   for i, expected in ipairs(expected_args) do
-    lu.assertEvalToTrue(call.args[i + 1] == expected,
+    luassert.truthy(call.args[i + 1] == expected,
       ("%s arg #%d expected %s, got %s"):format(
         expected_method, i + 1, tostring(expected), tostring(call.args[i + 1])))
   end
@@ -99,7 +100,7 @@ for _, case in ipairs(cases) do
 
     label[case.field] = case.value
 
-    lu.assertEvalToTrue(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
+    luassert.truthy(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
     _assert_call(calls[1], case.method, 301, case.args)
   end
 end
@@ -110,7 +111,7 @@ function TestELabel:test_getters_read_back_what_the_setters_stored()
 
   for _, case in ipairs(cases) do
     label[case.field] = case.value
-    lu.assertEvalToTrue(label[case.field] == case.value,
+    luassert.truthy(label[case.field] == case.value,
       ("getter for %s should return the value written"):format(case.field))
   end
 end
@@ -118,9 +119,9 @@ end
 function TestELabel:test_init_defaults_text_to_empty_string_and_transition_time_to_zero()
   local label = ELabel:new(304, "defaults")
 
-  lu.assertEvalToTrue(label.text == "", "text should default to empty string")
-  lu.assertEvalToTrue(label.transition_time == 0.0, "transition_time should default to 0.0")
-  lu.assertEvalToTrue(#calls == 0, "init should not touch the host")
+  luassert.truthy(label.text == "", "text should default to empty string")
+  luassert.truthy(label.transition_time == 0.0, "transition_time should default to 0.0")
+  luassert.truthy(#calls == 0, "init should not touch the host")
 end
 
 function TestELabel:test_transition_time_setter_stores_a_fixed_value_without_touching_the_host()
@@ -129,8 +130,8 @@ function TestELabel:test_transition_time_setter_stores_a_fixed_value_without_tou
 
   label.transition_time = 1.5
 
-  lu.assertEvalToTrue(label.transition_time == 1.5, "transition_time should read back")
-  lu.assertEvalToTrue(#calls == 0, "transition_time is not pushed to the host on its own")
+  luassert.truthy(label.transition_time == 1.5, "transition_time should read back")
+  luassert.truthy(#calls == 0, "transition_time is not pushed to the host on its own")
 end
 
 function TestELabel:test_transition_time_is_forwarded_to_the_host_by_transitioned_setters()
@@ -140,7 +141,7 @@ function TestELabel:test_transition_time_is_forwarded_to_the_host_by_transitione
 
   label.text_color = 0xABCDEF
 
-  lu.assertEvalToTrue(#calls == 1, "expected one host call")
+  luassert.truthy(#calls == 1, "expected one host call")
   _assert_call(calls[1], "set_label_color", 306, { 0xABCDEF, 2.0 })
 end
 
@@ -154,7 +155,7 @@ function TestELabel:test_the_misspelled_label_background_opactiy_is_not_an_acces
 
   label.label_background_opactiy = 0.25
 
-  lu.assertEvalToTrue(#calls == 0, "the misspelled name must not reach the host")
+  luassert.truthy(#calls == 0, "the misspelled name must not reach the host")
 end
 
 

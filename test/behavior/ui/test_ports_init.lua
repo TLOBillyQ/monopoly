@@ -1,11 +1,18 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function assert_identity(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
+local function assert_equal(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
 
 TestPortsInit = {}
 
 function TestPortsInit:test_loads_all_sub_port_modules_under_debug_hook()
   package.loaded["src.ui.ports.init"] = nil
   local ports = require("src.ui.ports.init")
-  lu.assertEvalToTrue(type(ports) == "table", "expected table")
+  luassert.truthy(type(ports) == "table", "expected table")
 end
 
 function TestPortsInit:test_ui_sync_facade_forwards_gate_and_dirty_refresh_results()
@@ -27,27 +34,27 @@ function TestPortsInit:test_ui_sync_facade_forwards_gate_and_dirty_refresh_resul
   }
   local ports = ui_sync.build(common)
 
-  lu.assertIs(ports.get_ui_state(state), state.ui)
-  lu.assertIs(ports.refresh_from_dirty({ turn = {} }, state, { any = false, ui = false }), false)
-  lu.assertIs(ports.is_input_blocked(state), false)
-  lu.assertIs(ports.is_popup_active(state), true)
-  lu.assertIs(ports.is_choice_active(state), true)
-  lu.assertIs(ports.get_popup_owner_index(state), 2)
+  assert_identity(ports.get_ui_state(state), state.ui)
+  assert_identity(ports.refresh_from_dirty({ turn = {} }, state, { any = false, ui = false }), false)
+  assert_identity(ports.is_input_blocked(state), false)
+  assert_identity(ports.is_popup_active(state), true)
+  assert_identity(ports.is_choice_active(state), true)
+  assert_identity(ports.get_popup_owner_index(state), 2)
   local gate = ports.resolve_ui_gate(state)
-  lu.assertIs(gate.input_blocked, false)
-  lu.assertIs(gate.choice_active, true)
-  lu.assertIs(gate.market_active, false)
-  lu.assertIs(gate.popup_active, true)
-  lu.assertIs(gate.popup_owner_index, 2)
-  lu.assertIs(ports.set_input_blocked(state, true), true)
-  lu.assertIs(state.ui.input_blocked, true)
-  lu.assertIs(ports.set_input_blocked(state, true), false)
+  assert_identity(gate.input_blocked, false)
+  assert_identity(gate.choice_active, true)
+  assert_identity(gate.market_active, false)
+  assert_identity(gate.popup_active, true)
+  assert_identity(gate.popup_owner_index, 2)
+  assert_identity(ports.set_input_blocked(state, true), true)
+  assert_identity(state.ui.input_blocked, true)
+  assert_identity(ports.set_input_blocked(state, true), false)
 end
 
 function TestPortsInit:test_set_input_blocked_returns_false_when_ui_state_is_nil()
   local ui_sync = require("src.ui.ports.ui_sync")
   local ports = ui_sync.build({ get_ui_state = function() return nil end })
-  lu.assertIs(ports.set_input_blocked({}, true), false)
+  assert_identity(ports.set_input_blocked({}, true), false)
 end
 
 function TestPortsInit:test_resolve_choice_ui_state_forwards_the_choice_gate_state_result()
@@ -59,8 +66,8 @@ function TestPortsInit:test_resolve_choice_ui_state_forwards_the_choice_gate_sta
   local choice = { id = "c1", route_key = "base_inline" }
   local direct = choice_state.resolve_gate_state(game, state, choice)
   local through = ports.resolve_choice_ui_state(game, state, choice)
-  lu.assertIs(through, direct)
-  lu.assertNotNil(through)
+  assert_identity(through, direct)
+  luassert.is_not_nil(through)
 end
 
 local function _probe_subject(ui)
@@ -101,13 +108,13 @@ function TestPortsInit:test_probe_choice_ui_missing_warns_with_full_gate_fields_
       ports.probe_choice_ui_missing(game, state)
     end)
   end)
-  lu.assertEvalToTrue(captured ~= nil, "a genuinely missing screen still warns")
-  lu.assertEquals(captured[2], "choice_runtime_without_ui_6", "the warn key carries the choice id")
-  lu.assertEquals(captured[9], "phase=wait_choice")
-  lu.assertEquals(captured[10], "served_owner=true")
-  lu.assertEquals(captured[11], "owner_computer_controlled=false")
-  lu.assertEquals(captured[12], "expects_ui=true")
-  lu.assertEquals(captured[13], "open=false")
+  luassert.truthy(captured ~= nil, "a genuinely missing screen still warns")
+  assert_equal(captured[2], "choice_runtime_without_ui_6", "the warn key carries the choice id")
+  assert_equal(captured[9], "phase=wait_choice")
+  assert_equal(captured[10], "served_owner=true")
+  assert_equal(captured[11], "owner_computer_controlled=false")
+  assert_equal(captured[12], "expects_ui=true")
+  assert_equal(captured[13], "open=false")
 end
 
 function TestPortsInit:test_probe_choice_ui_missing_stays_silent_when_the_screen_is_open()
@@ -127,7 +134,7 @@ function TestPortsInit:test_probe_choice_ui_missing_stays_silent_when_the_screen
       ports.probe_choice_ui_missing(game, state)
     end)
   end)
-  lu.assertEvalToTrue(captured == nil, "an opened screen never warns")
+  luassert.truthy(captured == nil, "an opened screen never warns")
 end
 
 

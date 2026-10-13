@@ -1,5 +1,6 @@
 -- class.lua branch-dense coverage: multi-inheritance lookup, getter/setter resolution.
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local Class = require("src.ui.manager.class")
 
 TestClass = {}
@@ -13,8 +14,8 @@ function TestClass:test_resolves_methods_from_multiple_parent_classes()
 
   local instance = C:new()
 
-  lu.assertEvalToTrue(instance:a_method() == "A", "should resolve method from first parent")
-  lu.assertEvalToTrue(instance:b_method() == "B", "should resolve method from second parent")
+  luassert.truthy(instance:a_method() == "A", "should resolve method from first parent")
+  luassert.truthy(instance:b_method() == "B", "should resolve method from second parent")
 end
 
 function TestClass:test_uses_get_as_getter_and_set_as_setter()
@@ -25,9 +26,9 @@ function TestClass:test_uses_get_as_getter_and_set_as_setter()
   local w = Widget:new()
   w._value = 42
 
-  lu.assertEvalToTrue(w.value == 42, "getter should expose _value")
+  luassert.truthy(w.value == 42, "getter should expose _value")
   w.value = 100
-  lu.assertEvalToTrue(w._value == 100, "setter should update _value")
+  luassert.truthy(w._value == 100, "setter should update _value")
 end
 
 function TestClass:test_inherits_get_and_set_from_parent_classes()
@@ -39,9 +40,9 @@ function TestClass:test_inherits_get_and_set_from_parent_classes()
   local d = Derived:new()
   d._value = 7
 
-  lu.assertEvalToTrue(d.value == 7, "derived instance should inherit base getter")
+  luassert.truthy(d.value == 7, "derived instance should inherit base getter")
   d.value = 14
-  lu.assertEvalToTrue(d._value == 14, "derived instance should inherit base setter")
+  luassert.truthy(d._value == 14, "derived instance should inherit base setter")
 end
 
 function TestClass:test_prefers_own_getter_setter_over_inherited_ones()
@@ -54,10 +55,10 @@ function TestClass:test_prefers_own_getter_setter_over_inherited_ones()
 
   local d = Derived:new()
 
-  lu.assertEvalToTrue(d.value == "derived", "own getter should shadow inherited getter")
+  luassert.truthy(d.value == "derived", "own getter should shadow inherited getter")
   d.value = 1
-  lu.assertEvalToTrue(d._derived_value == 1, "own setter should shadow inherited setter")
-  lu.assertEvalToTrue(d._base_value == nil, "inherited setter should not run")
+  luassert.truthy(d._derived_value == 1, "own setter should shadow inherited setter")
+  luassert.truthy(d._base_value == nil, "inherited setter should not run")
 end
 
 function TestClass:test_resolves_methods_and_getters_across_more_than_one_inheritance_level()
@@ -69,8 +70,8 @@ function TestClass:test_resolves_methods_and_getters_across_more_than_one_inheri
 
   local leaf = Leaf:new()
 
-  lu.assertEvalToTrue(leaf:grand_method() == "grand", "grandparent method must resolve through the middle class")
-  lu.assertEvalToTrue(leaf.depth == "grand_depth", "grandparent getter must resolve through the middle class")
+  luassert.truthy(leaf:grand_method() == "grand", "grandparent method must resolve through the middle class")
+  luassert.truthy(leaf.depth == "grand_depth", "grandparent getter must resolve through the middle class")
 end
 
 function TestClass:test_prefers_the_first_declared_parent_when_both_parents_define_a_member()
@@ -84,8 +85,8 @@ function TestClass:test_prefers_the_first_declared_parent_when_both_parents_defi
 
   local instance = Both:new()
 
-  lu.assertEvalToTrue(instance:tag() == "first", "declaration order must decide which parent wins")
-  lu.assertEvalToTrue(instance.label == "first_label", "declaration order must decide which parent getter wins")
+  luassert.truthy(instance:tag() == "first", "declaration order must decide which parent wins")
+  luassert.truthy(instance.label == "first_label", "declaration order must decide which parent getter wins")
 end
 
 function TestClass:test_falls_back_to_rawset_when_no_setter_is_found()
@@ -93,8 +94,8 @@ function TestClass:test_falls_back_to_rawset_when_no_setter_is_found()
   local b = Box:new()
   b.color = "red"
 
-  lu.assertEvalToTrue(b.color == "red", "plain field should be readable after rawset")
-  lu.assertEvalToTrue(rawget(b, "color") == "red", "plain field should be stored on instance")
+  luassert.truthy(b.color == "red", "plain field should be readable after rawset")
+  luassert.truthy(rawget(b, "color") == "red", "plain field should be stored on instance")
 end
 
 

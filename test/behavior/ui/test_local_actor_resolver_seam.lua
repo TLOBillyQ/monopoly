@@ -1,8 +1,11 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local resolver_seam = require("src.ui.seams.local_actor_resolver")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 -- local_actor_resolver 接缝是纯契约 port(#332 拆 ui.input ↔ ui.coord 投影环):
 -- input 层经它解析点击者身份,不反向 require coord/render 实现;实现由装配侧
@@ -45,8 +48,8 @@ function TestLocalActorResolverSeam:test_calls_without_a_configured_impl_error_l
   local ok, err = pcall(function()
     resolver_seam.resolve_from_event({}, {})
   end)
-  lu.assertEvalToTrue(ok == false, "call should raise")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "call should raise")
+  luassert.truthy(
     tostring(err):find("missing local_actor_resolver implementation", 1, true) ~= nil,
     "error should mention the missing implementation, got: " .. tostring(err)
   )
@@ -58,8 +61,8 @@ function TestLocalActorResolverSeam:test_reset_for_tests_clears_the_configured_i
   local ok, err = pcall(function()
     resolver_seam.resolve_turn_bound({}, {})
   end)
-  lu.assertEvalToTrue(ok == false, "call after reset should raise")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "call after reset should raise")
+  luassert.truthy(
     tostring(err):find("missing local_actor_resolver implementation", 1, true) ~= nil,
     "error should mention the missing implementation, got: " .. tostring(err)
   )
@@ -69,8 +72,8 @@ function TestLocalActorResolverSeam:test_configure_rejects_an_impl_missing_metho
   local ok, err = pcall(function()
     resolver_seam.configure({ resolve_from_event = function() end })
   end)
-  lu.assertEvalToTrue(ok == false, "configure should raise for a partial impl")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "configure should raise for a partial impl")
+  luassert.truthy(
     tostring(err):find("missing resolve_turn_bound", 1, true) ~= nil,
     "error should name the missing method, got: " .. tostring(err)
   )
@@ -80,8 +83,8 @@ function TestLocalActorResolverSeam:test_configure_rejects_an_impl_missing_metho
       resolve_turn_bound = function() end,
     })
   end)
-  lu.assertEvalToTrue(ok == false, "configure should raise for a partial impl")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "configure should raise for a partial impl")
+  luassert.truthy(
     tostring(err):find("missing resolve_from_event", 1, true) ~= nil,
     "error should name the missing method, got: " .. tostring(err)
   )
@@ -91,8 +94,8 @@ function TestLocalActorResolverSeam:test_configure_rejects_a_non_table_impl()
   local ok, err = pcall(function()
     resolver_seam.configure(nil)
   end)
-  lu.assertEvalToTrue(ok == false, "configure should raise for a non-table impl")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "configure should raise for a non-table impl")
+  luassert.truthy(
     tostring(err):find("invalid local_actor_resolver implementation", 1, true) ~= nil,
     "configure should name the invalid impl, got: " .. tostring(err)
   )
@@ -102,19 +105,19 @@ function TestLocalActorResolverSeam:test_resolve_turn_bound_without_impl_errors_
   local ok, err = pcall(function()
     resolver_seam.resolve_turn_bound({}, {})
   end)
-  lu.assertEvalToTrue(ok == false, "resolve_turn_bound without a configured impl should raise")
-  lu.assertEvalToTrue(
+  luassert.truthy(ok == false, "resolve_turn_bound without a configured impl should raise")
+  luassert.truthy(
     tostring(err):find("missing local_actor_resolver implementation", 1, true) ~= nil,
     "error should mention the missing implementation, got: " .. tostring(err)
   )
 end
 
 function TestLocalActorResolverSeam:test_is_configured_reflects_the_configuration_state()
-  lu.assertEvalToTrue(resolver_seam.is_configured() == false, "a fresh seam starts unconfigured")
+  luassert.truthy(resolver_seam.is_configured() == false, "a fresh seam starts unconfigured")
   resolver_seam.configure(_fake_impl({}))
-  lu.assertEvalToTrue(resolver_seam.is_configured() == true, "a configured seam reports configured")
+  luassert.truthy(resolver_seam.is_configured() == true, "a configured seam reports configured")
   resolver_seam.reset_for_tests()
-  lu.assertEvalToTrue(resolver_seam.is_configured() == false, "reset returns to unconfigured")
+  luassert.truthy(resolver_seam.is_configured() == false, "reset returns to unconfigured")
 end
 
 

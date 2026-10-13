@@ -1,5 +1,6 @@
 -- ecanvas.lua 直测:init 注册 nodes_list、只读属性存取、__init_children 经 GameAPI 替身组装子树。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local ECanvas = require("src.ui.manager.ecanvas")
 require("test.support.ui_manager_nodes_support")
@@ -29,11 +30,11 @@ end
 function TestECanvas:test_init_registers_itself_in_nodes_list_and_exposes_read_only_fields()
   local canvas = ECanvas:new(11, "root")
 
-  lu.assertEvalToTrue(context.nodes_list[11] == canvas, "canvas registered by id")
-  lu.assertEvalToTrue(canvas.id == 11, "id read back")
-  lu.assertEvalToTrue(canvas.name == "root", "name read back")
-  lu.assertEvalToTrue(canvas.parent == nil, "parent starts nil")
-  lu.assertEvalToTrue(canvas.children ~= nil and canvas.children.length == 0, "children starts empty")
+  luassert.truthy(context.nodes_list[11] == canvas, "canvas registered by id")
+  luassert.truthy(canvas.id == 11, "id read back")
+  luassert.truthy(canvas.name == "root", "name read back")
+  luassert.truthy(canvas.parent == nil, "parent starts nil")
+  luassert.truthy(canvas.children ~= nil and canvas.children.length == 0, "children starts empty")
 end
 
 function TestECanvas:test_init_evicts_a_stale_registration_for_the_same_id()
@@ -42,23 +43,23 @@ function TestECanvas:test_init_evicts_a_stale_registration_for_the_same_id()
 
   local canvas = ECanvas:new(11, "root")
 
-  lu.assertEvalToTrue(context.nodes_list[11] == canvas, "stale entry replaced")
-  lu.assertEvalToTrue(context.nodes_list[11] ~= stale, "old object evicted")
+  luassert.truthy(context.nodes_list[11] == canvas, "stale entry replaced")
+  luassert.truthy(context.nodes_list[11] ~= stale, "old object evicted")
 end
 
 function TestECanvas:test_init_children_pulls_child_ids_from_the_host_and_wires_parent_children()
   local parent = ECanvas:new(1, "parent")
   local child = ECanvas:new(2, "child")
   _G.GameAPI.get_eui_children = function(node_id)
-    lu.assertEvalToTrue(node_id == 1, "host queried with the parent canvas id")
+    luassert.truthy(node_id == 1, "host queried with the parent canvas id")
     return { 2 }
   end
 
   parent:__init_children()
 
-  lu.assertEvalToTrue(parent.children.length == 1, "one child appended")
-  lu.assertEvalToTrue(parent.children[1] == child, "child resolved via nodes_list")
-  lu.assertEvalToTrue(child.parent == parent, "child parent wired back")
+  luassert.truthy(parent.children.length == 1, "one child appended")
+  luassert.truthy(parent.children[1] == child, "child resolved via nodes_list")
+  luassert.truthy(child.parent == parent, "child parent wired back")
 end
 
 function TestECanvas:test_read_only_fields_reject_assignment()
@@ -70,10 +71,10 @@ function TestECanvas:test_read_only_fields_reject_assignment()
   canvas.parent = canvas
   canvas.children = nil
 
-  lu.assertEvalToTrue(canvas.name == "panel", "name unchanged")
-  lu.assertEvalToTrue(canvas.id == 21, "id unchanged")
-  lu.assertEvalToTrue(canvas.parent == nil, "parent unchanged")
-  lu.assertEvalToTrue(canvas.children ~= nil, "children unchanged")
+  luassert.truthy(canvas.name == "panel", "name unchanged")
+  luassert.truthy(canvas.id == 21, "id unchanged")
+  luassert.truthy(canvas.parent == nil, "parent unchanged")
+  luassert.truthy(canvas.children ~= nil, "children unchanged")
 end
 
 

@@ -1,6 +1,7 @@
 -- enode.lua branch-dense coverage: __custom_index / __new_custom_index role domain + fallback,
 -- visible/disabled 的定向与广播分支,名称查询(含 DFS)与 listen 的事件注册/分发。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local ENode = require("src.ui.manager.enode")
 local host_events = require("src.ui.seams.host_events")
@@ -32,7 +33,7 @@ function TestENode:test_custom_index_reads_role_domain_protected_data()
   local node = ENode:new(201, "role_node")
   node.client_data[7] = { __protected_test_value = "role_value" }
 
-  lu.assertEvalToTrue(node.__protected_test_value == "role_value",
+  luassert.truthy(node.__protected_test_value == "role_value",
     "should read protected value from client_data[roleid]")
 end
 
@@ -42,7 +43,7 @@ function TestENode:test_custom_index_falls_back_to_client_data_neg_1_when_role_d
   local node = ENode:new(202, "fallback_node")
   node.client_data[-1].__protected_test_value = "shared_value"
 
-  lu.assertEvalToTrue(node.__protected_test_value == "shared_value",
+  luassert.truthy(node.__protected_test_value == "shared_value",
     "should fall back to client_data[-1] when role data absent")
 end
 
@@ -53,7 +54,7 @@ function TestENode:test_custom_index_falls_back_to_client_data_neg_1_when_role_d
   node.client_data[7] = {}
   node.client_data[-1].__protected_test_value = "shared_value"
 
-  lu.assertEvalToTrue(node.__protected_test_value == "shared_value",
+  luassert.truthy(node.__protected_test_value == "shared_value",
     "should fall back to client_data[-1] when role data lacks the key")
 end
 
@@ -61,7 +62,7 @@ function TestENode:test_custom_index_reads_client_data_neg_1_when_no_client_role
   local node = ENode:new(204, "global_node")
   node.client_data[-1].__protected_test_value = "shared_value"
 
-  lu.assertEvalToTrue(node.__protected_test_value == "shared_value",
+  luassert.truthy(node.__protected_test_value == "shared_value",
     "should read from client_data[-1] when client_role is nil")
 end
 
@@ -72,9 +73,9 @@ function TestENode:test_new_custom_index_writes_role_domain_protected_data()
 
   ENode.__new_custom_index(node, "__protected_test_value", "role_value")
 
-  lu.assertEvalToTrue(node.client_data[7].__protected_test_value == "role_value",
+  luassert.truthy(node.client_data[7].__protected_test_value == "role_value",
     "should write protected value into client_data[roleid]")
-  lu.assertEvalToTrue(node.client_data[-1].__protected_test_value == nil,
+  luassert.truthy(node.client_data[-1].__protected_test_value == nil,
     "shared fallback should remain untouched")
 end
 
@@ -88,9 +89,9 @@ function TestENode:test_new_custom_index_keeps_earlier_role_data_when_a_second_k
   ENode.__new_custom_index(node, "__protected_first", "one")
   ENode.__new_custom_index(node, "__protected_second", "two")
 
-  lu.assertEvalToTrue(node.client_data[7].__protected_first == "one",
+  luassert.truthy(node.client_data[7].__protected_first == "one",
     "the first protected write must survive a later write for the same role")
-  lu.assertEvalToTrue(node.client_data[7].__protected_second == "two",
+  luassert.truthy(node.client_data[7].__protected_second == "two",
     "the later protected write should land in the same role bucket")
 end
 
@@ -99,7 +100,7 @@ function TestENode:test_new_custom_index_writes_client_data_neg_1_when_no_client
 
   ENode.__new_custom_index(node, "__protected_test_value", "shared_value")
 
-  lu.assertEvalToTrue(node.client_data[-1].__protected_test_value == "shared_value",
+  luassert.truthy(node.client_data[-1].__protected_test_value == "shared_value",
     "should write protected value into client_data[-1] when client_role is nil")
 end
 
@@ -108,7 +109,7 @@ function TestENode:test_new_custom_index_rawsets_non_protected_keys()
 
   ENode.__new_custom_index(node, "foo", "bar")
 
-  lu.assertEvalToTrue(node.foo == "bar", "non __protected_ key should be rawset on instance")
+  luassert.truthy(node.foo == "bar", "non __protected_ key should be rawset on instance")
 end
 
 function TestENode:test_set_attribute_and_get_attribtue_round_trip_custom_data()
@@ -116,8 +117,8 @@ function TestENode:test_set_attribute_and_get_attribtue_round_trip_custom_data()
 
   node:set_attribute("slot", 3)
 
-  lu.assertEvalToTrue(node:get_attribtue("slot") == 3, "stored attribute should be readable")
-  lu.assertEvalToTrue(node:get_attribtue("missing") == nil, "unset attribute should read nil")
+  luassert.truthy(node:get_attribtue("slot") == 3, "stored attribute should be readable")
+  luassert.truthy(node:get_attribtue("missing") == nil, "unset attribute should read nil")
 end
 
 function TestENode:test_custom_data_getter_and_setter_round_trip()
@@ -125,7 +126,7 @@ function TestENode:test_custom_data_getter_and_setter_round_trip()
 
   node.custom_data = { kind = "tile" }
 
-  lu.assertEvalToTrue(node.custom_data.kind == "tile", "custom_data should round-trip through the accessor")
+  luassert.truthy(node.custom_data.kind == "tile", "custom_data should round-trip through the accessor")
 end
 
 -- -------------------------------------------------- visible / disabled propagation
@@ -150,11 +151,11 @@ function TestENodeVisibleDisabledPropagation:test_visible_targets_only_the_clien
   node.visible = false
 
   local calls = support.calls_of(self.role_a, "set_node_visible")
-  lu.assertEvalToTrue(#calls == 1, "client role should receive set_node_visible once")
-  lu.assertEvalToTrue(calls[1].args[1] == 210, "host call should carry the eui node id")
-  lu.assertEvalToTrue(calls[1].args[2] == false, "host call should carry the new visibility")
-  lu.assertEvalToTrue(#self.role_b.calls == 0, "other roles should not receive the visibility update")
-  lu.assertEvalToTrue(node.visible == false, "visible getter should report the stored value")
+  luassert.truthy(#calls == 1, "client role should receive set_node_visible once")
+  luassert.truthy(calls[1].args[1] == 210, "host call should carry the eui node id")
+  luassert.truthy(calls[1].args[2] == false, "host call should carry the new visibility")
+  luassert.truthy(#self.role_b.calls == 0, "other roles should not receive the visibility update")
+  luassert.truthy(node.visible == false, "visible getter should report the stored value")
 end
 
 function TestENodeVisibleDisabledPropagation:test_visible_broadcasts_to_all_roles_when_no_client_role()
@@ -165,7 +166,7 @@ function TestENodeVisibleDisabledPropagation:test_visible_broadcasts_to_all_role
 
   for _, role in ipairs({ self.role_a, self.role_b }) do
     local calls = support.calls_of(role, "set_node_visible")
-    lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == true, "every role should receive the visibility update")
+    luassert.truthy(#calls == 1 and calls[1].args[2] == true, "every role should receive the visibility update")
   end
 end
 
@@ -177,11 +178,11 @@ function TestENodeVisibleDisabledPropagation:test_disabled_targets_only_the_clie
   node.disabled = true
 
   local calls = support.calls_of(self.role_a, "set_node_touch_enabled")
-  lu.assertEvalToTrue(#calls == 1, "client role should receive set_node_touch_enabled once")
-  lu.assertEvalToTrue(calls[1].args[1] == 212, "host call should carry the eui node id")
-  lu.assertEvalToTrue(calls[1].args[2] == false, "disabled=true should disable touch")
-  lu.assertEvalToTrue(#self.role_b.calls == 0, "other roles should not receive the disabled update")
-  lu.assertEvalToTrue(node.disabled == true, "disabled getter should report the stored value")
+  luassert.truthy(#calls == 1, "client role should receive set_node_touch_enabled once")
+  luassert.truthy(calls[1].args[1] == 212, "host call should carry the eui node id")
+  luassert.truthy(calls[1].args[2] == false, "disabled=true should disable touch")
+  luassert.truthy(#self.role_b.calls == 0, "other roles should not receive the disabled update")
+  luassert.truthy(node.disabled == true, "disabled getter should report the stored value")
 end
 
 function TestENodeVisibleDisabledPropagation:test_disabled_broadcasts_to_all_roles_when_no_client_role()
@@ -192,7 +193,7 @@ function TestENodeVisibleDisabledPropagation:test_disabled_broadcasts_to_all_rol
 
   for _, role in ipairs({ self.role_a, self.role_b }) do
     local calls = support.calls_of(role, "set_node_touch_enabled")
-    lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == true, "disabled=false should enable touch for every role")
+    luassert.truthy(#calls == 1 and calls[1].args[2] == true, "disabled=false should enable touch for every role")
   end
 end
 
@@ -205,9 +206,9 @@ function TestENodeVisibleDisabledPropagation:test_for_all_roles_applies_a_setter
 
   for _, role in ipairs({ self.role_a, self.role_b }) do
     local calls = support.calls_of(role, "set_node_visible")
-    lu.assertEvalToTrue(#calls == 1 and calls[1].args[2] == true, "for_all_roles should broadcast to every role")
+    luassert.truthy(#calls == 1 and calls[1].args[2] == true, "for_all_roles should broadcast to every role")
   end
-  lu.assertEvalToTrue(context.client_role == self.role_a, "for_all_roles should restore the previous client_role")
+  luassert.truthy(context.client_role == self.role_a, "for_all_roles should restore the previous client_role")
 end
 
 function TestENodeVisibleDisabledPropagation:test_for_all_roles_ignores_unknown_keys()
@@ -216,7 +217,7 @@ function TestENodeVisibleDisabledPropagation:test_for_all_roles_ignores_unknown_
 
   node:for_all_roles("no_such_property", true)
 
-  lu.assertEvalToTrue(#self.role_a.calls == 0, "unknown property should not reach the host")
+  luassert.truthy(#self.role_a.calls == 0, "unknown property should not reach the host")
 end
 
 -- -------------------------------------------------- name queries
@@ -287,17 +288,17 @@ end
 function TestENodeNameQueries:test_init_children_links_parents_and_children()
   local root = _build_tree()
 
-  lu.assertEvalToTrue(root.children.length == 2, "root should own two children")
-  lu.assertEvalToTrue(root.children[1].name == "child_a", "children should keep host order")
-  lu.assertEvalToTrue(root.children[1].parent == root, "child parent should point back at root")
+  luassert.truthy(root.children.length == 2, "root should own two children")
+  luassert.truthy(root.children[1].name == "child_a", "children should keep host order")
+  luassert.truthy(root.children[1].parent == root, "child parent should point back at root")
 end
 
 function TestENodeNameQueries:test_get_first_node_by_name_returns_nil_when_no_direct_child_matches()
   local root = _build_tree()
 
-  lu.assertEvalToTrue(root:get_first_node_by_name("deep") == nil,
+  luassert.truthy(root:get_first_node_by_name("deep") == nil,
     "a grandchild should not be found by the shallow lookup")
-  lu.assertEvalToTrue(root:get_first_node_by_name("child_b").id == 3,
+  luassert.truthy(root:get_first_node_by_name("child_b").id == 3,
     "a direct child should be found by the shallow lookup")
 end
 
@@ -305,9 +306,9 @@ function TestENodeNameQueries:test_query_nodes_by_name_collects_every_direct_chi
   local root = _build_tree()
   local branch = context.nodes_list[3]
 
-  lu.assertEvalToTrue(#root:query_nodes_by_name("child_a") == 1, "root has one direct child_a")
-  lu.assertEvalToTrue(#root:query_nodes_by_name("deep") == 0, "root has no direct child named deep")
-  lu.assertEvalToTrue(#branch:query_nodes_by_name("child_a") == 1, "branch has one direct child_a")
+  luassert.truthy(#root:query_nodes_by_name("child_a") == 1, "root has one direct child_a")
+  luassert.truthy(#root:query_nodes_by_name("deep") == 0, "root has no direct child named deep")
+  luassert.truthy(#branch:query_nodes_by_name("child_a") == 1, "branch has one direct child_a")
 end
 
 function TestENodeNameQueries:test_get_first_node_by_name_dfs_finds_a_direct_child_without_recursing()
@@ -315,7 +316,7 @@ function TestENodeNameQueries:test_get_first_node_by_name_dfs_finds_a_direct_chi
 
   local node = root:get_first_node_by_name_dfs("child_b")
 
-  lu.assertEvalToTrue(node ~= nil and node.id == 3, "direct child should be returned immediately")
+  luassert.truthy(node ~= nil and node.id == 3, "direct child should be returned immediately")
 end
 
 function TestENodeNameQueries:test_get_first_node_by_name_dfs_descends_into_children()
@@ -323,13 +324,13 @@ function TestENodeNameQueries:test_get_first_node_by_name_dfs_descends_into_chil
 
   local node = root:get_first_node_by_name_dfs("deep")
 
-  lu.assertEvalToTrue(node ~= nil and node.id == 4, "grandchild should be found via depth-first descent")
+  luassert.truthy(node ~= nil and node.id == 4, "grandchild should be found via depth-first descent")
 end
 
 function TestENodeNameQueries:test_get_first_node_by_name_dfs_returns_nil_when_the_name_is_absent()
   local root = _build_tree()
 
-  lu.assertEvalToTrue(root:get_first_node_by_name_dfs("missing") == nil,
+  luassert.truthy(root:get_first_node_by_name_dfs("missing") == nil,
     "absent names should yield nil after the whole subtree is scanned")
 end
 
@@ -338,8 +339,8 @@ function TestENodeNameQueries:test_query_nodes_by_name_dfs_stops_at_the_first_ma
 
   local list = root:query_nodes_by_name_dfs("child_a")
 
-  lu.assertEvalToTrue(#list == 1, "dfs query should stop at the first match")
-  lu.assertEvalToTrue(list[1].id == 2, "the shallowest match should win")
+  luassert.truthy(#list == 1, "dfs query should stop at the first match")
+  luassert.truthy(list[1].id == 2, "the shallowest match should win")
 end
 
 -- 命中在孙层、另一条兄弟分支也藏着同名节点:上报链一旦断掉(命中不再返回 true,
@@ -350,8 +351,8 @@ function TestENodeNameQueries:test_query_nodes_by_name_dfs_stops_scanning_siblin
 
   local list = twin_root:query_nodes_by_name_dfs("twin")
 
-  lu.assertEvalToTrue(#list == 1, "a match found deep in the first branch must stop the sibling scan")
-  lu.assertEvalToTrue(list[1].id == 16, "the first branch's grandchild should be the only result")
+  luassert.truthy(#list == 1, "a match found deep in the first branch must stop the sibling scan")
+  luassert.truthy(list[1].id == 16, "the first branch's grandchild should be the only result")
 end
 
 function TestENodeNameQueries:test_query_nodes_by_name_dfs_descends_when_no_direct_child_matches()
@@ -359,13 +360,13 @@ function TestENodeNameQueries:test_query_nodes_by_name_dfs_descends_when_no_dire
 
   local list = root:query_nodes_by_name_dfs("deep")
 
-  lu.assertEvalToTrue(#list == 1 and list[1].id == 4, "dfs query should find the grandchild")
+  luassert.truthy(#list == 1 and list[1].id == 4, "dfs query should find the grandchild")
 end
 
 function TestENodeNameQueries:test_query_nodes_by_name_dfs_returns_an_empty_list_when_the_name_is_absent()
   local root = _build_tree()
 
-  lu.assertEvalToTrue(#root:query_nodes_by_name_dfs("missing") == 0,
+  luassert.truthy(#root:query_nodes_by_name_dfs("missing") == 0,
     "absent names should yield an empty list")
 end
 
@@ -402,12 +403,12 @@ function TestENodeListen:test_registers_the_host_event_once_and_stores_the_trigg
   local listener = node_a:listen("click", function() end)
   node_b:listen("click", function() end)
 
-  lu.assertEvalToTrue(#registered == 1, "the host event should only be registered for the first listener")
-  lu.assertEvalToTrue(registered[1].event == "click", "the host registration should carry the event name")
-  lu.assertEvalToTrue(context.event_handlers["click"].trigger == 999,
+  luassert.truthy(#registered == 1, "the host event should only be registered for the first listener")
+  luassert.truthy(registered[1].event == "click", "the host registration should carry the event name")
+  luassert.truthy(context.event_handlers["click"].trigger == 999,
     "the trigger handle returned by the host should be stored")
-  lu.assertEvalToTrue(listener._event == "click", "the listener should remember its event")
-  lu.assertEvalToTrue(listener._node_id == 230, "the listener should remember its node id")
+  luassert.truthy(listener._event == "click", "the listener should remember its event")
+  luassert.truthy(listener._node_id == 230, "the listener should remember its node id")
 end
 
 function TestENodeListen:test_stores_no_trigger_when_the_host_refuses_to_register()
@@ -416,7 +417,7 @@ function TestENodeListen:test_stores_no_trigger_when_the_host_refuses_to_registe
 
   node:listen("click", function() end)
 
-  lu.assertEvalToTrue(context.event_handlers["click"].trigger == nil,
+  luassert.truthy(context.event_handlers["click"].trigger == nil,
     "a failed registration should not store a trigger handle")
 end
 
@@ -430,11 +431,11 @@ function TestENodeListen:test_appends_further_callbacks_on_the_same_node()
   local second = node:listen("click", cb2)
 
   local handler_data = context.event_handlers["click"][233]
-  lu.assertEvalToTrue(#handler_data.callbacks == 2, "both callbacks should be registered on the node")
-  lu.assertEvalToTrue(handler_data.callbacks[1] == cb1 and handler_data.callbacks[2] == cb2,
+  luassert.truthy(#handler_data.callbacks == 2, "both callbacks should be registered on the node")
+  luassert.truthy(handler_data.callbacks[1] == cb1 and handler_data.callbacks[2] == cb2,
     "callbacks should keep registration order")
-  lu.assertEvalToTrue(first ~= second, "each listen call should return its own listener")
-  lu.assertEvalToTrue(second._callback == cb2, "the listener should remember its own callback")
+  luassert.truthy(first ~= second, "each listen call should return its own listener")
+  luassert.truthy(second._callback == cb2, "the listener should remember its own callback")
 end
 
 function TestENodeListen:test_dispatches_host_events_to_the_node_callbacks_with_the_acting_role()
@@ -450,12 +451,12 @@ function TestENodeListen:test_dispatches_host_events_to_the_node_callbacks_with_
 
   registered[1].handler(nil, nil, { eui_node_id = 234, role = role })
 
-  lu.assertEvalToTrue(#seen == 1, "the callback should fire once")
-  lu.assertEvalToTrue(seen[1].role == role, "the callback should receive the acting role")
-  lu.assertEvalToTrue(seen[1].target == node, "the callback should receive the node as target")
-  lu.assertEvalToTrue(seen[1].listener == listener, "the callback should receive the listener")
-  lu.assertEvalToTrue(seen.role_during_callback == role, "client_role should be bound during dispatch")
-  lu.assertEvalToTrue(context.client_role == nil, "client_role should be cleared after dispatch")
+  luassert.truthy(#seen == 1, "the callback should fire once")
+  luassert.truthy(seen[1].role == role, "the callback should receive the acting role")
+  luassert.truthy(seen[1].target == node, "the callback should receive the node as target")
+  luassert.truthy(seen[1].listener == listener, "the callback should receive the listener")
+  luassert.truthy(seen.role_during_callback == role, "client_role should be bound during dispatch")
+  luassert.truthy(context.client_role == nil, "client_role should be cleared after dispatch")
 end
 
 function TestENodeListen:test_ignores_host_events_for_nodes_without_handlers()
@@ -466,8 +467,8 @@ function TestENodeListen:test_ignores_host_events_for_nodes_without_handlers()
 
   registered[1].handler(nil, nil, { eui_node_id = 999, role = {} })
 
-  lu.assertEvalToTrue(fired == 0, "a host event for an unregistered node should not fire callbacks")
-  lu.assertEvalToTrue(context.client_role == nil, "client_role should stay unset for unhandled events")
+  luassert.truthy(fired == 0, "a host event for an unregistered node should not fire callbacks")
+  luassert.truthy(context.client_role == nil, "client_role should stay unset for unhandled events")
 end
 
 function TestENodeListen:test_skips_dispatch_when_the_node_is_flagged_disabled()
@@ -479,7 +480,7 @@ function TestENodeListen:test_skips_dispatch_when_the_node_is_flagged_disabled()
 
   registered[1].handler(nil, nil, { eui_node_id = 236, role = {} })
 
-  lu.assertEvalToTrue(fired == 0, "a disabled node should not receive event callbacks")
+  luassert.truthy(fired == 0, "a disabled node should not receive event callbacks")
 end
 
 

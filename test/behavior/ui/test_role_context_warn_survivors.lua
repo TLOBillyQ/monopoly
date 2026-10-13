@@ -1,7 +1,8 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 
 local function _eq(a, b, msg)
-  lu.assertIs(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 -- role_context captures `logger` at require time, so the logger spy must be installed BEFORE
@@ -82,10 +83,9 @@ end
 
 TestRoleContextWarnSurvivors["test_L35: missing runtime asserts descriptive error"] = function(self)
   -- 杀 L35 两个位点(and->or 与消息->nil):deps 缺 runtime 必须报带消息的错。
-  local luax = require("test.support.luax")
   package.loaded["src.ui.view.role_context"] = nil
   local role_context = require("src.ui.view.role_context")
-  luax.has_error(function()
+  luassert.has_error(function()
     role_context.resolve("roleA", {}, {})
   end, "missing runtime.resolve_role_id")
   package.loaded["src.ui.view.role_context"] = nil

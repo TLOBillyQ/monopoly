@@ -1,12 +1,15 @@
 --- 原生 LuaUnit 迁移(busted → luaunit):describe 拍平为文件级 Test* 类,
---- 断言词汇切到 lu.assertXxx(裸 assert 语句 → lu.assertEvalToTrue),
+--- 断言词汇切到 lu.assertXxx(裸 assert 语句 → luassert.truthy),
 --- 用例数与改写前一一对应(30 例)。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 
 local support = require("test.support.shared_support")
 local control = require("src.player.control")
 local _new_game = support.new_game
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _bind_ui_runtime = support.bind_ui_runtime
 local _with_patches = support.with_patches
 local dispatch = require("src.turn.actions.action_dispatcher")
@@ -123,9 +126,9 @@ function TestModelDispatch:test_ui_model_structure()
     last_turn = g.last_turn,
     finished = g.finished,
   })
-  lu.assertEvalToTrue(model.panel and model.panel.turn_label, "ui_model.panel.turn_label expected")
-  lu.assertEvalToTrue(type(model.item_slots) == "table" and model.item_slots[1] == 2001, "ui_model.item_slots[1] expected")
-  lu.assertEvalToTrue(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
+  luassert.truthy(model.panel and model.panel.turn_label, "ui_model.panel.turn_label expected")
+  luassert.truthy(type(model.item_slots) == "table" and model.item_slots[1] == 2001, "ui_model.item_slots[1] expected")
+  luassert.truthy(model.board and model.board.tiles and model.board.tile_states, "ui_model.board data")
 end
 
 function TestModelDispatch:test_ui_panel_clamps_negative_assets_to_zero()
@@ -147,7 +150,7 @@ function TestModelDispatch:test_ui_panel_clamps_negative_assets_to_zero()
   }, 1)
 
   local row = statuses and statuses[1] or nil
-  lu.assertEvalToTrue(row ~= nil, "panel row should exist")
+  luassert.truthy(row ~= nil, "panel row should exist")
   _assert_eq(row.cash_value, 0, "negative cash_value should normalize as zero")
   _assert_eq(row.cash, "现金: 0", "negative cash should render as zero")
   _assert_eq(row.total_assets_value, 0, "negative total_assets_value should normalize as zero")
@@ -205,8 +208,8 @@ function TestModelDispatch:test_ui_panel_handles_invalid_cash_missing_role_id_an
 
     local row1 = statuses and statuses[1] or nil
     local row2 = statuses and statuses[2] or nil
-    lu.assertEvalToTrue(row1 ~= nil, "first panel row should exist")
-    lu.assertEvalToTrue(row2 ~= nil, "second panel row should exist")
+    luassert.truthy(row1 ~= nil, "first panel row should exist")
+    luassert.truthy(row2 ~= nil, "second panel row should exist")
     _assert_eq(resolve_calls, 1, "missing role id should not resolve a role")
     _assert_eq(row1.name, "NoId", "missing role id should keep local name")
     _assert_eq(row1.cash_value, 7, "valid local row should keep cash")
@@ -233,7 +236,7 @@ function TestModelDispatch:test_ui_panel_missing_player_name_renders_blank_label
     }, { [1] = 0 }), nil, 1)
 
   local row = statuses and statuses[1] or nil
-  lu.assertEvalToTrue(row ~= nil, "panel row should exist")
+  luassert.truthy(row ~= nil, "panel row should exist")
   _assert_eq(row.name, "", "missing player name should render as blank")
 end
 
@@ -244,7 +247,7 @@ function TestModelDispatch:test_ui_panel_empty_rows_and_zero_count_do_not_leak_c
   }, nil, 2)
 
   local row = statuses and statuses[1] or nil
-  lu.assertEvalToTrue(row ~= nil, "empty panel row should exist")
+  luassert.truthy(row ~= nil, "empty panel row should exist")
   _assert_eq(row.name, "", "empty row name should be blank")
   _assert_eq(row.avatar, nil, "empty row avatar should be nil")
   _assert_eq(row.eliminated, false, "empty row should not be eliminated")
@@ -295,11 +298,11 @@ function TestModelDispatch:test_ui_panel_builds_empty_rows_and_counts_land_asset
 
   local row1 = statuses and statuses[1] or nil
   local row2 = statuses and statuses[2] or nil
-  lu.assertEvalToTrue(row1 ~= nil, "first panel row should exist")
+  luassert.truthy(row1 ~= nil, "first panel row should exist")
   _assert_eq(row1.land_count, "地块: 2", "panel should count owned properties")
   _assert_eq(row1.total_assets_value, 670, "panel should only add invested value for land tiles")
   _assert_eq(row1.total_assets, "总资产: 670", "panel should render total assets with land investment")
-  lu.assertEvalToTrue(row2 ~= nil, "second panel row should exist")
+  luassert.truthy(row2 ~= nil, "second panel row should exist")
   _assert_eq(row2.name, "", "missing player slots should render empty name")
   _assert_eq(row2.cash, "", "missing player slots should render empty cash")
   _assert_eq(row2.total_assets_value, nil, "missing player slots should keep total assets empty")
@@ -334,16 +337,16 @@ function TestModelDispatch:test_ui_model_player_slot_map_and_choice_owner()
     player_control_by_player = g.player_control_snapshots,
   })
 
-  lu.assertEvalToTrue(model.current_player_id == 1, "current_player_id expected")
-  lu.assertEvalToTrue(model.item_choice_owner_id == 2, "item_choice_owner_id should normalize choice owner role id")
-  lu.assertEvalToTrue(model.item_slots and model.item_slots[1] == 2001, "current player slot expected")
-  lu.assertEvalToTrue(model.item_slots_by_player and model.item_slots_by_player[1][1] == 2001, "player1 slot map expected")
-  lu.assertEvalToTrue(model.item_slots_by_player and model.item_slots_by_player[2][1] == 2002, "player2 slot map expected")
-  lu.assertEvalToTrue(model.delegated_by_player and model.delegated_by_player[1] == false, "player1 delegation expected false")
-  lu.assertEvalToTrue(model.delegated_by_player and model.delegated_by_player[2] == true, "player2 delegation expected true")
-  lu.assertEvalToTrue(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[1] == "托管",
+  luassert.truthy(model.current_player_id == 1, "current_player_id expected")
+  luassert.truthy(model.item_choice_owner_id == 2, "item_choice_owner_id should normalize choice owner role id")
+  luassert.truthy(model.item_slots and model.item_slots[1] == 2001, "current player slot expected")
+  luassert.truthy(model.item_slots_by_player and model.item_slots_by_player[1][1] == 2001, "player1 slot map expected")
+  luassert.truthy(model.item_slots_by_player and model.item_slots_by_player[2][1] == 2002, "player2 slot map expected")
+  luassert.truthy(model.delegated_by_player and model.delegated_by_player[1] == false, "player1 delegation expected false")
+  luassert.truthy(model.delegated_by_player and model.delegated_by_player[2] == true, "player2 delegation expected true")
+  luassert.truthy(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[1] == "托管",
     "player1 auto label should use fixed delegate copy")
-  lu.assertEvalToTrue(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[2] == "托管",
+  luassert.truthy(model.panel and model.panel.auto_label_by_player and model.panel.auto_label_by_player[2] == "托管",
     "player2 auto label should use fixed delegate copy")
 end
 
@@ -361,7 +364,7 @@ function TestModelDispatch:test_ui_model_build_falls_back_when_no_current_player
 
   _assert_eq(model.current_player_name, "-", "no current player should fall back to the dash name")
   _assert_eq(model.current_player_cash, 0, "no current player should fall back to zero cash")
-  lu.assertNil(model.current_player_id, "no current player should leave the id nil")
+  luassert.is_nil(model.current_player_id, "no current player should leave the id nil")
 end
 
 function TestModelDispatch:test_panel_auto_label_stays_fixed_across_auto_states()
@@ -419,10 +422,10 @@ function TestModelDispatch:test_ui_model_player_profile_prefers_role_api_with_fa
 
   local row1 = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
   local row2 = model and model.panel and model.panel.player_rows and model.panel.player_rows[2] or nil
-  lu.assertEvalToTrue(row1 and row1.name == "远端昵称1", "player1 should use role name")
-  lu.assertEvalToTrue(row1 and row1.avatar == 12345, "player1 should use role avatar")
-  lu.assertEvalToTrue(row2 and row2.name == "本地玩家2 (出局)", "player2 name should fallback to local name with eliminated suffix")
-  lu.assertEvalToTrue(row2 and row2.avatar == nil, "player2 avatar should fallback to nil when role api failed")
+  luassert.truthy(row1 and row1.name == "远端昵称1", "player1 should use role name")
+  luassert.truthy(row1 and row1.avatar == 12345, "player1 should use role avatar")
+  luassert.truthy(row2 and row2.name == "本地玩家2 (出局)", "player2 name should fallback to local name with eliminated suffix")
+  luassert.truthy(row2 and row2.avatar == nil, "player2 avatar should fallback to nil when role api failed")
 end
 
 function TestModelDispatch:test_ui_model_player_profile_accepts_stringified_avatar()
@@ -459,7 +462,7 @@ function TestModelDispatch:test_ui_model_player_profile_accepts_stringified_avat
   end)
 
   local row1 = model and model.panel and model.panel.player_rows and model.panel.player_rows[1] or nil
-  lu.assertEvalToTrue(row1 and row1.avatar == 67890, "player1 avatar should parse stringified icon key")
+  luassert.truthy(row1 and row1.avatar == 67890, "player1 avatar should parse stringified icon key")
 end
 
 function TestModelDispatch:test_ui_model_player_profile_uses_slot_avatar_for_synthetic_ai()
@@ -556,10 +559,10 @@ function TestModelDispatch:test_ui_model_player_profile_uses_slot_avatar_for_syn
   local row2 = player_rows and player_rows[2] or nil
   local row3 = player_rows and player_rows[3] or nil
   local row4 = player_rows and player_rows[4] or nil
-  lu.assertEvalToTrue(row1 and row1.avatar == 12345, "player1 should keep real role avatar")
-  lu.assertEvalToTrue(row2 and row2.avatar == avatar_ai_2, "player2 should use slot-mapped AI2 avatar")
-  lu.assertEvalToTrue(row3 and row3.avatar == avatar_ai_3, "player3 should use slot-mapped AI3 avatar")
-  lu.assertEvalToTrue(row4 and row4.avatar == avatar_ai_4, "player4 should use slot-mapped AI4 avatar")
+  luassert.truthy(row1 and row1.avatar == 12345, "player1 should keep real role avatar")
+  luassert.truthy(row2 and row2.avatar == avatar_ai_2, "player2 should use slot-mapped AI2 avatar")
+  luassert.truthy(row3 and row3.avatar == avatar_ai_3, "player3 should use slot-mapped AI3 avatar")
+  luassert.truthy(row4 and row4.avatar == avatar_ai_4, "player4 should use slot-mapped AI4 avatar")
 end
 
 function TestModelDispatch:test_turn_dispatch_rejects_non_current_actor()
@@ -575,15 +578,15 @@ function TestModelDispatch:test_turn_dispatch_rejects_non_current_actor()
     id = "auto",
     actor_role_id = 2,
   }, {})
-  lu.assertEvalToTrue(res_auto and res_auto.status == "applied", "auto button should allow non-current actor")
-  lu.assertEvalToTrue(control.is_delegated(g.players[2]), "player2 delegation should toggle")
+  luassert.truthy(res_auto and res_auto.status == "applied", "auto button should allow non-current actor")
+  luassert.truthy(control.is_delegated(g.players[2]), "player2 delegation should toggle")
 
   local res_next = dispatch.dispatch_action(g, state, {
     type = "ui_button",
     id = "next",
     actor_role_id = 2,
   }, {})
-  lu.assertEvalToTrue(res_next and res_next.status == "rejected", "next button should reject non-current actor")
+  luassert.truthy(res_next and res_next.status == "rejected", "next button should reject non-current actor")
 end
 
 function TestModelDispatch:test_turn_dispatch_rejects_choice_non_owner()
@@ -617,9 +620,9 @@ function TestModelDispatch:test_turn_dispatch_rejects_choice_non_owner()
     actor_role_id = 2,
   }, {})
 
-  lu.assertEvalToTrue(res and res.status == "rejected", "choice_select should reject non-owner actor")
-  lu.assertEvalToTrue(dispatched == nil, "rejected choice should not dispatch")
-  lu.assertEvalToTrue(g.turn.pending_choice ~= nil, "rejected choice should keep pending")
+  luassert.truthy(res and res.status == "rejected", "choice_select should reject non-owner actor")
+  luassert.truthy(dispatched == nil, "rejected choice should not dispatch")
+  luassert.truthy(g.turn.pending_choice ~= nil, "rejected choice should keep pending")
 end
 
 function TestModelDispatch:test_turn_dispatch_auto_rejects_unmapped_role()
@@ -635,8 +638,8 @@ function TestModelDispatch:test_turn_dispatch_auto_rejects_unmapped_role()
     id = "auto",
     actor_role_id = 99,
   }, {})
-  lu.assertEvalToTrue(res and res.status == "rejected", "auto button should reject unmapped role")
-  lu.assertEvalToTrue(control.is_delegated(g.players[1]) == before, "mapped players delegation should keep unchanged")
+  luassert.truthy(res and res.status == "rejected", "auto button should reject unmapped role")
+  luassert.truthy(control.is_delegated(g.players[1]) == before, "mapped players delegation should keep unchanged")
 end
 
 function TestModelDispatch:test_turn_dispatch_choice_action_prefers_turn_pending_choice()
@@ -749,9 +752,9 @@ function TestModelDispatch:test_turn_dispatch_item_slot_resolves_actor_own_inven
     actor_role_id = actor.id,
   }, {})
 
-  lu.assertEvalToTrue(res and res.status == "applied", "item slot click should apply")
-  lu.assertEvalToTrue(captured and captured.type == "choice_select", "choice_select should dispatch")
-  lu.assertEvalToTrue(captured and captured.option_id == 4001, "should read the clicker's own bag, not the other player's")
+  luassert.truthy(res and res.status == "applied", "item slot click should apply")
+  luassert.truthy(captured and captured.type == "choice_select", "choice_select should dispatch")
+  luassert.truthy(captured and captured.option_id == 4001, "should read the clicker's own bag, not the other player's")
 end
 
 function TestModelDispatch:test_turn_dispatch_market_navigation_prefers_turn_pending_choice()
@@ -1018,7 +1021,7 @@ function TestModelDispatch:test_ui_intent_dispatcher_market_confirm_routes_choic
     }, {})
   end)
 
-  lu.assertEvalToTrue(captured and captured.type == "choice_select", "market_confirm should route as choice_select")
+  luassert.truthy(captured and captured.type == "choice_select", "market_confirm should route as choice_select")
   _assert_eq(captured and captured.choice_id, 12, "market_confirm should keep choice id")
   _assert_eq(captured and captured.option_id, 34, "market_confirm should keep option id")
 end
@@ -1056,14 +1059,14 @@ function TestModelDispatch:test_ui_model_update_refreshes_targeted_slices_only()
     turn_countdown = true,
   })
 
-  lu.assertEvalToTrue(updated == model, "update should mutate existing model table")
-  lu.assertEvalToTrue(updated.board == original_board, "turn-only refresh should keep board slice")
-  lu.assertEvalToTrue(updated.panel.turn_label ~= original_turn_label, "turn refresh should rebuild turn label")
-  lu.assertEvalToTrue(updated.item_choice_owner_id == original_choice_owner_id, "turn refresh should keep normalized choice owner when choice is unchanged")
-  lu.assertEvalToTrue(updated.popup == original_popup, "non-ui refresh should keep popup slice")
+  luassert.truthy(updated == model, "update should mutate existing model table")
+  luassert.truthy(updated.board == original_board, "turn-only refresh should keep board slice")
+  luassert.truthy(updated.panel.turn_label ~= original_turn_label, "turn refresh should rebuild turn label")
+  luassert.truthy(updated.item_choice_owner_id == original_choice_owner_id, "turn refresh should keep normalized choice owner when choice is unchanged")
+  luassert.truthy(updated.popup == original_popup, "non-ui refresh should keep popup slice")
   _assert_eq(updated.current_player_cash, 4321, "current player cash should refresh")
   _assert_eq(updated.turn_count, 7, "turn count should refresh")
-  lu.assertEvalToTrue(updated.panel.turn_label ~= nil, "turn label should remain populated")
+  luassert.truthy(updated.panel.turn_label ~= nil, "turn label should remain populated")
 end
 
 function TestModelDispatch:test_ui_model_update_refreshes_inventory_owned_slots()
@@ -1097,10 +1100,10 @@ function TestModelDispatch:test_ui_model_update_refreshes_inventory_owned_slots(
   for _, id in ipairs(updated.item_slots or {}) do
     if id == 2001 then after_has_2001 = true end
   end
-  lu.assertEvalToTrue(not before_has_2001, "item 2001 should not be present before inventory add")
-  lu.assertEvalToTrue(after_has_2001, "inventory refresh should include newly added item")
-  lu.assertEvalToTrue(updated.item_slots_by_player ~= nil, "inventory refresh should keep per-player slots")
-  lu.assertEvalToTrue(updated.item_choice_owner_id ~= nil or updated.choice == nil, "inventory refresh should recompute choice owner when needed")
+  luassert.truthy(not before_has_2001, "item 2001 should not be present before inventory add")
+  luassert.truthy(after_has_2001, "inventory refresh should include newly added item")
+  luassert.truthy(updated.item_slots_by_player ~= nil, "inventory refresh should keep per-player slots")
+  luassert.truthy(updated.item_choice_owner_id ~= nil or updated.choice == nil, "inventory refresh should recompute choice owner when needed")
 end
 
 function TestModelDispatch:test_panel_slice_update_refreshes_only_requested_flags()
@@ -1124,10 +1127,10 @@ function TestModelDispatch:test_panel_slice_update_refreshes_only_requested_flag
     auto_label = true,
   })
 
-  lu.assertEvalToTrue(updated == panel, "panel update should mutate the existing panel table")
-  lu.assertEvalToTrue(updated.player_rows == player_rows, "auto-label-only refresh should keep player rows")
-  lu.assertEvalToTrue(updated.auto_label == auto_label, "auto-label-only refresh should keep fixed delegate copy")
-  lu.assertEvalToTrue(updated.no_action_text ~= "locked", "no_action notice should not refresh without turn_label flag")
+  luassert.truthy(updated == panel, "panel update should mutate the existing panel table")
+  luassert.truthy(updated.player_rows == player_rows, "auto-label-only refresh should keep player rows")
+  luassert.truthy(updated.auto_label == auto_label, "auto-label-only refresh should keep fixed delegate copy")
+  luassert.truthy(updated.no_action_text ~= "locked", "no_action notice should not refresh without turn_label flag")
 end
 
 function TestModelDispatch:test_panel_slice_tracks_countdown_visibility()
@@ -1146,7 +1149,7 @@ function TestModelDispatch:test_panel_slice_tracks_countdown_visibility()
     turn_label = true,
   })
 
-  lu.assertEvalToTrue(updated == panel, "panel update should reuse panel table")
+  luassert.truthy(updated == panel, "panel update should reuse panel table")
   _assert_eq(updated.countdown_visible, true, "turn label refresh should track active countdown visibility")
 end
 
@@ -1190,8 +1193,8 @@ function TestModelDispatch:test_modal_presenter_select_choice_option_refreshes_s
     modal_presenter.select_choice_option(state, "confirm")
   end)
 
-  lu.assertEvalToTrue(labels["通用二次确认_标题"] ~= nil, "secondary confirm title should refresh")
-  lu.assertEvalToTrue(labels["通用二次确认_文本"] ~= nil, "secondary confirm body should refresh")
+  luassert.truthy(labels["通用二次确认_标题"] ~= nil, "secondary confirm title should refresh")
+  luassert.truthy(labels["通用二次确认_文本"] ~= nil, "secondary confirm body should refresh")
   _assert_eq(choice_dirty_marks, 0, "secondary confirm selection should not write choice canvas dirty")
   _assert_eq(state.ui_runtime and state.ui_runtime.ui_dirty, true, "secondary confirm selection should invalidate ui_model")
 end
@@ -1262,10 +1265,10 @@ function TestModelDispatch:test_modal_presenter_close_choice_modal_resets_choice
     modal_presenter.close_choice_modal(state)
   end)
 
-  lu.assertEvalToTrue(state.ui.choice_active == false, "close_choice_modal should deactivate choice screen")
-  lu.assertEvalToTrue(state.ui.market_active == false, "close_choice_modal should deactivate market")
-  lu.assertEvalToTrue(market_closed == 1, "close_choice_modal should close market once")
-  lu.assertEvalToTrue(modal_closed == 1, "close_choice_modal should close modal state once")
+  luassert.truthy(state.ui.choice_active == false, "close_choice_modal should deactivate choice screen")
+  luassert.truthy(state.ui.market_active == false, "close_choice_modal should deactivate market")
+  luassert.truthy(market_closed == 1, "close_choice_modal should close market once")
+  luassert.truthy(modal_closed == 1, "close_choice_modal should close modal state once")
 end
 
 

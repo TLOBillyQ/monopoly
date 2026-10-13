@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local property = require("test.support.property")
 local choice_options = require("src.ui.view.choice_options")
 
@@ -62,9 +63,9 @@ function TestChoiceOptions:test_resolve_option_id_is_the_identity_for_scalars_an
   end, function(case)
     local resolved = choice_options.resolve_option_id(case.option)
     if case.is_table then
-      lu.assertEvalToTrue(resolved == case.id, "table option should resolve to its id field")
+      luassert.truthy(resolved == case.id, "table option should resolve to its id field")
     else
-      lu.assertEvalToTrue(resolved == case.option, "scalar option should resolve to itself")
+      luassert.truthy(resolved == case.option, "scalar option should resolve to itself")
     end
   end)
 end
@@ -73,8 +74,8 @@ function TestChoiceOptions:test_resolve_option_by_id_round_trips_every_table_opt
   property.for_all(_gen_choice, function(case)
     for _, id in ipairs(case.table_ids) do
       local found = choice_options.resolve_option_by_id(case.choice, id)
-      lu.assertEvalToTrue(found ~= nil, "a present table id must resolve to an option")
-      lu.assertEvalToTrue(choice_options.resolve_option_id(found) == id,
+      luassert.truthy(found ~= nil, "a present table id must resolve to an option")
+      luassert.truthy(choice_options.resolve_option_id(found) == id,
         "the resolved option must carry the looked-up id")
     end
   end)
@@ -83,7 +84,7 @@ end
 function TestChoiceOptions:test_resolve_option_by_id_never_returns_a_scalar_option()
   property.for_all(_gen_choice, function(case)
     for _, id in ipairs(case.scalar_ids) do
-      lu.assertEvalToTrue(choice_options.resolve_option_by_id(case.choice, id) == nil,
+      luassert.truthy(choice_options.resolve_option_by_id(case.choice, id) == nil,
         "scalar options are not returned as table options")
     end
   end)
@@ -94,16 +95,16 @@ function TestChoiceOptions:test_a_present_id_always_yields_a_non_nil_label_and_a
     return _gen_choice(rng)
   end, function(case, rng)
     for id in pairs(case.used) do
-      lu.assertEvalToTrue(choice_options.resolve_option_label_by_id(case.choice, id) ~= nil,
+      luassert.truthy(choice_options.resolve_option_label_by_id(case.choice, id) ~= nil,
         "every present option id should resolve to a label")
     end
     local missing
     repeat
       missing = rng:int(ID_POOL_BOUND + 1, ID_POOL_BOUND * 2)
     until not case.used[missing]
-    lu.assertEvalToTrue(choice_options.resolve_option_by_id(case.choice, missing) == nil,
+    luassert.truthy(choice_options.resolve_option_by_id(case.choice, missing) == nil,
       "an absent id must not resolve to an option")
-    lu.assertEvalToTrue(choice_options.resolve_option_label_by_id(case.choice, missing) == nil,
+    luassert.truthy(choice_options.resolve_option_label_by_id(case.choice, missing) == nil,
       "an absent id must not resolve to a label")
   end)
 end
@@ -123,19 +124,19 @@ function TestChoiceOptions:test_a_missing_or_non_table_options_field_short_circu
       choice = { options = "not-a-table" }
     end
     local id = rng:int(1, 9)
-    lu.assertEvalToTrue(choice_options.resolve_option_by_id(choice, id) == nil,
+    luassert.truthy(choice_options.resolve_option_by_id(choice, id) == nil,
       "a non-table options field resolves to nil")
-    lu.assertEvalToTrue(choice_options.resolve_option_label_by_id(choice, id) == nil,
+    luassert.truthy(choice_options.resolve_option_label_by_id(choice, id) == nil,
       "a non-table options field resolves to no label")
   end)
 end
 
 function TestChoiceOptions:test_the_resolvers_stay_inert_for_nil_empty_inputs()
-  lu.assertEvalToTrue(choice_options.resolve_option_by_id(nil, 1) == nil)
-  lu.assertEvalToTrue(choice_options.resolve_option_by_id({ options = {} }, nil) == nil)
-  lu.assertEvalToTrue(choice_options.resolve_option_label_by_id({ options = {} }, 7) == nil)
+  luassert.truthy(choice_options.resolve_option_by_id(nil, 1) == nil)
+  luassert.truthy(choice_options.resolve_option_by_id({ options = {} }, nil) == nil)
+  luassert.truthy(choice_options.resolve_option_label_by_id({ options = {} }, 7) == nil)
   for _, option in ipairs({ false, 0, "", "x", 7 }) do
-    lu.assertEvalToTrue(choice_options.resolve_option_id(option) == option,
+    luassert.truthy(choice_options.resolve_option_id(option) == option,
       "a non-table option resolves to itself")
   end
 end

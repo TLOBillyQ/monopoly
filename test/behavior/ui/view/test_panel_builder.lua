@@ -1,7 +1,10 @@
 -- Coverage for src.ui.view.panel_builder: player status projection and
 -- turn-label caching.
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local panel_builder = require("src.ui.view.panel_builder")
 
 -- Helper: build a minimal player stub.

@@ -1,7 +1,10 @@
 -- luacheck: ignore 211
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local P = require("test.support.shared_support")
-local _assert_eq = P.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 TestSchemaBase = {}
 

@@ -1,6 +1,7 @@
 -- einputfield.lua branch-dense coverage: __update_text 双分支(client_role 定向 / allroles 广播)。
 -- 双分支实现已收口到 host_push.push(见 host_push_spec),这里从属性入口穿过去覆盖。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local EInputField = require("src.ui.manager.einputfield")
 -- 底座加载时自备共享运行时端口基线(#217 窄 suite 子集无全量车道加载序兜底)。
@@ -45,8 +46,8 @@ end
 function TestEInputField:test_init_defaults_text_to_empty_string_without_touching_the_host()
   local field = EInputField:new(401, "empty_field")
 
-  lu.assertEvalToTrue(field.text == "", "text should default to empty string")
-  lu.assertEvalToTrue(#calls == 0, "init should not push text to the host")
+  luassert.truthy(field.text == "", "text should default to empty string")
+  luassert.truthy(#calls == 0, "init should not push text to the host")
 end
 
 function TestEInputField:test_text_setter_pushes_the_text_to_the_client_role_only()
@@ -56,11 +57,11 @@ function TestEInputField:test_text_setter_pushes_the_text_to_the_client_role_onl
 
   field.text = "hello"
 
-  lu.assertEvalToTrue(field.text == "hello", "getter should read back the stored text")
-  lu.assertEvalToTrue(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
-  lu.assertEvalToTrue(calls[1].roleid == 7, "client_role should be the only receiver")
-  lu.assertEvalToTrue(calls[1].node_id == 402, "host should receive the node id")
-  lu.assertEvalToTrue(calls[1].text == "hello", "host should receive the new text")
+  luassert.truthy(field.text == "hello", "getter should read back the stored text")
+  luassert.truthy(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
+  luassert.truthy(calls[1].roleid == 7, "client_role should be the only receiver")
+  luassert.truthy(calls[1].node_id == 402, "host should receive the node id")
+  luassert.truthy(calls[1].text == "hello", "host should receive the new text")
 end
 
 function TestEInputField:test_text_setter_broadcasts_to_all_roles_when_no_client_role()
@@ -70,10 +71,10 @@ function TestEInputField:test_text_setter_broadcasts_to_all_roles_when_no_client
 
   field.text = "hello"
 
-  lu.assertEvalToTrue(#calls == 2, ("expected one host call per role, got %d"):format(#calls))
-  lu.assertEvalToTrue(calls[1].roleid == 101 and calls[2].roleid == 102, "should broadcast in allroles order")
-  lu.assertEvalToTrue(calls[1].node_id == 403 and calls[2].node_id == 403, "host should receive the node id")
-  lu.assertEvalToTrue(calls[1].text == "hello" and calls[2].text == "hello", "host should receive the new text")
+  luassert.truthy(#calls == 2, ("expected one host call per role, got %d"):format(#calls))
+  luassert.truthy(calls[1].roleid == 101 and calls[2].roleid == 102, "should broadcast in allroles order")
+  luassert.truthy(calls[1].node_id == 403 and calls[2].node_id == 403, "host should receive the node id")
+  luassert.truthy(calls[1].text == "hello" and calls[2].text == "hello", "host should receive the new text")
 end
 
 

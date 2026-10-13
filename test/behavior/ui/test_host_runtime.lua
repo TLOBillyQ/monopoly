@@ -1,6 +1,7 @@
 -- host_runtime.lua 直测：schedule 的 nil delay 缺省(转发时归一为 0)与逐名转发面。
 -- 宿主无关(纯转发,端口经 runtime_ports.configure 注入)。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 
 local host_runtime = require("src.ui.seams.host_runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -32,9 +33,9 @@ function TestHostRuntime:test_schedule_forwards_nil_delay_as_zero()
   local marker = function() end
   local result = host_runtime.schedule(nil, marker)
 
-  lu.assertEvalToTrue(received.delay == 0, "nil delay must be normalized to 0")
-  lu.assertEvalToTrue(received.fn == marker, "the callback must pass through")
-  lu.assertEvalToTrue(result == 42, "the port result must pass through")
+  luassert.truthy(received.delay == 0, "nil delay must be normalized to 0")
+  luassert.truthy(received.fn == marker, "the callback must pass through")
+  luassert.truthy(result == 42, "the port result must pass through")
 end
 
 function TestHostRuntime:test_schedule_keeps_an_explicit_delay()
@@ -46,7 +47,7 @@ function TestHostRuntime:test_schedule_keeps_an_explicit_delay()
   })
 
   host_runtime.schedule(3.0, function() end)
-  lu.assertEvalToTrue(received.delay == 3.0, "an explicit delay must pass through unchanged")
+  luassert.truthy(received.delay == 3.0, "an explicit delay must pass through unchanged")
 end
 
 return TestHostRuntime

@@ -9,7 +9,8 @@
 --      广播不中断;
 --   5. 单推的 client_role 缺方法 → 同样跳过 + warn,不上抛;
 --   6. 方法在但执行抛错 → 原样上抛,观测性不回退(#541)。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local context = require("src.ui.manager.context")
 local logger = require("src.foundation.log")
 local push = require("src.ui.manager.host_push").push
@@ -52,10 +53,10 @@ function TestHostPush:test_pushes_to_the_client_role_only_when_one_is_set()
 
   push(function(role) role.set_node_visible("node_42", true) end)
 
-  lu.assertEvalToTrue(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
-  lu.assertEvalToTrue(calls[1].roleid == 7, "client_role should be the only receiver")
-  lu.assertEvalToTrue(calls[1].method == "set_node_visible", "should forward the host method")
-  lu.assertEvalToTrue(calls[1].args[1] == "node_42" and calls[1].args[2] == true, "should forward the host args")
+  luassert.truthy(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
+  luassert.truthy(calls[1].roleid == 7, "client_role should be the only receiver")
+  luassert.truthy(calls[1].method == "set_node_visible", "should forward the host method")
+  luassert.truthy(calls[1].args[1] == "node_42" and calls[1].args[2] == true, "should forward the host args")
 end
 
 function TestHostPush:test_broadcasts_to_every_role_in_allroles_order_when_there_is_no_client_role()
@@ -65,8 +66,8 @@ function TestHostPush:test_broadcasts_to_every_role_in_allroles_order_when_there
 
   push(function(role) role.set_node_visible("node_42", false) end)
 
-  lu.assertEvalToTrue(#calls == 3, ("expected one host call per role, got %d"):format(#calls))
-  lu.assertEvalToTrue(calls[1].roleid == 101 and calls[2].roleid == 102 and calls[3].roleid == 103,
+  luassert.truthy(#calls == 3, ("expected one host call per role, got %d"):format(#calls))
+  luassert.truthy(calls[1].roleid == 101 and calls[2].roleid == 102 and calls[3].roleid == 103,
     "should broadcast in allroles order")
 end
 
@@ -81,12 +82,12 @@ function TestHostPush:test_runs_a_multi_call_apply_fully_per_role_before_moving_
     role.set_button_enabled("node_42", true)
   end)
 
-  lu.assertEvalToTrue(#calls == 4, ("expected 2 methods x 2 roles, got %d"):format(#calls))
+  luassert.truthy(#calls == 4, ("expected 2 methods x 2 roles, got %d"):format(#calls))
   local seen = {}
   for i, call in ipairs(calls) do
     seen[i] = call.roleid .. ":" .. call.method
   end
-  lu.assertEvalToTrue(table.concat(seen, ",") ==
+  luassert.truthy(table.concat(seen, ",") ==
     "101:set_node_touch_enabled,101:set_button_enabled,102:set_node_touch_enabled,102:set_button_enabled",
     "每个角色应先跑完整个 apply,再轮到下一个角色;实际: " .. table.concat(seen, ","))
 end
@@ -94,7 +95,7 @@ end
 function TestHostPush:test_does_nothing_when_there_is_no_client_role_and_no_roles_at_all()
   push(function(role) role.set_node_visible("node_42", true) end)
 
-  lu.assertEvalToTrue(#calls == 0, "没有任何角色时不应推送")
+  luassert.truthy(#calls == 0, "没有任何角色时不应推送")
 end
 
 -- 缺 UI 方法的 role 代理:只有 get_roleid,没有 __index 自动造方法——
@@ -129,10 +130,10 @@ local function _warn_texts(entries)
 end
 
 local function _assert_one_skip_warn(warns, role_text, method)
-  lu.assertEvalToTrue(#warns == 1, ("expected exactly 1 skip warn, got %d"):format(#warns))
-  lu.assertEvalToTrue(warns[1]:find(role_text, 1, true) ~= nil,
+  luassert.truthy(#warns == 1, ("expected exactly 1 skip warn, got %d"):format(#warns))
+  luassert.truthy(warns[1]:find(role_text, 1, true) ~= nil,
     "skip warn should name the role, got: " .. tostring(warns[1]))
-  lu.assertEvalToTrue(warns[1]:find(method, 1, true) ~= nil,
+  luassert.truthy(warns[1]:find(method, 1, true) ~= nil,
     "skip warn should name the missing method, got: " .. tostring(warns[1]))
 end
 
@@ -145,8 +146,8 @@ function TestHostPush:test_skips_a_role_missing_the_method_without_breaking_the_
     push(function(role) role.set_node_visible("node_42", true) end)
   end)
 
-  lu.assertEvalToTrue(#calls == 2, ("healthy roles should still be pushed, got %d calls"):format(#calls))
-  lu.assertEvalToTrue(calls[1].roleid == 101 and calls[2].roleid == 103,
+  luassert.truthy(#calls == 2, ("healthy roles should still be pushed, got %d calls"):format(#calls))
+  luassert.truthy(calls[1].roleid == 101 and calls[2].roleid == 103,
     "缺方法的 role 不得中断广播,排在其后的 role 必须照常收到推送")
   _assert_one_skip_warn(_warn_texts(entries), "-4", "set_node_visible")
 end
@@ -159,7 +160,7 @@ function TestHostPush:test_skips_a_client_role_missing_the_method_without_raisin
     push(function(role) role.set_node_visible("node_42", true) end)
   end)
 
-  lu.assertEvalToTrue(#calls == 0, "单推目标缺方法时不应推送,也不应碰 allroles")
+  luassert.truthy(#calls == 0, "单推目标缺方法时不应推送,也不应碰 allroles")
   _assert_one_skip_warn(_warn_texts(entries), "-4", "set_node_visible")
 end
 
@@ -173,7 +174,7 @@ function TestHostPush:test_skip_warn_falls_back_to_tostring_when_role_has_no_rol
     push(function(role) role.set_node_visible("node_42", true) end)
   end)
 
-  lu.assertEvalToTrue(#calls == 0, "no healthy roles to receive the push")
+  luassert.truthy(#calls == 0, "no healthy roles to receive the push")
   _assert_one_skip_warn(_warn_texts(entries), "table:", "set_node_visible")
 end
 
@@ -188,8 +189,8 @@ function TestHostPush:test_lets_a_method_that_raises_propagate_unchanged()
     push(function(role) role.set_node_visible("node_42", true) end)
   end)
 
-  lu.assertEvalToTrue(not ok, "方法存在但抛错必须原样上抛,不得被跳过逻辑吞掉")
-  lu.assertEvalToTrue(tostring(err):find("host exploded", 1, true) ~= nil,
+  luassert.truthy(not ok, "方法存在但抛错必须原样上抛,不得被跳过逻辑吞掉")
+  luassert.truthy(tostring(err):find("host exploded", 1, true) ~= nil,
     "原始错误正文不得被改写, got: " .. tostring(err))
 end
 
