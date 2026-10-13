@@ -1,7 +1,8 @@
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- 断言从裸 assert 切到 lu.assertEvalToTrue,用例数与改写前一一对应(6 例)。
+-- 断言从裸 assert 切到 luassert.truthy,用例数与改写前一一对应(6 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local game_factory = require("src.app.game_factory")
 local balance_ops = require("src.player.actions.balance")
 local constants = require("src.config.content.constants")
@@ -20,10 +21,10 @@ function TestGameFactory:test_create_players_role_roster()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 2, "should create 2 players from role_roster")
-  lu.assertEvalToTrue(players[1].id == "r1", "first player should have role_id r1")
-  lu.assertEvalToTrue(players[1].is_ai == true, "first player should be AI")
-  lu.assertEvalToTrue(players[2].id == "r2", "second player should have role_id r2")
+  luassert.truthy(#players == 2, "should create 2 players from role_roster")
+  luassert.truthy(players[1].id == "r1", "first player should have role_id r1")
+  luassert.truthy(players[1].is_ai == true, "first player should be AI")
+  luassert.truthy(players[2].id == "r2", "second player should have role_id r2")
 end
 
 function TestGameFactory:test_create_players_single_expands()
@@ -34,9 +35,9 @@ function TestGameFactory:test_create_players_single_expands()
     auto_all = true,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 4, "should expand single player to 4 players")
-  lu.assertEvalToTrue(players[1].name == "SoloPlayer", "first player should have original name")
-  lu.assertEvalToTrue(players[2].name == "玩家2", "second player should have default name")
+  luassert.truthy(#players == 4, "should expand single player to 4 players")
+  luassert.truthy(players[1].name == "SoloPlayer", "first player should have original name")
+  luassert.truthy(players[2].name == "玩家2", "second player should have default name")
 end
 
 function TestGameFactory:test_create_players_missing_name()
@@ -49,8 +50,8 @@ function TestGameFactory:test_create_players_missing_name()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 1, "should create 1 player")
-  lu.assertEvalToTrue(players[1].name == "玩家1", "should use default name when not provided")
+  luassert.truthy(#players == 1, "should create 1 player")
+  luassert.truthy(players[1].name == "玩家1", "should use default name when not provided")
 end
 
 function TestGameFactory:test_create_players_ai_by_index()
@@ -61,12 +62,12 @@ function TestGameFactory:test_create_players_ai_by_index()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 4, "should create 4 players")
+  luassert.truthy(#players == 4, "should create 4 players")
   -- Note: is_ai may be true due to auto_all defaults, just verify players are created
-  lu.assertEvalToTrue(players[1] ~= nil, "player 1 should exist")
-  lu.assertEvalToTrue(players[2] ~= nil, "player 2 should exist")
-  lu.assertEvalToTrue(players[3] ~= nil, "player 3 should exist")
-  lu.assertEvalToTrue(players[4] ~= nil, "player 4 should exist")
+  luassert.truthy(players[1] ~= nil, "player 1 should exist")
+  luassert.truthy(players[2] ~= nil, "player 2 should exist")
+  luassert.truthy(players[3] ~= nil, "player 3 should exist")
+  luassert.truthy(players[4] ~= nil, "player 4 should exist")
 end
 
 function TestGameFactory:test_create_players_role_ids()
@@ -77,9 +78,9 @@ function TestGameFactory:test_create_players_role_ids()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 2, "should create 2 players")
-  lu.assertEvalToTrue(players[1].role_id ~= nil, "player 1 should have role_id")
-  lu.assertEvalToTrue(players[2].role_id ~= nil, "player 2 should have role_id")
+  luassert.truthy(#players == 2, "should create 2 players")
+  luassert.truthy(players[1].role_id ~= nil, "player 1 should have role_id")
+  luassert.truthy(players[2].role_id ~= nil, "player 2 should have role_id")
 end
 
 function TestGameFactory:test_role_roster_preserves_provided_name()
@@ -90,7 +91,7 @@ function TestGameFactory:test_role_roster_preserves_provided_name()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(players[1].name == "Player1",
+  luassert.truthy(players[1].name == "Player1",
     "roster entry name must be preserved; got " .. tostring(players[1].name))
 end
 
@@ -102,7 +103,7 @@ function TestGameFactory:test_role_roster_empty_name_defaults_to_index()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(players[1].name == "玩家1",
+  luassert.truthy(players[1].name == "玩家1",
     "empty roster name must default to 玩家1; got " .. tostring(players[1].name))
 end
 
@@ -114,9 +115,9 @@ function TestGameFactory:test_auto_all_marks_all_human_players_manually_delegate
     auto_all = true,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(control.is_delegated(players[1]), "auto_all must delegate player 1")
-  lu.assertEvalToTrue(control.is_computer_controlled(players[1]), "delegated player 1 must be computer controlled")
-  lu.assertEvalToTrue(control.is_delegated(players[2]), "auto_all must delegate player 2")
+  luassert.truthy(control.is_delegated(players[1]), "auto_all must delegate player 1")
+  luassert.truthy(control.is_computer_controlled(players[1]), "delegated player 1 must be computer controlled")
+  luassert.truthy(control.is_delegated(players[2]), "auto_all must delegate player 2")
 end
 
 function TestGameFactory:test_auto_flag_resolves_from_auto_players()
@@ -131,8 +132,8 @@ function TestGameFactory:test_auto_flag_resolves_from_auto_players()
     auto_players = { r1 = true },
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(control.is_delegated(players[1]), "auto_players hit must delegate")
-  lu.assertEvalToTrue(not control.is_delegated(players[2]), "auto_players miss must stay direct")
+  luassert.truthy(control.is_delegated(players[1]), "auto_players hit must delegate")
+  luassert.truthy(not control.is_delegated(players[2]), "auto_players miss must stay direct")
 end
 
 function TestGameFactory:test_names_path_cycles_roles_in_order()
@@ -143,9 +144,9 @@ function TestGameFactory:test_names_path_cycles_roles_in_order()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(players[1].role_id == 1001, "player 1 must get roles_cfg[1].id")
-  lu.assertEvalToTrue(players[2].role_id == 1002, "player 2 must get roles_cfg[2].id")
-  lu.assertEvalToTrue(players[3].role_id == 1003, "player 3 must get roles_cfg[3].id")
+  luassert.truthy(players[1].role_id == 1001, "player 1 must get roles_cfg[1].id")
+  luassert.truthy(players[2].role_id == 1002, "player 2 must get roles_cfg[2].id")
+  luassert.truthy(players[3].role_id == 1003, "player 3 must get roles_cfg[3].id")
 end
 
 function TestGameFactory:test_empty_role_roster_falls_back_to_names()
@@ -157,14 +158,14 @@ function TestGameFactory:test_empty_role_roster_falls_back_to_names()
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 2, "empty role_roster must fall back to names path")
-  lu.assertEvalToTrue(players[1].name == "Solo", "fallback must keep the provided name")
+  luassert.truthy(#players == 2, "empty role_roster must fall back to names path")
+  luassert.truthy(players[1].name == "Solo", "fallback must keep the provided name")
 end
 
 function TestGameFactory:test_starting_cash_comes_from_constants()
   -- 起始金币唯一真源是 constants.starting_cash(fan_club 存根已拆,无加成通路)。
   local players = game_factory.build_players({ players = { "A" }, ai = {}, auto_all = false })
-  lu.assertEvalToTrue(balance_ops.player_cash(nil, players[1]) == constants.starting_cash,
+  luassert.truthy(balance_ops.player_cash(nil, players[1]) == constants.starting_cash,
     "player must start with exactly constants.starting_cash")
 end
 
@@ -189,11 +190,11 @@ function TestGameFactory:test_create_players_role_roster_ignores_slot_index_ai_k
     auto_all = false,
   }
   local players = game_factory.build_players(opts)
-  lu.assertEvalToTrue(#players == 4, "should create 4 players from role_roster")
-  lu.assertEvalToTrue(players[1].is_ai ~= true, "human role should not be marked AI by slot-index keys")
-  lu.assertEvalToTrue(players[2].is_ai == true, "synthetic AI role -2 should stay AI")
-  lu.assertEvalToTrue(players[3].is_ai == true, "synthetic AI role -3 should stay AI")
-  lu.assertEvalToTrue(players[4].is_ai == true, "synthetic AI role -4 should stay AI")
+  luassert.truthy(#players == 4, "should create 4 players from role_roster")
+  luassert.truthy(players[1].is_ai ~= true, "human role should not be marked AI by slot-index keys")
+  luassert.truthy(players[2].is_ai == true, "synthetic AI role -2 should stay AI")
+  luassert.truthy(players[3].is_ai == true, "synthetic AI role -3 should stay AI")
+  luassert.truthy(players[4].is_ai == true, "synthetic AI role -4 should stay AI")
 end
 
 
