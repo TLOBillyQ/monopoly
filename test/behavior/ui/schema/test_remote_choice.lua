@@ -1,6 +1,7 @@
 -- #293 批3 pin:src/ui/schema/remote_choice.lua 为纯数据表,幸存者均为
 -- 字段值换 nil。逐字段钉死数据契约(遥控骰子屏的节点名与六选项槽)。
 
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local remote_choice = require("src.ui.schema.remote_choice")
 

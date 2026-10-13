@@ -1,5 +1,6 @@
 -- src.ui.schema.popup 纯数据契约 pin：钉画布名/标题/图片与关闭节点逐名形态。
 -- #293 清扫：dismiss_nodes 未 pin 时"字面量 → nil"幸存。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)

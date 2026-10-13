@@ -1,4 +1,5 @@
 -- UI model and action dispatch behavior: 31 explicit busted cases.
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 
 local support = require("test.support.shared_support")

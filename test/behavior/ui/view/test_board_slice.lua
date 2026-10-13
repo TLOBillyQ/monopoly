@@ -1,6 +1,7 @@
 -- Coverage for the view-model projection modules src.ui.view.board_slice and
 -- src.ui.view.item_slice: contiguous count/rent projection onto tile states,
 -- and the standalone item-slot builder that trims empty inventory entries.
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local board_slice = require("src.ui.view.board_slice")
 local item_slice = require("src.ui.view.item_slice")

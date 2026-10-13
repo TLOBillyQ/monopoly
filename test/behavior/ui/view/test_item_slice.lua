@@ -4,6 +4,7 @@
 -- ③ build_delegated_by_player(读取玩家控制快照的托管位);
 -- ④ resolve_item_choice_owner_id(pending 优先、choice 次之、当前玩家兜底)。
 
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local item_slice = require("src.ui.view.item_slice")
 local control = require("src.player.control")

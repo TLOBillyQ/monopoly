@@ -1,3 +1,4 @@
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local with_client_role = require("src.ui.render.support.with_client_role")
 

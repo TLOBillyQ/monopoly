@@ -2,6 +2,7 @@
 -- 此前行为车道只驱动过 coord 逻辑本体(test_interaction / test_view_command_ports),
 -- 没驱动过这个包装面,"委托断线直接 return nil" 无测试照看——#293 清
 -- actor_context.lua 幸存者的测错维度补齐。#442 起端口面只剩 resolve_role_by_id。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)

@@ -1,5 +1,6 @@
 -- model_api.build 的 env 缺省路径:未传 env 时按 game 构建 ui env
 -- (覆盖 _build_ui_env 的 winner_name 回落与 winner.name 断言路径)。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 
 local support = require("test.support.shared_support")

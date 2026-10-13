@@ -1,6 +1,7 @@
 -- src.ui.schema.target_choice 纯数据契约 pin：逐个钉画布名/文案与 7 槽位按钮/
 -- 标签/投影的逐名形态。#293 清扫:纯数据表不 pin 时「字段 → nil / 字面量 → nil」
 -- 变异全幸存——内容配置是行为面,改了任何一格都该被合同钉住。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)

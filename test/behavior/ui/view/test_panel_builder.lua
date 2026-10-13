@@ -1,5 +1,6 @@
 -- Coverage for src.ui.view.panel_builder: player status projection and
 -- turn-label caching.
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)

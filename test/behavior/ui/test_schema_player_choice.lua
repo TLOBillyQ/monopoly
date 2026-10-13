@@ -1,5 +1,6 @@
 -- src.ui.schema.player_choice 纯数据契约 pin：钉画布名/标题/灰底与四槽位逐名形态。
 -- #293 清扫：underlay 字段未 pin 时"字面量 → nil"幸存。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)

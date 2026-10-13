@@ -1,6 +1,7 @@
 -- elabel.lua 映射覆盖:每个字段 -> (推送方法名, 参数序),从 ELabel 属性入口穿过去断言宿主收到的调用。
 -- 「推给谁」的分支决策(client_role 定向 / allroles 广播)由 host_push.push 独占,已在 host_push_spec
 -- 单点钉死;本 spec 只守映射表,不重复广播分支,单角色触发一次推送即可定位断言。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local context = require("src.ui.manager.context")
 local ELabel = require("src.ui.manager.elabel")

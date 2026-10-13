@@ -1,5 +1,6 @@
 -- src.ui.schema.permanent 纯数据契约 pin：钉画布名与道具槽的逐名形态。
 -- #293 清扫：纯数据表不 pin 时"字段 → nil / 字面量 → nil"变异全幸存。
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)

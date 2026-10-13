@@ -1,3 +1,4 @@
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local player_colors = require("src.ui.view.player_colors")
 local assets = require("src.ui.render.support.assets")

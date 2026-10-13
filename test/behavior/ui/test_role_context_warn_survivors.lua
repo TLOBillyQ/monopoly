@@ -1,3 +1,4 @@
+-- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 
 local function _eq(a, b, msg)
