@@ -34,5 +34,5 @@ push 前唯一硬地板是 slim：`lua tools/cli.lua verify`。按改动风险�
 ## 操作边界
 
 - 运行 `editor-cli` 的 `run_game`、`stop_game`、`clear-logs`，或改动部署目录前，先说明并等待用户明确同意。
-- 开发环境只支持 macOS 与 WSL Ubuntu；Eggy 宿主位于 Windows 端。部署入口是 `lua tools/cli.lua deploy`。
+- 开发环境只支持原生 Windows（ADR 0066）：Lua 5.4、LuaRocks 5.4 tree 与 cmd.exe，不依赖 WSL、Git Bash、Node 或 PowerShell Start-Job。Eggy 宿主位于 Windows 端。部署入口是 `lua tools/cli.lua deploy`。
 - `EggyAPI.lua` 与 `EggyEditorAPI.lua` 保持第三方边界，不把它们当作当前宿主契约。
