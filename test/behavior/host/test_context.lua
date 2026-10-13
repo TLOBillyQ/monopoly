@@ -3,12 +3,13 @@
 -- (pcall 抛 table 错误对象时变异体会把错误对象当 roles 返回)、
 -- install_globals 有效路径(杀 ~= -> ==)、globals 安装字面值、
 -- synthetic_actor_registry 懒建(not 移除 / call->nil)。
-local lu = require("luaunit")
-local luax = require("test.support.luax")
-local support = require("test.support.shared_support")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local runtime_context = require("src.host.context")
 
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local function _lua_api()
   return {
@@ -28,14 +29,14 @@ function TestContext:test_install_runtime_helpers_rejects_a_context_without_env(
   -- kills _refresh_roles' `ctx ~= nil and ctx.env ~= nil` `and` -> `or`
   -- (mutant passes the guard and silently swallows the missing env)
   -- and its "missing runtime context" -> nil.
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_runtime_helpers({})
   end, "missing runtime context")
 end
 
 function TestContext:test_install_runtime_helpers_rejects_a_nil_context()
   -- kills install_runtime_helpers' own "missing runtime context" -> nil.
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_runtime_helpers(nil)
   end, "missing runtime context")
 end
@@ -43,14 +44,14 @@ end
 function TestContext:test_install_environment_rejects_a_nil_context()
   -- kills install_environment's `and` -> `or` (mutant indexes nil and raises
   -- a different error) and "missing runtime context" -> nil.
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_environment(nil)
   end, "missing runtime context")
 end
 
 function TestContext:test_install_environment_rejects_env_without_luaapi()
   -- kills _validate_lua_api_methods' "missing LuaAPI" -> nil.
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_environment({ env = {} })
   end, "missing LuaAPI")
 end
@@ -64,21 +65,21 @@ end
 function TestContext:test_install_environment_requires_trigger_unregistration()
   local lua_api = _lua_api()
   lua_api.global_unregister_trigger_event = nil
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_environment({ env = { LuaAPI = lua_api } })
   end, "missing LuaAPI.global_unregister_trigger_event")
 end
 
 function TestContext:test_install_globals_rejects_a_nil_context()
   -- kills install_globals' `and` -> `or` and "missing runtime context" -> nil.
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_globals(nil)
   end, "missing runtime context")
 end
 
 function TestContext:test_install_runtime_helper_globals_rejects_nil_helpers()
   -- kills install_runtime_helper_globals' "missing helpers" -> nil.
-  luax.has_error(function()
+  luassert.has_error(function()
     runtime_context.install_runtime_helper_globals(nil)
   end, "missing helpers")
 end
@@ -117,11 +118,11 @@ function TestContext:test_installs_helpers_refreshes_roles_and_publishes_globals
     seen_camera, seen_roles = _G.camera_helper, _G.all_roles
   end)
   _G.camera_helper, _G.all_roles, _G.ALLROLES = saved_camera, saved_roles, saved_all
-  lu.assertEvalToTrue(ok, "install_globals must succeed for a valid context: " .. tostring(err))
-  lu.assertEvalToTrue(seen_camera ~= nil, "install_globals must publish the camera_helper global")
-  lu.assertEvalToTrue(seen_roles ~= nil and seen_roles[1] == "r1", "install_globals must publish the roles global")
-  lu.assertEvalToTrue(ctx.camera_helper ~= nil, "camera_helper is lazily built")
-  lu.assertEvalToTrue(ctx.synthetic_actor_registry ~= nil, "synthetic_actor_registry is lazily built")
+  luassert.truthy(ok, "install_globals must succeed for a valid context: " .. tostring(err))
+  luassert.truthy(seen_camera ~= nil, "install_globals must publish the camera_helper global")
+  luassert.truthy(seen_roles ~= nil and seen_roles[1] == "r1", "install_globals must publish the roles global")
+  luassert.truthy(ctx.camera_helper ~= nil, "camera_helper is lazily built")
+  luassert.truthy(ctx.synthetic_actor_registry ~= nil, "synthetic_actor_registry is lazily built")
   _assert_eq(ctx.roles[1], "r1", "roles are refreshed from GameAPI")
 end
 

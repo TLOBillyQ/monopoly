@@ -1,4 +1,5 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local role_resolver = require("src.host.role_resolver")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local support = require("test.support.shared_support")
@@ -8,12 +9,12 @@ TestRoleResolver = {}
 
 function TestRoleResolver:test_returns_nil_when_no_gameapi_and_no_port_resolver()
   local result = role_resolver.resolve_role_with(nil, nil)
-  lu.assertEvalToTrue(result == nil, "expected nil with no game engine")
+  luassert.truthy(result == nil, "expected nil with no game engine")
 end
 
 function TestRoleResolver:test_returns_nil_for_valid_player_id_with_no_game_engine()
   local result = role_resolver.resolve_role_with("player_1", nil)
-  lu.assertEvalToTrue(result == nil, "expected nil without game engine resolution")
+  luassert.truthy(result == nil, "expected nil without game engine resolution")
 end
 
 function TestRoleResolver:test_returns_nil_when_predicate_rejects_resolved_nil_role()
@@ -22,8 +23,8 @@ function TestRoleResolver:test_returns_nil_when_predicate_rejects_resolved_nil_r
     called = true
     return r ~= nil
   end)
-  lu.assertEvalToTrue(result == nil, "expected nil: nil role never passes predicate")
-  lu.assertEvalToTrue(not called, "predicate should not be called when role is nil")
+  luassert.truthy(result == nil, "expected nil: nil role never passes predicate")
+  luassert.truthy(not called, "predicate should not be called when role is nil")
 end
 
 function TestRoleResolver:test_returns_the_port_role_and_skips_the_host_when_no_predicate_is_given()
@@ -37,8 +38,8 @@ function TestRoleResolver:test_returns_the_port_role_and_skips_the_host_when_no_
     end } },
   }, function()
     local result = role_resolver.resolve_role_with("p1", nil)
-    lu.assertEvalToTrue(result == role, "a nil predicate should accept the resolved port role")
-    lu.assertEvalToTrue(not host_consulted, "host should not be consulted once the port role is accepted")
+    luassert.truthy(result == role, "a nil predicate should accept the resolved port role")
+    luassert.truthy(not host_consulted, "host should not be consulted once the port role is accepted")
   end)
 end
 
@@ -54,8 +55,8 @@ function TestRoleResolver:test_falls_back_to_the_host_role_when_the_predicate_re
     end } },
   }, function()
     local result = role_resolver.resolve_role_with("p7", function(r) return r.kind == "host" end)
-    lu.assertEvalToTrue(result == host_role, "predicate accepting only the host role should return the host role")
-    lu.assertEvalToTrue(seen_player_id == "p7", "host get_role should receive the requested player_id")
+    luassert.truthy(result == host_role, "predicate accepting only the host role should return the host role")
+    luassert.truthy(seen_player_id == "p7", "host get_role should receive the requested player_id")
   end)
 end
 
@@ -65,7 +66,7 @@ function TestRoleResolver:test_returns_nil_when_the_host_get_role_throws()
     { key = "GameAPI", value = { get_role = function() error("host role boom") end } },
   }, function()
     local result = role_resolver.resolve_role_with("p1", nil)
-    lu.assertEvalToTrue(result == nil, "a throwing host get_role should resolve to nil")
+    luassert.truthy(result == nil, "a throwing host get_role should resolve to nil")
   end)
 end
 
@@ -76,7 +77,7 @@ function TestRoleResolver:test_treats_a_truthy_but_not_true_predicate_result_as_
     { key = "GameAPI", value = { get_role = function() return nil end } },
   }, function()
     local result = role_resolver.resolve_role_with("p1", function() return "truthy" end)
-    lu.assertEvalToTrue(result == nil,
+    luassert.truthy(result == nil,
       "a predicate returning a non-true truthy value should reject the role, not accept it")
   end)
 end
@@ -87,7 +88,7 @@ function TestRoleResolver:test_accepts_the_role_only_when_the_predicate_returns_
     { target = runtime_ports, key = "resolve_role", value = function() return port_role end },
   }, function()
     local result = role_resolver.resolve_role_with("p1", function() return true end)
-    lu.assertEvalToTrue(result == port_role, "predicate returning true should accept the port role")
+    luassert.truthy(result == port_role, "predicate returning true should accept the port role")
   end)
 end
 
@@ -98,7 +99,7 @@ function TestRoleResolver:test_resolves_the_host_role_when_the_port_yields_nil_a
     { key = "GameAPI", value = { get_role = function() return host_role end } },
   }, function()
     local result = role_resolver.resolve_role_with("p1", nil)
-    lu.assertEvalToTrue(result == host_role,
+    luassert.truthy(result == host_role,
       "a nil port role should not itself count as a match; it should fall through to the host role")
   end)
 end
@@ -109,13 +110,13 @@ function TestRoleResolver:test_treats_a_falsy_gameapi_as_absent_instead_of_index
     { key = "GameAPI", value = false },
   }, function()
     local result = role_resolver.resolve_role_with("p1", nil)
-    lu.assertEvalToTrue(result == nil, "a falsy GameAPI should be guarded, not indexed, yielding nil")
+    luassert.truthy(result == nil, "a falsy GameAPI should be guarded, not indexed, yielding nil")
   end, { skip_runtime_context_refresh = true })
 end
 
 function TestRoleResolver:test_returns_empty_table_when_no_gameapi_and_no_port_resolver()
   local result = role_resolver.resolve_roles()
-  lu.assertEvalToTrue(type(result) == "table", "expected table")
+  luassert.truthy(type(result) == "table", "expected table")
 end
 
 function TestRoleResolver:test_returns_the_runtime_port_roster_verbatim_when_it_is_non_empty()
@@ -123,7 +124,7 @@ function TestRoleResolver:test_returns_the_runtime_port_roster_verbatim_when_it_
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return roster end },
   }, function()
-    lu.assertEvalToTrue(role_resolver.resolve_roles() == roster, "a non-empty port roster should be returned as-is")
+    luassert.truthy(role_resolver.resolve_roles() == roster, "a non-empty port roster should be returned as-is")
   end)
 end
 
@@ -134,7 +135,7 @@ function TestRoleResolver:test_returns_a_single_element_port_roster_directly_rat
     { target = runtime_ports, key = "resolve_roles", value = function() return port_roster end },
     { key = "GameAPI", value = { get_all_valid_roles = function() return host_roster end } },
   }, function()
-    lu.assertEvalToTrue(role_resolver.resolve_roles() == port_roster,
+    luassert.truthy(role_resolver.resolve_roles() == port_roster,
       "any non-empty port roster (even one element) should short-circuit before the host fallback")
   end)
 end
@@ -145,7 +146,7 @@ function TestRoleResolver:test_falls_back_to_gameapi_get_all_valid_roles_when_th
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
     { key = "GameAPI", value = { get_all_valid_roles = function() return fallback end } },
   }, function()
-    lu.assertEvalToTrue(role_resolver.resolve_roles() == fallback,
+    luassert.truthy(role_resolver.resolve_roles() == fallback,
       "an empty port roster should fall back to the host roles")
   end)
 end
@@ -156,7 +157,7 @@ function TestRoleResolver:test_falls_back_to_the_host_roster_when_the_port_retur
     { target = runtime_ports, key = "resolve_roles", value = function() return false end },
     { key = "GameAPI", value = { get_all_valid_roles = function() return fallback end } },
   }, function()
-    lu.assertEvalToTrue(role_resolver.resolve_roles() == fallback,
+    luassert.truthy(role_resolver.resolve_roles() == fallback,
       "a non-table port result should fall back to the host roles")
   end)
 end
@@ -167,7 +168,7 @@ function TestRoleResolver:test_ignores_a_non_table_host_fallback_and_returns_the
     { key = "GameAPI", value = { get_all_valid_roles = function() return "not a table" end } },
   }, function()
     local result = role_resolver.resolve_roles()
-    lu.assertEvalToTrue(type(result) == "table" and #result == 0,
+    luassert.truthy(type(result) == "table" and #result == 0,
       "a non-table host fallback should be ignored, yielding the empty roster")
   end)
 end
@@ -178,7 +179,7 @@ function TestRoleResolver:test_returns_the_empty_roster_when_the_gameapi_fallbac
     { key = "GameAPI", value = { get_all_valid_roles = function() error("host roles boom") end } },
   }, function()
     local result = role_resolver.resolve_roles()
-    lu.assertEvalToTrue(type(result) == "table" and #result == 0,
+    luassert.truthy(type(result) == "table" and #result == 0,
       "a throwing host fallback should yield the empty roster")
   end)
 end
@@ -188,7 +189,7 @@ function TestRoleResolver:test_returns_a_fresh_empty_table_when_the_port_yields_
     { target = runtime_ports, key = "resolve_roles", value = function() return nil end },
   }, function()
     local result = role_resolver.resolve_roles()
-    lu.assertEvalToTrue(type(result) == "table" and #result == 0,
+    luassert.truthy(type(result) == "table" and #result == 0,
       "a nil port roster with no host should coalesce to an empty table")
   end)
 end
@@ -199,7 +200,7 @@ function TestRoleResolver:test_treats_a_falsy_gameapi_as_absent_when_falling_bac
     { key = "GameAPI", value = false },
   }, function()
     local result = role_resolver.resolve_roles()
-    lu.assertEvalToTrue(type(result) == "table" and #result == 0,
+    luassert.truthy(type(result) == "table" and #result == 0,
       "a falsy GameAPI should be guarded, not indexed, when the port roster is empty")
   end, { skip_runtime_context_refresh = true })
 end
