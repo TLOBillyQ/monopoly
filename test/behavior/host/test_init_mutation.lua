@@ -9,7 +9,7 @@
 --   L26    return false
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local host_runtime = require("src.host.init")
 local runtime_context = require("src.host.context")
 
@@ -24,9 +24,9 @@ local function _with_current(ctx, fn)
   return res
 end
 
-TestInitMutation = {}
+describe("TestInitMutation", function()
 
-function TestInitMutation:test_rejects_a_non_string_event_name_even_when_handler_is_a_valid_function_L20_or()
+local function _test_rejects_a_non_string_event_name_even_when_handler_is_a_valid_function_L20_or()
   -- LuaAPI present and healthy: if the guard is bypassed, registration succeeds
   -- and the function returns true, so original (false) vs mutant (true) diverge.
   local registered = {}
@@ -50,7 +50,7 @@ function TestInitMutation:test_rejects_a_non_string_event_name_even_when_handler
     "rejected registration must not reach LuaAPI; saw " .. #registered .. " calls")
 end
 
-function TestInitMutation:test_returns_false_when_luaapi_lacks_a_callable_global_register_custom_event_L25_and()
+local function _test_returns_false_when_luaapi_lacks_a_callable_global_register_custom_event_L25_and()
   -- lua_api is a present table, but the registration hook is NOT a function.
   -- Original short-circuits on the failed type() check and returns false.
   -- Mutant 'or' lets a truthy lua_api satisfy the guard, then tries to CALL the
@@ -66,7 +66,7 @@ function TestInitMutation:test_returns_false_when_luaapi_lacks_a_callable_global
     "missing callable hook must return false; got " .. tostring(result))
 end
 
-function TestInitMutation:test_returns_false_not_true_when_no_runtime_context_luaapi_is_available_l26_false()
+local function _test_returns_false_not_true_when_no_runtime_context_luaapi_is_available_l26_false()
   -- current()=nil -> lua_api=nil -> guard fails -> hits `return false`.
   local result = _with_current(nil, function()
     return host_runtime.register_custom_event("evt", function() end)
@@ -76,7 +76,7 @@ function TestInitMutation:test_returns_false_not_true_when_no_runtime_context_lu
     "unavailable LuaAPI must yield false; L26 mutation flips it to true. Got " .. tostring(result))
 end
 
-function TestInitMutation:test_returns_true_only_on_the_genuine_happy_path_positive_control_for_L26()
+local function _test_returns_true_only_on_the_genuine_happy_path_positive_control_for_L26()
   -- Confirms the false/true distinction is meaningful: with a healthy hook the
   -- function DOES return true, so the L26 test above is not vacuously false.
   local ctx = { env = { LuaAPI = { global_register_custom_event = function() end } } }
@@ -86,7 +86,7 @@ function TestInitMutation:test_returns_true_only_on_the_genuine_happy_path_posit
   luassert.truthy(result == true, "healthy registration must return true; got " .. tostring(result))
 end
 
-function TestInitMutation:test_schedule_forwards_with_zero_default_delay()
+local function _test_schedule_forwards_with_zero_default_delay()
   -- #293:schedule 的 `delay or 0` 默认(or→and / 0→1 / 调用→nil 变异)未测。
   local runtime_ports = require("src.foundation.ports.runtime_ports")
   local seen
@@ -103,7 +103,7 @@ function TestInitMutation:test_schedule_forwards_with_zero_default_delay()
   luassert.truthy(seen.fn == fn, "schedule should forward the callback")
   luassert.truthy(result == true, "schedule should return the port result")
 end
-function TestInitMutation:test_trigger_event_rejects_a_non_table_event_desc()
+local function _test_trigger_event_rejects_a_non_table_event_desc()
   -- register_trigger_event 与 register_custom_event 同款守卫:desc 非 table 时
   -- or→and 变异会放行到 LuaAPI,返回值 false/true 分叉。
   local registered = {}
@@ -125,7 +125,7 @@ function TestInitMutation:test_trigger_event_rejects_a_non_table_event_desc()
     "rejected registration must not reach LuaAPI; saw " .. #registered .. " calls")
 end
 
-function TestInitMutation:test_trigger_event_returns_false_when_luaapi_lacks_callable_hook()
+local function _test_trigger_event_returns_false_when_luaapi_lacks_callable_hook()
   local ctx = { env = { LuaAPI = { global_register_trigger_event = 42 } } } -- not a function
   local result = _with_current(ctx, function()
     return host_runtime.register_trigger_event({ "evt" }, function() end)
@@ -134,7 +134,7 @@ function TestInitMutation:test_trigger_event_returns_false_when_luaapi_lacks_cal
     "missing callable hook must return false; got " .. tostring(result))
 end
 
-function TestInitMutation:test_trigger_event_returns_false_when_no_runtime_context()
+local function _test_trigger_event_returns_false_when_no_runtime_context()
   local result = _with_current(nil, function()
     return host_runtime.register_trigger_event({ "evt" }, function() end)
   end)
@@ -142,7 +142,7 @@ function TestInitMutation:test_trigger_event_returns_false_when_no_runtime_conte
     "unavailable LuaAPI must yield false; got " .. tostring(result))
 end
 
-function TestInitMutation:test_trigger_event_returns_true_and_forwards_desc_on_happy_path()
+local function _test_trigger_event_returns_true_and_forwards_desc_on_happy_path()
   local seen = nil
   local ctx = {
     env = {
@@ -168,4 +168,13 @@ function TestInitMutation:test_trigger_event_returns_true_and_forwards_desc_on_h
 end
 
 
-return TestInitMutation
+it("test_rejects_a_non_string_event_name_even_when_handler_is_a_valid_function_L20_or", _test_rejects_a_non_string_event_name_even_when_handler_is_a_valid_function_L20_or)
+it("test_returns_false_when_luaapi_lacks_a_callable_global_register_custom_event_L25_and", _test_returns_false_when_luaapi_lacks_a_callable_global_register_custom_event_L25_and)
+it("test_returns_false_not_true_when_no_runtime_context_luaapi_is_available_l26_false", _test_returns_false_not_true_when_no_runtime_context_luaapi_is_available_l26_false)
+it("test_returns_true_only_on_the_genuine_happy_path_positive_control_for_L26", _test_returns_true_only_on_the_genuine_happy_path_positive_control_for_L26)
+it("test_schedule_forwards_with_zero_default_delay", _test_schedule_forwards_with_zero_default_delay)
+it("test_trigger_event_rejects_a_non_table_event_desc", _test_trigger_event_rejects_a_non_table_event_desc)
+it("test_trigger_event_returns_false_when_luaapi_lacks_callable_hook", _test_trigger_event_returns_false_when_luaapi_lacks_callable_hook)
+it("test_trigger_event_returns_false_when_no_runtime_context", _test_trigger_event_returns_false_when_no_runtime_context)
+it("test_trigger_event_returns_true_and_forwards_desc_on_happy_path", _test_trigger_event_returns_true_and_forwards_desc_on_happy_path)
+end)
