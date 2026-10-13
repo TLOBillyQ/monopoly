@@ -1,7 +1,10 @@
 -- Coverage for src.ui.view.panel_builder: player status projection and
 -- turn-label caching.
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+-- luacheck: ignore 143 (genuine busted injects luassert)
+local luassert = assert
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local panel_builder = require("src.ui.view.panel_builder")
 
 -- Helper: build a minimal player stub.
@@ -17,14 +20,14 @@ end
 -- 三个无钩子 describe 拍平合并为文件级 TestPanelBuilder(_assert_eq 是自研
 -- helper,语义 a == b,参数序与 LuaUnit 一致,原样保留),用例数一一对应
 -- (3 + 3 + 1 = 7 例)。
-TestPanelBuilder = {}
+describe("TestPanelBuilder", function()
 
-function TestPanelBuilder:test_returns_empty_status_rows_when_game_is_nil()
+it("test_returns_empty_status_rows_when_game_is_nil", function()
   local results = panel_builder.build_player_statuses(nil, nil, 0)
   _assert_eq(#results, 0, "no rows when game is nil and count is 0")
-end
+end)
 
-function TestPanelBuilder:test_handles_game_object_missing_player_cash_method_regression_for_mutate_or_and()
+it("test_handles_game_object_missing_player_cash_method_regression_for_mutate_or_and", function()
   -- Regression: _read_player_cash guards game == nil OR missing player_cash.
   -- When the or→and mutant replaces the guard, a game that is truthy but
   -- lacks player_cash falls through to a nil call and crashes.
@@ -43,9 +46,9 @@ function TestPanelBuilder:test_handles_game_object_missing_player_cash_method_re
   _assert_eq(results[1].cash_value, 0, "cash_value falls back to 0 when player_cash absent")
   _assert_eq(results[1].land_count, "地块: 0", "land_count is 0")
   _assert_eq(results[1].total_assets_value, 0, "total_assets_value falls back to 0")
-end
+end)
 
-function TestPanelBuilder:test_returns_empty_fallback_row_when_a_player_slot_is_nil()
+it("test_returns_empty_fallback_row_when_a_player_slot_is_nil", function()
   local game = {
     players = {
       _player("p1", "Bob"),
@@ -65,31 +68,31 @@ function TestPanelBuilder:test_returns_empty_fallback_row_when_a_player_slot_is_
   _assert_eq(results[2].name, "", "empty slot name is empty")
   _assert_eq(results[2].cash_value, nil, "empty slot has no cash_value")
   _assert_eq(results[2].eliminated, false, "empty slot not eliminated")
-end
+end)
 
-function TestPanelBuilder:test_caches_label_for_same_countdown_value()
+it("test_caches_label_for_same_countdown_value", function()
   local label1 = panel_builder.build_turn_label(nil, 30)
   local label2 = panel_builder.build_turn_label(nil, 30)
   _assert_eq(label1, label2, "cached label returned for same second")
   _assert_eq(label1, "倒计时:30", "label format")
-end
+end)
 
-function TestPanelBuilder:test_rebuilds_label_when_seconds_change()
+it("test_rebuilds_label_when_seconds_change", function()
   local label1 = panel_builder.build_turn_label(nil, 10)
   local label2 = panel_builder.build_turn_label(nil, 20)
   _assert_eq(label1, "倒计时:10", "first label")
   _assert_eq(label2, "倒计时:20", "second label different from first")
-end
+end)
 
-function TestPanelBuilder:test_defaults_to_0_when_countdown_seconds_is_nil()
+it("test_defaults_to_0_when_countdown_seconds_is_nil", function()
   local label = panel_builder.build_turn_label(nil, nil)
   _assert_eq(label, "倒计时:0", "defaults to 0")
-end
+end)
 
-function TestPanelBuilder:test_always_returns_fixed_auto_play_label()
+it("test_always_returns_fixed_auto_play_label", function()
   _assert_eq(panel_builder.build_auto_label(true), "托管")
   _assert_eq(panel_builder.build_auto_label(false), "托管")
-end
+end)
 
 
-return TestPanelBuilder
+end)
