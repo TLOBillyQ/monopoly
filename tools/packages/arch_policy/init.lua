@@ -13,7 +13,7 @@
 --
 -- 规则语义与 ADR 0001/0002、ADR 0039 D2 一致:L1 最高、数字越大层越低;
 -- foundation 是 substrate(谁都能依赖它,它不依赖任何整型层)。环检测契约保留:
--- 强连通分量即违规,白名单经 `allowed_cycles` 显式豁免。
+-- 每个视图的反馈边闭合路径逐条判定,白名单按 view 和路径参与者集合豁免。
 local json_reader = require("foundation.json_reader")
 
 local M = {}
@@ -241,7 +241,10 @@ function M.check(policy, graph)
       for to in pairs(targets) do links[from][#links[from] + 1] = to end
       table.sort(links[from])
     end
-    for _, component in ipairs(_cycles(nodes, links)) do
+    local paths = require("packages.arch_policy.cycles").paths(nodes, links, _cycles(nodes, links))
+    for _, cycle in ipairs(paths) do
+      local component = {}
+      for index = 1, #cycle - 1 do component[#component + 1] = cycle[index] end
       local waiver = _waiver_for(policy, component, view)
       violations[#violations + 1] = {
         kind = "projection_cycle",
@@ -267,12 +270,14 @@ end
 -- 旧 arch_view 工具的 config.json 是同一份 policy 的投影:四个键逐一对应,
 -- 不放宽也不新增。旧工具退场前由投影测试钉住两者语义一致。
 function M.project_arch_view_config(policy)
-  return {
+  local config = {
     abstract_rules = policy.abstract_rules or {},
     component_rules = policy.component_rules or {},
     forbidden_dependency_rules = policy.forbidden_dependency_rules or {},
     source_roots = policy.source_roots or {},
   }
+  if #(policy.allowed_cycles or {}) > 0 then config.allowed_cycles = policy.allowed_cycles end
+  return config
 end
 
 local function _edn_string(value)

@@ -175,6 +175,85 @@ function TestArchPolicy:test_namespace_projection_cycle_without_module_cycle_is_
   lu.assertEquals(violation.nodes, { "rules.a", "rules.b" })
 end
 
+function TestArchPolicy:test_complex_scc_path_waivers_match_legacy_public_analyzer()
+  local fs = require("foundation.fs")
+  local json = require("foundation.json_writer")
+  local legacy = require("arch_view")
+  local root = "tmp/arch_policy_cycle_compare"
+  local graph = {
+    modules = { "src.rules.a", "src.rules.b", "src.rules.c" },
+    edges = {
+      { from = "src.rules.a", to = "src.rules.b" },
+      { from = "src.rules.b", to = "src.rules.a" },
+      { from = "src.rules.b", to = "src.rules.c" },
+      { from = "src.rules.c", to = "src.rules.b" },
+    },
+  }
+  assert(fs.write_file(root .. "/src/rules/a.lua", 'require("src.rules.b")'))
+  assert(fs.write_file(root .. "/src/rules/b.lua", 'require("src.rules.a")\nrequire("src.rules.c")'))
+  assert(fs.write_file(root .. "/src/rules/c.lua", 'require("src.rules.b")'))
+  for _, waivers in ipairs({
+    {},
+    { { view = "rules", nodes = { "rules.b", "rules.a" }, reason = "first path" } },
+    { { view = "rules", nodes = { "rules.a", "rules.b" }, reason = "first path" },
+      { view = "rules", nodes = { "rules.b", "rules.c" }, reason = "second path" } },
+    { { view = "wrong", nodes = { "rules.a", "rules.b" }, reason = "wrong view" } },
+    { { view = "rules", nodes = { "rules.a", "rules.b", "rules.c" }, reason = "SCC is not a path" } },
+  }) do
+    local policy = {
+      source_roots = POLICY.source_roots,
+      abstract_rules = POLICY.abstract_rules,
+      component_rules = POLICY.component_rules,
+      forbidden_dependency_rules = POLICY.forbidden_dependency_rules,
+      allowed_cycles = waivers,
+    }
+    assert(fs.write_file(root .. "/config.json", json.encode(arch_policy.project_arch_view_config(policy))))
+    local old = legacy.analyze({ project_root = root, config_path = root .. "/config.json" }).check
+    local current = arch_policy.check(policy, graph)
+    lu.assertEquals(current.ok, old.ok)
+    lu.assertEquals(#current.violations, #old.violations)
+    lu.assertEquals(#current.all_violations, #old.projection_cycles)
+    for index, cycle in ipairs(old.projection_cycles) do
+      local actual = current.all_violations[index]
+      lu.assertEquals(actual.view, cycle.view)
+      lu.assertEquals(actual.cycle, cycle.cycle)
+      lu.assertEquals(actual.nodes, cycle.nodes)
+      lu.assertEquals(actual.waived, cycle.waived)
+      lu.assertEquals(actual.reason, cycle.reason)
+    end
+  end
+  assert(fs.remove_path(root))
+end
+
+function TestArchPolicy:test_large_scc_greedy_paths_match_legacy_public_analyzer()
+  local fs = require("foundation.fs")
+  local json = require("foundation.json_writer")
+  local root = "tmp/arch_policy_greedy_compare"
+  local graph = { modules = {}, edges = {} }
+  for index = 1, 9 do
+    local id = "src.rules.n" .. index
+    graph.modules[#graph.modules + 1] = id
+    local source = {}
+    for _, offset in ipairs({ 1, 3 }) do
+      local target = "src.rules.n" .. ((index - 1 + offset) % 9 + 1)
+      graph.edges[#graph.edges + 1] = { from = id, to = target }
+      source[#source + 1] = 'require("' .. target .. '")'
+    end
+    assert(fs.write_file(root .. "/src/rules/n" .. index .. ".lua", table.concat(source, "\n")))
+  end
+  assert(fs.write_file(root .. "/config.json", json.encode(arch_policy.project_arch_view_config(POLICY))))
+  local old = require("arch_view").analyze({ project_root = root, config_path = root .. "/config.json" }).check
+  local current = arch_policy.check(POLICY, graph)
+  lu.assertFalse(current.ok)
+  lu.assertEquals(#current.all_violations, #old.projection_cycles)
+  for index, cycle in ipairs(old.projection_cycles) do
+    lu.assertEquals(current.all_violations[index].cycle, cycle.cycle)
+    lu.assertEquals(current.all_violations[index].nodes, cycle.nodes)
+    lu.assertEquals(current.all_violations[index].view, cycle.view)
+  end
+  assert(fs.remove_path(root))
+end
+
 function TestArchPolicy:test_external_and_self_edges_are_outside_the_graph()
   local result = _check({ "src.rules.bootstrap" }, {
     { from = "src.rules.bootstrap", to = "lfs" },
