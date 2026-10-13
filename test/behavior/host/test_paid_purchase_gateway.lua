@@ -1,6 +1,9 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local with_patches = support.with_patches
 
 local function _entry(overrides)
@@ -137,7 +140,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_pending
     gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123" })
   end)
 
-  lu.assertEvalToTrue(warned and warned:find("pending missing", 1, true), "should warn when pending is missing: " .. tostring(warned))
+  luassert.truthy(warned and warned:find("pending missing", 1, true), "should warn when pending is missing: " .. tostring(warned))
 end
 
 function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_player()
@@ -164,7 +167,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_player(
     gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = { get_roleid = function() return 5 end } })
   end)
 
-  lu.assertEvalToTrue(warned and warned:find("player missing", 1, true), "should warn when player is missing: " .. tostring(warned))
+  luassert.truthy(warned and warned:find("player missing", 1, true), "should warn when player is missing: " .. tostring(warned))
 end
 
 function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_entry()
@@ -192,7 +195,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_missing_entry()
     gateway._on_purchase_goods_callback(game, rt, { goods_id = "goods_123", role = { get_roleid = function() return 5 end } })
   end)
 
-  lu.assertEvalToTrue(warned and warned:find("market entry missing", 1, true), "should warn when entry is missing: " .. tostring(warned))
+  luassert.truthy(warned and warned:find("market entry missing", 1, true), "should warn when entry is missing: " .. tostring(warned))
 end
 
 function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_success_with_on_purchase()
@@ -588,8 +591,8 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_mapping_edge_cases
   end)
 
   local text = table.concat(warnings, "\n")
-  lu.assertEvalToTrue(text:find("duplicate name match", 1, true), "duplicate name should warn: " .. text)
-  lu.assertEvalToTrue(text:find("ambiguous goods_id", 1, true), "ambiguous goods id should warn: " .. text)
+  luassert.truthy(text:find("duplicate name match", 1, true), "duplicate name should warn: " .. text)
+  luassert.truthy(text:find("ambiguous goods_id", 1, true), "ambiguous goods id should warn: " .. text)
 end
 
 function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_distinct_mapping_failure_reasons()
@@ -630,9 +633,9 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_warns_distinct_mapping_f
     return false
   end
 
-  lu.assertEvalToTrue(has_warning(4001, "goods_list_unavailable"),
+  luassert.truthy(has_warning(4001, "goods_list_unavailable"),
     "unavailable goods list should warn its reason: " .. text)
-  lu.assertEvalToTrue(has_warning(4002, "name_mapping_not_found"),
+  luassert.truthy(has_warning(4002, "name_mapping_not_found"),
     "missing name mapping should warn its reason: " .. text)
 end
 
@@ -694,7 +697,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_pending_missing
       goods_id = "goods_123",
       role = { get_roleid = function() return 5 end },
     })
-    lu.assertEvalToTrue(warned and warned:find("pending missing", 1, true),
+    luassert.truthy(warned and warned:find("pending missing", 1, true),
       "missing pending queue should warn pending missing: " .. tostring(warned))
 
     rt.pending_by_role_id[5] = {
@@ -704,7 +707,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_callback_pending_missing
       goods_id = "goods_123",
       role = { get_roleid = function() return 5 end },
     })
-    lu.assertEvalToTrue(warned and warned:find("pending missing", 1, true),
+    luassert.truthy(warned and warned:find("pending missing", 1, true),
       "unmatched goods_id should warn pending missing: " .. tostring(warned))
   end)
 end
@@ -783,9 +786,9 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_mapping_missing_warn_car
     end)
   end)
 
-  lu.assertEvalToTrue(warnings[1] == "market paid goods mapping missing: product_id=4002 name=强征卡 currency=金豆 reason=name_mapping_not_found",
+  luassert.truthy(warnings[1] == "market paid goods mapping missing: product_id=4002 name=强征卡 currency=金豆 reason=name_mapping_not_found",
     "mapping missing warn should carry full entry args, got: " .. tostring(warnings[1]))
-  lu.assertEvalToTrue(warnings[2] == "market paid goods mapping missing: product_id=4003 name= currency= reason=name_mapping_not_found",
+  luassert.truthy(warnings[2] == "market paid goods mapping missing: product_id=4003 name= currency= reason=name_mapping_not_found",
     "mapping missing warn should expand missing fields to empty strings, got: " .. tostring(warnings[2]))
 end
 
@@ -817,7 +820,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_role_id_failure_warn_car
     end)
   end)
 
-  lu.assertEvalToTrue(warnings[1] and warnings[1]:find("market paid role_id resolve failed player_id=8", 1, true),
+  luassert.truthy(warnings[1] and warnings[1]:find("market paid role_id resolve failed player_id=8", 1, true),
     "role-id failure warn should carry the player id, got: " .. tostring(warnings[1]))
 end
 
@@ -882,7 +885,7 @@ function TestPaidPurchaseGateway:test_eggy_paid_gateway_panel_call_failure_warns
     end)
   end)
 
-  lu.assertEvalToTrue(warnings[1] and warnings[1]:find("market paid panel call failed player_id=1", 1, true),
+  luassert.truthy(warnings[1] and warnings[1]:find("market paid panel call failed player_id=1", 1, true),
     "panel failure warn should carry the caption and player id, got: " .. tostring(warnings[1]))
 end
 
