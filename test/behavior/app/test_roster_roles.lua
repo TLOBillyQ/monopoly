@@ -1,10 +1,11 @@
 ---@diagnostic disable: missing-fields
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):四个 describe 拍平成四个 Test* 类,
--- after_each → tearDown,断言从裸 assert 切到 lu.assertEvalToTrue,用例数与
+-- after_each → tearDown,断言从裸 assert 切到 luassert.truthy,用例数与
 -- 改写前一一对应(build_startup_roster 11 + build_startup_ai_map 2 +
 -- build_synthetic_player_specs 2 + 迁自 property 车道的 seating invariants 1 = 16 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local roster_roles = require("src.app.roster_roles")
 local support = require("test.support.shared_support")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -71,7 +72,7 @@ local function _with_roles(roles_source, fn)
   runtime_assets.reset_for_tests()
   _G.GameAPI = saved_gameapi
   logger.warn, logger.info = saved_warn, saved_info
-  lu.assertEvalToTrue(ok, err)
+  luassert.truthy(ok, err)
 end
 
 local function _count_synthetic(roster)
@@ -94,27 +95,27 @@ end
 function TestRosterRolesBuildStartupRoster:test_seats_exactly_the_real_roles_when_their_count_matches_the_cap()
   _with_roles({ _role(101, "甲"), _role(102, "乙"), _role(103, "丙"), _role(104, "丁") }, function(logs)
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#roster == 4, "should seat four roles, got " .. tostring(#roster))
-    lu.assertEvalToTrue(_count_synthetic(roster) == 0, "a full real roster needs no synthetic fill")
-    lu.assertEvalToTrue(roster[1].role_id == 101, "first seat keeps the resolved role id")
-    lu.assertEvalToTrue(roster[1].name == "甲", "first seat keeps the resolved role name")
-    lu.assertEvalToTrue(logs.warn == 0, "an exactly-full roster must not warn about truncation")
-    lu.assertEvalToTrue(logs.resolve_calls == 1, "a successful first resolve must not trigger a retry")
+    luassert.truthy(#roster == 4, "should seat four roles, got " .. tostring(#roster))
+    luassert.truthy(_count_synthetic(roster) == 0, "a full real roster needs no synthetic fill")
+    luassert.truthy(roster[1].role_id == 101, "first seat keeps the resolved role id")
+    luassert.truthy(roster[1].name == "甲", "first seat keeps the resolved role name")
+    luassert.truthy(logs.warn == 0, "an exactly-full roster must not warn about truncation")
+    luassert.truthy(logs.resolve_calls == 1, "a successful first resolve must not trigger a retry")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_fills_the_remaining_seats_with_synthetic_roles_in_pool_order()
   _with_roles({ _role(101, "甲") }, function(logs)
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#roster == 4, "should fill up to the cap, got " .. tostring(#roster))
-    lu.assertEvalToTrue(logs.resolve_calls == 1, "a non-empty first resolve must not retry")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 3, "three seats should be synthetic")
-    lu.assertEvalToTrue(roster[1].role_id == 101, "the single real role keeps its seat")
-    lu.assertEvalToTrue(roster[2].synthetic == true and roster[2].role_id == -2, "second seat is synthetic slot -2")
-    lu.assertEvalToTrue(roster[2].unit_key == "U1", "synthetic seats consume the unit-key pool in order")
-    lu.assertEvalToTrue(roster[3].unit_key == "U2", "third synthetic seat takes the next pool key")
-    lu.assertEvalToTrue(roster[4].role_id == -4, "fourth synthetic seat is slot -4")
-    lu.assertEvalToTrue(roster[2].avatar_image_key == "AVATAR_2", "synthetic avatar resolves from the AI image ref")
+    luassert.truthy(#roster == 4, "should fill up to the cap, got " .. tostring(#roster))
+    luassert.truthy(logs.resolve_calls == 1, "a non-empty first resolve must not retry")
+    luassert.truthy(_count_synthetic(roster) == 3, "three seats should be synthetic")
+    luassert.truthy(roster[1].role_id == 101, "the single real role keeps its seat")
+    luassert.truthy(roster[2].synthetic == true and roster[2].role_id == -2, "second seat is synthetic slot -2")
+    luassert.truthy(roster[2].unit_key == "U1", "synthetic seats consume the unit-key pool in order")
+    luassert.truthy(roster[3].unit_key == "U2", "third synthetic seat takes the next pool key")
+    luassert.truthy(roster[4].role_id == -4, "fourth synthetic seat is slot -4")
+    luassert.truthy(roster[2].avatar_image_key == "AVATAR_2", "synthetic avatar resolves from the AI image ref")
   end)
 end
 
@@ -123,27 +124,27 @@ function TestRosterRolesBuildStartupRoster:test_truncates_real_roles_past_the_ca
     _role(101), _role(102), _role(103), _role(104), _role(105), _role(106),
   }, function(logs)
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#roster == 4, "roster must clamp to the cap, got " .. tostring(#roster))
-    lu.assertEvalToTrue(_count_synthetic(roster) == 0, "an over-full real roster needs no synthetic fill")
-    lu.assertEvalToTrue(logs.warn == 1, "truncation should warn exactly once")
+    luassert.truthy(#roster == 4, "roster must clamp to the cap, got " .. tostring(#roster))
+    luassert.truthy(_count_synthetic(roster) == 0, "an over-full real roster needs no synthetic fill")
+    luassert.truthy(logs.warn == 1, "truncation should warn exactly once")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_skips_roles_without_a_resolvable_id_and_backfills_with_synthetic_seats()
   _with_roles({ _role(101, "甲"), _role(nil, "无效"), _role(103, "丙") }, function()
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(roster[1].role_id == 101, "first valid role keeps its seat")
-    lu.assertEvalToTrue(roster[2].role_id == 103, "the id-less role is skipped, not seated")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 2, "the two empty seats are filled synthetically")
+    luassert.truthy(roster[1].role_id == 101, "first valid role keeps its seat")
+    luassert.truthy(roster[2].role_id == 103, "the id-less role is skipped, not seated")
+    luassert.truthy(_count_synthetic(roster) == 2, "the two empty seats are filled synthetically")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_drops_empty_role_names_to_nil()
   _with_roles({ _role(101, "") }, function()
     local roster = roster_roles.build_startup_roster(1)
-    lu.assertEvalToTrue(#roster == 1, "cap of one seats a single role")
-    lu.assertEvalToTrue(roster[1].role_id == 101, "the real role is seated")
-    lu.assertEvalToTrue(roster[1].name == nil, "an empty role name resolves to nil")
+    luassert.truthy(#roster == 1, "cap of one seats a single role")
+    luassert.truthy(roster[1].role_id == 101, "the real role is seated")
+    luassert.truthy(roster[1].name == nil, "an empty role name resolves to nil")
   end)
 end
 
@@ -157,43 +158,43 @@ function TestRosterRolesBuildStartupRoster:test_retries_the_role_resolver_once_a
     return { _role(201, "甲"), _role(202, "乙") }
   end, function(logs)
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(attempts == 2, "an empty first resolve should trigger exactly one retry")
-    lu.assertEvalToTrue(roster[1].role_id == 201, "the retried roles are seated")
-    lu.assertEvalToTrue(logs.info >= 1, "a successful retry should log the recovery")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 2, "remaining seats are filled synthetically")
+    luassert.truthy(attempts == 2, "an empty first resolve should trigger exactly one retry")
+    luassert.truthy(roster[1].role_id == 201, "the retried roles are seated")
+    luassert.truthy(logs.info >= 1, "a successful retry should log the recovery")
+    luassert.truthy(_count_synthetic(roster) == 2, "remaining seats are filled synthetically")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_seats_an_all_synthetic_roster_when_no_real_roles_resolve()
   _with_roles({}, function()
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#roster == 4, "the cap is filled entirely with synthetic seats")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 4, "every seat is synthetic")
-    lu.assertEvalToTrue(roster[1].role_id == -1, "synthetic seats start at slot -1")
+    luassert.truthy(#roster == 4, "the cap is filled entirely with synthetic seats")
+    luassert.truthy(_count_synthetic(roster) == 4, "every seat is synthetic")
+    luassert.truthy(roster[1].role_id == -1, "synthetic seats start at slot -1")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_seats_every_real_role_with_no_synthetic_fill_when_the_cap_is_unset()
   _with_roles({ _role(101, "甲"), _role(102, "乙") }, function()
     local roster = roster_roles.build_startup_roster(nil)
-    lu.assertEvalToTrue(#roster == 2, "an unset cap seats exactly the resolved roles")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 0, "an unset cap performs no synthetic backfill")
+    luassert.truthy(#roster == 2, "an unset cap seats exactly the resolved roles")
+    luassert.truthy(_count_synthetic(roster) == 0, "an unset cap performs no synthetic backfill")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_skips_roles_missing_a_get_roleid_accessor_entirely()
   _with_roles({ { get_name = function() return "无效" end }, _role(103, "丙") }, function()
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(roster[1].role_id == 103, "the accessor-less role is skipped, not seated")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 3, "the empty seats are backfilled synthetically")
+    luassert.truthy(roster[1].role_id == 103, "the accessor-less role is skipped, not seated")
+    luassert.truthy(_count_synthetic(roster) == 3, "the empty seats are backfilled synthetically")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_skips_roles_whose_id_accessor_raises()
   _with_roles({ { get_roleid = function() error("boom") end }, _role(103, "丙") }, function()
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(roster[1].role_id == 103, "a raising id accessor is skipped, not seated")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 3, "the empty seats are backfilled synthetically")
+    luassert.truthy(roster[1].role_id == 103, "a raising id accessor is skipped, not seated")
+    luassert.truthy(_count_synthetic(roster) == 3, "the empty seats are backfilled synthetically")
   end)
 end
 
@@ -204,13 +205,13 @@ function TestRosterRolesBuildStartupRoster:test_truncation_warn_carries_expected
     _role(101), _role(102), _role(103), _role(104), _role(105), _role(106),
   }, function(logs)
     roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#logs.warn_args == 1, "truncation should warn exactly once")
-    lu.assertEvalToTrue(logs.warn_args[1][1] == "[Eggy]", "truncation warn should carry the Eggy tag")
-    lu.assertEvalToTrue(logs.warn_args[1][2] == "角色数量超过上限，已截断:",
+    luassert.truthy(#logs.warn_args == 1, "truncation should warn exactly once")
+    luassert.truthy(logs.warn_args[1][1] == "[Eggy]", "truncation warn should carry the Eggy tag")
+    luassert.truthy(logs.warn_args[1][2] == "角色数量超过上限，已截断:",
       "truncation warn should carry the truncation notice")
-    lu.assertEvalToTrue(logs.warn_args[1][3] == "6", "truncation warn should expand the resolved role count")
-    lu.assertEvalToTrue(logs.warn_args[1][4] == "->", "truncation warn should keep the arrow separator")
-    lu.assertEvalToTrue(logs.warn_args[1][5] == "4", "truncation warn should expand the cap")
+    luassert.truthy(logs.warn_args[1][3] == "6", "truncation warn should expand the resolved role count")
+    luassert.truthy(logs.warn_args[1][4] == "->", "truncation warn should keep the arrow separator")
+    luassert.truthy(logs.warn_args[1][5] == "4", "truncation warn should expand the cap")
   end)
 end
 
@@ -225,11 +226,11 @@ function TestRosterRolesBuildStartupRoster:test_retry_recovery_logs_expected_arg
     return { _role(201, "甲"), _role(202, "乙") }
   end, function(logs)
     roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#logs.info_args == 1, "a successful retry should log exactly once")
-    lu.assertEvalToTrue(logs.info_args[1][1] == "[Eggy]", "retry log should carry the Eggy tag")
-    lu.assertEvalToTrue(logs.info_args[1][2] == "角色列表二次拉取成功，角色数量:",
+    luassert.truthy(#logs.info_args == 1, "a successful retry should log exactly once")
+    luassert.truthy(logs.info_args[1][1] == "[Eggy]", "retry log should carry the Eggy tag")
+    luassert.truthy(logs.info_args[1][2] == "角色列表二次拉取成功，角色数量:",
       "retry log should carry the recovery notice")
-    lu.assertEvalToTrue(logs.info_args[1][3] == "2", "retry log should expand the retried role count")
+    luassert.truthy(logs.info_args[1][3] == "2", "retry log should expand the retried role count")
   end)
 end
 
@@ -237,9 +238,9 @@ end
 function TestRosterRolesBuildStartupRoster:test_empty_retry_result_is_not_treated_as_recovery()
   _with_roles({}, function(logs)
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(logs.info == 0, "an empty retry result must not log a recovery")
-    lu.assertEvalToTrue(logs.resolve_calls == 2, "an empty first resolve should still retry once")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 4, "an empty retry leaves the cap fully synthetic")
+    luassert.truthy(logs.info == 0, "an empty retry result must not log a recovery")
+    luassert.truthy(logs.resolve_calls == 2, "an empty first resolve should still retry once")
+    luassert.truthy(_count_synthetic(roster) == 4, "an empty retry leaves the cap fully synthetic")
   end)
 end
 
@@ -247,8 +248,8 @@ end
 function TestRosterRolesBuildStartupRoster:test_non_table_resolver_result_is_rejected()
   _with_roles("abc", function(logs)
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(logs.info == 0, "a non-table resolver result must not log a recovery")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 4, "a rejected resolver result leaves the cap fully synthetic")
+    luassert.truthy(logs.info == 0, "a non-table resolver result must not log a recovery")
+    luassert.truthy(_count_synthetic(roster) == 4, "a rejected resolver result leaves the cap fully synthetic")
   end)
 end
 
@@ -257,11 +258,11 @@ end
 function TestRosterRolesBuildStartupRoster:test_single_missing_seat_keeps_a_real_unit_key()
   _with_roles({ _role(101, "甲"), _role(102, "乙"), _role(103, "丙") }, function()
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(#roster == 4, "cap of four with three real roles leaves one seat")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 1, "exactly one seat should be synthetic")
-    lu.assertEvalToTrue(roster[4].synthetic == true and roster[4].role_id == -4,
+    luassert.truthy(#roster == 4, "cap of four with three real roles leaves one seat")
+    luassert.truthy(_count_synthetic(roster) == 1, "exactly one seat should be synthetic")
+    luassert.truthy(roster[4].synthetic == true and roster[4].role_id == -4,
       "the missing seat is the synthetic slot -4")
-    lu.assertEvalToTrue(roster[4].unit_key == "U1", "a single synthetic seat keeps the first pool key")
+    luassert.truthy(roster[4].unit_key == "U1", "a single synthetic seat keeps the first pool key")
   end)
 end
 
@@ -270,16 +271,16 @@ end
 function TestRosterRolesBuildStartupRoster:test_dirty_false_entries_in_roles_list_are_skipped()
   _with_roles({ false, _role(101, "甲") }, function()
     local roster = roster_roles.build_startup_roster(4)
-    lu.assertEvalToTrue(roster[1].role_id == 101, "the real role after a false entry is still seated")
-    lu.assertEvalToTrue(_count_synthetic(roster) == 3, "the remaining seats are backfilled synthetically")
+    luassert.truthy(roster[1].role_id == 101, "the real role after a false entry is still seated")
+    luassert.truthy(_count_synthetic(roster) == 3, "the remaining seats are backfilled synthetically")
   end)
 end
 
 function TestRosterRolesBuildStartupRoster:test_drops_the_name_to_nil_when_the_name_accessor_raises()
   _with_roles({ { get_roleid = function() return 101 end, get_name = function() error("boom") end } }, function()
     local roster = roster_roles.build_startup_roster(1)
-    lu.assertEvalToTrue(roster[1].role_id == 101, "the role is still seated despite the name failure")
-    lu.assertEvalToTrue(roster[1].name == nil, "a raising name accessor resolves to nil, not the error")
+    luassert.truthy(roster[1].role_id == 101, "the role is still seated despite the name failure")
+    luassert.truthy(roster[1].name == nil, "a raising name accessor resolves to nil, not the error")
   end)
 end
 
@@ -291,16 +292,16 @@ function TestRosterRolesBuildStartupAiMap:test_marks_only_synthetic_role_ids()
     { role_id = -2, synthetic = true },
     { role_id = -3, synthetic = true },
   })
-  lu.assertEvalToTrue(ai ~= nil, "a roster with synthetic seats yields an ai map")
-  lu.assertEvalToTrue(ai[-2] == true and ai[-3] == true, "synthetic seats are marked ai")
-  lu.assertEvalToTrue(ai[1] == nil, "real seats are never marked ai")
+  luassert.truthy(ai ~= nil, "a roster with synthetic seats yields an ai map")
+  luassert.truthy(ai[-2] == true and ai[-3] == true, "synthetic seats are marked ai")
+  luassert.truthy(ai[1] == nil, "real seats are never marked ai")
 end
 
 function TestRosterRolesBuildStartupAiMap:test_returns_nil_for_an_all_real_or_empty_roster()
-  lu.assertEvalToTrue(roster_roles.build_startup_ai_map({ { role_id = 1 }, { role_id = 2 } }) == nil,
+  luassert.truthy(roster_roles.build_startup_ai_map({ { role_id = 1 }, { role_id = 2 } }) == nil,
     "an all-real roster has no ai map")
-  lu.assertEvalToTrue(roster_roles.build_startup_ai_map({}) == nil, "an empty roster has no ai map")
-  lu.assertEvalToTrue(roster_roles.build_startup_ai_map(nil) == nil, "a nil roster has no ai map")
+  luassert.truthy(roster_roles.build_startup_ai_map({}) == nil, "an empty roster has no ai map")
+  luassert.truthy(roster_roles.build_startup_ai_map(nil) == nil, "a nil roster has no ai map")
 end
 
 TestRosterRolesBuildSyntheticPlayerSpecs = {}
@@ -311,16 +312,16 @@ function TestRosterRolesBuildSyntheticPlayerSpecs:test_emits_one_spec_per_synthe
     { role_id = -2, synthetic = true, name = "乙", unit_key = "U1", avatar_image_key = "A2" },
     { role_id = -3, synthetic = true, name = "丙", unit_key = "U2", avatar_image_key = "A3" },
   })
-  lu.assertEvalToTrue(#specs == 2, "only synthetic seats produce specs, got " .. tostring(#specs))
-  lu.assertEvalToTrue(specs[1].player_id == -2, "spec carries the synthetic role id as player_id")
-  lu.assertEvalToTrue(specs[1].name == "乙" and specs[1].unit_key == "U1" and specs[1].avatar_image_key == "A2",
+  luassert.truthy(#specs == 2, "only synthetic seats produce specs, got " .. tostring(#specs))
+  luassert.truthy(specs[1].player_id == -2, "spec carries the synthetic role id as player_id")
+  luassert.truthy(specs[1].name == "乙" and specs[1].unit_key == "U1" and specs[1].avatar_image_key == "A2",
     "spec preserves the synthetic seat fields")
-  lu.assertEvalToTrue(specs[2].player_id == -3, "specs preserve roster order")
+  luassert.truthy(specs[2].player_id == -3, "specs preserve roster order")
 end
 
 function TestRosterRolesBuildSyntheticPlayerSpecs:test_returns_an_empty_list_when_there_are_no_synthetic_seats()
   local specs = roster_roles.build_synthetic_player_specs({ { role_id = 1 } })
-  lu.assertEvalToTrue(#specs == 0, "a real-only roster yields no synthetic specs")
+  luassert.truthy(#specs == 0, "a real-only roster yields no synthetic specs")
 end
 
 -- ===== 迁自 test/property/test_roster_seating.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
@@ -370,7 +371,7 @@ do
     end)
     runtime_ports.reset_for_tests()
     _G.GameAPI = saved_gameapi
-    lu.assertEvalToTrue(ok, "roster build failed for signup_count=" .. tostring(signup_count) .. ": " .. tostring(result))
+    luassert.truthy(ok, "roster build failed for signup_count=" .. tostring(signup_count) .. ": " .. tostring(result))
     return result
   end
 
@@ -400,13 +401,13 @@ do
       local real = total - ai
       local seated_real = math.min(signup_count, SEATS)
 
-      lu.assertEvalToTrue(total == SEATS,
+      luassert.truthy(total == SEATS,
         "expected " .. SEATS .. " seated roles for signup=" .. signup_count .. ", got " .. tostring(total))
-      lu.assertEvalToTrue(real == seated_real,
+      luassert.truthy(real == seated_real,
         "expected " .. seated_real .. " real roles for signup=" .. signup_count .. ", got " .. tostring(real))
-      lu.assertEvalToTrue(ai == SEATS - seated_real,
+      luassert.truthy(ai == SEATS - seated_real,
         "expected " .. (SEATS - seated_real) .. " AI roles for signup=" .. signup_count .. ", got " .. tostring(ai))
-      lu.assertEvalToTrue(real + ai == SEATS,
+      luassert.truthy(real + ai == SEATS,
         "real + AI roles must conserve to " .. SEATS .. " for signup=" .. signup_count)
     end)
   end
