@@ -583,9 +583,7 @@ return {
     "tools/packages/acceptance_mutate/test/test_acceptance_mutate_cli.lua",
     "tools/packages/acceptance_mutate/test/test_mutate_lane.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
-    "tools/packages/acceptance_mutate/test/test_mutator_report_skipped.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
-    "tools/packages/acceptance_mutate/test/test_mutator_status_format.lua",
     "tools/packages/arch_view/test/test_arch_view_live_tooling_contract.lua",
     "tools/packages/arch_view/test/test_arch_view_snapshot_tooling_contract.lua",
     "tools/packages/arch_view/test/test_script_tools_contract.lua",
@@ -611,6 +609,8 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/acceptance_mutate/test/test_mutator_report_skipped.lua",
+    "tools/packages/acceptance_mutate/test/test_mutator_status_format.lua",
     "tools/foundation/test/test_path_join.lua",
     "tools/foundation/test/test_platform_boundary.lua",
     "tools/foundation/test/test_tap_summary.lua",

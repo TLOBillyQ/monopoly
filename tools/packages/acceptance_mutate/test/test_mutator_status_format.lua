@@ -1,84 +1,55 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local check = require("luassert")
 local status = require("acceptance4lua.mutator.status")
-
-TestMutatorStatusFormat = {}
-
-function TestMutatorStatusFormat:test_builds_snapshot_with_completed_work_including_skipped_mutations()
-  local snapshot = status.snapshot(8, {
-    killed = 2,
-    survived = 1,
-    errors = 1,
-    skipped_scenarios = 3,
-    skipped_mutations = 4,
-  }, 0, "12s")
-
-  lu.assertIs(snapshot.total, 8)
-  lu.assertIs(snapshot.completed, 8)
-  lu.assertIs(snapshot.running, 0)
-  lu.assertIs(snapshot.elapsed, "12s")
-  lu.assertIs(snapshot.killed, 2)
-  lu.assertIs(snapshot.survived, 1)
-  lu.assertIs(snapshot.errors, 1)
-  lu.assertIs(snapshot.skipped_scenarios, 3)
-  lu.assertIs(snapshot.skipped_mutations, 4)
-end
-
-function TestMutatorStatusFormat:test_normalizes_missing_numeric_fields_to_zero()
-  local snapshot = status.snapshot(nil, nil, nil, nil)
-
-  lu.assertIs(snapshot.total, 0)
-  lu.assertIs(snapshot.completed, 0)
-  lu.assertIs(snapshot.running, 0)
-  lu.assertIs(snapshot.elapsed, "")
-  lu.assertIs(snapshot.killed, 0)
-  lu.assertIs(snapshot.survived, 0)
-  lu.assertIs(snapshot.errors, 0)
-  lu.assertIs(snapshot.skipped_scenarios, 0)
-  lu.assertIs(snapshot.skipped_mutations, 0)
-end
-
-function TestMutatorStatusFormat:test_formats_status_lines_as_stable_key_value_tokens()
-  local line = status.format_line({
-    total = 8,
-    completed = 8,
-    running = 0,
-    elapsed = "12s",
-    killed = 2,
-    survived = 1,
-    errors = 1,
-    skipped_scenarios = 3,
-    skipped_mutations = 4,
-  })
-
-  lu.assertIs(
-    line,
-    "status elapsed=12s total=8 completed=8 running=0 killed=2 survived=1 errors=1 skipped_scenarios=3 skipped_mutations=4"
-  )
-end
-
-
--- Public argument validation returns before any filesystem or worker operation.
 local mutator = require("acceptance4lua.mutator")
 
-function TestMutatorStatusFormat:test_rejects_an_unknown_level_value_before_touching_the_filesystem()
-  local report, err = mutator.run({
-    feature = "/nonexistent/path/intentionally-bad.feature",
-    work_dir = "/tmp/will-not-be-created",
-    level = "nonsense",
-  })
-  lu.assertNil(report)
-  lu.assertNotNil(err)
-  lu.assertEvalToTrue(tostring(err):match("invalid level"))
-end
-
-function TestMutatorStatusFormat:test_rejects_non_string_level_values()
-  local report, err = mutator.run({
-    feature = "/dev/null",
-    work_dir = "/tmp",
-    level = 42,
-  })
-  lu.assertNil(report)
-  lu.assertEvalToTrue(tostring(err):match("invalid level"))
-end
-
-return TestMutatorStatusFormat
+describe("mutator status format", function()
+  it("builds snapshot with completed work including skipped mutations", function()
+    local snapshot = status.snapshot(8, {
+      killed = 2, survived = 1, errors = 1, skipped_scenarios = 3, skipped_mutations = 4,
+    }, 0, "12s")
+    check.equal(8, snapshot.total)
+    check.equal(8, snapshot.completed)
+    check.equal(0, snapshot.running)
+    check.equal("12s", snapshot.elapsed)
+    check.equal(2, snapshot.killed)
+    check.equal(1, snapshot.survived)
+    check.equal(1, snapshot.errors)
+    check.equal(3, snapshot.skipped_scenarios)
+    check.equal(4, snapshot.skipped_mutations)
+  end)
+  it("normalizes missing numeric fields to zero", function()
+    local snapshot = status.snapshot(nil, nil, nil, nil)
+    check.equal(0, snapshot.total)
+    check.equal(0, snapshot.completed)
+    check.equal(0, snapshot.running)
+    check.equal("", snapshot.elapsed)
+    check.equal(0, snapshot.killed)
+    check.equal(0, snapshot.survived)
+    check.equal(0, snapshot.errors)
+    check.equal(0, snapshot.skipped_scenarios)
+    check.equal(0, snapshot.skipped_mutations)
+  end)
+  it("formats status lines as stable key value tokens", function()
+    local line = status.format_line({
+      total = 8, completed = 8, running = 0, elapsed = "12s", killed = 2,
+      survived = 1, errors = 1, skipped_scenarios = 3, skipped_mutations = 4,
+    })
+    check.equal("status elapsed=12s total=8 completed=8 running=0 killed=2 survived=1 errors=1 skipped_scenarios=3 skipped_mutations=4", line)
+  end)
+  -- Public validation returns before filesystem or worker operations.
+  it("rejects an unknown level value before touching the filesystem", function()
+    local report, err = mutator.run({
+      feature = "/nonexistent/path/intentionally-bad.feature",
+      work_dir = "/tmp/will-not-be-created", level = "nonsense",
+    })
+    check.is_nil(report)
+    check.is_not_nil(err)
+    check.truthy(tostring(err):match("invalid level"))
+  end)
+  it("rejects non string level values", function()
+    local report, err = mutator.run({ feature = "/dev/null", work_dir = "/tmp", level = 42 })
+    check.is_nil(report)
+    check.truthy(tostring(err):match("invalid level"))
+  end)
+end)
