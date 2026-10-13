@@ -1,14 +1,9 @@
 if arg then rawset(arg, 0, "tools/packages/crap/test/test_crap_tooling_contract.lua") end
+require("test.bootstrap").install_package_paths()
 local suite = require("test.support.tooling_suites.architecture.crap_tooling_contract")
-local cases = suite.tests or {}
 
-TestCrapToolingContract = {}
-
-for _, case in ipairs(cases) do
-  TestCrapToolingContract["test_" .. case.name] = function(self)
-    case.run()
+describe("crap tooling contracts", function()
+  for _, case in ipairs(suite.tests) do
+    it(case.name, case.run)
   end
-end
-
-
-return TestCrapToolingContract
+end)

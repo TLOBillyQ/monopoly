@@ -11,23 +11,18 @@ local json_reader = require("foundation.json_reader")
 local json_writer = require("foundation.json_writer")
 
 bootstrap.install_package_paths()
+local check = require("luassert")
 
 local function _assert_eq(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
+  check.equal(expected, actual, message)
 end
 
 local function _assert_contains(text, expected, message)
-  if tostring(text or ""):find(expected, 1, true) == nil then
-    error((message or "missing expected text") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(text))
-  end
+  check.matches(expected, tostring(text or ""), 1, true, message)
 end
 
 local function _assert_not_contains(text, unexpected, message)
-  if tostring(text or ""):find(unexpected, 1, true) ~= nil then
-    error((message or "unexpected text found") .. "\nunexpected: " .. tostring(unexpected) .. "\nactual: " .. tostring(text))
-  end
+  check.is_nil(tostring(text or ""):find(unexpected, 1, true), message)
 end
 
 local function _buffer()
@@ -47,11 +42,11 @@ end
 
 local function _test_env_preserves_monopoly_path_convention()
   local env = crap.env
-  assert(env.tmp_root:find("eggy_crap", 1, true) ~= nil,
+  check.truthy(env.tmp_root:find("eggy_crap", 1, true) ~= nil,
     "default tmp root should preserve monopoly-specific directory name")
-  assert(env.default_config:find("tools/packages/crap/config.lua", 1, true) ~= nil,
+  check.truthy(env.default_config:find("tools/packages/crap/config.lua", 1, true) ~= nil,
     "default config should point at monopoly wrapper config")
-  assert(env.default_gate_threshold == 5.0,
+  check.truthy(env.default_gate_threshold == 5.0,
     "gate threshold should align with upstream v0.1.0 via config.lua (6 -> 5.0)")
 end
 
@@ -82,10 +77,10 @@ end
 local function _test_luacov_adapter_resolves_lanes_and_delegates_run()
   local adapter = require("packages.crap.luacov_adapter")
   local behavior_suites = adapter.resolve_suites("behavior")
-  assert(#behavior_suites > 0, "behavior lane should expose behavior suites")
+  check.truthy(#behavior_suites > 0, "behavior lane should expose behavior suites")
   local contract_suites = adapter.resolve_suites("contract")
-  assert(#contract_suites > 0, "contract lane should expose contract suites")
-  assert(type(adapter.run) == "function", "adapter should expose the run contract")
+  check.truthy(#contract_suites > 0, "contract lane should expose contract suites")
+  check.truthy(type(adapter.run) == "function", "adapter should expose the run contract")
   local result = adapter.run({}, {})
   _assert_eq(result.total, 0, "adapter.run with no suites should return total 0")
   _assert_eq(result.failed, false, "adapter.run with no suites should not fail")
@@ -114,10 +109,10 @@ local function _test_report_io_coerces_string_line_keys_from_collect_json()
 
   local collected = report_io.load_collect(in_json)
   fs_lib.remove_path(in_json)
-  assert(type(collected) == "table", "collect JSON should load")
+  check.truthy(type(collected) == "table", "collect JSON should load")
   local entry = collected.coverage_result.files["src/probe.lua"]
-  assert(type(entry.exec[1]) == "boolean", "exec line keys must be coerced to numbers")
-  assert(type(entry.exec[2]) == "boolean", "exec line keys must be coerced to numbers")
+  check.truthy(type(entry.exec[1]) == "boolean", "exec line keys must be coerced to numbers")
+  check.truthy(type(entry.exec[2]) == "boolean", "exec line keys must be coerced to numbers")
   _assert_eq(entry.exec[3], nil, "lines not present must stay absent")
 end
 
@@ -143,9 +138,9 @@ local function _test_cli_report_generates_report_json()
     stderr = err,
   })
 
-  assert(ok == true, "cli report should return true: " .. err:text())
+  check.truthy(ok == true, "cli report should return true: " .. err:text())
   _assert_contains(out:text(), "crap report json:", "report stdout should print report path")
-  assert(fs_lib.path_exists(tmp_out), "report json should exist at output path")
+  check.truthy(fs_lib.path_exists(tmp_out), "report json should exist at output path")
   local content = fs_lib.read_file(tmp_out)
   _assert_contains(content, '"functions"', "report json should contain functions array")
   _assert_contains(content, '"crap_score"', "report json should contain crap_score field")
@@ -169,9 +164,9 @@ local function _test_cli_collect_writes_coverage_json()
     stderr = err,
   })
 
-  assert(ok == true, "collect should return true: " .. err:text())
+  check.truthy(ok == true, "collect should return true: " .. err:text())
   _assert_contains(out:text(), "crap collect json:", "collect stdout should print collect path")
-  assert(fs_lib.path_exists(tmp_out), "collect json should exist at output path")
+  check.truthy(fs_lib.path_exists(tmp_out), "collect json should exist at output path")
   local content = fs_lib.read_file(tmp_out)
   _assert_contains(content, '"coverage_result"', "collect json should contain coverage_result")
   _assert_contains(content, '"files"', "collect json should contain v0.1.0 files shape")
@@ -199,7 +194,7 @@ local function _test_cli_summary_out_prints_resolved_json_path()
   })
   fs_lib.remove_path(in_json)
 
-  assert(ok == true, "summary should return true")
+  check.truthy(ok == true, "summary should return true")
   _assert_contains(out:text(), "crap summary json:",
     "summary stdout should print resolved summary json path")
   fs_lib.remove_path(summary_out)
@@ -212,12 +207,12 @@ end
 
 local function _test_gate_bar_is_flat_with_no_complexity_exemption()
   -- Anything strictly above the threshold violates, whatever its complexity.
-  assert(gate.is_violation({ complexity = 3, crap = 5.5 }, 5.0) == true,
+  check.truthy(gate.is_violation({ complexity = 3, crap = 5.5 }, 5.0) == true,
     "crap 5.5 should violate a threshold of 5.0")
-  assert(gate.is_violation({ complexity = 5, crap = 5.0 }, 5.0) == false,
+  check.truthy(gate.is_violation({ complexity = 5, crap = 5.0 }, 5.0) == false,
     "crap exactly at the threshold should pass")
   -- A high-complexity function gets no exemption: its 100% floor still fails.
-  assert(gate.is_violation({ complexity = 8, crap = 8.0 }, 5.0) == true,
+  check.truthy(gate.is_violation({ complexity = 8, crap = 8.0 }, 5.0) == true,
     "cx=8 at its full-coverage floor should still violate; it must be split")
 end
 
@@ -225,11 +220,11 @@ local function _test_gate_treats_unmeasurable_coverage_as_violation()
   -- #275-③:N/A 计违例。crap 为 null 表示覆盖率不可测,必须按违例算,
   -- 绝不能当 0 分放行。两种形态都要拦:JSON 往返后 null -> nil,analyzer
   -- 内存对象是 json_writer.null 哨兵表。
-  assert(gate.is_violation({ complexity = 2, crap = nil }, 5.0) == true,
+  check.truthy(gate.is_violation({ complexity = 2, crap = nil }, 5.0) == true,
     "null crap (N/A coverage) must violate the gate")
-  assert(gate.is_violation({ complexity = 2, crap = {} }, 5.0) == true,
+  check.truthy(gate.is_violation({ complexity = 2, crap = {} }, 5.0) == true,
     "json_writer.null sentinel (table) must violate the gate")
-  assert(gate.is_violation({ complexity = 2, crap = 0.0 }, 5.0) == false,
+  check.truthy(gate.is_violation({ complexity = 2, crap = 0.0 }, 5.0) == false,
     "measurable 0.0 crap at full coverage passes")
 end
 
@@ -261,10 +256,10 @@ local function _test_gate_evaluate_reports_every_violation()
 end
 
 local function _test_gate_exposes_no_baseline_escape_hatch()
-  assert(gate.render_baseline == nil, "gate must not offer a baseline renderer")
-  assert(gate.ceiling == nil, "gate must not offer a complexity-aware ceiling")
+  check.truthy(gate.render_baseline == nil, "gate must not offer a baseline renderer")
+  check.truthy(gate.ceiling == nil, "gate must not offer a complexity-aware ceiling")
   local baseline_path = path_lib.join_path(crap.env.repo_root, "tools/packages/crap/crap_gate_baseline.lua")
-  assert(fs_lib.read_file(baseline_path) == nil, "the per-file ratchet baseline must not exist")
+  check.truthy(fs_lib.read_file(baseline_path) == nil, "the per-file ratchet baseline must not exist")
 end
 
 -- coverage_tiers.lua 是纯数据,先前零 spec 覆盖(issue #124):改坏了没有任何东西会响。
@@ -272,7 +267,7 @@ end
 
 local function _load_tiers()
   local config = dofile(crap.env.default_tier_config)
-  assert(type(config) == "table" and type(config.tiers) == "table",
+  check.truthy(type(config) == "table" and type(config.tiers) == "table",
     "tier config must return { tiers = { ... } }")
   return config.tiers
 end
@@ -310,11 +305,11 @@ local function _tier_rows_for(source_paths)
     stderr = err,
   })
   fs_lib.remove_path(in_json)
-  assert(ok == true, "crap summary should classify the probe report: " .. err:text())
+  check.truthy(ok == true, "crap summary should classify the probe report: " .. err:text())
 
   local payload = json_reader.decode(fs_lib.read_file(out_json))
   fs_lib.remove_path(out_json)
-  assert(type(payload) == "table" and type(payload.tiers) == "table",
+  check.truthy(type(payload) == "table" and type(payload.tiers) == "table",
     "summary json must expose tier rows")
   return payload.tiers
 end
@@ -335,13 +330,13 @@ end
 -- 而聚合照样出结果、不报错。
 local function _test_tier_order_keeps_ui_manager_out_of_ui_surface()
   local manager = _tier_row_of("src/ui/manager/board_manager.lua")
-  assert(manager ~= nil, "a src/ui/manager file must land in some tier")
+  check.truthy(manager ~= nil, "a src/ui/manager file must land in some tier")
   _assert_eq(manager.name, "ui_host_adapter",
     "src/ui/manager must match ui_host_adapter first; ui_host_adapter has to precede ui_surface")
   _assert_eq(manager.threshold, 0.60, "ui_host_adapter keeps the host_bridge-grade threshold")
 
   local surface = _tier_row_of("src/ui/panel/shop_panel.lua")
-  assert(surface ~= nil and surface.name == "ui_surface",
+  check.truthy(surface ~= nil and surface.name == "ui_surface",
     "a plain src/ui file still belongs to ui_surface")
 end
 
@@ -351,7 +346,7 @@ end
 local function _test_every_src_file_lands_in_a_tier()
   local src_root = path_lib.join_path(crap.env.cwd, "src")
   local files = proc_lib.collect_lua_files(src_root) or {}
-  assert(#files > 0, "src/ should contain lua files")
+  check.truthy(#files > 0, "src/ should contain lua files")
 
   local relatives = {}
   for _, absolute in ipairs(files) do
@@ -382,23 +377,23 @@ end
 
 local function _test_tier_shape_is_wellformed()
   local tiers = _load_tiers()
-  assert(#tiers > 0, "tier config must define at least one tier")
+  check.truthy(#tiers > 0, "tier config must define at least one tier")
 
   local seen = {}
   for _, tier in ipairs(tiers) do
-    assert(type(tier.name) == "string" and tier.name ~= "", "each tier needs a name")
-    assert(seen[tier.name] == nil, "tier names must be unique; duplicated: " .. tostring(tier.name))
+    check.truthy(type(tier.name) == "string" and tier.name ~= "", "each tier needs a name")
+    check.truthy(seen[tier.name] == nil, "tier names must be unique; duplicated: " .. tostring(tier.name))
     seen[tier.name] = true
 
-    assert(type(tier.threshold) == "number" and tier.threshold > 0 and tier.threshold <= 1,
+    check.truthy(type(tier.threshold) == "number" and tier.threshold > 0 and tier.threshold <= 1,
       "tier " .. tier.name .. " needs a threshold in (0, 1]; got " .. tostring(tier.threshold))
 
-    assert(type(tier.includes) == "table" and #tier.includes > 0,
+    check.truthy(type(tier.includes) == "table" and #tier.includes > 0,
       "tier " .. tier.name .. " needs at least one include prefix")
     for _, prefix in ipairs(tier.includes) do
-      assert(prefix:sub(1, 4) == "src/",
+      check.truthy(prefix:sub(1, 4) == "src/",
         "tier " .. tier.name .. " include must be under src/; got " .. tostring(prefix))
-      assert(prefix:sub(-1) == "/",
+      check.truthy(prefix:sub(-1) == "/",
         "tier " .. tier.name .. " include must end with / so it cannot prefix-match a sibling; got " .. tostring(prefix))
     end
   end
