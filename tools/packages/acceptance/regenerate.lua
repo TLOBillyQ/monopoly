@@ -48,6 +48,7 @@ function regenerate.run(options)
   local report = options.report or function(_) end
   local generated_dir = options.generated_dir or registry.generated_dir
   local entries = options.entries or registry.select(report)
+  if type(entries) ~= "table" or #entries == 0 then return nil, "no acceptance entries selected" end
   local total = #entries
   for index, entry in ipairs(entries) do
     local generated_path = path_lib.join_path(generated_dir, entry.generated)

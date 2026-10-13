@@ -25,13 +25,13 @@ local function _load_manifest()
   local path = _repo_root() .. "/features/manifest.lua"
   local probe = io.open(path, "r")
   if probe == nil then
-    return {}
+    error("acceptance manifest unavailable: " .. path)
   end
   probe:close()
 
   local loaded = dofile(path)
-  if type(loaded) ~= "table" then
-    return {}
+  if type(loaded) ~= "table" or type(loaded.entries) ~= "table" or #loaded.entries == 0 then
+    error("acceptance manifest invalid or empty: " .. path)
   end
   return loaded
 end
@@ -44,6 +44,7 @@ local registry = {
 }
 
 function registry.select(report)
+  assert(type(registry.entries) == "table" and #registry.entries > 0, "no acceptance entries registered")
   local selected, excluded = {}, {}
   local boundary = require("foundation.platform_boundary")
   for _, entry in ipairs(registry.entries) do

@@ -157,6 +157,26 @@ function boundary.evaluate(id, args, platform)
   }
 end
 
+-- Retained actual engine regressions are explicit capability tests, not native gates.
+boundary.test_capabilities = {
+  ["tools/packages/acceptance_mutate/test/test_mutator_level.lua"] = "acceptance-mutate",
+  ["tools/packages/acceptance_mutate/test/test_mutator_status.lua"] = "acceptance-mutate",
+}
+
+function boundary.test_verdict(path)
+  local normalized = tostring(path):gsub("\\", "/")
+  for identity, capability in pairs(boundary.test_capabilities) do
+    if normalized == identity or normalized:sub(-#identity - 1) == "/" .. identity then
+      local verdict = boundary.evaluate(capability, {})
+      if verdict.status then
+        verdict.identity = identity
+        verdict.cases = identity:match("test_mutator_level%.lua$") and 14 or 2
+        return verdict
+      end
+    end
+  end
+end
+
 -- 写诊断。stream 由 evaluate 给定,调用点不再各自挑输出流。
 function boundary.emit(verdict)
   local stream = verdict.stream == "stderr" and io.stderr or io.stdout

@@ -12,7 +12,7 @@
 -- 这里大声失败,而不是让 mutator 静静地跳过一切然后报成功。全跳过本身是合法的
 -- (没动 feature 就没有差分变异体),所以按「跳过数」判失败会天天误报;
 -- 该判的是「runner 到底能不能跑」。
-local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
+local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
 local env = bootstrap.install(debug.getinfo(1, "S").source)
 
 -- 平台保证边界(#96):与 packages.acceptance_mutate.cli 同一份声明,判定必须

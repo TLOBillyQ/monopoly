@@ -70,7 +70,11 @@ local function _discover_files(roots, pattern)
     for _, path in ipairs(discovered or {}) do
       local base = path:match("([^/\\]+)%.lua$")
       if base ~= nil and base:find(pattern) ~= nil and not seen[path] then
-        files[#files + 1] = path
+        local verdict = require("foundation.platform_boundary").test_verdict(path)
+        if verdict then
+          io.write("[tooling] excluded status=unavailable file=" .. verdict.identity
+            .. " cases=" .. verdict.cases .. " capability=acceptance-mutate reason=" .. verdict.entry.reason .. "\n")
+        else files[#files + 1] = path end
         seen[path] = true
       end
     end
