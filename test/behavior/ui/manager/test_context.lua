@@ -3,8 +3,7 @@
 -- 宿主无关:角色列表走 foundation runtime port(测试基线已装默认实现)。
 require("test.support.ui_manager_nodes_support")
 
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 
 -- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert 兼容层
 -- 切到 lu.assertXxx,用例数与改写前一一对应(2 例)。
@@ -14,9 +13,9 @@ local function _load_fresh()
   return chunk()
 end
 
-TestContext = {}
+describe("TestContext", function()
 
-function TestContext:test_initializes_shared_state_with_the_documented_shape()
+it("test_initializes_shared_state_with_the_documented_shape", function()
   local ctx = _load_fresh()
 
   luassert.truthy(type(ctx.allroles) == "table", "allroles resolved from the runtime port")
@@ -28,14 +27,14 @@ function TestContext:test_initializes_shared_state_with_the_documented_shape()
   luassert.truthy(type(ctx.event_handlers) == "table", "event_handlers initialized")
   luassert.truthy(next(ctx.event_handlers) == nil, "event_handlers starts empty")
   luassert.truthy(ctx.config_list == nil, "config_list starts nil")
-end
+end)
 
-function TestContext:test_each_chunk_load_produces_independent_state_tables()
+it("test_each_chunk_load_produces_independent_state_tables", function()
   local first = _load_fresh()
   local second = _load_fresh()
 
   luassert.truthy(first.nodes_list ~= second.nodes_list, "no shared backing between loads")
-end
+end)
 
 
-return TestContext
+end)

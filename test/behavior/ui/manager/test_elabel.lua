@@ -1,8 +1,7 @@
 -- elabel.lua 映射覆盖:每个字段 -> (推送方法名, 参数序),从 ELabel 属性入口穿过去断言宿主收到的调用。
 -- 「推给谁」的分支决策(client_role 定向 / allroles 广播)由 host_push.push 独占,已在 host_push_spec
 -- 单点钉死;本 spec 只守映射表,不重复广播分支,单角色触发一次推送即可定位断言。
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local context = require("src.ui.manager.context")
 local ELabel = require("src.ui.manager.elabel")
 local support = require("test.support.ui_manager_nodes_support")
@@ -79,22 +78,22 @@ local function _assert_call(call, expected_method, node_id, expected_args)
   end
 end
 
-TestELabel = {}
+describe("TestELabel", function()
 
-function TestELabel:setUp()
+before_each(function()
   _clear_context()
   support.install_host_math()
   calls = {}
-end
+end)
 
-function TestELabel:tearDown()
+after_each(function()
   _clear_context()
   support.restore_host_math()
-end
+end)
 
 for _, case in ipairs(cases) do
   local case_name = ("test_%s setter pushes %s with the mapped args"):format(case.field, case.method)
-  TestELabel[case_name] = function(self)
+  it(case_name, function()
     table.insert(context.allroles, _make_role(101))
     local label = ELabel:new(301, "label_" .. case.field)
 
@@ -102,10 +101,10 @@ for _, case in ipairs(cases) do
 
     luassert.truthy(#calls == 1, ("expected exactly 1 host call, got %d"):format(#calls))
     _assert_call(calls[1], case.method, 301, case.args)
-  end
+  end)
 end
 
-function TestELabel:test_getters_read_back_what_the_setters_stored()
+it("test_getters_read_back_what_the_setters_stored", function()
   table.insert(context.allroles, _make_role(101))
   local label = ELabel:new(303, "getters")
 
@@ -114,17 +113,17 @@ function TestELabel:test_getters_read_back_what_the_setters_stored()
     luassert.truthy(label[case.field] == case.value,
       ("getter for %s should return the value written"):format(case.field))
   end
-end
+end)
 
-function TestELabel:test_init_defaults_text_to_empty_string_and_transition_time_to_zero()
+it("test_init_defaults_text_to_empty_string_and_transition_time_to_zero", function()
   local label = ELabel:new(304, "defaults")
 
   luassert.truthy(label.text == "", "text should default to empty string")
   luassert.truthy(label.transition_time == 0.0, "transition_time should default to 0.0")
   luassert.truthy(#calls == 0, "init should not touch the host")
-end
+end)
 
-function TestELabel:test_transition_time_setter_stores_a_fixed_value_without_touching_the_host()
+it("test_transition_time_setter_stores_a_fixed_value_without_touching_the_host", function()
   table.insert(context.allroles, _make_role(101))
   local label = ELabel:new(305, "transition")
 
@@ -132,9 +131,9 @@ function TestELabel:test_transition_time_setter_stores_a_fixed_value_without_tou
 
   luassert.truthy(label.transition_time == 1.5, "transition_time should read back")
   luassert.truthy(#calls == 0, "transition_time is not pushed to the host on its own")
-end
+end)
 
-function TestELabel:test_transition_time_is_forwarded_to_the_host_by_transitioned_setters()
+it("test_transition_time_is_forwarded_to_the_host_by_transitioned_setters", function()
   table.insert(context.allroles, _make_role(101))
   local label = ELabel:new(306, "transition_forwarded")
   label.transition_time = 2.0
@@ -143,20 +142,19 @@ function TestELabel:test_transition_time_is_forwarded_to_the_host_by_transitione
 
   luassert.truthy(#calls == 1, "expected one host call")
   _assert_call(calls[1], "set_label_color", 306, { 0xABCDEF, 2.0 })
-end
+end)
 
 -- label_background_opacity 曾是本类唯一一处拼写不一致的属性(#210):访问器与
 -- setter 写的字段是 ...opactiy,updater 读的却是 ...opacity,两条路都设不上值。
 -- 名字对齐后它与 label_background_color 同形,故由上面的通用 cases 表覆盖;
 -- 这条钉住拼错的名字不再是可用属性面,防止旧写法悄悄复活。
-function TestELabel:test_the_misspelled_label_background_opactiy_is_not_an_accessor_anymore()
+it("test_the_misspelled_label_background_opactiy_is_not_an_accessor_anymore", function()
   context.client_role = _make_role(7)
   local label = ELabel:new(307, "opacity_typo")
 
   label.label_background_opactiy = 0.25
 
   luassert.truthy(#calls == 0, "the misspelled name must not reach the host")
-end
+end)
 
-
-return TestELabel
+end)

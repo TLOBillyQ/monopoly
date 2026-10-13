@@ -9,13 +9,12 @@
 --      广播不中断;
 --   5. 单推的 client_role 缺方法 → 同样跳过 + warn,不上抛;
 --   6. 方法在但执行抛错 → 原样上抛,观测性不回退(#541)。
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local context = require("src.ui.manager.context")
 local logger = require("src.foundation.log")
 local push = require("src.ui.manager.host_push").push
 
-TestHostPush = {}
+describe("TestHostPush", function()
 
 local calls
 
@@ -37,16 +36,14 @@ local function _clear_context()
   context.client_role = nil
 end
 
-function TestHostPush:setUp()
+before_each(function()
   _clear_context()
   calls = {}
-end
+end)
 
-function TestHostPush:tearDown()
-  _clear_context()
-end
+after_each(_clear_context)
 
-function TestHostPush:test_pushes_to_the_client_role_only_when_one_is_set()
+it("test_pushes_to_the_client_role_only_when_one_is_set", function()
   context.client_role = _make_role(7)
   table.insert(context.allroles, _make_role(101))
   table.insert(context.allroles, _make_role(102))
@@ -57,9 +54,9 @@ function TestHostPush:test_pushes_to_the_client_role_only_when_one_is_set()
   luassert.truthy(calls[1].roleid == 7, "client_role should be the only receiver")
   luassert.truthy(calls[1].method == "set_node_visible", "should forward the host method")
   luassert.truthy(calls[1].args[1] == "node_42" and calls[1].args[2] == true, "should forward the host args")
-end
+end)
 
-function TestHostPush:test_broadcasts_to_every_role_in_allroles_order_when_there_is_no_client_role()
+it("test_broadcasts_to_every_role_in_allroles_order_when_there_is_no_client_role", function()
   table.insert(context.allroles, _make_role(101))
   table.insert(context.allroles, _make_role(102))
   table.insert(context.allroles, _make_role(103))
@@ -69,11 +66,11 @@ function TestHostPush:test_broadcasts_to_every_role_in_allroles_order_when_there
   luassert.truthy(#calls == 3, ("expected one host call per role, got %d"):format(#calls))
   luassert.truthy(calls[1].roleid == 101 and calls[2].roleid == 102 and calls[3].roleid == 103,
     "should broadcast in allroles order")
-end
+end)
 
 -- 这条是 EButton:__update_disabled 的地基:成对下发必须 role1.a、role1.b、role2.a、role2.b,
 -- 而不是拆成两次广播后的 role1.a、role2.a、role1.b、role2.b。
-function TestHostPush:test_runs_a_multi_call_apply_fully_per_role_before_moving_to_the_next_role()
+it("test_runs_a_multi_call_apply_fully_per_role_before_moving_to_the_next_role", function()
   table.insert(context.allroles, _make_role(101))
   table.insert(context.allroles, _make_role(102))
 
@@ -90,13 +87,13 @@ function TestHostPush:test_runs_a_multi_call_apply_fully_per_role_before_moving_
   luassert.truthy(table.concat(seen, ",") ==
     "101:set_node_touch_enabled,101:set_button_enabled,102:set_node_touch_enabled,102:set_button_enabled",
     "每个角色应先跑完整个 apply,再轮到下一个角色;实际: " .. table.concat(seen, ","))
-end
+end)
 
-function TestHostPush:test_does_nothing_when_there_is_no_client_role_and_no_roles_at_all()
+it("test_does_nothing_when_there_is_no_client_role_and_no_roles_at_all", function()
   push(function(role) role.set_node_visible("node_42", true) end)
 
   luassert.truthy(#calls == 0, "没有任何角色时不应推送")
-end
+end)
 
 -- 缺 UI 方法的 role 代理:只有 get_roleid,没有 __index 自动造方法——
 -- 索引任何推送方法都得 nil,与真机 AI 位(role=-4)的宿主代理同形。
@@ -137,7 +134,7 @@ local function _assert_one_skip_warn(warns, role_text, method)
     "skip warn should name the missing method, got: " .. tostring(warns[1]))
 end
 
-function TestHostPush:test_skips_a_role_missing_the_method_without_breaking_the_broadcast()
+it("test_skips_a_role_missing_the_method_without_breaking_the_broadcast", function()
   table.insert(context.allroles, _make_role(101))
   table.insert(context.allroles, _make_method_less_role(-4))
   table.insert(context.allroles, _make_role(103))
@@ -150,9 +147,9 @@ function TestHostPush:test_skips_a_role_missing_the_method_without_breaking_the_
   luassert.truthy(calls[1].roleid == 101 and calls[2].roleid == 103,
     "缺方法的 role 不得中断广播,排在其后的 role 必须照常收到推送")
   _assert_one_skip_warn(_warn_texts(entries), "-4", "set_node_visible")
-end
+end)
 
-function TestHostPush:test_skips_a_client_role_missing_the_method_without_raising()
+it("test_skips_a_client_role_missing_the_method_without_raising", function()
   context.client_role = _make_method_less_role(-4)
   table.insert(context.allroles, _make_role(101))
 
@@ -162,12 +159,12 @@ function TestHostPush:test_skips_a_client_role_missing_the_method_without_raisin
 
   luassert.truthy(#calls == 0, "单推目标缺方法时不应推送,也不应碰 allroles")
   _assert_one_skip_warn(_warn_texts(entries), "-4", "set_node_visible")
-end
+end)
 
 -- #542 最极端宿主个体差异:role 代理连 get_roleid 都没有(纯宿主对象,无任何
 -- 方法)。缺方法跳过时 warn 里的 role 标识必须落到 tostring(role) 兜底,
 -- 不能炸 nil 调用,也不能中断广播(虽然这里没有任何健康角色可推)。
-function TestHostPush:test_skip_warn_falls_back_to_tostring_when_role_has_no_roleid()
+it("test_skip_warn_falls_back_to_tostring_when_role_has_no_roleid", function()
   table.insert(context.allroles, {})
 
   local entries = _capture_log_entries(function()
@@ -176,9 +173,9 @@ function TestHostPush:test_skip_warn_falls_back_to_tostring_when_role_has_no_rol
 
   luassert.truthy(#calls == 0, "no healthy roles to receive the push")
   _assert_one_skip_warn(_warn_texts(entries), "table:", "set_node_visible")
-end
+end)
 
-function TestHostPush:test_lets_a_method_that_raises_propagate_unchanged()
+it("test_lets_a_method_that_raises_propagate_unchanged", function()
   context.client_role = {
     set_node_visible = function()
       error("host exploded", 0)
@@ -192,7 +189,6 @@ function TestHostPush:test_lets_a_method_that_raises_propagate_unchanged()
   luassert.truthy(not ok, "方法存在但抛错必须原样上抛,不得被跳过逻辑吞掉")
   luassert.truthy(tostring(err):find("host exploded", 1, true) ~= nil,
     "原始错误正文不得被改写, got: " .. tostring(err))
-end
+end)
 
-
-return TestHostPush
+end)

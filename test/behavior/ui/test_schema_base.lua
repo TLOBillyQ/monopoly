@@ -1,15 +1,14 @@
 -- luacheck: ignore 211
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local P = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
 
-TestSchemaBase = {}
+describe("TestSchemaBase", function()
 
 do
-  TestSchemaBase["test_pins base screen host node names"] = function(self)
+  it("test_pins base screen host node names", function()
     package.loaded["src.ui.schema.base"] = nil
     local base_nodes = require("src.ui.schema.base")
 
@@ -49,9 +48,9 @@ do
     _assert_eq(base_nodes.player_action_effects[2], "基础_玩家2行动动效", "player action effect 2")
     _assert_eq(base_nodes.player_action_effects[3], "基础_玩家3行动动效", "player action effect 3")
     _assert_eq(base_nodes.player_action_effects[4], "基础_玩家4行动动效", "player action effect 4")
-  end
+  end)
 
-  TestSchemaBase["test_resolves main turn button slots to unique EButton host nodes"] = function(self)
+  it("test_resolves main turn button slots to unique EButton host nodes", function()
     local base_nodes = require("src.ui.schema.base")
     local host_nodes = require("Data.UIManagerNodes")
 
@@ -72,8 +71,7 @@ do
       _assert_eq(entry_kinds[node_name], "EButton",
         slot_key .. " (" .. node_name .. ") host node kind")
     end
-  end
+  end)
 end
 
-
-return TestSchemaBase
+end)

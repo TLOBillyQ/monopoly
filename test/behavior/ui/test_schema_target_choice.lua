@@ -1,15 +1,14 @@
 -- src.ui.schema.target_choice 纯数据契约 pin：逐个钉画布名/文案与 7 槽位按钮/
 -- 标签/投影的逐名形态。#293 清扫:纯数据表不 pin 时「字段 → nil / 字面量 → nil」
 -- 变异全幸存——内容配置是行为面,改了任何一格都该被合同钉住。
-require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function assert_identity(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
 
-TestSchemaTargetChoice = {}
+describe("TestSchemaTargetChoice", function()
 
-function TestSchemaTargetChoice:test_pins_choice_screen_text_slots_in_full()
+it("test_pins_choice_screen_text_slots_in_full", function()
   package.loaded["src.ui.schema.target_choice"] = nil
   local schema = require("src.ui.schema.target_choice")
 
@@ -42,6 +41,6 @@ function TestSchemaTargetChoice:test_pins_choice_screen_text_slots_in_full()
   assert_identity(schema.slot_projections[5], "位置-槽位5投影")
   assert_identity(schema.slot_projections[6], "位置-槽位6投影")
   assert_identity(schema.slot_projections[7], "位置-槽位7投影")
-end
+end)
 
-return TestSchemaTargetChoice
+end)
