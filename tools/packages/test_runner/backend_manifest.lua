@@ -2,7 +2,6 @@
 return {
   legacy = {
     "test/behavior/app/test_cosmetics_transaction.lua",
-    "test/behavior/app/test_startup_profile.lua",
     "test/behavior/host/test_paid_purchase_gateway.lua",
     "test/behavior/rules/board/test_init_mutation.lua",
     "test/behavior/rules/board/test_route_plan.lua",
@@ -371,6 +370,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/test_startup_profile.lua",
     "test/behavior/app/test_sign_in.lua",
     "test/behavior/app/test_gameplay_start.lua",
     "test/behavior/scenarios/deadlines/test_all_human_no_input_full_game.lua",

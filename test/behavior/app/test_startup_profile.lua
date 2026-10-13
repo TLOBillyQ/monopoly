@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 
 ---@diagnostic disable: different-requires
 
@@ -236,9 +236,13 @@ local function _reload_app_init_with_stubs(runner, logger_overrides)
   return capture
 end
 
-TestStartupProfile = {}
+describe("TestStartupProfile", function()
+  after_each(function()
+    runtime_ports.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestStartupProfile:test_state_factory_builds_runtime_state_when_package_global_missing()
+local function _test_state_factory_builds_runtime_state_when_package_global_missing()
   with_patches({
     { key = "package", value = nil },
   }, function()
@@ -253,7 +257,7 @@ function TestStartupProfile:test_state_factory_builds_runtime_state_when_package
   })
 end
 
-function TestStartupProfile:test_game_startup_fills_synthetic_ai_when_role_roster_empty()
+local function _test_game_startup_fills_synthetic_ai_when_role_roster_empty()
   local created_opts = nil
   with_patches({
     { target = runtime_ports, key = "resolve_roles", value = function() return {} end },
@@ -281,7 +285,7 @@ function TestStartupProfile:test_game_startup_fills_synthetic_ai_when_role_roste
     "synthetic entries should always be AI")
 end
 
-function TestStartupProfile:test_game_startup_real_roles_stay_human_by_default()
+local function _test_game_startup_real_roles_stay_human_by_default()
   local created_opts = nil
   with_patches({
     {
@@ -308,7 +312,7 @@ function TestStartupProfile:test_game_startup_real_roles_stay_human_by_default()
   luassert.truthy(created_opts.ai == nil, "real roles should stay human by default")
 end
 
-function TestStartupProfile:test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs()
+local function _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs()
   local created_opts = nil
   local created_game = nil
   with_patches({
@@ -342,7 +346,7 @@ function TestStartupProfile:test_game_startup_mixed_real_and_synthetic_players_k
   _assert_startup_synthetic_specs_have_slot_avatars(created_game.startup_synthetic_players, { 2, 3, 4 })
 end
 
-function TestStartupProfile:test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only()
+local function _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only()
   local created_opts = nil
   with_patches({
     {
@@ -372,7 +376,7 @@ function TestStartupProfile:test_game_startup_mixed_real_and_synthetic_players_a
   _assert_ai_map_has_no_positive_slot_keys(created_opts.ai, 4)
 end
 
-function TestStartupProfile:test_app_init_requires_explicit_init_and_runs_once()
+local function _test_app_init_requires_explicit_init_and_runs_once()
   local capture = _reload_app_init_with_stubs(function(capture, app_module)
     luassert.truthy(type(app_module) == "table", "bootstrap module should export a table")
     luassert.truthy(type(app_module.init) == "function", "bootstrap module should expose init")
@@ -398,7 +402,7 @@ function TestStartupProfile:test_app_init_requires_explicit_init_and_runs_once()
     "init's game factory builder should produce a callable factory")
 end
 
-function TestStartupProfile:test_app_init_ui_warn_sink_routes_only_warn_entries_to_host()
+local function _test_app_init_ui_warn_sink_routes_only_warn_entries_to_host()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end)
@@ -446,7 +450,7 @@ function TestStartupProfile:test_app_init_ui_warn_sink_routes_only_warn_entries_
   end)
 end
 
-function TestStartupProfile:test_app_init_configures_game_time_logger_from_host_clock_api()
+local function _test_app_init_configures_game_time_logger_from_host_clock_api()
   local time_api = {
     get_timestamp = function() return 0 end,
     get_hour = function() return 0 end,
@@ -466,7 +470,7 @@ function TestStartupProfile:test_app_init_configures_game_time_logger_from_host_
     "a host clock api should configure the game-time logger")
 end
 
-function TestStartupProfile:test_app_init_resets_time_runtime_when_host_lacks_clock_api()
+local function _test_app_init_resets_time_runtime_when_host_lacks_clock_api()
   local capture
   with_patches({
     { key = "GameAPI", value = { get_timestamp = function() return 0 end } },
@@ -485,7 +489,7 @@ end
 -- app.init publishes test_mode into the tip runtime. The logger is a host-facing
 -- seam, so every way it can answer (absent / true / non-boolean / raising) must
 -- land on a definite boolean rather than leaking a stray value or an error.
-function TestStartupProfile:test_app_init_publishes_test_mode_when_logger_reports_it_enabled()
+local function _test_app_init_publishes_test_mode_when_logger_reports_it_enabled()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end, { is_test_mode = function() return true end })
@@ -494,7 +498,7 @@ function TestStartupProfile:test_app_init_publishes_test_mode_when_logger_report
     "an enabled logger test mode should be published to the tip runtime")
 end
 
-function TestStartupProfile:test_app_init_publishes_test_mode_false_when_logger_reports_it_disabled()
+local function _test_app_init_publishes_test_mode_false_when_logger_reports_it_disabled()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end, { is_test_mode = function() return false end })
@@ -503,7 +507,7 @@ function TestStartupProfile:test_app_init_publishes_test_mode_false_when_logger_
     "a disabled logger test mode should be published as false")
 end
 
-function TestStartupProfile:test_app_init_treats_non_boolean_test_mode_as_disabled()
+local function _test_app_init_treats_non_boolean_test_mode_as_disabled()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end, { is_test_mode = function() return "yes" end })
@@ -512,7 +516,7 @@ function TestStartupProfile:test_app_init_treats_non_boolean_test_mode_as_disabl
     "a non-boolean test mode should be normalized to false, not forwarded as-is")
 end
 
-function TestStartupProfile:test_app_init_treats_raising_test_mode_probe_as_disabled()
+local function _test_app_init_treats_raising_test_mode_probe_as_disabled()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end, { is_test_mode = function() error("test mode probe boom") end })
@@ -521,7 +525,7 @@ function TestStartupProfile:test_app_init_treats_raising_test_mode_probe_as_disa
     "a logger that raises while probing test mode should not fail init")
 end
 
-function TestStartupProfile:test_app_init_treats_missing_test_mode_probe_as_disabled()
+local function _test_app_init_treats_missing_test_mode_probe_as_disabled()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end, { is_test_mode = "not-a-function" })
@@ -530,7 +534,7 @@ function TestStartupProfile:test_app_init_treats_missing_test_mode_probe_as_disa
     "a logger without a callable test-mode probe should report disabled")
 end
 
-function TestStartupProfile:test_app_init_wires_runtime_and_debug_providers()
+local function _test_app_init_wires_runtime_and_debug_providers()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end)
@@ -632,7 +636,7 @@ function TestStartupProfile:test_app_init_wires_runtime_and_debug_providers()
   luassert.truthy(type(capture.runtime_start_game_ref) == "table", "runtime start closure should forward game ref")
 end
 
-function TestStartupProfile:test_app_init_keeps_scheduler_fallback()
+local function _test_app_init_keeps_scheduler_fallback()
   local capture = {}
   local state = { ui = {} }
   local tip_queue_stub = {
@@ -682,7 +686,7 @@ end
 
 -- 批3 击杀：_globalapi_missing_warned 去重状态机（L17 初值 / L41 守卫 / L42 置位 /
 -- L47 宿主就绪复位）与 L43 日志 tag/文案，一次会话内全部 pin 死。
-function TestStartupProfile:test_app_init_tip_presenter_warns_once_until_host_ready()
+local function _test_app_init_tip_presenter_warns_once_until_host_ready()
   local warn_calls = {}
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
@@ -719,7 +723,7 @@ end
 
 -- 批3 击杀：scheduler 在既无 SetTimeOut 又无回调时返回 false（L58），
 -- tip_queue 据此判定「未排程→立即释放」。
-function TestStartupProfile:test_app_init_scheduler_rejects_work_without_callback()
+local function _test_app_init_scheduler_rejects_work_without_callback()
   local capture = _reload_app_init_with_stubs(function(_, app_module)
     app_module.init()
   end)
@@ -730,7 +734,7 @@ function TestStartupProfile:test_app_init_scheduler_rejects_work_without_callbac
   end)
 end
 
-function TestStartupProfile:test_app_module_exposes_init_function()
+local function _test_app_module_exposes_init_function()
   local capture = {
     app_init_call_count = 0,
   }
@@ -758,7 +762,7 @@ function TestStartupProfile:test_app_module_exposes_init_function()
   luassert.truthy(capture.app_init_call_count == 1, "app init should be callable once")
 end
 
-function TestStartupProfile:test_main_lua_calls_app_init()
+local function _test_main_lua_calls_app_init()
   local capture = {
     app_init_call_count = 0,
   }
@@ -782,7 +786,7 @@ function TestStartupProfile:test_main_lua_calls_app_init()
   luassert.truthy(capture.app_init_call_count == 1, "main.lua should call app init once")
 end
 
-function TestStartupProfile:test_gameplay_start_sets_current_game_before_priming_first_turn()
+local function _test_gameplay_start_sets_current_game_before_priming_first_turn()
   local gameplay_start = require("src.app.gameplay_start")
   local current_game_ref = { nil }
   local advanced = false
@@ -841,4 +845,25 @@ function TestStartupProfile:test_gameplay_start_sets_current_game_before_priming
 end
 
 
-return TestStartupProfile
+it("test_state_factory_builds_runtime_state_when_package_global_missing", _test_state_factory_builds_runtime_state_when_package_global_missing)
+it("test_game_startup_fills_synthetic_ai_when_role_roster_empty", _test_game_startup_fills_synthetic_ai_when_role_roster_empty)
+it("test_game_startup_real_roles_stay_human_by_default", _test_game_startup_real_roles_stay_human_by_default)
+it("test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs", _test_game_startup_mixed_real_and_synthetic_players_keep_slot_avatar_specs)
+it("test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only", _test_game_startup_mixed_real_and_synthetic_players_ai_map_uses_role_ids_only)
+it("test_app_init_requires_explicit_init_and_runs_once", _test_app_init_requires_explicit_init_and_runs_once)
+it("test_app_init_ui_warn_sink_routes_only_warn_entries_to_host", _test_app_init_ui_warn_sink_routes_only_warn_entries_to_host)
+it("test_app_init_configures_game_time_logger_from_host_clock_api", _test_app_init_configures_game_time_logger_from_host_clock_api)
+it("test_app_init_resets_time_runtime_when_host_lacks_clock_api", _test_app_init_resets_time_runtime_when_host_lacks_clock_api)
+it("test_app_init_publishes_test_mode_when_logger_reports_it_enabled", _test_app_init_publishes_test_mode_when_logger_reports_it_enabled)
+it("test_app_init_publishes_test_mode_false_when_logger_reports_it_disabled", _test_app_init_publishes_test_mode_false_when_logger_reports_it_disabled)
+it("test_app_init_treats_non_boolean_test_mode_as_disabled", _test_app_init_treats_non_boolean_test_mode_as_disabled)
+it("test_app_init_treats_raising_test_mode_probe_as_disabled", _test_app_init_treats_raising_test_mode_probe_as_disabled)
+it("test_app_init_treats_missing_test_mode_probe_as_disabled", _test_app_init_treats_missing_test_mode_probe_as_disabled)
+it("test_app_init_wires_runtime_and_debug_providers", _test_app_init_wires_runtime_and_debug_providers)
+it("test_app_init_keeps_scheduler_fallback", _test_app_init_keeps_scheduler_fallback)
+it("test_app_init_tip_presenter_warns_once_until_host_ready", _test_app_init_tip_presenter_warns_once_until_host_ready)
+it("test_app_init_scheduler_rejects_work_without_callback", _test_app_init_scheduler_rejects_work_without_callback)
+it("test_app_module_exposes_init_function", _test_app_module_exposes_init_function)
+it("test_main_lua_calls_app_init", _test_main_lua_calls_app_init)
+it("test_gameplay_start_sets_current_game_before_priming_first_turn", _test_gameplay_start_sets_current_game_before_priming_first_turn)
+end)
