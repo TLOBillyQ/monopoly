@@ -1,5 +1,7 @@
 ---@diagnostic disable
 -- luacheck: ignore 113
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local control = require("src.player.control")
 local function make_cases(helpers)
   local _ENV = helpers
@@ -54,7 +56,7 @@ local function _test_autorunner_runs_to_end()
   local turn_limit = timing.turn_limit or 0
   local env_steps = number_utils.to_integer(os.getenv("EGGY_TEST_AUTORUNNER_STEPS"))
   local max_steps = env_steps or (turn_limit * 40)
-  assert(max_steps > 0, "invalid turn_limit for autorunner test")
+  luassert.truthy(max_steps > 0, "invalid turn_limit for autorunner test")
 
   local timeout = constants.action_timeout_seconds or 0
   local dt = timeout > 0 and (timeout + 0.1) or 1
@@ -140,8 +142,8 @@ local function _test_autorunner_runs_to_end()
             if auto_choice then
               return auto_choice
             end
-            local options = assert(choice.options, "missing choice.options")
-            local first = assert(options[1], "missing choice option")
+            local options = luassert.truthy(choice.options, "missing choice.options")
+            local first = luassert.truthy(options[1], "missing choice option")
             return {
               type = "choice_select",
               choice_id = choice.id,
@@ -184,8 +186,8 @@ local function _test_autorunner_runs_to_end()
             if auto_choice then
               return auto_choice
             end
-            local options = assert(choice.options, "missing choice.options")
-            local first = assert(options[1], "missing choice option")
+            local options = luassert.truthy(choice.options, "missing choice.options")
+            local first = luassert.truthy(options[1], "missing choice option")
             return {
               type = "choice_select",
               choice_id = choice.id,
@@ -201,7 +203,7 @@ local function _test_autorunner_runs_to_end()
     end)
   end)
 
-  assert(ok, "autorunner test failed: " .. tostring(err))
+  luassert.truthy(ok, "autorunner test failed: " .. tostring(err))
 end
 
 local function _test_complex_consecutive_turn_settlement()
@@ -237,30 +239,30 @@ local function _test_complex_consecutive_turn_settlement()
       break
     end
   end
-  assert(has_move_forward, "配置中需要存在向前移动2格的机会卡")
+  luassert.truthy(has_move_forward, "配置中需要存在向前移动2格的机会卡")
 
   local initial_has_steal_card = inventory.find_index(p1, 2007) and true or false
   local initial_p2_item_count = p2.inventory:count()
 
-  assert(initial_has_steal_card, "p1 应该有偷窃卡")
-  assert(initial_p2_item_count > 0, "p2 应该有道具可被偷")
+  luassert.truthy(initial_has_steal_card, "p1 应该有偷窃卡")
+  luassert.truthy(initial_p2_item_count > 0, "p2 应该有道具可被偷")
 
   local res1 = movement.move(g, p1, 3, { branch_parity = 3, skip_market_check = true })
   local first_res = res1
 
-  assert(first_res.encountered_players and #first_res.encountered_players > 0, "应该经过其他玩家")
-  assert(p1.position == chance_idx, "应该停在机会卡格子")
+  luassert.truthy(first_res.encountered_players and #first_res.encountered_players > 0, "应该经过其他玩家")
+  luassert.truthy(p1.position == chance_idx, "应该停在机会卡格子")
 
   local tile_chance = g.board:get_tile(chance_idx)
   _resolve_landing_with_choices(g, p1, tile_chance, res1, 10)
 
-  assert(p1, "玩家1应该存在")
+  luassert.truthy(p1, "玩家1应该存在")
 
   if p1.position == hospital_idx then
-    assert(g:detention_remaining(p1) > 0, "医院应设置扣留剩余回合")
+    luassert.truthy(g:detention_remaining(p1) > 0, "医院应设置扣留剩余回合")
   end
 
-  assert(true, "复杂连续结算完成")
+  luassert.truthy(true, "复杂连续结算完成")
 end
 
 local function _test_complex_market_interrupt_with_rent()
@@ -295,7 +297,7 @@ local function _test_complex_market_interrupt_with_rent()
       end
     end
   end
-  assert(found_land, "should find a land tile after market")
+  luassert.truthy(found_land, "should find a land tile after market")
 
   g:set_tile_owner(land_tile, p2.id)
   g:set_tile_level(land_tile, 2)
@@ -322,8 +324,8 @@ local function _test_complex_market_interrupt_with_rent()
     _resolve_landing_with_choices(g, p1, final_tile, res, 10)
   end
 
-  assert(p1, "玩家应该存在")
-  assert(true, "黑市中断 + 租金支付场景完成")
+  luassert.truthy(p1, "玩家应该存在")
+  luassert.truthy(true, "黑市中断 + 租金支付场景完成")
 end
 
 local function _test_decision_engine_cancels_item_phase_passive()
@@ -344,10 +346,10 @@ local function _test_decision_engine_cancels_item_phase_passive()
 
   local result = decide(g, choice)
 
-  assert(result, "decide should return an action for item_phase_passive")
-  assert(result.type == "choice_cancel", "item_phase_passive should result in choice_cancel")
-  assert(result.choice_id == choice.id, "should preserve choice_id")
-  assert(result.actor_role_id == player.id, "should preserve actor_role_id")
+  luassert.truthy(result, "decide should return an action for item_phase_passive")
+  luassert.truthy(result.type == "choice_cancel", "item_phase_passive should result in choice_cancel")
+  luassert.truthy(result.choice_id == choice.id, "should preserve choice_id")
+  luassert.truthy(result.actor_role_id == player.id, "should preserve actor_role_id")
 end
 
   return {

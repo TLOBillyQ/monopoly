@@ -1,3 +1,5 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local _new_game = support.new_game
@@ -14,15 +16,15 @@ local _t2_case_groups = {}
 _t2_case_groups.roll_dice_tests = {
   function()
     local results, total = roll._roll_dice(3, { 4, 5, 6 }, nil)
-    assert(#results == 3, "should return 3 results")
-    assert(results[1] == 4 and results[2] == 5 and results[3] == 6, "should use override values")
-    assert(total == 15, "total should sum override values")
+    luassert.truthy(#results == 3, "should return 3 results")
+    luassert.truthy(results[1] == 4 and results[2] == 5 and results[3] == 6, "should use override values")
+    luassert.truthy(total == 15, "total should sum override values")
   end,
   function()
     local results = roll._roll_dice(4, { 2, 3 }, { next_int = function() return 6 end })
-    assert(#results == 4, "should return 4 results")
-    assert(results[1] == 2 and results[2] == 3, "should use provided overrides")
-    assert(results[3] == 3 and results[4] == 3, "should repeat last override value")
+    luassert.truthy(#results == 4, "should return 4 results")
+    luassert.truthy(results[1] == 2 and results[2] == 3, "should use provided overrides")
+    luassert.truthy(results[3] == 3 and results[4] == 3, "should repeat last override value")
   end,
 }
 
@@ -54,9 +56,9 @@ _t2_case_groups.apply_dice_multiplier_tests = {
         raw_total = 3,
       })
     end)
-    assert(result == "move_ok", "move should finish through followup")
-    assert(called_total == 12, "multiplier should be applied when total equals raw_total")
-    assert(turn_mgr.game:player_pending_dice_multiplier(player) == 1, "multiplier should be reset")
+    luassert.truthy(result == "move_ok", "move should finish through followup")
+    luassert.truthy(called_total == 12, "multiplier should be applied when total equals raw_total")
+    luassert.truthy(turn_mgr.game:player_pending_dice_multiplier(player) == 1, "multiplier should be reset")
   end,
   function()
     local player = { id = 1, position = 1, status = { pending_dice_multiplier = 2 } }
@@ -85,7 +87,7 @@ _t2_case_groups.apply_dice_multiplier_tests = {
         raw_total = 8,
       })
     end)
-    assert(called_total == 10, "multiplier should be skipped when total already changed")
+    luassert.truthy(called_total == 10, "multiplier should be skipped when total already changed")
   end,
   function()
     local player = { id = 1, position = 1, status = { pending_dice_multiplier = 3 } }
@@ -114,30 +116,30 @@ _t2_case_groups.apply_dice_multiplier_tests = {
         raw_total = nil,
       })
     end)
-    assert(called_total == 6, "multiplier should be skipped when raw_total is nil")
+    luassert.truthy(called_total == 6, "multiplier should be skipped when raw_total is nil")
   end,
 }
 
 _t2_case_groups.roll_dice_extended_tests = {
   function()
     local results, total = roll._roll_dice(2, nil, { next_int = function() return 5 end })
-    assert(#results == 2 and results[1] == 5 and results[2] == 5, "rng path should cover all dice")
-    assert(total == 10, "rng path should sum results")
+    luassert.truthy(#results == 2 and results[1] == 5 and results[2] == 5, "rng path should cover all dice")
+    luassert.truthy(total == 10, "rng path should sum results")
   end,
   function()
     local results, total = roll._roll_dice(0, nil, { next_int = function() return 3 end })
-    assert(#results == 0, "zero dice should return empty result")
-    assert(total == 0, "zero dice should have zero total")
+    luassert.truthy(#results == 0, "zero dice should return empty result")
+    luassert.truthy(total == 0, "zero dice should have zero total")
   end,
   function()
     local results, total = roll._roll_dice(2, { 1, 2, 3 }, { next_int = function() return 6 end })
-    assert(#results == 2 and results[1] == 1 and results[2] == 2, "extra overrides should be ignored")
-    assert(total == 3, "total should only sum used overrides")
+    luassert.truthy(#results == 2 and results[1] == 1 and results[2] == 2, "extra overrides should be ignored")
+    luassert.truthy(total == 3, "total should only sum used overrides")
   end,
   function()
     local results, total = roll._roll_dice(3, { 2, 4, 6 }, { next_int = function() return 1 end })
-    assert(#results == 3 and results[3] == 6, "exact overrides should be preserved")
-    assert(total == 12, "exact overrides should sum correctly")
+    luassert.truthy(#results == 3 and results[3] == 6, "exact overrides should be preserved")
+    luassert.truthy(total == 12, "exact overrides should sum correctly")
   end,
 }
 
@@ -145,19 +147,19 @@ _t2_case_groups.resolve_wait_state_tests = {
   function()
     local game = { turn = { action_anim = { kind = "test" } }, dirty = {} }
     local state_name = require("src.turn.phases.land")._resolve_wait_state(game, "post_action", { player = { id = 1 } }, true)
-    assert(state_name == "wait_action_anim", "wait_action_anim should win when requested")
+    luassert.truthy(state_name == "wait_action_anim", "wait_action_anim should win when requested")
   end,
   function()
     local game = { turn = {}, dirty = {} }
     local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
-    assert(state_name == "wait_choice", "no action anim should still route through wait_choice")
-    assert(args.next_state == "move", "next state should be preserved")
+    luassert.truthy(state_name == "wait_choice", "no action anim should still route through wait_choice")
+    luassert.truthy(args.next_state == "move", "next state should be preserved")
   end,
   function()
     local game = { turn = { action_anim_queue = { { kind = "move_effect" } } }, dirty = {} }
     local state_name, args = require("src.turn.phases.land")._resolve_wait_state(game, "move", { player = { id = 1 } }, false)
-    assert(state_name == "wait_action_anim", "queued move effect should wait for action anim")
-    assert(args.next_state == "wait_choice", "non-anim wait should wrap back to wait_choice")
+    luassert.truthy(state_name == "wait_action_anim", "queued move effect should wait for action anim")
+    luassert.truthy(args.next_state == "wait_choice", "non-anim wait should wrap back to wait_choice")
   end,
 }
 
@@ -168,7 +170,7 @@ _t2_case_groups.update_countdown_tests = {
     game.turn.current_player_index = 2
     game.turn.pending_choice = { id = 1, kind = "test", owner_role_id = game.players[2].id }
     tick_ui_sync.update_countdown(game, state)
-    assert(game.turn.countdown_active == true, "pending choice should activate countdown")
+    luassert.truthy(game.turn.countdown_active == true, "pending choice should activate countdown")
   end,
   function()
     local game = _new_game()
@@ -177,7 +179,7 @@ _t2_case_groups.update_countdown_tests = {
     game.turn.detained_wait_seconds = 10
     game.turn.detained_wait_elapsed = 3
     tick_ui_sync.update_countdown(game, state)
-    assert(game.turn.countdown_seconds == 7, "detained wait should count down remaining seconds")
+    luassert.truthy(game.turn.countdown_seconds == 7, "detained wait should count down remaining seconds")
   end,
   function()
     local game = _new_game()
@@ -185,14 +187,14 @@ _t2_case_groups.update_countdown_tests = {
     state.action_button_active = true
     state.action_button_elapsed = 2
     tick_ui_sync.update_countdown(game, state)
-    assert(game.turn.countdown_active == true, "action button timer should activate countdown")
+    luassert.truthy(game.turn.countdown_active == true, "action button timer should activate countdown")
   end,
   function()
     local game = _new_game()
     local state = _build_loop_state()
     state.ui = { popup_active = true, popup_payload = { auto_close_seconds = 0 } }
     tick_ui_sync.update_countdown(game, state)
-    assert(game.turn.countdown_active == false or game.turn.countdown_active == true, "popup path should not error")
+    luassert.truthy(game.turn.countdown_active == false or game.turn.countdown_active == true, "popup path should not error")
   end,
 }
 
@@ -202,7 +204,7 @@ _t2_case_groups.is_action_button_wait_active_tests = {
     local state = _build_loop_state()
     local ports = _build_test_ports()
     g.turn.pending_choice = { id = 1 }
-    assert(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
+    luassert.truthy(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
       "pending choice should block action button wait")
   end,
   function()
@@ -210,7 +212,7 @@ _t2_case_groups.is_action_button_wait_active_tests = {
     local state = _build_loop_state()
     local ports = _build_test_ports()
     state.ui = { input_blocked = true }
-    assert(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
+    luassert.truthy(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
       "input blocked ui should block action button wait")
   end,
   function()
@@ -218,7 +220,7 @@ _t2_case_groups.is_action_button_wait_active_tests = {
     local state = _build_loop_state()
     local ports = _build_test_ports()
     state.ui = { popup_active = true }
-    assert(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
+    luassert.truthy(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
       "popup should block action button wait")
   end,
   function()
@@ -226,7 +228,7 @@ _t2_case_groups.is_action_button_wait_active_tests = {
     local state = _build_loop_state()
     local ports = _build_test_ports()
     g.finished = true
-    assert(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
+    luassert.truthy(turn_timer_policy.is_action_button_wait_active(g, state, ports) == false,
       "finished game should block action button wait")
   end,
 }

@@ -1,5 +1,7 @@
 ---@diagnostic disable
 -- luacheck: ignore 211
+require("test.bootstrap").install_package_paths()
+local luassert = assert(require("test.support.luassert_loader").load())
 local control = require("src.player.control")
 local support = require("test.support.shared_support")
 local _new_game = support.new_game
@@ -215,24 +217,24 @@ local function _extra_cases()
         })
       end)
 
-      assert(result == "wait_move_anim", "move phase should wait for move animation")
-      assert(args.next_state == "move_followup", "wait_move_anim should resume move_followup")
-      assert(args.next_args.mode == "resume_turn_move", "resume args should keep resume_turn_move mode")
-      assert(args.next_args.player == player, "resume args should preserve player")
-      assert(args.next_args.raw_total == 4, "resume args should preserve raw_total")
-      assert(args.next_args.move_result == move_result, "resume args should preserve move_result")
+      luassert.truthy(result == "wait_move_anim", "move phase should wait for move animation")
+      luassert.truthy(args.next_state == "move_followup", "wait_move_anim should resume move_followup")
+      luassert.truthy(args.next_args.mode == "resume_turn_move", "resume args should keep resume_turn_move mode")
+      luassert.truthy(args.next_args.player == player, "resume args should preserve player")
+      luassert.truthy(args.next_args.raw_total == 4, "resume args should preserve raw_total")
+      luassert.truthy(args.next_args.move_result == move_result, "resume args should preserve move_result")
 
       local anim_data = turn_mgr.game.turn.move_anim
-      assert(anim_data ~= nil, "move animation data should be queued")
-      assert(anim_data.seq == 1, "move animation seq should increment from current sequence")
-      assert(anim_data.player_id == 7, "move animation should preserve player id")
-      assert(anim_data.from_index == 5, "move animation should preserve start index")
-      assert(anim_data.to_index == 9, "move animation should use moved player position")
-      assert(anim_data.visited == move_result.visited, "move animation should preserve visited path")
-      assert(anim_data.steps == move_result.steps, "move animation should preserve steps")
-      assert(anim_data.stopped_on_roadblock == true, "move animation should preserve roadblock flag")
-      assert(anim_data.market_interrupt == true, "move animation should preserve market interrupt flag")
-      assert(turn_mgr.game.dirty.turn == true and turn_mgr.game.dirty.any == true, "queueing anim should mark game dirty")
+      luassert.truthy(anim_data ~= nil, "move animation data should be queued")
+      luassert.truthy(anim_data.seq == 1, "move animation seq should increment from current sequence")
+      luassert.truthy(anim_data.player_id == 7, "move animation should preserve player id")
+      luassert.truthy(anim_data.from_index == 5, "move animation should preserve start index")
+      luassert.truthy(anim_data.to_index == 9, "move animation should use moved player position")
+      luassert.truthy(anim_data.visited == move_result.visited, "move animation should preserve visited path")
+      luassert.truthy(anim_data.steps == move_result.steps, "move animation should preserve steps")
+      luassert.truthy(anim_data.stopped_on_roadblock == true, "move animation should preserve roadblock flag")
+      luassert.truthy(anim_data.market_interrupt == true, "move animation should preserve market interrupt flag")
+      luassert.truthy(turn_mgr.game.dirty.turn == true and turn_mgr.game.dirty.any == true, "queueing anim should mark game dirty")
     end,
     _test_move_phase_continue_interrupt_passes_direction_and_branch_parity = function()
       local player = {
@@ -280,40 +282,40 @@ local function _extra_cases()
         })
       end)
 
-      assert(result == "followup_ok", "continue-from-market path should finish through move_followup")
-      assert(captured_total == 2, "move phase should use remaining_steps when resuming from interrupt")
-      assert(captured_opts.direction == "left", "move opts should preserve interrupt facing")
-      assert(captured_opts.branch_parity == 11, "move opts should preserve branch parity")
-      assert(captured_opts.entered_inner == true, "move opts should preserve entered_inner")
-      assert(captured_followup_args.mode == "resume_turn_move", "followup should use resume_turn_move mode")
-      assert(captured_followup_args.player == player, "followup should preserve player")
-      assert(captured_followup_args.raw_total == 11, "followup should pass branch_parity as raw_total")
-      assert(captured_followup_args.move_result == move_result, "followup should preserve move_result")
+      luassert.truthy(result == "followup_ok", "continue-from-market path should finish through move_followup")
+      luassert.truthy(captured_total == 2, "move phase should use remaining_steps when resuming from interrupt")
+      luassert.truthy(captured_opts.direction == "left", "move opts should preserve interrupt facing")
+      luassert.truthy(captured_opts.branch_parity == 11, "move opts should preserve branch parity")
+      luassert.truthy(captured_opts.entered_inner == true, "move opts should preserve entered_inner")
+      luassert.truthy(captured_followup_args.mode == "resume_turn_move", "followup should use resume_turn_move mode")
+      luassert.truthy(captured_followup_args.player == player, "followup should preserve player")
+      luassert.truthy(captured_followup_args.raw_total == 11, "followup should pass branch_parity as raw_total")
+      luassert.truthy(captured_followup_args.move_result == move_result, "followup should preserve move_result")
     end,
     _test_resolve_phase_wait_result_with_wait_action_anim = function()
     local player = { id = 1, name = "P1" }
     local phase_res = { next_state = "move", next_args = { player = player, total = 10 }, wait_action_anim = true }
     local state, args = roll._resolve_phase_wait_result(phase_res, player, 10, 5)
-    assert(state == "wait_action_anim", "should return wait_action_anim state")
-    assert(args.next_state == "move", "should preserve next_state")
-    assert(args.next_args.total == 10, "should preserve total in next_args")
+    luassert.truthy(state == "wait_action_anim", "should return wait_action_anim state")
+    luassert.truthy(args.next_state == "move", "should preserve next_state")
+    luassert.truthy(args.next_args.total == 10, "should preserve total in next_args")
   end,
     _test_resolve_phase_wait_result_without_wait_action_anim = function()
     local player = { id = 1, name = "P1" }
     local phase_res = { next_state = "land", next_args = { player = player, total = 8 }, wait_action_anim = false }
     local state, args = roll._resolve_phase_wait_result(phase_res, player, 8, 4)
-    assert(state == "wait_choice", "should return wait_choice state when no anim wait")
-    assert(args.next_state == "land", "should preserve next_state")
+    luassert.truthy(state == "wait_choice", "should return wait_choice state when no anim wait")
+    luassert.truthy(args.next_state == "land", "should preserve next_state")
   end,
     _test_resolve_phase_wait_result_defaults = function()
     local player = { id = 1, name = "P1" }
     local phase_res = {}
     local state, args = roll._resolve_phase_wait_result(phase_res, player, 6, 3)
-    assert(state == "wait_choice", "should default to wait_choice")
-    assert(args.next_state == "move", "should default next_state to move")
-    assert(args.next_args.player == player, "should include player in default next_args")
-    assert(args.next_args.total == 6, "should include total in default next_args")
-    assert(args.next_args.raw_total == 3, "should include raw_total in default next_args")
+    luassert.truthy(state == "wait_choice", "should default to wait_choice")
+    luassert.truthy(args.next_state == "move", "should default next_state to move")
+    luassert.truthy(args.next_args.player == player, "should include player in default next_args")
+    luassert.truthy(args.next_args.total == 6, "should include total in default next_args")
+    luassert.truthy(args.next_args.raw_total == 3, "should include raw_total in default next_args")
   end,
     _test_validate_choice_actor_match = function()
     local g = _new_game()
@@ -321,7 +323,7 @@ local function _extra_cases()
     local choice = { id = 1, owner_role_id = p1.id }
     local action = { type = "choice_select", actor_role_id = p1.id }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    assert(result == true, "should return true when actor matches owner")
+    luassert.truthy(result == true, "should return true when actor matches owner")
   end,
     _test_validate_choice_actor_mismatch = function()
     local g = _new_game()
@@ -330,7 +332,7 @@ local function _extra_cases()
     local choice = { id = 1, owner_role_id = p1.id }
     local action = { type = "choice_select", actor_role_id = p2.id }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    assert(result == false, "should return false when actor does not match owner")
+    luassert.truthy(result == false, "should return false when actor does not match owner")
   end,
     _test_validate_choice_actor_no_owner = function()
     local g = _new_game()
@@ -338,7 +340,7 @@ local function _extra_cases()
     local choice = { id = 1 }
     local action = { type = "choice_select", actor_role_id = p1.id }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    assert(result == true, "should return true when choice has no owner")
+    luassert.truthy(result == true, "should return true when choice has no owner")
   end,
     _test_validate_choice_actor_no_actor_id = function()
     local g = _new_game()
@@ -346,7 +348,7 @@ local function _extra_cases()
     local choice = { id = 1, owner_role_id = p1.id }
     local action = { type = "choice_select" }
     local result = dispatch_validator.validate_choice_actor(g, action, choice)
-    assert(result == false, "should return false when action has no actor_role_id")
+    luassert.truthy(result == false, "should return false when action has no actor_role_id")
   end,
     _test_log_missing_auto_choice_action_logs_once = function()
     local g = _new_game()
@@ -355,7 +357,7 @@ local function _extra_cases()
     local ctx = { pending_choice = { id = 123, kind = "test_choice" }, current_player_computer_controlled = true }
     gameplay_loop._log_missing_auto_choice_action(state, ctx)
     gameplay_loop._log_missing_auto_choice_action(state, ctx)
-    assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == true, "should mark log_once key")
+    luassert.truthy(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == true, "should mark log_once key")
   end,
     _test_log_missing_auto_choice_action_skips_when_waiting = function()
     local g = _new_game()
@@ -364,7 +366,7 @@ local function _extra_cases()
     state.auto_runner.waiting_for_interval = true
     local ctx = { pending_choice = { id = 123, kind = "test_choice" }, current_player_computer_controlled = true }
     gameplay_loop._log_missing_auto_choice_action(state, ctx)
-    assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when waiting for interval")
+    luassert.truthy(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when waiting for interval")
   end,
     _test_log_missing_auto_choice_action_skips_when_not_auto = function()
     local g = _new_game()
@@ -372,7 +374,7 @@ local function _extra_cases()
     runtime_state.ensure_debug_runtime(state)
     local ctx = { pending_choice = { id = 123, kind = "test_choice" }, current_player_computer_controlled = false }
     gameplay_loop._log_missing_auto_choice_action(state, ctx)
-    assert(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when not auto")
+    luassert.truthy(state.debug_runtime.log_once["auto_runner_choice_no_action_123"] == nil, "should not log when not auto")
   end,
     _test_resolve_wait_state_prefers_wait_action_anim = _t2_case_groups.resolve_wait_state_tests[1],
     _test_resolve_wait_state_without_anim_returns_wait_choice = _t2_case_groups.resolve_wait_state_tests[2],
