@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local _with_patches = support.with_patches
 local _build_role_with_events = support.build_role_with_events
@@ -28,16 +28,12 @@ local function _build_ui_state()
   }
 end
 
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个顶层 describe 各带钩子,按钩子边界
--- 拍平成两个 Test* 类(open 路径 only before_each;routing 路径 before+after),
--- 用例数与改写前一一对应(2 + 3 = 5 例);断言从裸 assert 切到 lu.assertXxx。
-TestSkinPanelIntentCanvasOpenViaViewCommandDispatch = {}
-
-function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:setUp()
+describe("TestSkinPanelIntentCanvasOpenViaViewCommandDispatch", function()
+before_each(function()
   skin_panel.reset_for_tests()
-end
+end)
 
-function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:test_open_skin_panel_intent_switches_canvas_for_resolved_role()
+it("test_open_skin_panel_intent_switches_canvas_for_resolved_role", function()
   local clicker_events = {}
   local other_events = {}
   local clicker = _build_role_with_events(1, clicker_events)
@@ -65,9 +61,9 @@ function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:test_open_skin_pane
     "clicker role must receive 显示皮肤商店 — model open without canvas show is the v102 bug")
   luassert.truthy(not _has_event(other_events, "显示皮肤商店"),
     "non-clicker role must not have their canvas yanked to skin shop")
-end
+end)
 
-function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:test_open_skin_panel_intent_broadcasts_when_actor_role_id_missing()
+it("test_open_skin_panel_intent_broadcasts_when_actor_role_id_missing", function()
   local role1_events = {}
   local role2_events = {}
   local role1 = _build_role_with_events(1, role1_events)
@@ -91,10 +87,10 @@ function TestSkinPanelIntentCanvasOpenViaViewCommandDispatch:test_open_skin_pane
     "broadcast path must reach role1 when actor_role_id is missing")
   luassert.truthy(_has_event(role2_events, "显示皮肤商店"),
     "broadcast path must reach role2 when actor_role_id is missing")
-end
+end)
+end)
 
-TestSkinPanelIntentCanvasActionButtonRouting = {}
-
+describe("TestSkinPanelIntentCanvasActionButtonRouting", function()
 local function _spec_named(specs, name)
   for _, spec in ipairs(specs) do
     if spec.name == name then
@@ -117,19 +113,19 @@ local function _state_with(selected)
   }
 end
 
-function TestSkinPanelIntentCanvasActionButtonRouting:setUp()
+before_each(function()
   skin_panel.reset_for_tests()
   skin_panel.configure_catalog_for_tests({
     { product_id = "s1", name = "皮肤一" },
     { product_id = "s2", name = "皮肤二" },
   })
-end
+end)
 
-function TestSkinPanelIntentCanvasActionButtonRouting:tearDown()
+after_each(function()
   skin_panel.reset_for_tests()
-end
+end)
 
-function TestSkinPanelIntentCanvasActionButtonRouting:test_action_button_routes_activate_slot_for_equipped_slot()
+it("test_action_button_routes_activate_slot_for_equipped_slot", function()
   -- The input route should report the clicked slot. The transaction flow owns
   -- whether that activation equips or unequips.
   local state = _state_with("s1")
@@ -140,18 +136,18 @@ function TestSkinPanelIntentCanvasActionButtonRouting:test_action_button_routes_
   luassert.truthy(intent.action.type == "activate_slot",
     "action button route should leave equip/unequip selection to the transaction flow")
   luassert.truthy(intent.action.slot_index == 1, "activate_slot intent must carry the clicked slot index")
-end
+end)
 
-function TestSkinPanelIntentCanvasActionButtonRouting:test_action_button_routes_activate_slot_for_unequipped_slot()
+it("test_action_button_routes_activate_slot_for_unequipped_slot", function()
   local state = _state_with("s1")
   local spec = _spec_named(skin_intents.build_route_specs(state), skin_nodes.action_buttons[2])
   luassert.is_not_nil(spec, "slot 2 action button must have a canvas route")
   local intent = spec.build_intent()
   luassert.truthy(intent.action.type == "activate_slot", "non-equipped slot's button should emit activate_slot")
   luassert.truthy(intent.action.slot_index == 2, "activate_slot intent must carry the clicked slot index")
-end
+end)
 
-function TestSkinPanelIntentCanvasActionButtonRouting:test_action_intent_does_not_read_live_equipped_state()
+it("test_action_intent_does_not_read_live_equipped_state", function()
   local state = _state_with(nil)
   local specs = skin_intents.build_route_specs(state)
   local spec = _spec_named(specs, skin_nodes.action_buttons[1])
@@ -161,14 +157,7 @@ function TestSkinPanelIntentCanvasActionButtonRouting:test_action_intent_does_no
   state.ui.skin_panel.selected_by_role["1"] = "s1"
   luassert.truthy(spec.build_intent().action.type == "activate_slot",
     "equipped state changes should not alter the input-layer action")
-end
+end)
 
 
--- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
--- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
--- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
--- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
-return require("test.support.multi_class_return").merge(
-  TestSkinPanelIntentCanvasOpenViaViewCommandDispatch,
-  TestSkinPanelIntentCanvasActionButtonRouting
-)
+end)

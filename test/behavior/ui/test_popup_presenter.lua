@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- 弹层簇合并规约（#191）：popup_presenter 生命周期 + 卡牌展示广播（原
 -- card_reveal_broadcast_spec 并入）。共享 _make_state / 角色扇出 / reveal fixture。
 local support = require("test.support.shared_support")
@@ -92,10 +92,8 @@ end
 local function _push_broadcast_chance(state)
   popup_presenter.push_popup(state, { title = "机会卡", kind = "chance_card", broadcast = true })
 end
-
-TestPopupPresenter = {}
-
-function TestPopupPresenter:test_push_and_close_roundtrip_resets_popup_state()
+describe("TestPopupPresenter", function()
+it("test_push_and_close_roundtrip_resets_popup_state", function()
   local state = _make_state()
 
   _with_patches(_render_patches(), function()
@@ -109,12 +107,12 @@ function TestPopupPresenter:test_push_and_close_roundtrip_resets_popup_state()
 
   _assert_eq(state.ui.popup_active, false, "popup should be inactive after close")
   _assert_eq(state.ui.popup_broadcast, false, "broadcast flag should reset after close")
-end
+end)
 
 -- 回归:弹窗开/关必须标 ui_dirty。修复前 close_popup 只清旗标不触发重绘,
 -- 回合结束阶段用卡时(弹窗关闭后再无其他 dirty 源)道具槽保持「弹窗期间渲染的
 -- 不可点状态」直到窗口超时——玩家只能干等倒计时到回合结束。
-function TestPopupPresenter:test_popup_open_and_close_both_mark_ui_dirty_for_rerender()
+it("test_popup_open_and_close_both_mark_ui_dirty_for_rerender", function()
   local state = _make_state()
   local runtime_state = require("src.ui.state.runtime")
 
@@ -130,9 +128,9 @@ function TestPopupPresenter:test_popup_open_and_close_both_mark_ui_dirty_for_rer
 
   _assert_eq(runtime_state.is_ui_dirty(state), true,
     "close_popup must mark ui dirty: without it item slots stay untouchable until choice timeout")
-end
+end)
 
-function TestPopupPresenter:test_close_without_active_popup_is_a_noop()
+it("test_close_without_active_popup_is_a_noop", function()
   local state = _make_state()
   local hide_calls = 0
 
@@ -146,9 +144,9 @@ function TestPopupPresenter:test_close_without_active_popup_is_a_noop()
 
   _assert_eq(hide_calls, 0, "close without active popup must not hide anything")
   _assert_eq(state.ui.popup_active, false, "popup stays inactive")
-end
+end)
 
-function TestPopupPresenter:test_push_requires_payload_and_close_warns_when_inactive_262()
+it("test_push_requires_payload_and_close_warns_when_inactive_262", function()
   -- kills assert 消息 "missing popup payload" -> nil 与
   -- logger.warn 消息 "close_popup ignored: popup not active" -> nil。
   luassert.has_error(function()
@@ -165,9 +163,9 @@ function TestPopupPresenter:test_push_requires_payload_and_close_warns_when_inac
   end)
   _assert_eq(warns[1], "close_popup ignored: popup not active",
     "close without an active popup must warn with the exact label")
-end
+end)
 
-function TestPopupPresenter:test_deferred_popups_replay_in_order()
+it("test_deferred_popups_replay_in_order", function()
   local state = _make_state()
 
   _with_patches(_render_patches(), function()
@@ -188,9 +186,9 @@ function TestPopupPresenter:test_deferred_popups_replay_in_order()
   end)
 
   _assert_eq(state.ui.popup_active, false, "queue drained popup should be inactive")
-end
+end)
 
-function TestPopupPresenter:test_close_ignores_stale_roll_anim_outside_wait_phase()
+it("test_close_ignores_stale_roll_anim_outside_wait_phase", function()
   -- 只有「wait_action_anim 相位 + roll 动画」才保持骰子屏;残留的 roll 动画
   -- 载荷在其它相位不该劫持关屏后的回屏目标。
   local state = _make_state()
@@ -210,9 +208,9 @@ function TestPopupPresenter:test_close_ignores_stale_roll_anim_outside_wait_phas
   end)
 
   _assert_eq(closed_to, canvas.CANVAS_BASE, "stale roll anim outside wait phase should not keep dice canvas")
-end
+end)
 
-function TestPopupPresenter:test_closing_bankruptcy_popup_keeps_spectator_on_market_return_canvas()
+it("test_closing_bankruptcy_popup_keeps_spectator_on_market_return_canvas", function()
   -- 关屏 kind 取自 ui.popup_kind:破产弹窗关屏时旁观 role 也跟到回屏目标
   -- (黑市),而不是被当成普通卡牌弹窗打回 fallback。
   local state = _make_state()
@@ -230,9 +228,9 @@ function TestPopupPresenter:test_closing_bankruptcy_popup_keeps_spectator_on_mar
 
   _assert_eq(_last_switch_target(switches, 2), canvas.CANVAS_MARKET,
     "spectator should follow bankruptcy close to the market return canvas")
-end
+end)
 
-function TestPopupPresenter:test_popup_render_and_hide_survive_missing_screen_tables()
+it("test_popup_render_and_hide_survive_missing_screen_tables", function()
   -- 渲染/隐藏对 screen 表缺失(或 root 缺失)按守卫跳过,不摸空节点。
   local nil_node_touches = 0
   local ui = {
@@ -269,9 +267,9 @@ function TestPopupPresenter:test_popup_render_and_hide_survive_missing_screen_ta
   end)
 
   _assert_eq(nil_node_touches, 0, "render must never touch a nil node name")
-end
+end)
 
-function TestPopupPresenter:test_dismiss_popup_allows_non_broadcast_without_actor_check()
+it("test_dismiss_popup_allows_non_broadcast_without_actor_check", function()
   -- Regression for --mutate and→or at L68:
   -- `ui and ui.popup_broadcast` → `or`. With a non-broadcast popup
   -- (popup_broadcast is nil), the original skips the actor check and
@@ -284,9 +282,9 @@ function TestPopupPresenter:test_dismiss_popup_allows_non_broadcast_without_acto
       "non-broadcast popup should allow bystander dismiss without actor check")
   end)
   _assert_eq(state.ui.popup_active, false, "popup should close after dismiss")
-end
+end)
 
-function TestPopupPresenter:test_close_popup_defaults_kind_to_card_when_popup_kind_nil()
+it("test_close_popup_defaults_kind_to_card_when_popup_kind_nil", function()
   -- Regression for --mutate "card"→nil at L49:
   -- `local kind = ui.popup_kind or "card"` — when ui.popup_kind is nil,
   -- the default "card" is used. Mutating to nil would pass nil as kind
@@ -309,9 +307,9 @@ function TestPopupPresenter:test_close_popup_defaults_kind_to_card_when_popup_ki
   end)
   _assert_eq(switch_calls[1], "card",
     "close_popup should default kind to 'card' when ui.popup_kind is nil")
-end
+end)
 
-function TestPopupPresenter:test_dismiss_popup_reports_close_permission()
+it("test_dismiss_popup_reports_close_permission", function()
   local state = _make_state()
   state.ui.current_action_role_id = 1
 
@@ -327,9 +325,9 @@ function TestPopupPresenter:test_dismiss_popup_reports_close_permission()
   end)
 
   _assert_eq(state.ui.popup_active, false, "popup should close after operator dismiss")
-end
+end)
 
-function TestPopupPresenter:test_broadcast_popup_excludes_excluded_role_from_canvas_switch()
+it("test_broadcast_popup_excludes_excluded_role_from_canvas_switch", function()
   -- 2026-08-25 买家免展示口径:载荷带 exclude_role_id 的广播弹窗,被排除角色
   -- 开屏不切去弹窗、收屏也不回切(其 canvas 全程未离开,黑市屏不动);
   -- 其余角色照常切去弹窗、收屏回自己面板。排除只属本条弹窗:收屏后再推
@@ -369,9 +367,9 @@ function TestPopupPresenter:test_broadcast_popup_excludes_excluded_role_from_can
   end)
   _assert_eq(_has_switch(next_switches, 1, canvas.CANVAS_POPUP), true,
     "buyer should see the next non-excluding broadcast popup (exclusion must not leak across popups)")
-end
+end)
 
-function TestPopupPresenter:test_excluded_buyer_cannot_dismiss_broadcast_popup()
+it("test_excluded_buyer_cannot_dismiss_broadcast_popup", function()
   -- 2026-08-25 买家免展示口径:被排除的买家看不到展示也无关闭权——dismiss
   -- 一律拒绝(含程序化 popup_confirm),收屏只走超时自动关闭;旁观者点击
   -- 依旧无效。超时装订的 close_popup 端口路径照常收屏。
@@ -393,9 +391,9 @@ function TestPopupPresenter:test_excluded_buyer_cannot_dismiss_broadcast_popup()
   end)
 
   _assert_eq(state.ui.popup_active, false, "timeout close path should still close the popup")
-end
+end)
 
-function TestPopupPresenter:test_broadcast_flag_gates_bystander_popup_canvas()
+it("test_broadcast_flag_gates_bystander_popup_canvas", function()
   -- broadcast 弹窗把旁观者切到弹窗屏;非 broadcast 不动旁观者。
   local roles = _make_roles(2)
 
@@ -418,9 +416,9 @@ function TestPopupPresenter:test_broadcast_flag_gates_bystander_popup_canvas()
     "bystander should see popup canvas for broadcast chance popup")
   _assert_eq(_bystander_on_popup(plain_switches), false,
     "non-broadcast popup should not switch bystander to popup canvas")
-end
+end)
 
-function TestPopupPresenter:test_closing_broadcast_popup_restores_bystander_to_previous_panel()
+it("test_closing_broadcast_popup_restores_bystander_to_previous_panel", function()
   -- 旁观者被打断前开着的面板(道具图鉴/皮肤面板)在关屏时按面板态回屏。
   local atlas_state = _make_state()
   item_atlas.open(atlas_state, 2)
@@ -439,9 +437,9 @@ function TestPopupPresenter:test_closing_broadcast_popup_restores_bystander_to_p
   end)
   _assert_eq(_last_switch_target(skin_switches, 2), skin_nodes.canvas,
     "closing broadcast popup should restore bystander to skin panel canvas")
-end
+end)
 
-function TestPopupPresenter:test_bystander_return_canvas_reresolves_at_close_time()
+it("test_bystander_return_canvas_reresolves_at_close_time", function()
   -- 回屏按关闭时刻的面板态重解析:展示期间面板被其它流程关掉时回基础屏,
   -- 不回开屏时快照的过期画面。
   local state = _make_state()
@@ -456,12 +454,12 @@ function TestPopupPresenter:test_bystander_return_canvas_reresolves_at_close_tim
 
   _assert_eq(_last_switch_target(switches, 2), canvas.CANVAS_BASE,
     "bystander should return to base canvas when the interrupted panel was closed mid-broadcast")
-end
+end)
 
 -- #583:旁观者图鉴停留在「选中放大」态时,广播弹窗收屏回图鉴必须清掉陈旧放大卡
 -- (selected_item_id + 覆盖层 per-role 显隐)——否则放大覆盖层住图鉴 canvas,
 -- 随回屏复活/滞留。观测可见行为:ui.set_visible 捕获三节点终态,不钉内部调用。
-function TestPopupPresenter:test_bystander_return_to_atlas_clears_stale_enlarged_card()
+it("test_bystander_return_to_atlas_clears_stale_enlarged_card", function()
   local state = _make_state()
   state.ui.current_action_role_id = 1
   local vis = {}
@@ -486,9 +484,9 @@ function TestPopupPresenter:test_bystander_return_to_atlas_clears_stale_enlarged
   for _, node in ipairs({ item_atlas_nodes.enlarged_card, item_atlas_nodes.close_hint_label, item_atlas_nodes.close_blank }) do
     luassert.truthy(vis[node] == false, node .. " should be hidden on bystander return")
   end
-end
+end)
 
-function TestPopupPresenter:test_closing_broadcast_popup_routes_operator_to_market_and_bystander_back()
+it("test_closing_broadcast_popup_routes_operator_to_market_and_bystander_back", function()
   -- Story10/11:黑市在展示期间打开,关屏 per-role 分道 —— 行动者进黑市,
   -- 旁观者回自己的面板态,黑市屏不广播。
   local state = _make_state()
@@ -506,9 +504,9 @@ function TestPopupPresenter:test_closing_broadcast_popup_routes_operator_to_mark
     "operator should land on market canvas after closing broadcast popup")
   _assert_eq(_last_switch_target(switches, 2), item_atlas_nodes.canvas,
     "bystander should return to own panel, not follow operator into market")
-end
+end)
 
-function TestPopupPresenter:test_bystander_restore_falls_back_to_runtime_role_id_when_ctx_lacks_it()
+it("test_bystander_restore_falls_back_to_runtime_role_id_when_ctx_lacks_it", function()
   -- role_context 解析不出 role_id 时(如映射失败的观战 role),回屏分道
   -- 回退用 runtime 侧的 role id,旁观者仍能回到被打断前的面板。
   local state = _make_state()
@@ -526,9 +524,9 @@ function TestPopupPresenter:test_bystander_restore_falls_back_to_runtime_role_id
 
   _assert_eq(_last_switch_target(switches, 2), item_atlas_nodes.canvas,
     "bystander restore should fall back to runtime-resolved role id")
-end
+end)
 
-function TestPopupPresenter:test_bystander_popup_confirm_is_ignored_for_broadcast_popup()
+it("test_bystander_popup_confirm_is_ignored_for_broadcast_popup", function()
   local state = _make_state()
   state.ui.current_action_role_id = 1
   local closed = false
@@ -546,9 +544,9 @@ function TestPopupPresenter:test_bystander_popup_confirm_is_ignored_for_broadcas
     ports.dispatch(state, { type = "popup_confirm", actor_role_id = 1 })
     _assert_eq(closed, true, "operator should be able to close broadcast popup")
   end)
-end
+end)
 
-function TestPopupPresenter:test_real_intent_path_attaches_click_actor_for_popup_confirm()
+it("test_real_intent_path_attaches_click_actor_for_popup_confirm", function()
   -- #143 回归:真机 intent 由 route_popup 构造(不带 actor),actor 只能靠
   -- 命令定义的 requires_event_actor 从点击事件附加;此前定义缺标志,
   -- 行动者本人也关不掉广播弹窗。
@@ -582,9 +580,9 @@ function TestPopupPresenter:test_real_intent_path_attaches_click_actor_for_popup
     _dispatch_click_from(roles[1])
     _assert_eq(closed, true, "operator click via real intent path should close broadcast popup")
   end)
-end
+end)
 
-function TestPopupPresenter:test_item_tile_landing_reveals_to_bystander_through_real_queue()
+it("test_item_tile_landing_reveals_to_bystander_through_real_queue", function()
   -- 2026-08-18 换皮(CONTEXT「卡牌展示广播」 修订)+ 2026-08-22 #543 口径反转:
   -- 道具获得展示全来源统一走「卡牌展示屏」弹窗全员广播。
   -- 全链路拼接:effect_transit 执行器 → 真实 game 队列 + 真实 intent 派发链,
@@ -616,9 +614,9 @@ function TestPopupPresenter:test_item_tile_landing_reveals_to_bystander_through_
   _assert_eq(payload.title, "道具卡", "gain popup title mismatch")
   _assert_eq(payload.broadcast, true, "gain popup should broadcast to all roles")
   _assert_eq(payload.image_ref, anim.item_id, "gain popup image should match the drawn item")
-end
+end)
 
-function TestPopupPresenter:test_route_popup_falls_back_to_static_dismiss_nodes_without_ui()
+it("test_route_popup_falls_back_to_static_dismiss_nodes_without_ui", function()
   -- kills _dismiss_nodes 的 `state.ui and state.ui.popup_screen` and->or 与
   -- _popup_confirm_intent 的 `state.ui and state.ui.popup_active` and->or:
   -- state 无 ui 时 route 必须静默回落静态节点表,or 变异体会在 nil 上索引报错。
@@ -628,9 +626,9 @@ function TestPopupPresenter:test_route_popup_falls_back_to_static_dismiss_nodes_
     "without ui the popup route should fall back to static dismiss nodes")
   local intent = specs[1].build_intent()
   luassert.truthy(intent == nil, "without ui there is no active popup, so no confirm intent")
-end
+end)
 
-function TestPopupPresenter:test_route_popup_uses_screen_dismiss_nodes_when_present()
+it("test_route_popup_uses_screen_dismiss_nodes_when_present", function()
   -- kills _dismiss_nodes 的两个 or->and/and->or 链:弹窗屏提供自定义
   -- dismiss_nodes 时必须用它而不是静态回落表。
   local state = {
@@ -644,18 +642,18 @@ function TestPopupPresenter:test_route_popup_uses_screen_dismiss_nodes_when_pres
   luassert.truthy(type(specs) == "table" and #specs == 2, "specs should mirror the screen dismiss nodes")
   _assert_eq(specs[1].name, "custom_dismiss_1", "first spec should use the screen dismiss node")
   _assert_eq(specs[2].name, "custom_dismiss_2", "second spec should use the screen dismiss node")
-end
+end)
 
-function TestPopupPresenter:test_route_popup_falls_back_to_static_nodes_when_screen_absent()
+it("test_route_popup_falls_back_to_static_nodes_when_screen_absent", function()
   -- kills L1 require 换 nil:弹窗屏缺失(ui 在但无 popup_screen)时回落
   -- 静态节点表,require 被删会让 nodes.dismiss_nodes 索引 nil 报错。
   local state = { ui = {} }
   local specs = route_popup.build(state)
   luassert.truthy(type(specs) == "table" and #specs > 0,
     "without popup_screen the route should fall back to the static dismiss nodes")
-end
+end)
 
-function TestPopupPresenter:test_choice_close_returns_excluded_buyer_to_base_canvas()
+it("test_choice_close_returns_excluded_buyer_to_base_canvas", function()
   -- #604 黑市收屏滞留回归:买家在广播弹窗存活期关闭黑市,收屏走弹窗分支,
   -- 排除口径若整体跳过买家,「隐藏黑市屏」事件永远不发,客户端屏滞留到
   -- 无关 canvas 切换(真机实测 3.1s/7.3s)。此时黑市已随 choice 关闭,
@@ -687,7 +685,7 @@ function TestPopupPresenter:test_choice_close_returns_excluded_buyer_to_base_can
     "excluded buyer must still not be switched to the popup canvas")
   _assert_eq(_has_switch(switches, 2, canvas.CANVAS_POPUP), true,
     "bystanders still follow the broadcast popup canvas")
-end
+end)
 
 
-return TestPopupPresenter
+end)

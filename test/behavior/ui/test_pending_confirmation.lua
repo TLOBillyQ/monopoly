@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- 二次确认屏状态深模块的纯状态行为规约（GLOSSARY.md「二次确认屏」）。
 -- 覆盖 enter/confirm/cancel × 两来源、重入与互斥语义（单记录：后 enter 顶掉
 -- 已有记录）、item_phase_ask 的确认闩锁，以及 clear 的来源过滤。
@@ -19,10 +19,8 @@ local SOURCES = {
   pending_confirmation.SOURCE_CHOICE_SELECT,
   pending_confirmation.SOURCE_ITEM_PHASE_ASK,
 }
-
-TestPendingConfirmation = {}
-
-TestPendingConfirmation["test_ui 层入口是 state 深模块的同一引用(arch:ui 内部一律经 ui.state 引用)"] = function(self)
+describe("TestPendingConfirmation", function()
+it("test_ui 层入口是 state 深模块的同一引用(arch:ui 内部一律经 ui.state 引用)", function()
   -- src.ui.state.pending_confirmation 是纯 re-export 转接(turn_no_ui 的架构注释
   -- 在转接模块里);钉住同一引用,转接被改道(如复制一份实现)时此处即刻断裂。
   -- 清 package.loaded 重加载:转接 chunk 只在加载时执行,得在 case 内重放才能让
@@ -34,9 +32,9 @@ TestPendingConfirmation["test_ui 层入口是 state 深模块的同一引用(arc
   package.loaded[name] = saved
 
   luassert.is.equal(pending_confirmation, reexport)
-end
+end)
 
-TestPendingConfirmation["test_enter/confirm 各来源均建立并弹出同一条记录"] = function(self)
+it("test_enter/confirm 各来源均建立并弹出同一条记录", function()
   for _, source in ipairs(SOURCES) do
     local state = {}
     local intent = { type = "ui_button", id = "item_slot_1" }
@@ -61,9 +59,9 @@ TestPendingConfirmation["test_enter/confirm 各来源均建立并弹出同一条
     luassert.is_false(pending_confirmation.is_active(state))
     luassert.is_nil(pending_confirmation.active_source(state))
   end
-end
+end)
 
-TestPendingConfirmation["test_enter/cancel 各来源均弹出记录且不留活动状态"] = function(self)
+it("test_enter/cancel 各来源均弹出记录且不留活动状态", function()
   for _, source in ipairs(SOURCES) do
     local state = {}
     luassert.is_true(pending_confirmation.enter(state, source))
@@ -71,22 +69,22 @@ TestPendingConfirmation["test_enter/cancel 各来源均弹出记录且不留活�
     luassert.is.equal(source, record.source)
     luassert.is_false(pending_confirmation.is_active(state))
   end
-end
+end)
 
-TestPendingConfirmation["test_未激活时 confirm/cancel 返回 nil"] = function(self)
+it("test_未激活时 confirm/cancel 返回 nil", function()
   local state = {}
   luassert.is_nil(pending_confirmation.confirm(state))
   luassert.is_nil(pending_confirmation.cancel(state))
   luassert.is_false(pending_confirmation.is_active(state))
-end
+end)
 
-TestPendingConfirmation["test_非法参数的 enter 被拒绝"] = function(self)
+it("test_非法参数的 enter 被拒绝", function()
   luassert.is_false(pending_confirmation.enter(nil, pending_confirmation.SOURCE_CHOICE_SELECT))
   luassert.is_false(pending_confirmation.enter({}, "unknown_source"))
   luassert.is_false(pending_confirmation.enter({}, nil))
-end
+end)
 
-TestPendingConfirmation["test_互斥语义：单记录，另一来源 enter 顶掉已有记录"] = function(self)
+it("test_互斥语义：单记录，另一来源 enter 顶掉已有记录", function()
   local state = {}
   local select_intent = { type = "choice_select", option_id = "opt1" }
   pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
@@ -103,9 +101,9 @@ TestPendingConfirmation["test_互斥语义：单记录，另一来源 enter 顶�
   local record = pending_confirmation.confirm(state)
   luassert.is.equal(pending_confirmation.SOURCE_CHOICE_SELECT, record.source)
   luassert.is_false(pending_confirmation.is_item_phase_confirmed(state))
-end
+end)
 
-TestPendingConfirmation["test_重入语义：同来源再次 enter 覆盖 payload"] = function(self)
+it("test_重入语义：同来源再次 enter 覆盖 payload", function()
   local state = {}
   pending_confirmation.enter(state, pending_confirmation.SOURCE_CHOICE_SELECT, {
     option_id = "opt1",
@@ -117,9 +115,9 @@ TestPendingConfirmation["test_重入语义：同来源再次 enter 覆盖 payloa
   }))
   luassert.is.equal("opt2", pending_confirmation.option_id(state))
   luassert.is.equal("market", pending_confirmation.source_screen(state))
-end
+end)
 
-TestPendingConfirmation["test_item_phase_ask 的 confirm 置确认闩锁，cancel/reset 清除"] = function(self)
+it("test_item_phase_ask 的 confirm 置确认闩锁，cancel/reset 清除", function()
   local state = {}
   pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   pending_confirmation.confirm(state)
@@ -136,16 +134,16 @@ TestPendingConfirmation["test_item_phase_ask 的 confirm 置确认闩锁，cance
   pending_confirmation.confirm(state)
   pending_confirmation.reset_item_phase_confirmed(state)
   luassert.is_false(pending_confirmation.is_item_phase_confirmed(state))
-end
+end)
 
-TestPendingConfirmation["test_choice_select 的 confirm 不影响 item_phase 闩锁"] = function(self)
+it("test_choice_select 的 confirm 不影响 item_phase 闩锁", function()
   local state = {}
   pending_confirmation.enter(state, pending_confirmation.SOURCE_CHOICE_SELECT)
   pending_confirmation.confirm(state)
   luassert.is_false(pending_confirmation.is_item_phase_confirmed(state))
-end
+end)
 
-TestPendingConfirmation["test_clear 按来源过滤：匹配才清除，nil 清除任意来源"] = function(self)
+it("test_clear 按来源过滤：匹配才清除，nil 清除任意来源", function()
   local state = {}
   pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
 
@@ -158,9 +156,9 @@ TestPendingConfirmation["test_clear 按来源过滤：匹配才清除，nil 清�
   pending_confirmation.enter(state, pending_confirmation.SOURCE_CHOICE_SELECT)
   pending_confirmation.clear(state)
   luassert.is_false(pending_confirmation.is_active(state))
-end
+end)
 
-TestPendingConfirmation["test_clear 丢弃记录但不动 item_phase 闩锁（force-skip 语义）"] = function(self)
+it("test_clear 丢弃记录但不动 item_phase 闩锁（force-skip 语义）", function()
   local state = {}
   pending_confirmation.enter(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   pending_confirmation.confirm(state)
@@ -169,9 +167,9 @@ TestPendingConfirmation["test_clear 丢弃记录但不动 item_phase 闩锁（fo
   pending_confirmation.clear(state, pending_confirmation.SOURCE_ITEM_PHASE_ASK)
   luassert.is_false(pending_confirmation.is_active(state))
   luassert.is_true(pending_confirmation.is_item_phase_confirmed(state))
-end
+end)
 
-TestPendingConfirmation["test_弹出后不在 state 留残余键"] = function(self)
+it("test_弹出后不在 state 留残余键", function()
   local state = {}
   pending_confirmation.enter(state, pending_confirmation.SOURCE_CHOICE_SELECT, {
     intent = { type = "choice_select", option_id = "opt1" },
@@ -183,9 +181,9 @@ TestPendingConfirmation["test_弹出后不在 state 留残余键"] = function(se
   pending_confirmation.confirm(state)
   pending_confirmation.reset_item_phase_confirmed(state)
   luassert.is_nil(state._pending_confirmation)
-end
+end)
 
-TestPendingConfirmation["test_空表/非表 state 上的读接口安全返回未激活"] = function(self)
+it("test_空表/非表 state 上的读接口安全返回未激活", function()
   luassert.is_false(pending_confirmation.is_active(nil))
   luassert.is_false(pending_confirmation.is_source_active(nil, pending_confirmation.SOURCE_CHOICE_SELECT))
   luassert.is_nil(pending_confirmation.active_source({}))
@@ -195,7 +193,7 @@ TestPendingConfirmation["test_空表/非表 state 上的读接口安全返回未
   luassert.is_false(pending_confirmation.is_item_phase_confirmed({}))
   pending_confirmation.reset_item_phase_confirmed({})
   pending_confirmation.clear(nil)
-end
+end)
 
 
-return TestPendingConfirmation
+end)

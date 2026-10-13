@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- target 选择屏 Screen 深模块直测：descriptor 字段 + 路由意图 + inert 确认键。
 -- 用 shared_support 的 choice_modal fixture（与 choice_routes_spec 同款）。
 local registry = require("src.ui.screens_registry")
@@ -34,11 +34,8 @@ local function _capturing_warn(fn)
   return warned
 end
 
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- 无钩子不拆类,用例数与改写前一一对应(8 例);断言从裸 assert 切到 lu.assertXxx。
-TestTargetChoiceScreen = {}
-
-function TestTargetChoiceScreen:test_exposes_a_descriptor_with_the_pinned_target_fields()
+describe("TestTargetChoiceScreen", function()
+it("test_exposes_a_descriptor_with_the_pinned_target_fields", function()
   local d = target_screen.descriptor()
   luassert.truthy(d.key == "target", "descriptor key is target")
   luassert.is_not_nil(d.root, "has root/canvas node")
@@ -46,15 +43,15 @@ function TestTargetChoiceScreen:test_exposes_a_descriptor_with_the_pinned_target
   luassert.is_not_nil(d.option_buttons, "has option_buttons")
   luassert.truthy(d.slot_labels ~= nil and d.slot_projections ~= nil, "has slot label/projection nodes")
   luassert.truthy(d.confirm ~= nil and d.cancel ~= nil, "has confirm and cancel nodes")
-end
+end)
 
-function TestTargetChoiceScreen:test_registers_itself_into_the_registry_under_its_key()
+it("test_registers_itself_into_the_registry_under_its_key", function()
   luassert.is_not_nil(registry.build_choice_screens().target, "registry aggregates target descriptor")
   luassert.truthy(registry.canvas_for("target") == target_screen.canvas, "registry maps target canvas")
   luassert.truthy(registry.opener_for("target") == target_screen.open, "registry maps target opener")
-end
+end)
 
-TestTargetChoiceScreen["test_keeps the confirm key inert (build_intent returns nil) — target auto-confirms on slot"] = function(self)
+it("test_keeps the confirm key inert (build_intent returns nil) — target auto-confirms on slot", function()
   local specs = target_screen.build_route_specs({})
   local confirm_spec
   for _, s in ipairs(specs) do
@@ -62,9 +59,9 @@ TestTargetChoiceScreen["test_keeps the confirm key inert (build_intent returns n
   end
   luassert.is_not_nil(confirm_spec, "confirm node has a route spec")
   luassert.is_nil(confirm_spec.build_intent(), "confirm intent is inert nil by design")
-end
+end)
 
-function TestTargetChoiceScreen:test_builds_a_choice_select_intent_for_a_slot_button_when_a_choice_is_present()
+it("test_builds_a_choice_select_intent_for_a_slot_button_when_a_choice_is_present", function()
   -- slot 路径与 target_choice_screen.build_route_specs 等价：借 runtime model 注入 choice。
   -- 具体 fixture 复用 shared_support（见 choice_routes_spec 的 _build_choice_modal_state）。
   local specs = target_screen.build_route_specs({})
@@ -73,9 +70,9 @@ function TestTargetChoiceScreen:test_builds_a_choice_select_intent_for_a_slot_bu
     if s.name == schema.slot_buttons[1] then has_slot = true end
   end
   luassert.truthy(has_slot, "first slot button has a route spec")
-end
+end)
 
-function TestTargetChoiceScreen:test_resolves_the_slots_own_index_when_the_choice_has_multiple_options()
+it("test_resolves_the_slots_own_index_when_the_choice_has_multiple_options", function()
   local intent = _with_ui_model(
     { choice = { id = 8, options = { { id = 21 }, { id = 22 } } } },
     function(state)
@@ -85,9 +82,9 @@ function TestTargetChoiceScreen:test_resolves_the_slots_own_index_when_the_choic
   luassert.truthy(intent.type == "choice_select", "intent type is choice_select")
   luassert.truthy(intent.choice_id == 8, "intent carries the choice id")
   luassert.truthy(intent.option_id == 21, "first slot maps to its own index -> option 21")
-end
+end)
 
-function TestTargetChoiceScreen:test_collapses_to_the_single_option_when_the_choice_has_exactly_one()
+it("test_collapses_to_the_single_option_when_the_choice_has_exactly_one", function()
   local intent = _with_ui_model(
     { choice = { id = 9, options = { { id = 99 } } } },
     function(state)
@@ -95,9 +92,9 @@ function TestTargetChoiceScreen:test_collapses_to_the_single_option_when_the_cho
     end)
   luassert.is_not_nil(intent, "single-option choice resolves to an intent")
   luassert.truthy(intent.option_id == 99, "single-option choice collapses to option 99")
-end
+end)
 
-function TestTargetChoiceScreen:test_warns_and_returns_nil_when_no_choice_is_present()
+it("test_warns_and_returns_nil_when_no_choice_is_present", function()
   local intent
   local warned = _capturing_warn(function()
     intent = _with_ui_model({}, function(state)
@@ -106,9 +103,9 @@ function TestTargetChoiceScreen:test_warns_and_returns_nil_when_no_choice_is_pre
   end)
   luassert.is_nil(intent, "missing choice yields nil intent")
   luassert.truthy(warned, "missing choice logs a warning")
-end
+end)
 
-function TestTargetChoiceScreen:test_warns_and_returns_nil_when_the_option_cannot_be_resolved()
+it("test_warns_and_returns_nil_when_the_option_cannot_be_resolved", function()
   local intent
   local warned = _capturing_warn(function()
     intent = _with_ui_model({ choice = { id = 4, options = {} } }, function(state)
@@ -117,7 +114,7 @@ function TestTargetChoiceScreen:test_warns_and_returns_nil_when_the_option_canno
   end)
   luassert.is_nil(intent, "unresolvable option yields nil intent")
   luassert.truthy(warned, "unresolvable option logs a warning")
-end
+end)
 
 
-return TestTargetChoiceScreen
+end)

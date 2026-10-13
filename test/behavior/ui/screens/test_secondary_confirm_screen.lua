@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- secondary_confirm 选择屏 Screen 深模块直测：descriptor 字段 + 路由意图 + registry 注册。
 local registry = require("src.ui.screens_registry")
 local secondary_screen = require("src.ui.screens.secondary_confirm")
@@ -7,11 +7,8 @@ local schema = require("src.ui.schema.secondary_confirm")
 local modal_state = require("src.ui.state.modal")
 local runtime_state = require("src.ui.state.runtime")
 
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- 无钩子不拆类,用例数与改写前一一对应(4 例);断言从裸 assert 切到 lu.assertXxx。
-TestSecondaryConfirmScreen = {}
-
-function TestSecondaryConfirmScreen:test_exposes_a_descriptor_with_the_pinned_secondary_confirm_fields()
+describe("TestSecondaryConfirmScreen", function()
+it("test_exposes_a_descriptor_with_the_pinned_secondary_confirm_fields", function()
   local d = secondary_screen.descriptor()
   luassert.truthy(d.key == "secondary_confirm", "descriptor key is secondary_confirm")
   luassert.is_not_nil(d.root, "has root/canvas node")
@@ -19,15 +16,15 @@ function TestSecondaryConfirmScreen:test_exposes_a_descriptor_with_the_pinned_se
   luassert.is_not_nil(d.body, "has body")
   luassert.is_not_nil(d.confirm, "has confirm node")
   luassert.is_not_nil(d.cancel, "has cancel node")
-end
+end)
 
-function TestSecondaryConfirmScreen:test_registers_itself_into_the_registry_under_its_key()
+it("test_registers_itself_into_the_registry_under_its_key", function()
   luassert.is_not_nil(registry.build_choice_screens().secondary_confirm, "registry aggregates secondary_confirm descriptor")
   luassert.truthy(registry.canvas_for("secondary_confirm") == secondary_screen.canvas, "registry maps secondary_confirm canvas")
   luassert.truthy(registry.opener_for("secondary_confirm") == secondary_screen.open, "registry maps secondary_confirm opener")
-end
+end)
 
-function TestSecondaryConfirmScreen:test_builds_a_confirm_route_spec_that_uses_choice_confirm_intent()
+it("test_builds_a_confirm_route_spec_that_uses_choice_confirm_intent", function()
   local specs = secondary_screen.build_route_specs({})
   local confirm_spec
   for _, s in ipairs(specs) do
@@ -35,9 +32,9 @@ function TestSecondaryConfirmScreen:test_builds_a_confirm_route_spec_that_uses_c
   end
   luassert.is_not_nil(confirm_spec, "confirm node has a route spec")
   luassert.is_not_nil(confirm_spec.build_intent, "confirm spec has build_intent")
-end
+end)
 
-function TestSecondaryConfirmScreen:test_builds_a_cancel_route_spec_that_uses_choice_cancel_intent()
+it("test_builds_a_cancel_route_spec_that_uses_choice_cancel_intent", function()
   local specs = secondary_screen.build_route_specs({})
   local cancel_spec
   for _, s in ipairs(specs) do
@@ -45,11 +42,11 @@ function TestSecondaryConfirmScreen:test_builds_a_cancel_route_spec_that_uses_ch
   end
   luassert.is_not_nil(cancel_spec, "cancel node has a route spec")
   luassert.is_not_nil(cancel_spec.build_intent, "cancel spec has build_intent")
-end
+end)
 
 -- build_intent 必须真的被调用:只断言「闭包存在」杀不掉 ui_event_intents
 -- require → nil 的变异(闭包惰性引用,永不求值)。
-function TestSecondaryConfirmScreen:test_confirm_build_intent_returns_a_choice_select_intent()
+it("test_confirm_build_intent_returns_a_choice_select_intent", function()
   local state = {}
   runtime_state.set_ui_model(state, { choice = { id = "c9" } })
   modal_state.open_choice(state, "c9", { "opt1" }, "opt1")
@@ -63,9 +60,9 @@ function TestSecondaryConfirmScreen:test_confirm_build_intent_returns_a_choice_s
     "confirm intent is a choice_select")
   luassert.truthy(intent.choice_id == "c9", "confirm intent carries the pending choice id")
   luassert.truthy(intent.option_id == "opt1", "confirm intent carries the selected option")
-end
+end)
 
-function TestSecondaryConfirmScreen:test_cancel_build_intent_returns_a_choice_cancel_intent()
+it("test_cancel_build_intent_returns_a_choice_cancel_intent", function()
   local state = {}
   runtime_state.set_ui_model(state, { choice = { id = "c9" } })
   local specs = secondary_screen.build_route_specs(state)
@@ -77,7 +74,7 @@ function TestSecondaryConfirmScreen:test_cancel_build_intent_returns_a_choice_ca
   luassert.truthy(intent ~= nil and intent.type == "choice_cancel",
     "cancel intent is a choice_cancel")
   luassert.truthy(intent.choice_id == "c9", "cancel intent carries the pending choice id")
-end
+end)
 
 
-return TestSecondaryConfirmScreen
+end)

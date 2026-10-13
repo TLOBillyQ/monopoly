@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 require("src.app.compose_game") -- 组合根装配:注入 ui.ports.cosmetics 的 transaction 实现(工单 #244)
 local support = require("test.support.shared_support")
 local panel_interrupt = require("src.ui.state.panel_interrupt")
@@ -19,10 +19,8 @@ local function _drain_tips()
   _captured_tips = {}
   return copy
 end
-
-TestPanelInterrupt = {}
-
-function TestPanelInterrupt:setUp()
+describe("TestPanelInterrupt", function()
+before_each(function()
   item_atlas.reset_for_tests()
   skin_panel.reset_for_tests()
   tips.clear()
@@ -34,16 +32,16 @@ function TestPanelInterrupt:setUp()
     scheduler = function() return true end,
     test_mode = false,
   })
-end
+end)
 
-function TestPanelInterrupt:tearDown()
+after_each(function()
   tips.configure_runtime({ clear_presenter = true, clear_scheduler = true, test_mode = false })
   tips.clear()
   -- 清了共享 tips 基线必须装回,否则 mutate 车道窄 suite 子集撞空 presenter(#217)
   support.restore_runtime_services()
-end
+end)
 
-function TestPanelInterrupt:test_classifies_each_settlement_flag_and_stays_inert_without_flags()
+it("test_classifies_each_settlement_flag_and_stays_inert_without_flags", function()
   local s = _make_state()
   luassert.truthy(panel_interrupt.is_settling(s) == false, "no flags -> not settling")
   luassert.truthy(panel_interrupt.settlement_type(s.ui) == nil, "no flags -> no settlement type")
@@ -62,9 +60,9 @@ function TestPanelInterrupt:test_classifies_each_settlement_flag_and_stays_inert
       flag .. " -> should be a distinct settlement type, got duplicate " .. tostring(kind))
     seen[kind] = flag
   end
-end
+end)
 
-function TestPanelInterrupt:test_only_the_acting_player_s_market_blocks_tip_is_deduped_by_panel_settlement()
+it("test_only_the_acting_player_s_market_blocks_tip_is_deduped_by_panel_settlement", function()
   -- 不在结算 / 非黑市结算 / 他人黑市:一律不拦、无提示
   local idle = _make_state()
   luassert.truthy(panel_interrupt.block_entry(idle, "skin") == false)
@@ -98,9 +96,9 @@ function TestPanelInterrupt:test_only_the_acting_player_s_market_blocks_tip_is_d
   luassert.truthy(panel_interrupt.block_entry(s, "gallery", 1) == true)
   luassert.truthy(tips.snapshot().pending_count == 1,
     "a different panel must not be deduped against the skin tip")
-end
+end)
 
-function TestPanelInterrupt:test_blocks_conservatively_when_market_actor_identity_is_incomplete()
+it("test_blocks_conservatively_when_market_actor_identity_is_incomplete", function()
   local s = _make_state()
   s.ui.market_active = true
   s.ui.current_action_role_id = 1
@@ -112,9 +110,9 @@ function TestPanelInterrupt:test_blocks_conservatively_when_market_actor_identit
   s_without_current.ui.market_active = true
   luassert.truthy(panel_interrupt.block_entry(s_without_current, "gallery", 1) == true,
     "missing current action role should block during market settlement")
-end
+end)
 
-function TestPanelInterrupt:test_acting_player_s_market_closes_atlas_skin_panel_and_only_the_acting_role_s_event_log()
+it("test_acting_player_s_market_closes_atlas_skin_panel_and_only_the_acting_role_s_event_log", function()
   local s = _make_state()
   item_atlas.open(s, 1)
   skin_panel.open(s, 1)
@@ -130,9 +128,9 @@ function TestPanelInterrupt:test_acting_player_s_market_closes_atlas_skin_panel_
   luassert.truthy(s.ui.skin_panel.open == false, "skin panel should be closed by interrupt")
   luassert.truthy(event_log_view.is_open(s, 1) == false, "role 1 event log should be closed")
   luassert.truthy(event_log_view.is_open(s, 2) == true, "role 2 event log should remain open")
-end
+end)
 
-function TestPanelInterrupt:test_keeps_panels_open_for_non_market_settlements_and_other_players_market()
+it("test_keeps_panels_open_for_non_market_settlements_and_other_players_market", function()
   local choice_state = _make_state()
   item_atlas.open(choice_state, 1)
   choice_state.ui.choice_active = true
@@ -147,23 +145,23 @@ function TestPanelInterrupt:test_keeps_panels_open_for_non_market_settlements_an
   others_market.ui.current_action_role_id = 2
   panel_interrupt.interrupt(others_market)
   luassert.truthy(others_market.ui.item_atlas.open == true, "other player's market should not close atlas")
-end
+end)
 
-function TestPanelInterrupt:test_is_a_no_op_when_no_panel_is_open()
+it("test_is_a_no_op_when_no_panel_is_open", function()
   local s = _make_state()
   luassert.has_no_error(function() panel_interrupt.interrupt(s) end)
-end
+end)
 
-function TestPanelInterrupt:test_is_a_no_op_when_no_skin_panel_exists()
+it("test_is_a_no_op_when_no_skin_panel_exists", function()
   local s = _make_state()
 
   panel_interrupt.begin_player_action(s, 1)
 
   luassert.truthy(s.ui.current_action_role_id == 1, "acting role should still be recorded")
   luassert.truthy(#_drain_tips() == 0, "no tip should be shown without a skin panel")
-end
+end)
 
-function TestPanelInterrupt:test_closes_an_off_turn_skin_panel_for_the_acting_role_and_shows_the_action_tip()
+it("test_closes_an_off_turn_skin_panel_for_the_acting_role_and_shows_the_action_tip", function()
   local s = _make_state()
   s.ui.current_action_role_id = 2
   skin_panel.open(s, 1)
@@ -178,9 +176,9 @@ function TestPanelInterrupt:test_closes_an_off_turn_skin_panel_for_the_acting_ro
   local pending = _drain_tips()
   luassert.truthy(#pending == 1, "expected one action-turn tip, got " .. #pending)
   luassert.truthy(pending[1].text == "轮到你行动了", "tip text mismatch: " .. tostring(pending[1].text))
-end
+end)
 
-function TestPanelInterrupt:test_does_not_clear_an_unrelated_active_tip_when_closing_the_off_turn_skin_panel()
+it("test_does_not_clear_an_unrelated_active_tip_when_closing_the_off_turn_skin_panel", function()
   local s = _make_state()
   s.ui.current_action_role_id = 2
   skin_panel.open(s, 1)
@@ -196,9 +194,9 @@ function TestPanelInterrupt:test_does_not_clear_an_unrelated_active_tip_when_clo
   luassert.truthy(s.ui.skin_panel.open == false, "off-turn skin panel should close when its owner acts")
   luassert.truthy(#_drain_tips() == 0,
     "action-turn tip must wait behind the active unrelated tip, not preempt it")
-end
+end)
 
-function TestPanelInterrupt:test_keeps_an_off_turn_skin_panel_open_when_another_role_starts_acting()
+it("test_keeps_an_off_turn_skin_panel_open_when_another_role_starts_acting", function()
   local s = _make_state()
   s.ui.current_action_role_id = 2
   skin_panel.open(s, 1)
@@ -208,29 +206,29 @@ function TestPanelInterrupt:test_keeps_an_off_turn_skin_panel_open_when_another_
 
   luassert.truthy(s.ui.skin_panel.open == true, "other role action should not close this skin panel")
   luassert.truthy(#_drain_tips() == 0, "no tip should be shown for another role")
-end
+end)
 
-TestPanelInterrupt["test_nil_ui_视为无弹层"] = function(self)
+it("test_nil_ui_视为无弹层", function()
   luassert.truthy(panel_interrupt.is_overlay_visible(nil) == false, "nil ui must not read as an overlay")
-end
+end)
 
-TestPanelInterrupt["test_nil_ui_的 settlement_type_excluding_choice 返回 nil"] = function(self)
+it("test_nil_ui_的 settlement_type_excluding_choice 返回 nil", function()
   luassert.truthy(panel_interrupt.settlement_type_excluding_choice(nil) == nil,
     "nil ui must resolve to no settlement type")
-end
+end)
 
-TestPanelInterrupt["test_弹窗/黑市/机会三个真弹层各自触发"] = function(self)
+it("test_弹窗/黑市/机会三个真弹层各自触发", function()
   luassert.truthy(panel_interrupt.is_overlay_visible({ popup_active = true }) == true, "popup is an overlay")
   luassert.truthy(panel_interrupt.is_overlay_visible({ market_active = true }) == true, "market is an overlay")
   luassert.truthy(panel_interrupt.is_overlay_visible({ choice_active = true }) == true, "chance choice is an overlay")
-end
+end)
 
-TestPanelInterrupt["test_阶段位不算弹层"] = function(self)
+it("test_阶段位不算弹层", function()
   luassert.truthy(panel_interrupt.is_overlay_visible({ move_active = true }) == false, "move phase bit is not an overlay")
   luassert.truthy(panel_interrupt.is_overlay_visible({ input_blocked = true }) == false, "input_blocked is not an overlay")
-end
+end)
 
-TestPanelInterrupt["test_面板视为归属任何角色,照常关闭"] = function(self)
+it("test_面板视为归属任何角色,照常关闭", function()
   local closed = {}
   panel_interrupt.register_panel_closer("skin_panel", function(_, role_id)
     closed[#closed + 1] = role_id
@@ -246,9 +244,9 @@ TestPanelInterrupt["test_面板视为归属任何角色,照常关闭"] = functio
   panel_interrupt.unregister_panel_closer("skin_panel")
   luassert.truthy(#closed == 1 and closed[1] == 3,
     "with no active action role the open panel must still be closed, got " .. tostring(#closed))
-end
+end)
 
-function TestPanelInterrupt:test_re_registering_a_fixed_panel_key_replaces_the_old_closer()
+it("test_re_registering_a_fixed_panel_key_replaces_the_old_closer", function()
   local calls = {}
   panel_interrupt.register_panel_closer("skin_panel", function()
     calls[#calls + 1] = "old"
@@ -270,9 +268,9 @@ function TestPanelInterrupt:test_re_registering_a_fixed_panel_key_replaces_the_o
   end)
   luassert.truthy(#calls == 1 and calls[1] == "new",
     "fixed-key registration must replace the stale closer")
-end
+end)
 
-function TestPanelInterrupt:test_block_entry_tip_payload_pins_blocking_and_source()
+it("test_block_entry_tip_payload_pins_blocking_and_source", function()
   -- 杀 L91 blocks_inter_turn false->true 与 L92 source "ui.panel_interrupt"->nil。
   local s = _make_state()
   s.ui.market_active = true
@@ -282,9 +280,9 @@ function TestPanelInterrupt:test_block_entry_tip_payload_pins_blocking_and_sourc
   luassert.truthy(#pending == 1, "expected one block tip")
   luassert.truthy(pending[1].blocks_inter_turn == false, "block tip must not block inter-turn")
   luassert.truthy(pending[1].source == "ui.panel_interrupt", "block tip source should be pinned")
-end
+end)
 
-function TestPanelInterrupt:test_action_turn_tip_payload_pins_blocking_and_source()
+it("test_action_turn_tip_payload_pins_blocking_and_source", function()
   -- 杀 L146 blocks_inter_turn false->true 与 L147 source "ui.panel_interrupt"->nil。
   local s = _make_state()
   s.ui.current_action_role_id = 2
@@ -298,7 +296,7 @@ function TestPanelInterrupt:test_action_turn_tip_payload_pins_blocking_and_sourc
   luassert.truthy(#pending == 1, "expected one action-turn tip")
   luassert.truthy(pending[1].blocks_inter_turn == false, "action turn tip must not block inter-turn")
   luassert.truthy(pending[1].source == "ui.panel_interrupt", "action turn tip source should be pinned")
-end
+end)
 
 
-return TestPanelInterrupt
+end)

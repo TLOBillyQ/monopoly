@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- choice_helpers.lua 直测:覆盖 resolve_canvas_for_screen 的 canvas_for 回落、
 -- hide_choice_screens 的状态清理、set_option_node 的 touch_enabled 赋值。
 local support = require("test.support.shared_support")
@@ -10,23 +10,21 @@ local canvas = require("src.ui.coord.canvas_coordinator")
 local ui_controls = require("src.ui.render.support.ui_controls")
 local runtime = require("src.ui.render.support.runtime_ui")
 local runtime_state = require("src.ui.state.runtime")
-
-TestChoiceHelpers = {}
-
+describe("TestChoiceHelpers", function()
 -- resolve_canvas_for_screen:已知选择屏返回其固定画布
-function TestChoiceHelpers:test_resolve_canvas_returns_registered_canvas()
+it("test_resolve_canvas_returns_registered_canvas", function()
   local result = choice_helpers.resolve_canvas_for_screen("target")
   luassert.is.equal(canvas.CANVAS_TARGET_CHOICE, result)
-end
+end)
 
 -- resolve_canvas_for_screen:未知 key 回落 CANVAS_BASE
-function TestChoiceHelpers:test_resolve_canvas_falls_back_to_base()
+it("test_resolve_canvas_falls_back_to_base", function()
   local result = choice_helpers.resolve_canvas_for_screen("unknown")
   luassert.is.equal(canvas.CANVAS_BASE, result)
-end
+end)
 
 -- hide_choice_screens: 清理 choice_active 和 active_choice_screen_key
-function TestChoiceHelpers:test_hide_choice_screens_clears_state()
+it("test_hide_choice_screens_clears_state", function()
   local reset_calls = {}
   local ui = {
     choice_screens = {
@@ -48,10 +46,10 @@ function TestChoiceHelpers:test_hide_choice_screens_clears_state()
   luassert.is.equal(2, #reset_calls, "should reset both choice screens")
   luassert.is.equal(false, ui.choice_active, "choice_active must be false after hide")
   luassert.is.equal(nil, ui.active_choice_screen_key, "active_choice_screen_key must be nil after hide")
-end
+end)
 
 -- hide_choice_screens: choice_screens 为 nil 时不报错
-function TestChoiceHelpers:test_hide_choice_screens_handles_nil_screens()
+it("test_hide_choice_screens_handles_nil_screens", function()
   local ui = {
     choice_active = true,
     active_choice_screen_key = "x",
@@ -63,10 +61,10 @@ function TestChoiceHelpers:test_hide_choice_screens_handles_nil_screens()
   end)
   luassert.is.equal(false, ui.choice_active)
   luassert.is_nil(ui.active_choice_screen_key)
-end
+end)
 
 -- set_option_node: option 非 nil 时 touch_enabled 为 true
-function TestChoiceHelpers:test_set_option_node_enables_touch_for_valid_option()
+it("test_set_option_node_enables_touch_for_valid_option", function()
   local control_state = nil
   local set_button_calls = {}
 
@@ -87,10 +85,10 @@ function TestChoiceHelpers:test_set_option_node_enables_touch_for_valid_option()
   luassert.is.equal(true, control_state.visible, "visible must be true when option exists")
   luassert.is.equal(true, control_state.touch_enabled, "touch_enabled must be true when option exists")
   luassert.is.equal(1, #set_button_calls, "set_button must be called once")
-end
+end)
 
 -- set_option_node: option 为 nil 时 touch_enabled 为 false
-function TestChoiceHelpers:test_set_option_node_disables_touch_for_nil_option()
+it("test_set_option_node_disables_touch_for_nil_option", function()
   local control_state = nil
   local set_button_calls = {}
 
@@ -111,7 +109,7 @@ function TestChoiceHelpers:test_set_option_node_disables_touch_for_nil_option()
   luassert.is.equal(false, control_state.visible, "visible must be false when option is nil")
   luassert.is.equal(false, control_state.touch_enabled, "touch_enabled must be false when option is nil")
   luassert.is.equal(0, #set_button_calls, "set_button must not be called for nil option")
-end
+end)
 
 -- switch_modal_canvas 覆盖（杀掉 L50 can_operate 判定四件套 + get_ui_model→nil 幸存者）：
 -- 可操作角色切到目标画布，不可操作角色回落 CANVAS_BASE
@@ -133,7 +131,7 @@ local function _patch_switch_deps(with_calls)
   }
 end
 
-function TestChoiceHelpers:test_switch_modal_canvas_uses_target_canvas_when_role_can_operate()
+it("test_switch_modal_canvas_uses_target_canvas_when_role_can_operate", function()
   local calls = {}
   local ui = {}
   local state = { ui = ui }
@@ -144,9 +142,9 @@ function TestChoiceHelpers:test_switch_modal_canvas_uses_target_canvas_when_role
   luassert.is.equal(canvas.CANVAS_MARKET, calls[1][1],
     "can-operate role should switch to the target canvas")
   luassert.is.equal("r1", calls[1][2], "role should be forwarded to switch_for_role")
-end
+end)
 
-function TestChoiceHelpers:test_switch_modal_canvas_falls_back_to_base_when_role_cannot_operate()
+it("test_switch_modal_canvas_falls_back_to_base_when_role_cannot_operate", function()
   local calls = {}
   local ui = {}
   local state = { ui = ui }
@@ -165,6 +163,6 @@ function TestChoiceHelpers:test_switch_modal_canvas_falls_back_to_base_when_role
   end)
   luassert.is.equal(canvas.CANVAS_BASE, calls[1][1],
     "role that cannot operate should get the base canvas")
-end
+end)
 
-return TestChoiceHelpers
+end)

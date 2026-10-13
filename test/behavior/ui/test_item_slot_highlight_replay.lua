@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- 可用槽位高亮重放的展示状态直测(#594):plan_refresh 的三态判定与
 -- 逐视角记忆隔离,apply_lifecycle 的确认冻结/命令解冻,以及两个公开操作的
 -- 入参断言。本模块是纯展示状态(ui.state),不碰宿主动画。
@@ -15,11 +15,9 @@ end
 local function _perspective(role_id, display_player_id)
   return { role_id = role_id, display_player_id = display_player_id }
 end
-
-TestItemSlotHighlightReplay = {}
-
+describe("TestItemSlotHighlightReplay", function()
 -- 首次观察三态:非空集合重放,空集合只清除,无快照不动。
-function TestItemSlotHighlightReplay:test_first_observation_plans_by_snapshot()
+it("test_first_observation_plans_by_snapshot", function()
   local state = _new_state()
   _assert_eq(replay.plan_refresh(state, _perspective(1, 1), { true, false, true, false, false }),
     "replay", "首次观察非空集合重放")
@@ -37,19 +35,19 @@ function TestItemSlotHighlightReplay:test_first_observation_plans_by_snapshot()
     "none", "无槽位快照不动")
   _assert_eq(replay.remembered_signature(blank_state, _perspective(1, 1)), nil,
     "无槽位快照不建立记忆")
-end
+end)
 
 -- 可选编号集合未变化 → 翻新不重放(卡牌身份换掉也不算变化)。
-function TestItemSlotHighlightReplay:test_unchanged_pickable_set_does_not_replay()
+it("test_unchanged_pickable_set_does_not_replay", function()
   local state = _new_state()
   local perspective = _perspective(1, 1)
   replay.plan_refresh(state, perspective, { true, false, true, false, false })
   _assert_eq(replay.plan_refresh(state, perspective, { true, false, true, false, false }),
     "none", "集合未变化不重放")
-end
+end)
 
 -- 集合真实变化才产生新计划;变为空集合也是 replay(不是 reset)。
-function TestItemSlotHighlightReplay:test_changed_pickable_set_replays()
+it("test_changed_pickable_set_replays", function()
   local cases = {
     { snapshot = { true, true, true, false, false }, plan = "replay", memory = "1,2,3" },
     { snapshot = { true, false, false, false, false }, plan = "replay", memory = "1" },
@@ -65,10 +63,10 @@ function TestItemSlotHighlightReplay:test_changed_pickable_set_replays()
     _assert_eq(replay.remembered_signature(state, perspective), case.memory,
       "集合变化后的记忆")
   end
-end
+end)
 
 -- 每个「本机角色 + 展示玩家」视角独立记忆;缺失侧是独立身份,不与真实 id 混。
-function TestItemSlotHighlightReplay:test_each_perspective_remembers_independently()
+it("test_each_perspective_remembers_independently", function()
   local cases = {
     { replayed = _perspective(1, 1), pending = _perspective(2, 1) },
     { replayed = _perspective(1, 1), pending = _perspective(1, 2) },
@@ -85,10 +83,10 @@ function TestItemSlotHighlightReplay:test_each_perspective_remembers_independent
     _assert_eq(replay.remembered_signature(state, case.replayed), "1,3",
       "已重放视角的记忆不受影响")
   end
-end
+end)
 
 -- 等价身份(字符串 vs 整数)归一化为同一视角 → 不重放。
-function TestItemSlotHighlightReplay:test_equivalent_identities_normalize_to_one_perspective()
+it("test_equivalent_identities_normalize_to_one_perspective", function()
   local cases = {
     { replayed = _perspective(1, 1), equivalent = _perspective("1", 1) },
     { replayed = _perspective(1, 1), equivalent = _perspective(1, "1") },
@@ -101,11 +99,11 @@ function TestItemSlotHighlightReplay:test_equivalent_identities_normalize_to_one
     _assert_eq(replay.plan_refresh(state, case.equivalent, snapshot), "none",
       "等价身份视为同一展示视角")
   end
-end
+end)
 
 -- 确认使用道具后冻结重放:同一待决选择在发起确认的视角内不重放,
 -- 其它视角照常;槽位命令解除冻结但不强制重放。
-function TestItemSlotHighlightReplay:test_confirmation_freezes_replay_until_slot_command()
+it("test_confirmation_freezes_replay_until_slot_command", function()
   local state = _new_state()
   local perspective = _perspective(1, 1)
   replay.plan_refresh(state, perspective, { true, false, true, false, false })
@@ -117,21 +115,21 @@ function TestItemSlotHighlightReplay:test_confirmation_freezes_replay_until_slot
     "none", "槽位命令解除冻结但不强制重放")
   _assert_eq(replay.plan_refresh(state, perspective, { true, false, false, false, false }),
     "replay", "解冻后集合再变化恢复重放")
-end
+end)
 
 -- 冻结只作用于发起确认的视角。
-function TestItemSlotHighlightReplay:test_freeze_is_scoped_to_the_confirming_perspective()
+it("test_freeze_is_scoped_to_the_confirming_perspective", function()
   local state = _new_state()
   local confirming, other = _perspective(1, 1), _perspective(2, 1)
   replay.plan_refresh(state, confirming, { true, false, true, false, false })
   replay.apply_lifecycle(state, confirming, { kind = "confirm_item_use", choice_id = "c1" })
   _assert_eq(replay.plan_refresh(state, other, { true, false, true, false, false }),
     "replay", "其它视角不受冻结影响")
-end
+end)
 
 -- 槽位命令无条件解冻,不按 choice_id 匹配:玩家已经动过手,冻结不该再挂着。
 -- kills "slot_command" -> nil(变异体退化成只按 choice_id 匹配解冻)。
-function TestItemSlotHighlightReplay:test_slot_command_unfreezes_regardless_of_choice_id()
+it("test_slot_command_unfreezes_regardless_of_choice_id", function()
   local state = _new_state()
   local perspective = _perspective(1, 1)
   replay.plan_refresh(state, perspective, { true, false, true, false, false })
@@ -139,10 +137,10 @@ function TestItemSlotHighlightReplay:test_slot_command_unfreezes_regardless_of_c
   replay.apply_lifecycle(state, perspective, { kind = "slot_command", choice_id = "c2" })
   _assert_eq(replay.plan_refresh(state, perspective, { true, false, false, false, false }),
     "replay", "槽位命令即使 choice_id 不匹配也解冻")
-end
+end)
 
 -- 释放选择只解除匹配该选择的冻结。
-function TestItemSlotHighlightReplay:test_choice_release_only_clears_matching_freeze()
+it("test_choice_release_only_clears_matching_freeze", function()
   local state = _new_state()
   local perspective = _perspective(1, 1)
   replay.plan_refresh(state, perspective, { true, false, true, false, false })
@@ -154,10 +152,10 @@ function TestItemSlotHighlightReplay:test_choice_release_only_clears_matching_fr
   replay.apply_lifecycle(state, perspective, { kind = "choice_released", choice_id = "c1" })
   _assert_eq(replay.plan_refresh(state, perspective, { true, false, false, false, false }),
     "replay", "匹配的释放解冻")
-end
+end)
 
 -- 公开操作的入参断言(#594 场景 010)。
-function TestItemSlotHighlightReplay:test_public_operations_assert_invalid_input()
+it("test_public_operations_assert_invalid_input", function()
   local state, perspective = _new_state(), _perspective(1, 1)
   local lifecycle = { kind = "slot_command", choice_id = "c1" }
   local cases = {
@@ -177,7 +175,7 @@ function TestItemSlotHighlightReplay:test_public_operations_assert_invalid_input
   for _, case in ipairs(cases) do
     _assert_eq(pcall(case.call), false, case.label .. " 应断言失败")
   end
-end
+end)
 
 -- ===== 性质覆盖(#594):例子测试逐个钉三态,这里钉住例子跨不过的不变量 =====
 do
@@ -215,16 +213,16 @@ do
   end
 
   -- plan_refresh 只返回三态之一,永不返回别的东西(全域性)。
-  function TestItemSlotHighlightReplay:test_plan_refresh_only_ever_returns_a_known_plan()
+  it("test_plan_refresh_only_ever_returns_a_known_plan", function()
     property.for_all(_gen_case, function(case)
       local plan = replay.plan_refresh(_new_state(), case.perspective, case.slots)
       luassert.truthy(_PLANS[plan] == true,
         "plan_refresh 必须返回三态之一, 实际: " .. tostring(plan))
     end)
-  end
+  end)
 
   -- 幂等:同一快照连刷第二次一定 none, 且记忆不变。
-  function TestItemSlotHighlightReplay:test_repeating_the_same_snapshot_is_idempotent()
+  it("test_repeating_the_same_snapshot_is_idempotent", function()
     property.for_all(_gen_case, function(case)
       local state = _new_state()
       replay.plan_refresh(state, case.perspective, case.slots)
@@ -238,11 +236,11 @@ do
           "重复同一快照不应改变记忆")
       end
     end)
-  end
+  end)
 
   -- 记忆锚定「可选槽位编号集合」:任意快照的记忆签名必须正是那些编号,
   -- 与未选中的槽位无关。
-  function TestItemSlotHighlightReplay:test_remembered_signature_lists_exactly_the_pickable_slots()
+  it("test_remembered_signature_lists_exactly_the_pickable_slots", function()
     property.for_all(_gen_case, function(case)
       local state = _new_state()
       replay.plan_refresh(state, case.perspective, case.slots)
@@ -250,11 +248,11 @@ do
         replay.remembered_signature(state, case.perspective) == _signature_of(case.slots),
         "记忆签名必须恰好是可选槽位编号升序")
     end)
-  end
+  end)
 
   -- 冻结不变量(#595 收窄):确认后永不整组重播,但集合真的变了要清除旧高亮;
   -- 记忆照记 —— 解冻后不补陈旧重放,而是以最新集合为基准继续判定。
-  function TestItemSlotHighlightReplay:test_confirmation_freeze_suppresses_every_plan_but_keeps_remembering()
+  it("test_confirmation_freeze_suppresses_every_plan_but_keeps_remembering", function()
     property.for_all(_gen_case, function(case, rng)
       local state = _new_state()
       replay.plan_refresh(state, case.perspective, case.slots)
@@ -281,7 +279,7 @@ do
         replay.plan_refresh(state, case.perspective, case.slots) == expected,
         "解冻后必须以冻结期间记下的最新集合为基准判定, 期望: " .. expected)
     end)
-  end
+  end)
 
   -- 冻结替换的时序性质(#595 场景 014/017):任意 confirm / choice_released
   -- 交错序列后,「是否仍冻结」只由最后一次 confirm 的 choice_id 是否在其之后
@@ -301,7 +299,7 @@ do
     return frozen ~= nil
   end
 
-  function TestItemSlotHighlightReplay:test_freeze_state_follows_the_last_unreleased_confirmation()
+  it("test_freeze_state_follows_the_last_unreleased_confirmation", function()
     property.for_all(function(rng)
       local ids = { "C1", "C2", "C3" }
       local events = {}
@@ -323,12 +321,12 @@ do
         replay.plan_refresh(state, case.perspective, { true, true, false, false, false }) == expected,
         "冻结状态必须只跟随最后一次未被释放的确认, 期望计划: " .. expected)
     end)
-  end
+  end)
 
   -- phase-advance 全局去重线的性质(#596):连续观察序列里,「是否发重置」
   -- 恰好等价于「本次快照与上一次观察到的不同」。例子测试钉了几条手挑序列,
   -- 这里让随机序列(含 nil 快照与空集合交错)跨遍相邻组合。
-  function TestItemSlotHighlightReplay:test_phase_advance_reset_fires_exactly_on_change()
+  it("test_phase_advance_reset_fires_exactly_on_change", function()
     property.for_all(function(rng)
       local observations = {}
       for _ = 1, rng:int(1, 8) do
@@ -357,10 +355,10 @@ do
         previous, seen_any = signature, true
       end
     end)
-  end
+  end)
 
   -- 视角隔离:在一个视角上刷新, 绝不建立或改动另一个视角的记忆。
-  function TestItemSlotHighlightReplay:test_refreshing_one_perspective_never_touches_another()
+  it("test_refreshing_one_perspective_never_touches_another", function()
     property.for_all(_gen_case, function(case, rng)
       local other = _perspective(case.perspective.role_id + 10,
         case.perspective.display_player_id + 10)
@@ -373,12 +371,12 @@ do
       luassert.truthy(replay.remembered_signature(state, other) == other_before,
         "刷新与冻结都不得越过视角边界")
     end)
-  end
+  end)
 end
 
 -- #595-012:冻结期间集合变化不再是「什么都不做」,而是只清除旧高亮并记住
 -- 新集合——旧高亮框指向的槽位已经变了,留在屏上就是错的视觉。
-function TestItemSlotHighlightReplay:test_frozen_set_change_clears_and_remembers()
+it("test_frozen_set_change_clears_and_remembers", function()
   local state = _new_state()
   local perspective = _perspective(1, 1)
   replay.plan_refresh(state, perspective, { true, false, true, false, false })
@@ -387,20 +385,20 @@ function TestItemSlotHighlightReplay:test_frozen_set_change_clears_and_remembers
     "reset", "冻结期间集合变化只清除旧高亮")
   _assert_eq(replay.remembered_signature(state, perspective), "1,2,3",
     "冻结期间仍记忆新集合")
-end
+end)
 
 -- 冻结期间集合没变则什么都不做(不该反复清除)。
-function TestItemSlotHighlightReplay:test_frozen_unchanged_set_does_nothing()
+it("test_frozen_unchanged_set_does_nothing", function()
   local state = _new_state()
   local perspective = _perspective(1, 1)
   replay.plan_refresh(state, perspective, { true, false, true, false, false })
   replay.apply_lifecycle(state, perspective, { kind = "confirm_item_use", choice_id = "C1" })
   _assert_eq(replay.plan_refresh(state, perspective, { true, false, true, false, false }),
     "none", "冻结期间集合未变化不清除")
-end
+end)
 
 -- #595-014/017:确认幂等;新选择替换旧冻结后,迟到的旧选择关闭不解除新冻结。
-function TestItemSlotHighlightReplay:test_confirm_replaces_freeze_and_late_close_is_ignored()
+it("test_confirm_replaces_freeze_and_late_close_is_ignored", function()
   local cases = {
     { second = "C1", closed = "C1", plan = "replay" },
     { second = "C2", closed = "C2", plan = "replay" },
@@ -416,10 +414,10 @@ function TestItemSlotHighlightReplay:test_confirm_replaces_freeze_and_late_close
     _assert_eq(replay.plan_refresh(state, perspective, { true, true, true, false, false }),
       case.plan, "确认幂等与替换后的解冻结果")
   end
-end
+end)
 
 -- #595-016:槽位命令只解除该视角的冻结,别的视角仍冻结。
-function TestItemSlotHighlightReplay:test_slot_command_unfreezes_only_its_perspective()
+it("test_slot_command_unfreezes_only_its_perspective", function()
   local state = _new_state()
   local first, second = _perspective(1, 1), _perspective(2, 1)
   local snapshot = { true, false, true, false, false }
@@ -430,10 +428,10 @@ function TestItemSlotHighlightReplay:test_slot_command_unfreezes_only_its_perspe
   replay.apply_lifecycle(state, first, { kind = "slot_command" })
   _assert_eq(replay.plan_refresh(state, second, { true, true, true, false, false }),
     "reset", "另一视角的冻结不被解除")
-end
+end)
 
 -- #595-013:解冻后集合未再变化不补发过时重放(冻结期间已记住新集合)。
-function TestItemSlotHighlightReplay:test_unfreeze_does_not_replay_stale_set()
+it("test_unfreeze_does_not_replay_stale_set", function()
   for _, unfreeze in ipairs({
     { kind = "slot_command" },
     { kind = "choice_released", choice_id = "C1" },
@@ -447,12 +445,12 @@ function TestItemSlotHighlightReplay:test_unfreeze_does_not_replay_stale_set()
     _assert_eq(replay.plan_refresh(state, perspective, { true, true, true, false, false }),
       "none", "解冻后集合未变化不补发重放")
   end
-end
+end)
 
 -- #596:phase-advance 的「集合变了才发全局重置」判定并入本模块,取代 coord 侧
 -- 那份平行的 _last_emitted_pickable_signature + "none" 字符串哨兵。
 -- 无快照与空集合必须是不同状态:前者是「还不知道」,后者是「确实没有可选槽」。
-function TestItemSlotHighlightReplay:test_phase_advance_reset_tracks_pickable_set()
+it("test_phase_advance_reset_tracks_pickable_set", function()
   local state = _new_state()
   _assert_eq(replay.needs_phase_advance_reset(state, { true, false }), true,
     "首次观察到集合发全局重置")
@@ -462,10 +460,10 @@ function TestItemSlotHighlightReplay:test_phase_advance_reset_tracks_pickable_se
     "集合变空仍发清场重置")
   _assert_eq(replay.needs_phase_advance_reset(state, {}), false,
     "空集合之间自洽去重")
-end
+end)
 
 -- 无快照(nil)与空集合互不冒充,且 nil 之间也能自洽去重。
-function TestItemSlotHighlightReplay:test_phase_advance_reset_distinguishes_absent_snapshot()
+it("test_phase_advance_reset_distinguishes_absent_snapshot", function()
   local state = _new_state()
   _assert_eq(replay.needs_phase_advance_reset(state, nil), true,
     "首次无快照发一次重置")
@@ -475,14 +473,14 @@ function TestItemSlotHighlightReplay:test_phase_advance_reset_distinguishes_abse
     "空集合不同于无快照")
   _assert_eq(replay.needs_phase_advance_reset(state, nil), true,
     "回到无快照也是变化")
-end
+end)
 
-function TestItemSlotHighlightReplay:test_phase_advance_reset_asserts_missing_state()
+it("test_phase_advance_reset_asserts_missing_state", function()
   _assert_eq(pcall(function() replay.needs_phase_advance_reset(nil, { true }) end), false,
     "缺失展示状态应断言失败")
   _assert_eq(pcall(function()
     replay.needs_phase_advance_reset({}, { "可" })
   end), false, "非布尔槽位数组应断言失败")
-end
+end)
 
-return TestItemSlotHighlightReplay
+end)

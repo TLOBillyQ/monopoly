@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- #293 批3 pin:src/ui/screens/skin_panel/skin_panel_state.lua 的幸存者:
 -- 包装层(ensure_panel 调用、assert(panel, err or "missing_state") 与
 -- 返回)的三处换 nil 变异。transaction_state 经 cosmetics port 转发代理
@@ -25,10 +25,8 @@ local _captured = nil
 local function _set_impl(impl)
   debug.setupvalue(cosmetics.install, _impl_upvalue_index, impl)
 end
-
-TestSkinPanelState = {}
-
-function TestSkinPanelState:setUp()
+describe("TestSkinPanelState", function()
+before_each(function()
   _captured = {}
   -- debug.getupvalue 返回 (name, value) 两值,单赋值只取 name——必须显式
   -- 取第二返回值,否则 tearDown 会把 "_impl" 名字串写回,污染后续用例。
@@ -46,13 +44,13 @@ function TestSkinPanelState:setUp()
       end,
     },
   })
-end
+end)
 
-function TestSkinPanelState:tearDown()
+after_each(function()
   _set_impl(_saved_impl)
-end
+end)
 
-function TestSkinPanelState:test_ensure_returns_the_panel_from_the_port()
+it("test_ensure_returns_the_panel_from_the_port", function()
   -- L6 ensure_panel 调用换 nil 与 L7 assert 调用换 nil:成功路径必须把
   -- port 返回的 panel 原样透出。
   local root_state = { ui = {} }
@@ -60,16 +58,16 @@ function TestSkinPanelState:test_ensure_returns_the_panel_from_the_port()
   luassert.truthy(panel ~= nil, "ensure must return the panel")
   luassert.truthy(panel == root_state.ui.skin_panel, "returned panel must be the recorded one")
   luassert.truthy(_captured.root == root_state, "ensure must forward the root state")
-end
+end)
 
-function TestSkinPanelState:test_ensure_reuses_an_existing_panel()
+it("test_ensure_reuses_an_existing_panel", function()
   local existing = { open = true }
   local root_state = { ui = { skin_panel = existing } }
   local panel = require("src.ui.screens.skin_panel.skin_panel_state").ensure(root_state)
   luassert.truthy(panel == existing, "existing panel must be reused, not replaced")
-end
+end)
 
-function TestSkinPanelState:test_ensure_raises_missing_state_without_ui()
+it("test_ensure_raises_missing_state_without_ui", function()
   -- L7 `err or "missing_state"` 的 err 换 nil 等消息链在此钉死:无 ui 时
   -- 必须带 missing_state 语义报错。
   local ok, err = pcall(function()
@@ -77,6 +75,6 @@ function TestSkinPanelState:test_ensure_raises_missing_state_without_ui()
   end)
   luassert.truthy(ok == false, "ensure must fail without ui state")
   luassert.truthy(tostring(err):find("missing_state") ~= nil, "error must carry missing_state")
-end
+end)
 
-return TestSkinPanelState
+end)

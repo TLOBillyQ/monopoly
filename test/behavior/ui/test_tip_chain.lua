@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 ---@diagnostic disable: need-check-nil, undefined-field
 -- tip_chain(自 anim/init.lua 拆分)的 tip 链直接 spec:mutation-closure pins。
 -- 覆盖:白名单 kind 展示、user 策略展示、roll 排除、debug 日志门、时长定稿
@@ -41,30 +41,28 @@ local function _emit_with_tip(anim, duration)
   end)
   return captured
 end
-
-TestTipChain = {}
-
-function TestTipChain:test_whitelisted_kinds_emit_tips()
+describe("TestTipChain", function()
+it("test_whitelisted_kinds_emit_tips", function()
   -- kills user_tip_whitelist 五个条目 true→false:白名单 kind 必须展示 tip。
   for _, kind in ipairs({ "monster", "missile", "item_target_player", "teleport_effect", "clear_obstacles" }) do
     local captured = _emit_with_tip({ kind = kind }, 2.0)
     luassert.truthy(captured ~= nil, "whitelisted kind should emit a tip; got nil for " .. tostring(kind))
     _assert_eq(captured.text, _TIP, "whitelisted tip should carry the built text")
   end
-end
+end)
 
-function TestTipChain:test_non_whitelisted_kind_emits_no_tip()
+it("test_non_whitelisted_kind_emits_no_tip", function()
   local captured = _emit_with_tip({ kind = "unknown_kind" }, 2.0)
   luassert.truthy(captured == nil, "a non-whitelisted kind without a policy must not emit a tip")
-end
+end)
 
-function TestTipChain:test_user_policy_emits_tip_for_any_kind()
+it("test_user_policy_emits_tip_for_any_kind", function()
   -- kills _should_show_tip 的 user 策略分支 true→false。
   local captured = _emit_with_tip({ kind = "anything", tip_policy = "user" }, 2.0)
   luassert.truthy(captured ~= nil, "user policy should emit a tip regardless of kind")
-end
+end)
 
-function TestTipChain:test_roll_kind_emits_no_tip_and_no_debug_log()
+it("test_roll_kind_emits_no_tip_and_no_debug_log", function()
   -- kills roll 排除(should_show_tip/should_debug_log 两处)与 debug 日志门。
   local logged = 0
   local captured
@@ -95,9 +93,9 @@ function TestTipChain:test_roll_kind_emits_no_tip_and_no_debug_log()
   end)
   luassert.truthy(captured == nil, "roll kind must not emit a tip")
   _assert_eq(logged, 0, "roll kind must not leave a debug log")
-end
+end)
 
-function TestTipChain:test_nil_anim_is_tolerated_without_error()
+it("test_nil_anim_is_tolerated_without_error", function()
   -- kills _should_debug_log 首操作数 and→or:anim 缺位时不得索引 nil.kind。
   local ok = true
   _with_patches({
@@ -113,17 +111,17 @@ function TestTipChain:test_nil_anim_is_tolerated_without_error()
     ok = result
   end)
   luassert.truthy(ok, "emit with a nil anim should not raise")
-end
+end)
 
-function TestTipChain:test_duration_passes_through_without_tofixed()
+it("test_duration_passes_through_without_tofixed", function()
   -- kills _to_fixed_duration 的 ok/as_fixed 守卫:宿主无 math.tofixed 时
   -- 原样直通,不得把 pcall 错误串当时长。
   local captured = _emit_with_tip({ kind = "monster", tip_policy = "user" }, 3.5)
   luassert.truthy(captured ~= nil, "tip should enqueue")
   _assert_eq(captured.duration, 3.5, "duration should pass through raw without math.tofixed")
-end
+end)
 
-function TestTipChain:test_tofixed_formats_numeric_duration_only()
+it("test_tofixed_formats_numeric_duration_only", function()
   -- kills pcall(math.tofixed)→nil 与 _resolve_tip_duration 的 is_numeric/and
   -- 守卫:数值时长经宿主 tofixed 定稿,非数值时长不得进入 tofixed 链。
   local captured
@@ -148,9 +146,9 @@ function TestTipChain:test_tofixed_formats_numeric_duration_only()
     captured = _emit({ kind = "monster", tip_policy = "user" }, "x")
     _assert_eq(captured.duration, "x", "non-numeric duration must not enter the tofixed chain")
   end)
-end
+end)
 
-function TestTipChain:test_tofixed_raise_falls_back_to_raw_duration()
+it("test_tofixed_raise_falls_back_to_raw_duration", function()
   -- kills _to_fixed_duration 的 ok 守卫 and→or:宿主 tofixed 抛异常时不得把
   -- 错误串当时长。
   local captured
@@ -173,6 +171,6 @@ function TestTipChain:test_tofixed_raise_falls_back_to_raw_duration()
     captured = _emit({ kind = "monster", tip_policy = "user" }, 4.0)
   end)
   _assert_eq(captured.duration, 4.0, "a raising host tofixed should fall back to the raw duration")
-end
+end)
 
-return TestTipChain
+end)

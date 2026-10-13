@@ -1,15 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
--- src/ui/coord/modal.lua 的开关屏流程规约。首跑变异的幸存集中在:
--- skip-reopen 判定（同 choice 重复开屏 / market 豁免）、base_inline 的
--- 二次确认门控与 suppress-highlight 记号、item_phase_passive 接管、
--- _validate_choice 的拒绝返回值,以及 popup 在场时的关屏回画布路径。
--- 状态按规约内联铺陈,不抽 state helper(见 view_command_mutation_pin_spec 头注)。
---
--- 原生 LuaUnit(busted → LuaUnit 迁移):五个 describe 均无钩子,合并拍平为
--- TestChoiceModalPresenter 单类;it 名全为中文,按「原名逐字保留」用 table
--- key 赋值写法;裸 assert(cond, msg) 机械映射为 lu.assertEvalToTrue,用例数
--- 与改写前一一对应(3+2+1+1+1 = 8 例)。
+local luassert = assert
 local support = require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = support.with_patches
@@ -25,10 +15,8 @@ local market_presenter = require("src.ui.screens.market")
 local canvas = require("src.ui.coord.canvas_coordinator")
 local runtime_state = require("src.ui.state.runtime")
 local logger = require("src.foundation.log")
-
-TestChoiceModalPresenter = {}
-
-TestChoiceModalPresenter["test_同一个非 market choice 的屏已开着时,重复 open 被整体跳过"] = function()
+describe("TestChoiceModalPresenter", function()
+it("test_同一个非 market choice 的屏已开着时,重复 open 被整体跳过", function()
   local dirty_calls = 0
   local opener_calls = 0
   local market_close_calls = 0
@@ -49,9 +37,9 @@ TestChoiceModalPresenter["test_同一个非 market choice 的屏已开着时,重
   _assert_eq(dirty_calls, 0, "a skipped reopen must not dirty the ui")
   _assert_eq(opener_calls, 0, "a skipped reopen must not re-run the generic choice opener")
   _assert_eq(market_close_calls, 0, "a skipped reopen must not touch the market screen")
-end
+end)
 
-TestChoiceModalPresenter["test_market choice 即使已是当前屏也照常重开(不享受 skip 豁免)"] = function()
+it("test_market choice 即使已是当前屏也照常重开(不享受 skip 豁免)", function()
   local market_open = nil
   local state = {
     ui = { choice_active = true, active_choice_screen_key = "market", market_active = true },
@@ -73,9 +61,9 @@ TestChoiceModalPresenter["test_market choice 即使已是当前屏也照常重�
   luassert.truthy(market_open ~= nil, "an already-active market choice must still reopen the market screen")
   _assert_eq(market_open.choice_id, 42, "market open must carry the choice id")
   _assert_eq(market_open.market, market_snapshot, "market open must carry the market snapshot")
-end
+end)
 
-TestChoiceModalPresenter["test_缺 choice / 缺 choice.id 时告警拒绝,不开任何屏也不弄脏 ui"] = function()
+it("test_缺 choice / 缺 choice.id 时告警拒绝,不开任何屏也不弄脏 ui", function()
   local warns = {}
   local opener_calls = 0
   local dirty_calls = 0
@@ -100,9 +88,9 @@ TestChoiceModalPresenter["test_缺 choice / 缺 choice.id 时告警拒绝,不开
   _assert_eq(opener_calls, 0, "a rejected open must not reach the generic choice opener")
   _assert_eq(market_open_calls, 0, "a rejected open must not reach the market screen")
   _assert_eq(dirty_calls, 0, "a rejected open must not dirty the ui")
-end
+end)
 
-TestChoiceModalPresenter["test_不需要二次确认的 base_inline choice 走关屏路径"] = function()
+it("test_不需要二次确认的 base_inline choice 走关屏路径", function()
   local pre_confirm_calls = 0
   local close_calls = 0
   local reset_calls = 0
@@ -133,9 +121,9 @@ TestChoiceModalPresenter["test_不需要二次确认的 base_inline choice 走�
   _assert_eq(close_calls, 1, "with no active choice screen the inline path closes the choice state")
   _assert_eq(canvas_targets[1], canvas.CANVAS_BASE, "the inline close path must return to the base canvas")
   _assert_eq(opener_calls, 0, "a special-screen choice must not fall through to the generic opener")
-end
+end)
 
-TestChoiceModalPresenter["test_已确认过道具阶段的 choice 不再弹二次确认"] = function()
+it("test_已确认过道具阶段的 choice 不再弹二次确认", function()
   local pre_confirm_calls = 0
   local close_calls = 0
   local state = { ui = { choice_active = false, market_active = false } }
@@ -157,9 +145,9 @@ TestChoiceModalPresenter["test_已确认过道具阶段的 choice 不再弹二�
   _assert_eq(pre_confirm_calls, 0,
     "an already-confirmed item phase must go to the close path, not another pre-confirm")
   _assert_eq(close_calls, 1, "the confirmed choice must close the inline choice state")
-end
+end)
 
-TestChoiceModalPresenter["test_接管清掉道具阶段询问,不走通用开屏"] = function()
+it("test_接管清掉道具阶段询问,不走通用开屏", function()
   local cleared_sources = {}
   local opener_calls = 0
   local canvas_targets = {}
@@ -183,9 +171,9 @@ TestChoiceModalPresenter["test_接管清掉道具阶段询问,不走通用开屏
     "the takeover must clear the item-phase ask confirmation")
   _assert_eq(canvas_targets[1], canvas.CANVAS_BASE, "the takeover must land on the base canvas")
   _assert_eq(opener_calls, 0, "the passive window must not fall through to the generic opener")
-end
+end)
 
-TestChoiceModalPresenter["test_popup 在场时关 choice 回 popup 画布,不走普通 modal 画布切换"] = function()
+it("test_popup 在场时关 choice 回 popup 画布,不走普通 modal 画布切换", function()
   local popup_switch = nil
   local modal_canvas_calls = 0
   local state = {
@@ -208,9 +196,9 @@ TestChoiceModalPresenter["test_popup 在场时关 choice 回 popup 画布,不走
   _assert_eq(popup_switch.target, canvas.CANVAS_POPUP, "the popup switch target must be the popup canvas")
   _assert_eq(popup_switch.fallback, canvas.CANVAS_BASE, "the popup switch fallback must be the base canvas")
   _assert_eq(modal_canvas_calls, 0, "an active popup must bypass the plain modal canvas switch")
-end
+end)
 
-TestChoiceModalPresenter["test_open 与 close 都以 true 弄脏 ui"] = function()
+it("test_open 与 close 都以 true 弄脏 ui", function()
   -- kills open_choice_modal 与 close_choice_modal 里
   -- set_ui_dirty(state, true) 的两个 true->false。
   local dirty_flags = {}
@@ -237,9 +225,9 @@ TestChoiceModalPresenter["test_open 与 close 都以 true 弄脏 ui"] = function
   _assert_eq(#dirty_flags, 2, "open and close must each dirty the ui once")
   _assert_eq(dirty_flags[1], true, "open must dirty the ui with true")
   _assert_eq(dirty_flags[2], true, "close must dirty the ui with true")
-end
+end)
 
-TestChoiceModalPresenter["test_popup 在场关 choice 时,弹窗切换带排除角色回切标记"] = function()
+it("test_popup 在场关 choice 时,弹窗切换带排除角色回切标记", function()
   -- #604:choice 收屏的弹窗分支必须把「黑市已关」的事实传给 popup 分发,
   -- 让排除角色(买家)回切基础屏;缺标记时买家被整体跳过,屏滞留。
   local popup_switch = nil
@@ -261,7 +249,7 @@ TestChoiceModalPresenter["test_popup 在场关 choice 时,弹窗切换带排除�
   luassert.truthy(popup_switch ~= nil, "closing with an active popup must go through the popup canvas switch")
   _assert_eq(popup_switch.opts and popup_switch.opts.excluded_return, true,
     "choice close with live popup must mark excluded_return so the buyer returns to base canvas")
-end
+end)
 
 
-return TestChoiceModalPresenter
+end)

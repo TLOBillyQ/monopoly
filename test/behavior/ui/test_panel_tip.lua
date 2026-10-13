@@ -1,15 +1,13 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- panel_tip.enqueue 补测:blocks_inter_turn=false 的 false→true 突变体。
 local support = require("test.support.shared_support")
 local tip_queue = require("src.foundation.tips")
 local panel_tip = require("src.ui.coord.panel_tip")
 
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
-
-TestPanelTip = {}
-
-function TestPanelTip:test_enqueue_sets_blocks_inter_turn_false()
+describe("TestPanelTip", function()
+it("test_enqueue_sets_blocks_inter_turn_false", function()
   local captured = nil
   support.with_patches({
     { target = tip_queue, key = "enqueue", value = function(tip)
@@ -27,6 +25,6 @@ function TestPanelTip:test_enqueue_sets_blocks_inter_turn_false()
     "panel_tip should pass through source")
   _assert_eq(captured.dedupe_key, "key1",
     "panel_tip should pass through dedupe_key")
-end
+end)
 
-return TestPanelTip
+end)

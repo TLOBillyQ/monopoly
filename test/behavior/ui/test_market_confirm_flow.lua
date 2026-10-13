@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- luacheck: ignore 211
 local pending_confirmation = require("src.state.pending_confirmation")
 local support = require("test.support.shared_support")
@@ -17,16 +17,14 @@ local runtime_state = require("src.ui.state.runtime")
 local route_model = require("src.ui.input.route_model")
 local item_slice = require("src.ui.view.item_slice")
 local tip_queue = require("src.foundation.tips")
-
-TestMarketConfirmFlow = {}
-
-function TestMarketConfirmFlow:tearDown()
+describe("TestMarketConfirmFlow", function()
+after_each(function()
   runtime_ports.reset_for_tests()
   -- 拆了共享端口基线必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)
   support.restore_runtime_services()
-end
+end)
 
-function TestMarketConfirmFlow:test_market_open_keeps_market_canvas_visible_when_item_atlas_was_open()
+it("test_market_open_keeps_market_canvas_visible_when_item_atlas_was_open", function()
   local events = {}
   local role1 = {
     get_roleid = function()
@@ -114,12 +112,12 @@ function TestMarketConfirmFlow:test_market_open_keeps_market_canvas_visible_when
   _assert_eq(state.ui.item_atlas.open, false, "opening market should close the atlas for the acting role")
   _assert_eq(last_market_event, "显示" .. market_nodes.canvas,
     "market canvas must remain visible after closing the previously open atlas")
-end
+end)
 
 -- 杀 screens/market.lua L140 `opened=false→true` 幸存者:没有任何可操作角色时,
 -- refresh 不发生,market_active 必须保持 false —— 否则「打不开的商店」会被标成已打开,
 -- 后续 close/interrupt 逻辑会对着不存在的面板走一遍。
-function TestMarketConfirmFlow:test_market_open_stays_inactive_when_no_role_can_operate()
+it("test_market_open_stays_inactive_when_no_role_can_operate", function()
   local spectator_role = {
     get_roleid = function()
       return 2
@@ -174,9 +172,9 @@ function TestMarketConfirmFlow:test_market_open_stays_inactive_when_no_role_can_
 
   _assert_eq(state.ui.market_active, false,
     "market must stay inactive when no role can operate (nothing was refreshed)")
-end
+end)
 
-function TestMarketConfirmFlow:test_market_open_without_roles_switches_the_base_canvas_globally()
+it("test_market_open_without_roles_switches_the_base_canvas_globally", function()
   local runtime_ui = require("src.ui.render.support.runtime_ui")
   local canvas = require("src.ui.coord.canvas_coordinator")
   local market_view = require("src.ui.render.market")
@@ -233,12 +231,12 @@ function TestMarketConfirmFlow:test_market_open_without_roles_switches_the_base_
   end, { skip_runtime_context_refresh = true })
 
   _assert_eq(#switches, 1, "a no-role open should still switch the canvas once")
-end
+end)
 
 -- 杀 screens/market.lua L113 `require("src.ui.state.modal")→nil` 幸存者:真 modal 的
 -- select_market_option 会 set_ui_dirty(true)(fallback 不会),这是选中后触发重投影的
 -- 可观测契约 —— 丢了它,选中态不会刷新到画面。
-function TestMarketConfirmFlow:test_market_select_option_marks_ui_dirty_via_real_modal_state()
+it("test_market_select_option_marks_ui_dirty_via_real_modal_state", function()
   local entry = assert(market_cfg[1], "missing market config entry")
   local state = {
     ui_model = {
@@ -267,9 +265,9 @@ function TestMarketConfirmFlow:test_market_select_option_marks_ui_dirty_via_real
 
   _assert_eq(runtime_state.is_ui_dirty(state), true,
     "selecting a market option must mark ui dirty through the real modal state module")
-end
+end)
 
-function TestMarketConfirmFlow:test_ui_intent_dispatcher_market_confirm_dispatches_directly()
+it("test_ui_intent_dispatcher_market_confirm_dispatches_directly", function()
   local captured = nil
   local state = {
     turn_action_port = {
@@ -307,9 +305,9 @@ function TestMarketConfirmFlow:test_ui_intent_dispatcher_market_confirm_dispatch
   _assert_eq(captured and captured.type, "choice_select", "market_confirm should dispatch choice_select directly")
   _assert_eq(captured and captured.choice_id, 12, "market_confirm should keep choice id")
   _assert_eq(captured and captured.option_id, 2001, "market_confirm should keep option id")
-end
+end)
 
-function TestMarketConfirmFlow:test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly()
+it("test_ui_intent_dispatcher_market_confirm_without_pre_confirm_flag_dispatches_directly", function()
   local captured = nil
   local state = {
     turn_action_port = {
@@ -351,9 +349,9 @@ function TestMarketConfirmFlow:test_ui_intent_dispatcher_market_confirm_without_
     "direct dispatch should keep market choice id when pre-confirm flag missing")
   _assert_eq(captured and captured.option_id, 2001,
     "direct dispatch should keep selected option id when pre-confirm flag missing")
-end
+end)
 
-function TestMarketConfirmFlow:test_ui_intent_dispatcher_item_slot_dispatches_directly()
+it("test_ui_intent_dispatcher_item_slot_dispatches_directly", function()
   local dispatched = {}
   local state = {
     turn_action_port = {
@@ -399,9 +397,9 @@ function TestMarketConfirmFlow:test_ui_intent_dispatcher_item_slot_dispatches_di
   _assert_eq(#dispatched, 1, "item slot should dispatch directly without pre_confirm")
   _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "item slot should dispatch original ui_button")
   _assert_eq(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT), false, "item slot should not activate pre_confirm")
-end
+end)
 
-function TestMarketConfirmFlow:test_ui_intent_dispatcher_remote_choice_skips_pre_confirm_when_disabled()
+it("test_ui_intent_dispatcher_remote_choice_skips_pre_confirm_when_disabled", function()
   local opened_pre_confirm = 0
   local dispatched = {}
   local state = {
@@ -453,9 +451,9 @@ function TestMarketConfirmFlow:test_ui_intent_dispatcher_remote_choice_skips_pre
     "remote choice with disabled pre-confirm should dispatch choice_select")
   _assert_eq(dispatched[1] and dispatched[1].option_id, 4,
     "remote choice with disabled pre-confirm should keep selected option id")
-end
+end)
 
-function TestMarketConfirmFlow:test_secondary_confirm_flow_opens_its_own_confirm_screen_and_dispatches_choice_select_on_confirm()
+it("test_secondary_confirm_flow_opens_its_own_confirm_screen_and_dispatches_choice_select_on_confirm", function()
   local opened_pre_confirm = 0
   local dispatched = {}
   local state = {
@@ -520,9 +518,9 @@ function TestMarketConfirmFlow:test_secondary_confirm_flow_opens_its_own_confirm
   _assert_eq(#dispatched, 1, "secondary_confirm confirm should dispatch once")
   _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "secondary_confirm confirm should dispatch choice_select")
   _assert_eq(dispatched[1] and dispatched[1].option_id, "use", "secondary_confirm confirm should keep selected option id")
-end
+end)
 
-function TestMarketConfirmFlow:test_market_select_still_requires_confirm_after_item_flatten()
+it("test_market_select_still_requires_confirm_after_item_flatten", function()
   local dispatched = {}
   local selected_option = nil
   local state = {
@@ -588,9 +586,9 @@ function TestMarketConfirmFlow:test_market_select_still_requires_confirm_after_i
   _assert_eq(#dispatched, 1, "market confirm should dispatch once after selection")
   _assert_eq(dispatched[1] and dispatched[1].type, "choice_select", "market confirm should dispatch choice_select")
   _assert_eq(dispatched[1] and dispatched[1].option_id, 2001, "market confirm should keep selected option id")
-end
+end)
 
-function TestMarketConfirmFlow:test_ui_intent_dispatcher_item_slot_dispatches_directly_for_non_owner()
+it("test_ui_intent_dispatcher_item_slot_dispatches_directly_for_non_owner", function()
   local opened_pre_confirm = 0
   local dispatched = {}
   local state = {
@@ -641,7 +639,7 @@ function TestMarketConfirmFlow:test_ui_intent_dispatcher_item_slot_dispatches_di
   _assert_eq(pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT), false, "non-owner item slot should keep pre-confirm inactive")
   _assert_eq(#dispatched, 1, "non-owner item slot should continue with original action path")
   _assert_eq(dispatched[1] and dispatched[1].type, "ui_button", "non-owner item slot should dispatch original ui_button")
-end
+end)
 
 -- ===== 槽满点击拦截(UI 本地闸,工单见提交说明) =====
 -- 契约:道具槽满时点击购买按钮在 build_intent 处打回 —— tip 告知 + 不生出
@@ -696,7 +694,7 @@ local function _with_captured_tips(fn)
   return tips
 end
 
-function TestMarketConfirmFlow:test_market_confirm_blocked_with_tip_when_buyer_slots_full()
+it("test_market_confirm_blocked_with_tip_when_buyer_slots_full", function()
   local state = _market_gate_state({ "a", "b", "c", "d", "e" }, nil)
   local spec = assert(_market_confirm_spec(state), "confirm route spec should exist")
 
@@ -709,9 +707,9 @@ function TestMarketConfirmFlow:test_market_confirm_blocked_with_tip_when_buyer_s
   _assert_eq(#tips, 1, "slots full should enqueue exactly one rejection tip")
   _assert_eq(tips[1] and tips[1].text, "道具槽已满，无法购买",
     "rejection tip should tell the player slots are full")
-end
+end)
 
-function TestMarketConfirmFlow:test_market_confirm_passes_when_buyer_has_empty_slot()
+it("test_market_confirm_passes_when_buyer_has_empty_slot", function()
   local state = _market_gate_state({ "a", nil, "c", "d", "e" }, nil)
   local spec = assert(_market_confirm_spec(state), "confirm route spec should exist")
 
@@ -725,11 +723,11 @@ function TestMarketConfirmFlow:test_market_confirm_passes_when_buyer_has_empty_s
   _assert_eq(intent.choice_id, 88, "unblocked click should keep choice id")
   _assert_eq(intent.option_id, 2001, "unblocked click should keep selected option id")
   _assert_eq(#tips, 0, "no rejection tip when a slot is free")
-end
+end)
 
 -- 闸的槽位必须按 choice owner 取(item_slots_by_player[owner]),不能拿当前视角的
 -- item_slots 凑数 —— 否则观战/视角错位时满槽会被漏判、空槽会被误判。
-function TestMarketConfirmFlow:test_market_confirm_gate_reads_choice_owner_slots()
+it("test_market_confirm_gate_reads_choice_owner_slots", function()
   local owner_full = { "a", "b", "c", "d", "e" }
   local current_view_holey = { "a", nil, nil, nil, nil }
   local state = _market_gate_state(owner_full, current_view_holey)
@@ -741,11 +739,11 @@ function TestMarketConfirmFlow:test_market_confirm_gate_reads_choice_owner_slots
   end)
 
   luassert.is_nil(intent, "gate must judge by the choice owner's slots, not the viewing player's")
-end
+end)
 
 -- 模型里没有任何槽位数据时放行,交给引擎侧兜底 —— 本地闸只做「确定满了」的
 -- 提前打回,数据缺失不得误拦正常购买。
-function TestMarketConfirmFlow:test_market_confirm_passes_when_slots_unknown()
+it("test_market_confirm_passes_when_slots_unknown", function()
   local state = _market_gate_state(nil, nil)
   local spec = assert(_market_confirm_spec(state), "confirm route spec should exist")
 
@@ -757,11 +755,11 @@ function TestMarketConfirmFlow:test_market_confirm_passes_when_slots_unknown()
   assert(intent ~= nil, "unknown slots must fall through to the engine-side backstop")
   _assert_eq(intent.type, "market_confirm", "unknown slots should still build market_confirm")
   _assert_eq(#tips, 0, "unknown slots should not enqueue a rejection tip")
-end
+end)
 
 -- _buyer_slots 的 model==nil 早退:ui_model 缺失(刷新窗口期)时槽位未知,
 -- 本地闸必须放行、交给引擎侧兜底,不能对着 nil 模型炸索引。
-function TestMarketConfirmFlow:test_market_confirm_passes_when_ui_model_is_missing()
+it("test_market_confirm_passes_when_ui_model_is_missing", function()
   local state = { ui = {} }
   _bind_ui_runtime(state)
   runtime_state.ensure_ui_runtime(state).pending_choice_selected_option_id = 2001
@@ -780,11 +778,11 @@ function TestMarketConfirmFlow:test_market_confirm_passes_when_ui_model_is_missi
   assert(intent ~= nil, "missing ui_model must fall through to the engine-side backstop")
   _assert_eq(intent.type, "market_confirm", "missing ui_model should still build market_confirm")
   _assert_eq(#tips, 0, "missing ui_model should not enqueue a rejection tip")
-end
+end)
 
 -- _buyer_inventory_full 的 slot_count<=0 早退:零槽配置没有可用的「满」判定,
 -- 闸必须放行,不得误拦购买。
-function TestMarketConfirmFlow:test_market_confirm_passes_when_slot_count_is_zero()
+it("test_market_confirm_passes_when_slot_count_is_zero", function()
   local state = _market_gate_state({}, nil)
   local spec = assert(_market_confirm_spec(state), "confirm route spec should exist")
 
@@ -800,7 +798,7 @@ function TestMarketConfirmFlow:test_market_confirm_passes_when_slot_count_is_zer
   assert(intent ~= nil, "zero slot count must not block the purchase")
   _assert_eq(intent.type, "market_confirm", "zero slot count should still build market_confirm")
   _assert_eq(#tips, 0, "zero slot count should not enqueue a rejection tip")
-end
+end)
 
 
-return TestMarketConfirmFlow
+end)

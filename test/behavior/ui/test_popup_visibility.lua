@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 -- luacheck: ignore 211
 local support = require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
@@ -11,10 +11,8 @@ local modal_presenter = require("src.ui.coord.popup_presenter")
 local _build_popup_view_state = support.build_popup_view_state
 local _build_role_with_events = support.build_role_with_events
 local _has_event = support.has_event
-
-TestPopupVisibility = {}
-
-function TestPopupVisibility:test_push_popup_sets_card_image_by_image_ref()
+describe("TestPopupVisibility", function()
+it("test_push_popup_sets_card_image_by_image_ref", function()
   local last_image_key = nil
   local card_node = {
     set_texture_keep_size = function(_, image_key)
@@ -40,9 +38,9 @@ function TestPopupVisibility:test_push_popup_sets_card_image_by_image_ref()
 
   _assert_eq(last_image_key, "ICON2001", "popup card should use mapped image")
   _assert_eq(nodes["卡牌展示_图片"].visible, true, "popup card should be visible when image exists")
-end
+end)
 
-function TestPopupVisibility:test_push_popup_hides_card_and_clears_image_when_missing()
+it("test_push_popup_hides_card_and_clears_image_when_missing", function()
   local last_image_key = nil
   local card_node = {
     set_texture_keep_size = function(_, image_key)
@@ -72,9 +70,9 @@ function TestPopupVisibility:test_push_popup_hides_card_and_clears_image_when_mi
 
   _assert_eq(last_image_key, "EMPTY", "popup card should reset to empty key when image missing")
   _assert_eq(nodes["卡牌展示_图片"].visible, false, "popup card should hide when image missing")
-end
+end)
 
-function TestPopupVisibility:test_popup_hidden_for_non_current_role()
+it("test_popup_hidden_for_non_current_role", function()
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -112,11 +110,11 @@ function TestPopupVisibility:test_popup_hidden_for_non_current_role()
 
   luassert.truthy(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
   luassert.truthy(not _has_event(role2_events, "显示卡牌展示屏"), "non-current role should not see popup canvas")
-end
+end)
 
 -- #142 反转旧 pin「卡牌弹窗时旁观者 canvas 不动」:机会卡抽卡展示走广播载荷
 -- (rules 层 effect_chance 置 broadcast 标志),旁观 role 也切到卡牌展示屏。
-function TestPopupVisibility:test_broadcast_chance_popup_switches_spectator_to_popup_canvas()
+it("test_broadcast_chance_popup_switches_spectator_to_popup_canvas", function()
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -157,9 +155,9 @@ function TestPopupVisibility:test_broadcast_chance_popup_switches_spectator_to_p
   luassert.truthy(_has_event(role1_events, "显示卡牌展示屏"), "current role should see popup canvas")
   luassert.truthy(_has_event(role2_events, "显示卡牌展示屏"),
     "spectator must be switched to popup canvas for broadcast chance card")
-end
+end)
 
-function TestPopupVisibility:test_non_broadcast_card_popup_keeps_spectator_canvas_untouched()
+it("test_non_broadcast_card_popup_keeps_spectator_canvas_untouched", function()
   -- 不带 broadcast 标志的普通卡牌弹窗维持旧语义:旁观者 canvas 不动。
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -204,9 +202,9 @@ function TestPopupVisibility:test_non_broadcast_card_popup_keeps_spectator_canva
     "spectator canvas must remain untouched so opened atlas stays visible")
   luassert.truthy(not _has_event(role2_events, "隐藏道具图鉴"),
     "spectator atlas canvas must not be force-hidden during non-broadcast card popup")
-end
+end)
 
-function TestPopupVisibility:test_bankruptcy_popup_visible_for_all_roles()
+it("test_bankruptcy_popup_visible_for_all_roles", function()
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
   }, {
@@ -244,9 +242,9 @@ function TestPopupVisibility:test_bankruptcy_popup_visible_for_all_roles()
 
   luassert.truthy(_has_event(role1_events, "显示破产展示屏"), "current role should see bankruptcy canvas")
   luassert.truthy(_has_event(role2_events, "显示破产展示屏"), "non-current role should see bankruptcy canvas")
-end
+end)
 
-function TestPopupVisibility:test_hide_bankruptcy_popup_hides_bankruptcy_root()
+it("test_hide_bankruptcy_popup_hides_bankruptcy_root", function()
   local popup_controller = require("src.ui.coord.popup")
   local state, nodes, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -268,9 +266,9 @@ function TestPopupVisibility:test_hide_bankruptcy_popup_hides_bankruptcy_root()
 
   _assert_eq(nodes["破产展示屏"] and nodes["破产展示屏"].visible or false, false,
     "hide must close the bankruptcy screen root, not the card popup root")
-end
+end)
 
-function TestPopupVisibility:test_bankruptcy_popup_avatar_uses_native_size_path()
+it("test_bankruptcy_popup_avatar_uses_native_size_path", function()
   local native_calls = 0
   local avatar_image_key = nil
   local state, _, query_nodes = _build_popup_view_state({
@@ -296,9 +294,9 @@ function TestPopupVisibility:test_bankruptcy_popup_avatar_uses_native_size_path(
 
   _assert_eq(native_calls, 1, "bankruptcy popup avatar should use native-size path")
   _assert_eq(avatar_image_key, 2002, "bankruptcy popup avatar should forward payload image key")
-end
+end)
 
-function TestPopupVisibility:test_show_card_popup_shows_root_and_enables_dismiss_touch()
+it("test_show_card_popup_shows_root_and_enables_dismiss_touch", function()
   -- kills L118 `set_visible(popup.root, true)` true->false 与
   -- L130 `set_popup_dismiss_touch(ui, true)` true->false(#262)。
   local popup_controller = require("src.ui.coord.popup")
@@ -321,9 +319,9 @@ function TestPopupVisibility:test_show_card_popup_shows_root_and_enables_dismiss
 
   _assert_eq(nodes["卡牌展示屏"].visible, true, "card popup root must be visible after show")
   _assert_eq(nodes["卡牌展示_灰底"].disabled, false, "dismiss touch must be enabled after show")
-end
+end)
 
-function TestPopupVisibility:test_hide_card_popup_hides_root_and_disables_dismiss_touch()
+it("test_hide_card_popup_hides_root_and_disables_dismiss_touch", function()
   -- kills L156 `set_popup_dismiss_touch(ui, false)` false->true(#262)。
   local popup_controller = require("src.ui.coord.popup")
   local state, nodes, query_nodes = _build_popup_view_state({
@@ -346,9 +344,9 @@ function TestPopupVisibility:test_hide_card_popup_hides_root_and_disables_dismis
 
   _assert_eq(nodes["卡牌展示屏"].visible, false, "card popup root must hide after hide")
   _assert_eq(nodes["卡牌展示_灰底"].disabled, true, "dismiss touch must be disabled after hide")
-end
+end)
 
-function TestPopupVisibility:test_bankruptcy_show_marks_root_visible()
+it("test_bankruptcy_show_marks_root_visible", function()
   -- kills L108 `set_visible(screen.root, true)` true->false(#262):
   -- 既有 hide 用例只钉 hide 后 false,节点初始 visible 为 nil(falsy),
   -- show 从不置 true 也测不出来。
@@ -372,9 +370,9 @@ function TestPopupVisibility:test_bankruptcy_show_marks_root_visible()
 
   _assert_eq(nodes["破产展示屏"] and nodes["破产展示屏"].visible or false, true,
     "bankruptcy root must be visible after show")
-end
+end)
 
-function TestPopupVisibility:test_resolve_bankruptcy_text_prefers_payload_text()
+it("test_resolve_bankruptcy_text_prefers_payload_text", function()
   local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -399,9 +397,9 @@ function TestPopupVisibility:test_resolve_bankruptcy_text_prefers_payload_text()
   end)
 
   _assert_eq(captured_text, "自定义破产文本", "_resolve_bankruptcy_text should prefer payload.text")
-end
+end)
 
-function TestPopupVisibility:test_resolve_bankruptcy_text_falls_back_to_reason()
+it("test_resolve_bankruptcy_text_falls_back_to_reason", function()
   local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -426,9 +424,9 @@ function TestPopupVisibility:test_resolve_bankruptcy_text_falls_back_to_reason()
   end)
 
   _assert_eq(captured_text, "破产原因说明", "_resolve_bankruptcy_text should fall back to payload.reason")
-end
+end)
 
-function TestPopupVisibility:test_resolve_bankruptcy_text_falls_back_to_player_name()
+it("test_resolve_bankruptcy_text_falls_back_to_player_name", function()
   local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -453,9 +451,9 @@ function TestPopupVisibility:test_resolve_bankruptcy_text_falls_back_to_player_n
   end)
 
   _assert_eq(captured_text, "测试玩家 破产出局", "_resolve_bankruptcy_text should append 破产出局 to player_name")
-end
+end)
 
-function TestPopupVisibility:test_resolve_bankruptcy_text_uses_default_when_all_missing()
+it("test_resolve_bankruptcy_text_uses_default_when_all_missing", function()
   local popup_controller = require("src.ui.coord.popup")
   local state, _, query_nodes = _build_popup_view_state({
     ["Empty"] = "EMPTY",
@@ -479,7 +477,7 @@ function TestPopupVisibility:test_resolve_bankruptcy_text_uses_default_when_all_
   end)
 
   _assert_eq(captured_text, "破产出局", "_resolve_bankruptcy_text should return default when all fields missing")
-end
+end)
 
 
-return TestPopupVisibility
+end)

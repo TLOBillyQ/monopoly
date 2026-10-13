@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local property = require("test.support.property")
 local atlas_state = require("src.ui.screens.item_atlas.item_atlas_state")
 local item_atlas_nodes = require("src.ui.schema.item_atlas")
@@ -18,15 +18,13 @@ local function _build_catalog(rng)
   end
   return { catalog = catalog, n = n }
 end
-
-TestItemAtlasPaging = {}
-
+describe("TestItemAtlasPaging", function()
 do
-  function TestItemAtlasPaging:tearDown()
+  after_each(function()
     atlas_state.set_catalog(nil)
-  end
+  end)
 
-  TestItemAtlasPaging["test_clamp_page always lands in [1, page_count] for any integer input"] = function(self)
+  it("test_clamp_page always lands in [1, page_count] for any integer input", function()
     property.for_all(function(rng)
       local case = _build_catalog(rng)
       case.page_input = rng:int(-999, 999)
@@ -40,9 +38,9 @@ do
       luassert.truthy(atlas_state.clamp_page(clamped) == clamped,
         "clamping must be idempotent")
     end)
-  end
+  end)
 
-  TestItemAtlasPaging["test_clamp_page pins non-numeric input to page 1"] = function(self)
+  it("test_clamp_page pins non-numeric input to page 1", function()
     property.for_all(_build_catalog, function(case, rng)
       atlas_state.set_catalog(case.catalog)
       local junk = rng:pick({ "not-a-page", {}, false })
@@ -51,9 +49,9 @@ do
       luassert.truthy(atlas_state.clamp_page(nil) == 1,
         "nil page input must clamp to 1")
     end)
-  end
+  end)
 
-  TestItemAtlasPaging["test_item_at maps (page, slot) to the matching global catalog entry and nil past the end"] = function(self)
+  it("test_item_at maps (page, slot) to the matching global catalog entry and nil past the end", function()
     property.for_all(function(rng)
       local case = _build_catalog(rng)
       case.page = rng:int(1, math.max(1, math.ceil(case.n / PAGE)))
@@ -68,9 +66,9 @@ do
         "slot " .. case.slot .. " on page " .. case.page
         .. " must resolve to catalog[" .. global_index .. "]")
     end)
-  end
+  end)
 
-  TestItemAtlasPaging["test_set_catalog(nil) restores the default catalog"] = function(self)
+  it("test_set_catalog(nil) restores the default catalog", function()
     local default_catalog = atlas_state.catalog()
     property.for_all(_build_catalog, function(case)
       atlas_state.set_catalog(case.catalog)
@@ -78,8 +76,8 @@ do
       atlas_state.set_catalog(nil)
       luassert.truthy(atlas_state.catalog() == default_catalog, "set_catalog(nil) must restore the default")
     end)
-  end
+  end)
 end
 
 
-return TestItemAtlasPaging
+end)
