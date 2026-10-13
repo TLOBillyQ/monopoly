@@ -213,7 +213,6 @@ return {
     "test/behavior/scenarios/angel_immunity/test_angel_immunity.lua",
     "test/behavior/scenarios/angel_immunity/test_angel_tax_and_chance.lua",
     "test/behavior/scenarios/deadlines/test_all_human_no_input_full_game.lua",
-    "test/behavior/scenarios/item_phase/test_effect_groups.lua",
     "test/behavior/scenarios/item_phase/test_passive.lua",
     "test/behavior/scenarios/item_phase/test_reopen_timeout.lua",
     "test/behavior/scenarios/item_phase/test_repro_full_loop.lua",
@@ -602,6 +601,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/scenarios/item_phase/test_effect_groups.lua",
     "test/behavior/scenarios/turn_flow/test_landing_auto_advance.lua",
     "test/behavior/scenarios/movement_obstacles/test_obstacles.lua",
     "test/behavior/app/test_compose_game.lua",

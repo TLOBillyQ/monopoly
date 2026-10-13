@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.same(expected, actual, message)
 end
@@ -15,7 +15,7 @@ local use_flow = require("src.rules.items.use_flow")
 local phase_registry = require("src.turn.phases.registry")
 local scheduler = require("src.turn.scheduler")
 
-TestItemEffectGroups = {}
+describe("TestItemEffectGroups", function()
 
 local function new_game(mode, item_id)
   local g = support.new_game({ ai = mode == "replacement" and { [1] = true } or {} })
@@ -39,7 +39,7 @@ local function select_item(g, item_id)
   return resolver.resolve(g, assert(g.turn.pending_choice), { option_id = item_id })
 end
 
-function TestItemEffectGroups:test_remote_dice_locks_only_after_success_and_keeps_the_pending_points()
+local function _test_remote_dice_locks_only_after_success_and_keeps_the_pending_points()
   for _, mode in ipairs({ "direct", "replacement", "manual", "afk" }) do
     local g, p = new_game(mode, item_ids.remote_dice)
     run_phase(g, p)
@@ -63,7 +63,7 @@ function TestItemEffectGroups:test_remote_dice_locks_only_after_success_and_keep
   end
 end
 
-function TestItemEffectGroups:test_cancel_and_illegal_phase_do_not_lock_a_later_success()
+local function _test_cancel_and_illegal_phase_do_not_lock_a_later_success()
   local g, p = new_game("direct", item_ids.remote_dice)
   local rejected = use_flow.begin_item_use(g, p, item_ids.remote_dice, { phase = "post_action" })
   luassert.is_false(rejected.ok)
@@ -84,7 +84,7 @@ function TestItemEffectGroups:test_cancel_and_illegal_phase_do_not_lock_a_later_
   _assert_equal(g.turn.used_effect_groups.dice_control, true)
 end
 
-function TestItemEffectGroups:test_rejected_effect_keeps_its_consumption_policy_and_allows_a_later_grouped_card()
+local function _test_rejected_effect_keeps_its_consumption_policy_and_allows_a_later_grouped_card()
   local g, p = new_game("direct", item_ids.remote_dice)
   p.inventory:add({ id = item_ids.monster })
   local rejected = use_flow.begin_item_use(g, p, item_ids.monster)
@@ -100,7 +100,7 @@ function TestItemEffectGroups:test_rejected_effect_keeps_its_consumption_policy_
   _assert_equal(p.inventory.items[2].id, item_ids.remote_dice)
 end
 
-function TestItemEffectGroups:test_different_groups_can_succeed_in_the_same_turn()
+local function _test_different_groups_can_succeed_in_the_same_turn()
   for _, mode in ipairs({ "direct", "replacement", "manual", "afk" }) do
     local g, p = new_game(mode, item_ids.remote_dice)
     p.inventory:add({ id = item_ids.dice_multiplier })
@@ -118,7 +118,7 @@ function TestItemEffectGroups:test_different_groups_can_succeed_in_the_same_turn
   end
 end
 
-function TestItemEffectGroups:test_real_turn_cleanup_restores_the_group_on_the_next_own_turn()
+local function _test_real_turn_cleanup_restores_the_group_on_the_next_own_turn()
   local g, p = new_game("direct", item_ids.dice_multiplier)
   run_phase(g, p, "pre_move")
   select_item(g, item_ids.dice_multiplier)
@@ -145,7 +145,7 @@ function TestItemEffectGroups:test_real_turn_cleanup_restores_the_group_on_the_n
   _assert_equal(g.turn.used_effect_groups.dice_multiply, true)
 end
 
-function TestItemEffectGroups:test_all_control_modes_keep_the_second_multiplier_in_its_slot()
+local function _test_all_control_modes_keep_the_second_multiplier_in_its_slot()
   for _, mode in ipairs({ "direct", "replacement", "manual", "afk" }) do
     local g, p = new_game(mode, item_ids.dice_multiplier)
     run_phase(g, p, "pre_move")
@@ -160,3 +160,11 @@ function TestItemEffectGroups:test_all_control_modes_keep_the_second_multiplier_
     _assert_equal(reason, "effect_group_used", mode)
   end
 end
+
+it("test_remote_dice_locks_only_after_success_and_keeps_the_pending_points", _test_remote_dice_locks_only_after_success_and_keeps_the_pending_points)
+it("test_cancel_and_illegal_phase_do_not_lock_a_later_success", _test_cancel_and_illegal_phase_do_not_lock_a_later_success)
+it("test_rejected_effect_keeps_its_consumption_policy_and_allows_a_later_grouped_card", _test_rejected_effect_keeps_its_consumption_policy_and_allows_a_later_grouped_card)
+it("test_different_groups_can_succeed_in_the_same_turn", _test_different_groups_can_succeed_in_the_same_turn)
+it("test_real_turn_cleanup_restores_the_group_on_the_next_own_turn", _test_real_turn_cleanup_restores_the_group_on_the_next_own_turn)
+it("test_all_control_modes_keep_the_second_multiplier_in_its_slot", _test_all_control_modes_keep_the_second_multiplier_in_its_slot)
+end)
