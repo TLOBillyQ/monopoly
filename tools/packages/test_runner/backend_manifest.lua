@@ -69,7 +69,6 @@ return {
     "test/behavior/host/test_init_mutation.lua",
     "test/behavior/host/test_paid_purchase_gateway.lua",
     "test/behavior/host/test_synthetic_actor_registry.lua",
-    "test/behavior/host/test_units.lua",
     "test/behavior/player/actions/test_balance_mutation.lua",
     "test/behavior/player/actions/test_deity_mutation.lua",
     "test/behavior/player/actions/test_location_ops.lua",
@@ -582,6 +581,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/host/test_units.lua",
     "test/behavior/host/test_scene_ui.lua",
     "test/behavior/host/test_like_collect_subscribe.lua",
     "test/behavior/host/test_context.lua",

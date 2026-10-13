@@ -1,12 +1,12 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local unit_lifecycle = require("src.host.units")
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
-TestUnits = {}
+describe("TestUnits", function()
 
-function TestUnits:test_create_unit_group_returns_nil_when_gameapi_missing()
+local function _test_create_unit_group_returns_nil_when_gameapi_missing()
   local result, err = unit_lifecycle.create_unit_group(1, {}, {})
   luassert.truthy(result == nil, "expected nil without GameAPI")
   luassert.truthy(type(err) == "string", "expected error string")
@@ -14,7 +14,7 @@ function TestUnits:test_create_unit_group_returns_nil_when_gameapi_missing()
     "error should name the missing create_unit_group method, got " .. tostring(err))
 end
 
-function TestUnits:test_create_unit_with_scale_returns_nil_when_gameapi_missing()
+local function _test_create_unit_with_scale_returns_nil_when_gameapi_missing()
   local result, err = unit_lifecycle.create_unit_with_scale(1, {}, {}, 1.0)
   luassert.truthy(result == nil, "expected nil without GameAPI")
   luassert.truthy(type(err) == "string", "expected error string")
@@ -22,17 +22,17 @@ function TestUnits:test_create_unit_with_scale_returns_nil_when_gameapi_missing(
     "error should name the missing create_unit_with_scale method, got " .. tostring(err))
 end
 
-function TestUnits:test_destroy_unit_with_children_returns_false_when_gameapi_missing()
+local function _test_destroy_unit_with_children_returns_false_when_gameapi_missing()
   local result = unit_lifecycle.destroy_unit_with_children({})
   luassert.truthy(result == false, "expected false without GameAPI")
 end
 
-function TestUnits:test_destroy_unit_returns_false_when_gameapi_missing()
+local function _test_destroy_unit_returns_false_when_gameapi_missing()
   local result = unit_lifecycle.destroy_unit({})
   luassert.truthy(result == false, "expected false without GameAPI")
 end
 
-function TestUnits:test_treats_a_non_function_gameapi_member_as_missing()
+local function _test_treats_a_non_function_gameapi_member_as_missing()
   with_patches({
     { key = "GameAPI", value = { create_unit_group = 42, destroy_unit = "not a fn" } },
   }, function()
@@ -44,7 +44,7 @@ function TestUnits:test_treats_a_non_function_gameapi_member_as_missing()
   end)
 end
 
-function TestUnits:test_create_unit_group_forwards_group_id_pos_rotation_and_returns_host_handle()
+local function _test_create_unit_group_forwards_group_id_pos_rotation_and_returns_host_handle()
   local seen
   with_patches({
     { key = "GameAPI", value = {
@@ -66,7 +66,7 @@ function TestUnits:test_create_unit_group_forwards_group_id_pos_rotation_and_ret
   end)
 end
 
-function TestUnits:test_create_unit_with_scale_forwards_unit_id_pos_rotation_scale_and_returns_host_handle()
+local function _test_create_unit_with_scale_forwards_unit_id_pos_rotation_scale_and_returns_host_handle()
   local seen
   with_patches({
     { key = "GameAPI", value = {
@@ -88,7 +88,7 @@ function TestUnits:test_create_unit_with_scale_forwards_unit_id_pos_rotation_sca
   end)
 end
 
-function TestUnits:test_destroy_unit_forwards_the_handle_and_returns_true()
+local function _test_destroy_unit_forwards_the_handle_and_returns_true()
   local seen
   with_patches({
     { key = "GameAPI", value = {
@@ -105,7 +105,7 @@ function TestUnits:test_destroy_unit_forwards_the_handle_and_returns_true()
   end)
 end
 
-function TestUnits:test_destroy_unit_with_children_coerces_include_children_to_a_boolean_and_returns_true()
+local function _test_destroy_unit_with_children_coerces_include_children_to_a_boolean_and_returns_true()
   local seen = {}
   with_patches({
     { key = "GameAPI", value = {
@@ -134,4 +134,13 @@ function TestUnits:test_destroy_unit_with_children_coerces_include_children_to_a
 end
 
 
-return TestUnits
+it("test_create_unit_group_returns_nil_when_gameapi_missing", _test_create_unit_group_returns_nil_when_gameapi_missing)
+it("test_create_unit_with_scale_returns_nil_when_gameapi_missing", _test_create_unit_with_scale_returns_nil_when_gameapi_missing)
+it("test_destroy_unit_with_children_returns_false_when_gameapi_missing", _test_destroy_unit_with_children_returns_false_when_gameapi_missing)
+it("test_destroy_unit_returns_false_when_gameapi_missing", _test_destroy_unit_returns_false_when_gameapi_missing)
+it("test_treats_a_non_function_gameapi_member_as_missing", _test_treats_a_non_function_gameapi_member_as_missing)
+it("test_create_unit_group_forwards_group_id_pos_rotation_and_returns_host_handle", _test_create_unit_group_forwards_group_id_pos_rotation_and_returns_host_handle)
+it("test_create_unit_with_scale_forwards_unit_id_pos_rotation_scale_and_returns_host_handle", _test_create_unit_with_scale_forwards_unit_id_pos_rotation_scale_and_returns_host_handle)
+it("test_destroy_unit_forwards_the_handle_and_returns_true", _test_destroy_unit_forwards_the_handle_and_returns_true)
+it("test_destroy_unit_with_children_coerces_include_children_to_a_boolean_and_returns_true", _test_destroy_unit_with_children_coerces_include_children_to_a_boolean_and_returns_true)
+end)
