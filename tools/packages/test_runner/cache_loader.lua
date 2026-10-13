@@ -8,6 +8,12 @@ local function dependency(name)
   end
   return false
 end
+function M.verified_module(name)
+  for dependency_name, object in pairs(verified) do
+    assert(package.loaded[dependency_name] == object, "verified module identity changed: " .. dependency_name)
+  end
+  return verified[name]
+end
 function M.install(root)
   local prefix = root:gsub("\\", "/"):gsub("/+$", "") .. "/.toolcache/luarocks/"
   for name, object in pairs(package.loaded) do
