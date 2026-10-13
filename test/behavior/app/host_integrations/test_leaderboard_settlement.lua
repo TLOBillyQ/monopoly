@@ -1,7 +1,7 @@
 -- leaderboard_settlement 装配接线:gm.finished 事件触发当前对局的 settle;
 -- 惰性访问器缺位时跳过接线(context-only 测试装配路径)。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local host_runtime = require("src.host.init")
@@ -26,14 +26,13 @@ local function _install_archives()
   return store
 end
 
-TestLeaderboardSettlement = {}
+describe("TestLeaderboardSettlement", function()
+  after_each(function()
+    runtime_ports.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestLeaderboardSettlement:tearDown()
-  runtime_ports.reset_for_tests()
-  support.restore_runtime_services()
-end
-
-function TestLeaderboardSettlement:test_skips_wiring_without_lazy_game_accessor()
+local function _test_skips_wiring_without_lazy_game_accessor()
   local register_calls = 0
   support.with_patches({
     {
@@ -51,7 +50,7 @@ function TestLeaderboardSettlement:test_skips_wiring_without_lazy_game_accessor(
   luassert.truthy(register_calls == 0, "skipped install must not touch the host event port")
 end
 
-function TestLeaderboardSettlement:test_settles_current_game_on_game_finished_event()
+local function _test_settles_current_game_on_game_finished_event()
   local handler = nil
   local game = {
     players = { { id = 1, name = "P1", properties = {}, cash = 30000 } },
@@ -89,7 +88,7 @@ function TestLeaderboardSettlement:test_settles_current_game_on_game_finished_ev
   luassert.truthy(game.leaderboard_settled == true, "settle must mark the game settled")
 end
 
-function TestLeaderboardSettlement:test_handler_tolerates_missing_game()
+local function _test_handler_tolerates_missing_game()
   local handler = nil
   support.with_patches({
     {
@@ -117,7 +116,7 @@ local function _configure_roles(role_by_id)
   })
 end
 
-function TestLeaderboardSettlement:test_watch_game_registers_quit_listener_per_human_player()
+local function _test_watch_game_registers_quit_listener_per_human_player()
   local role1, role3 = { tag = "role1" }, { tag = "role3" }
   _configure_roles({ [1] = role1, [3] = role3 })
   local ai_player = { id = 2, name = "AI", is_ai = true }
@@ -161,7 +160,7 @@ function TestLeaderboardSettlement:test_watch_game_registers_quit_listener_per_h
   luassert.truthy(#warns == 0, "healthy registration must not leave skip warns")
 end
 
-function TestLeaderboardSettlement:test_exit_callback_skips_other_players_exit()
+local function _test_exit_callback_skips_other_players_exit()
   _configure_roles({ [1] = { tag = "role1" } })
   local player1 = { id = 1, name = "P1" }
   local registrations = {}
@@ -194,7 +193,7 @@ function TestLeaderboardSettlement:test_exit_callback_skips_other_players_exit()
     "own exit with string role id must mark this player")
 end
 
-function TestLeaderboardSettlement:test_watch_game_skips_and_logs_when_role_unresolved()
+local function _test_watch_game_skips_and_logs_when_role_unresolved()
   _configure_roles({})
   local warns = {}
   local register_calls = 0
@@ -222,7 +221,7 @@ function TestLeaderboardSettlement:test_watch_game_skips_and_logs_when_role_unre
   luassert.truthy(#warns == 1, "unresolved role must leave a warn trace (ADR 0046)")
 end
 
-function TestLeaderboardSettlement:test_watch_game_warns_when_host_rejects_registration()
+local function _test_watch_game_warns_when_host_rejects_registration()
   _configure_roles({ [1] = { tag = "role1" } })
   local warns = {}
   support.with_patches({
@@ -249,7 +248,7 @@ function TestLeaderboardSettlement:test_watch_game_warns_when_host_rejects_regis
 end
 
 -- 未知 proxy 形态(既非 table 也非字符串/数字)读不出 id:保守按本玩家退出标记。
-function TestLeaderboardSettlement:test_exit_callback_marks_quit_when_role_id_is_unreadable()
+local function _test_exit_callback_marks_quit_when_role_id_is_unreadable()
   _configure_roles({ [1] = { tag = "role1" } })
   local player1 = { id = 1, name = "P1" }
   local registrations = {}
@@ -272,7 +271,7 @@ function TestLeaderboardSettlement:test_exit_callback_marks_quit_when_role_id_is
 end
 
 -- 端口不可用(首返回值为 false)与宿主拒绝是两条独立跳过路径,都必须留痕。
-function TestLeaderboardSettlement:test_watch_game_warns_when_trigger_port_is_unavailable()
+local function _test_watch_game_warns_when_trigger_port_is_unavailable()
   _configure_roles({ [1] = { tag = "role1" } })
   local warns = {}
   support.with_patches({
@@ -297,9 +296,19 @@ function TestLeaderboardSettlement:test_watch_game_warns_when_trigger_port_is_un
   luassert.truthy(#warns == 1, "unavailable trigger port must leave a warn trace (ADR 0046)")
 end
 
-function TestLeaderboardSettlement:test_watch_game_rejects_missing_game_or_players()
+local function _test_watch_game_rejects_missing_game_or_players()
   luassert.truthy(settlement.watch_game(nil) == false, "watch_game must reject nil game")
   luassert.truthy(settlement.watch_game({}) == false, "watch_game must reject a game without players")
 end
 
-return TestLeaderboardSettlement
+it("test_skips_wiring_without_lazy_game_accessor", _test_skips_wiring_without_lazy_game_accessor)
+it("test_settles_current_game_on_game_finished_event", _test_settles_current_game_on_game_finished_event)
+it("test_handler_tolerates_missing_game", _test_handler_tolerates_missing_game)
+it("test_watch_game_registers_quit_listener_per_human_player", _test_watch_game_registers_quit_listener_per_human_player)
+it("test_exit_callback_skips_other_players_exit", _test_exit_callback_skips_other_players_exit)
+it("test_watch_game_skips_and_logs_when_role_unresolved", _test_watch_game_skips_and_logs_when_role_unresolved)
+it("test_watch_game_warns_when_host_rejects_registration", _test_watch_game_warns_when_host_rejects_registration)
+it("test_exit_callback_marks_quit_when_role_id_is_unreadable", _test_exit_callback_marks_quit_when_role_id_is_unreadable)
+it("test_watch_game_warns_when_trigger_port_is_unavailable", _test_watch_game_warns_when_trigger_port_is_unavailable)
+it("test_watch_game_rejects_missing_game_or_players", _test_watch_game_rejects_missing_game_or_players)
+end)
