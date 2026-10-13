@@ -3,7 +3,7 @@
 -- (host-managed rewards 3 例 + 迁自 property 车道的 config properties 2 例 = 5 例)。
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_eq(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -18,9 +18,9 @@ local EXPECTED_TASKS = {
   { period = "永久", name = "邀请20人", progress_source = "首次进入地图的人数", target_progress = 20, reward_amount = 99800 },
 }
 
-TestShareTaskHostManagedRewards = {}
+describe("TestShareTaskHostManagedRewards", function()
 
-function TestShareTaskHostManagedRewards:test_mirrors_the_configured_host_task_rewards()
+local function _test_mirrors_the_configured_host_task_rewards()
   for _, expected in ipairs(EXPECTED_TASKS) do
     local task = share_task.find_task(expected.period, expected.name)
     luassert.truthy(task ~= nil, "missing share task config: " .. expected.period .. "/" .. expected.name)
@@ -31,12 +31,12 @@ function TestShareTaskHostManagedRewards:test_mirrors_the_configured_host_task_r
   end
 end
 
-function TestShareTaskHostManagedRewards:test_returns_nil_for_unknown_task_names()
+local function _test_returns_nil_for_unknown_task_names()
   _assert_eq(share_task.find_task("每日", "不存在"), nil, "unknown share task should not resolve")
   _assert_eq(share_task.find_task("永久", "每日分享"), nil, "period is part of the task identity")
 end
 
-function TestShareTaskHostManagedRewards:test_does_not_grant_currency_from_lua_when_a_host_task_is_claimable()
+local function _test_does_not_grant_currency_from_lua_when_a_host_task_is_claimable()
   local task = share_task.find_task("每日", "每日分享")
   local player = { id = 1, cash = 500 }
   local result = share_task.claim(nil, player, task)
@@ -46,8 +46,13 @@ function TestShareTaskHostManagedRewards:test_does_not_grant_currency_from_lua_w
   _assert_eq(player.cash, 500, "Lua share task claim must not add currency")
 end
 
--- ===== 迁自 test/property/test_share_task.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
-do
+it("test_mirrors_the_configured_host_task_rewards", _test_mirrors_the_configured_host_task_rewards)
+it("test_returns_nil_for_unknown_task_names", _test_returns_nil_for_unknown_task_names)
+it("test_does_not_grant_currency_from_lua_when_a_host_task_is_claimable", _test_does_not_grant_currency_from_lua_when_a_host_task_is_claimable)
+end)
+
+-- ===== 迁自 test/property/test_share_task.lua（#190）=====
+describe("TestShareTaskConfigProperties", function()
   local property = require("test.support.property")
 
   local function _prop_assert_eq(actual, expected, message)
@@ -58,9 +63,7 @@ do
     return rng:pick(share_task.tasks)
   end
 
-  TestShareTaskConfigProperties = {}
-
-  function TestShareTaskConfigProperties:test_lookup_round_trips_every_configured_task_identity()
+  local function _test_lookup_round_trips_every_configured_task_identity()
     property.for_all(_gen_task, function(task)
       local found = share_task.find_task(task.period, task.name)
 
@@ -70,7 +73,7 @@ do
     end)
   end
 
-  function TestShareTaskConfigProperties:test_host_managed_claims_never_mutate_supplied_player_cash()
+  local function _test_host_managed_claims_never_mutate_supplied_player_cash()
     property.for_all(function(rng)
       return {
         task = _gen_task(rng),
@@ -85,14 +88,6 @@ do
       _prop_assert_eq(player.cash, case.cash, "claim should not mutate player cash")
     end)
   end
-end
-
-
--- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
--- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
--- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
--- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
-return require("test.support.multi_class_return").merge(
-  TestShareTaskHostManagedRewards,
-  TestShareTaskConfigProperties
-)
+  it("test_lookup_round_trips_every_configured_task_identity", _test_lookup_round_trips_every_configured_task_identity)
+  it("test_host_managed_claims_never_mutate_supplied_player_cash", _test_host_managed_claims_never_mutate_supplied_player_cash)
+end)

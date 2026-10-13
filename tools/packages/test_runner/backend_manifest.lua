@@ -13,7 +13,6 @@ return {
     "test/behavior/app/test_gameplay_start.lua",
     "test/behavior/app/test_init_runtime.lua",
     "test/behavior/app/test_leaderboard.lua",
-    "test/behavior/app/test_share_task.lua",
     "test/behavior/app/test_sign_in.lua",
     "test/behavior/app/test_startup_profile.lua",
     "test/behavior/app/test_ui_bootstrap.lua",
@@ -391,6 +390,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/test_share_task.lua",
     "test/behavior/app/test_roster_roles.lua",
     "test/behavior/app/test_host_install.lua",
     "test/behavior/app/test_roster_fallback.lua",
