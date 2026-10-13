@@ -2,7 +2,7 @@
 -- + 真实 need_choice 消费者 + 真实触控输入管线(输入锁/槽位预确认)。
 -- 剧本:同回合 2 查税 + 1 财神后,最后一张查税是否可用。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local function _assert_equal(actual, expected, message)
   luassert.is.equal(expected, actual, message)
 end
@@ -30,9 +30,19 @@ local function _has_option(choice, option_id)
   return false
 end
 
-TestReproFullLoopRichReopen = {}
+describe("TestReproFullLoopRichReopen", function()
+  local main_view = require("src.ui.coord.ui_runtime")
+  local saved_render, saved_emit_intent
+  before_each(function()
+    saved_render = main_view.render
+    saved_emit_intent = monopoly_event.emit_intent
+  end)
+  after_each(function()
+    monopoly_event.emit_intent = saved_emit_intent
+    main_view.render = saved_render
+  end)
 
-function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactive()
+it("test_window_after_rich_use_stays_interactive", function()
   local g = support.new_game()
   local state = fixtures.build_loop_state()
   -- 生产真身端口组:真实 modal/ui_sync(reconcile 安全网),动画桩给真实时长
@@ -197,7 +207,5 @@ function TestReproFullLoopRichReopen:test_window_after_rich_use_stays_interactiv
 
   monopoly_event.emit_intent = old_emit
   main_view.render = old_render
-end
-
-
-return TestReproFullLoopRichReopen
+end)
+end)
