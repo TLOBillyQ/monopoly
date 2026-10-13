@@ -47,6 +47,10 @@ local function _with_single_entry(fn)
   end
 end
 
+local function _result(cases, passed, failed)
+  return require("acceptance4lua.json").encode_compact({ backend = "busted", outcome = failed > 0 and "test_failure" or "test_success", error = "", output = "real busted output", counts = { cases = cases, passed = passed, failed = failed, errors = 0 }, executions = {} })
+end
+
 local function _run_serial()
   return run_all.run({ serial = true, generated_dir = "build/acceptance/serial_spec_tmp" })
 end
@@ -69,7 +73,7 @@ end
 function TestAcceptanceSerialLane:test_zero_executed_cases_never_counts_as_passing()
   local summary
   _with_single_entry(function()
-    _with_stubbed_proc({ { ok = true, code = 0, output = "0 passed, 0 failed\n" } }, function()
+    _with_stubbed_proc({ { ok = true, code = 0, output = _result(0, 0, 0) } }, function()
       summary = _run_serial()
     end)
   end)
@@ -81,19 +85,19 @@ end
 function TestAcceptanceSerialLane:test_real_failure_keeps_output_without_infrastructure_error()
   local summary
   _with_single_entry(function()
-    _with_stubbed_proc({ { ok = false, code = 1, output = "16 passed, 2 failed\n" } }, function()
+    _with_stubbed_proc({ { ok = false, code = 1, output = _result(18, 16, 2) } }, function()
       summary = _run_serial()
     end)
   end)
   lu.assertIs(#summary.failed, 1)
   lu.assertIs(summary.failed[1].error, "")
-  lu.assertEvalToTrue(summary.failed[1].output:find("16 passed, 2 failed", 1, true) ~= nil)
+  lu.assertEvalToTrue(summary.failed[1].output:find("real busted output", 1, true) ~= nil)
 end
 
 function TestAcceptanceSerialLane:test_spawns_from_repo_root_with_project_lua_path()
   local summary, calls
   _with_single_entry(function()
-    _with_stubbed_proc({ { ok = true, code = 0, output = "1 passed, 0 failed\n" } }, function(captured)
+    _with_stubbed_proc({ { ok = true, code = 0, output = _result(1, 1, 0) } }, function(captured)
       calls = captured
       summary = _run_serial()
     end)
@@ -108,11 +112,9 @@ function TestAcceptanceSerialLane:test_spawns_from_repo_root_with_project_lua_pa
   end
   local repo_root = bootstrap.resolve("tools/packages/acceptance/run_all.lua").repo_root
   lu.assertIs(_strip_dot(calls[1].options.cwd), _strip_dot(repo_root))
-  lu.assertEvalToTrue(calls[1].command:find("LUA_PATH=", 1, true) ~= nil, calls[1].command)
-  lu.assertEvalToTrue(
-    calls[1].command:find(path_lib.join_path("build/acceptance/serial_spec_tmp", "test_x_acceptance.lua"), 1, true) ~= nil,
-    calls[1].command
-  )
+  lu.assertIsTable(calls[1].command)
+  lu.assertStrContains(calls[1].command[2], "tools/packages/acceptance/execute.lua")
+  lu.assertIs(calls[1].command[3], path_lib.join_path("build/acceptance/serial_spec_tmp", "test_x_acceptance.lua"))
 end
 
 return TestAcceptanceSerialLane

@@ -7,7 +7,8 @@
 -- must be bound to it. This module is the one place that binding is decided.
 
 local fs_lib = require("foundation.fs")
-local generator = require("acceptance4lua.generator")
+-- The portable generator emits a private harness. Project output is a genuine
+-- busted spec; the upstream source and lock remain read-only.
 local json = require("acceptance4lua.json")
 
 local entrypoint = {}
@@ -43,10 +44,17 @@ function entrypoint.generate_file(ir_path, output_path)
       return nil, "metadata identity conflict: " .. metadata_path
     end
   end
-  local generated = generator.generate(ir_or_err, {
-    runtime_module = entrypoint.runtime_module,
-    steps_module = "packages.acceptance.steps",
-  })
+  local generated = table.concat({
+    'local runtime = require("packages.acceptance.runtime")',
+    'local steps = require("packages.acceptance.steps")',
+    'local json = require("acceptance4lua.json")',
+    'local embedded_ir = json.decode(' .. string.format("%q", json.encode(ir_or_err)) .. ')',
+    'local ir = runtime.load_ir(embedded_ir)',
+    'describe("Acceptance: " .. tostring(ir.name), function()',
+    '  runtime.define_specs(ir, steps.handlers(), it)',
+    'end)',
+    '',
+  }, "\n")
   local written, write_err = fs_lib.write_file(output_path, generated)
   if not written then return nil, write_err end
   return fs_lib.write_file(metadata_path, json.encode({
