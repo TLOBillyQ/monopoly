@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local check = assert(require("test.support.luassert_loader").load())
+local check = require("luassert")
 local game_driver = require("packages.acceptance.game_driver")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local paid_purchase_port = require("src.rules.ports.paid_purchase")
@@ -8,7 +8,8 @@ local event_kinds = require("src.config.gameplay.event_kinds")
 
 local TEST_PRODUCT_ID = 2003
 
-local function _land_with_building(ctx, owner_id, level)
+local function
+ _land_with_building(ctx, owner_id, level)
   local idx = game_driver.first_land_tile(ctx)
   local tile = ctx.game.board:get_tile(idx)
   ctx.game:set_tile_owner(tile, owner_id)
@@ -16,7 +17,8 @@ local function _land_with_building(ctx, owner_id, level)
   return idx, tile
 end
 
-local function _saw_event(ctx, kind)
+local function
+ _saw_event(ctx, kind)
   for _, event in ipairs(game_driver.events(ctx)) do
     if event.kind == kind then
       return true
@@ -25,7 +27,8 @@ local function _saw_event(ctx, kind)
   return false
 end
 
-local function _option(view, product_id)
+local function
+ _option(view, product_id)
   for _, opt in ipairs(view.options or {}) do
     if opt.id == product_id then
       return opt
@@ -34,9 +37,9 @@ local function _option(view, product_id)
   return nil
 end
 
-TestGameDriver = {}
 
-function TestGameDriver:test_returns_a_context_with_a_real_game_instance()
+local function
+returns_a_context_with_a_real_game_instance()
   local ctx = game_driver.new_game()
   check.is_table(ctx)
   check.is_table(ctx.game)
@@ -44,27 +47,30 @@ function TestGameDriver:test_returns_a_context_with_a_real_game_instance()
   check.is_true(#ctx.game.players >= 2)
 end
 
-function TestGameDriver:test_creates_players_starting_at_position_1()
+local function
+creates_players_starting_at_position_1()
   local ctx = game_driver.new_game()
   local player = ctx.game.players[1]
   check.equal(player.position, 1)
 end
 
-function TestGameDriver:test_provides_outer_ring_size()
+local function
+provides_outer_ring_size()
   local ctx = game_driver.new_game()
   check.equal(ctx.outer_ring_size, 32)
 end
 
 -- #164：new_game 必须先把会触碰的进程级全局端口 reset 到已知基线再 configure，
 -- 每个 ctx 不依赖上一个套件善后（原先只是注释纪律）。
-TestGameDriverGlobalPortBaseline = {}
 
-function TestGameDriverGlobalPortBaseline:tearDown()
+local function
+ restore_global_ports()
   runtime_ports.reset_for_tests()
   paid_purchase_port.reset_for_tests()
 end
 
-function TestGameDriverGlobalPortBaseline:test_resets_both_global_ports_before_configuring_its_own()
+local function
+resets_both_global_ports_before_configuring_its_own()
   local calls = {}
   local originals = {
     runtime_reset = runtime_ports.reset_for_tests,
@@ -116,7 +122,8 @@ function TestGameDriverGlobalPortBaseline:test_resets_both_global_ports_before_c
   check.equal(reset_count, 2, "both global ports should be reset")
 end
 
-function TestGameDriverGlobalPortBaseline:test_clears_leftover_runtime_port_config_from_a_previous_suite()
+local function
+clears_leftover_runtime_port_config_from_a_previous_suite()
   runtime_ports.configure({
     rng_next_int = function() return 1 end,
     resolve_role = function() return "leftover" end,
@@ -126,7 +133,8 @@ function TestGameDriverGlobalPortBaseline:test_clears_leftover_runtime_port_conf
   check.is_number(runtime_ports.rng_next_int(1, 6))
 end
 
-function TestGameDriverGlobalPortBaseline:test_replaces_a_leftover_paid_gateway_with_the_driver_noop_gateway()
+local function
+replaces_a_leftover_paid_gateway_with_the_driver_noop_gateway()
   paid_purchase_port.configure({
     setup_for_game = function() end,
     can_start = function() return true, "leftover" end,
@@ -138,20 +146,23 @@ function TestGameDriverGlobalPortBaseline:test_replaces_a_leftover_paid_gateway_
   check.equal(reason, "acceptance_noop")
 end
 
-function TestGameDriver:test_returns_the_first_player()
+local function
+returns_the_first_player()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   check.equal(player, ctx.game.players[1])
 end
 
-function TestGameDriver:test_updates_player_position_via_game_api()
+local function
+updates_player_position_via_game_api()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.set_player_position(ctx, player, 10)
   check.equal(player.position, 10)
 end
 
-function TestGameDriver:test_moves_player_forward_using_rules_movement_move()
+local function
+moves_player_forward_using_rules_movement_move()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   local result = game_driver.move(ctx, player, 3)
@@ -160,7 +171,8 @@ function TestGameDriver:test_moves_player_forward_using_rules_movement_move()
   check.equal(#result.visited, 3)
 end
 
-function TestGameDriver:test_tracks_pass_start_when_wrapping_around_outer_ring()
+local function
+tracks_pass_start_when_wrapping_around_outer_ring()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.set_player_position(ctx, player, 30)
@@ -169,7 +181,8 @@ function TestGameDriver:test_tracks_pass_start_when_wrapping_around_outer_ring()
   check.equal(result.passed_start, 1)
 end
 
-function TestGameDriver:test_queues_deterministic_dice_results()
+local function
+queues_deterministic_dice_results()
   local ctx = game_driver.new_game()
   game_driver.set_next_rolls(ctx, {3, 5, 7})
   check.equal(ctx.game.rng:next_int(1, 6), 3)
@@ -177,7 +190,8 @@ function TestGameDriver:test_queues_deterministic_dice_results()
   check.equal(ctx.game.rng:next_int(1, 6), 7)
 end
 
-function TestGameDriver:test_returns_current_player_position()
+local function
+returns_current_player_position()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.set_player_position(ctx, player, 15)
@@ -185,7 +199,8 @@ function TestGameDriver:test_returns_current_player_position()
 end
 
 -- #165:道具/棋盘观察动词——step 模块经 driver 而非直 require src.rules 内部。
-function TestGameDriver:test_clear_items_items_of_round_trip_through_real_inventory()
+local function
+clear_items_items_of_round_trip_through_real_inventory()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.give_item(ctx, player, 1)
@@ -194,7 +209,8 @@ function TestGameDriver:test_clear_items_items_of_round_trip_through_real_invent
   check.equal(#game_driver.items_of(ctx, player), 0)
 end
 
-function TestGameDriver:test_open_item_phase_opens_a_pending_choice_and_reports_availability()
+local function
+open_item_phase_opens_a_pending_choice_and_reports_availability()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.give_item(ctx, player, item_ids.remote_dice)
@@ -204,7 +220,8 @@ function TestGameDriver:test_open_item_phase_opens_a_pending_choice_and_reports_
   check.is_table(ctx.game.turn.pending_choice)
 end
 
-function TestGameDriver:test_target_candidates_reads_the_real_item_registry_candidate_face()
+local function
+target_candidates_reads_the_real_item_registry_candidate_face()
   local ctx = game_driver.new_game()
   local user = game_driver.current_player(ctx)
   local opponent = ctx.game.players[2]
@@ -216,14 +233,16 @@ function TestGameDriver:test_target_candidates_reads_the_real_item_registry_cand
   check.equal(candidates[1], opponent)
 end
 
-function TestGameDriver:test_tile_indices_in_range_reflects_real_board_geometry()
+local function
+tile_indices_in_range_reflects_real_board_geometry()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   local indices = game_driver.tile_indices_in_range(ctx, player.position, 3)
   check.is_true(#indices > 0)
 end
 
-function TestGameDriver:test_returns_player_balance_via_game_api()
+local function
+returns_player_balance_via_game_api()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   local cash = game_driver.player_cash(ctx, player)
@@ -233,7 +252,8 @@ end
 
 -- #199:拆除类道具「使用」动词——真实消耗卡牌 + 真实拆迁应用(含送医),
 -- 绑定层不再用夹具模型模拟应用结果。
-function TestGameDriver:test_consumes_the_monster_card_and_levels_the_target_building_through_the_real_apply()
+local function
+consumes_the_monster_card_and_levels_the_target_building_through_the_real_apply()
   local ctx = game_driver.new_game()
   local player, opponent = ctx.game.players[1], ctx.game.players[2]
   local idx, tile = _land_with_building(ctx, opponent.id, 2)
@@ -247,7 +267,8 @@ function TestGameDriver:test_consumes_the_monster_card_and_levels_the_target_bui
     "the monster card is consumed by the use")
 end
 
-function TestGameDriver:test_missile_injures_occupants_the_bombed_opponent_relocates_to_the_hospital_tile()
+local function
+missile_injures_occupants_the_bombed_opponent_relocates_to_the_hospital_tile()
   local ctx = game_driver.new_game()
   local player, opponent = ctx.game.players[1], ctx.game.players[2]
   local idx, tile = _land_with_building(ctx, player.id, 2)
@@ -263,7 +284,8 @@ function TestGameDriver:test_missile_injures_occupants_the_bombed_opponent_reloc
     "the missile card is consumed by the use")
 end
 
-function TestGameDriver:test_angel_immunity_blocks_the_demolition_and_publishes_the_feedback_event()
+local function
+angel_immunity_blocks_the_demolition_and_publishes_the_feedback_event()
   local ctx = game_driver.new_game()
   local player, opponent = ctx.game.players[1], ctx.game.players[2]
   local _, tile = _land_with_building(ctx, opponent.id, 2)
@@ -278,7 +300,8 @@ function TestGameDriver:test_angel_immunity_blocks_the_demolition_and_publishes_
     "the angel protection feedback event is published")
 end
 
-function TestGameDriver:test_refuses_items_that_are_not_demolish_items()
+local function
+refuses_items_that_are_not_demolish_items()
   local ctx = game_driver.new_game()
   local player = ctx.game.players[1]
   local idx = game_driver.first_land_tile(ctx)
@@ -290,7 +313,8 @@ end
 
 -- #199:item_slot 点击派发动词——封装「点击某槽位」的 UI 意图到 action dispatch,
 -- 绑定层不再直接触碰 src.turn.actions 内部模块。
-function TestGameDriver:test_dispatches_a_real_slot_click_applied_and_the_item_follow_up_choice_opens()
+local function
+dispatches_a_real_slot_click_applied_and_the_item_follow_up_choice_opens()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   game_driver.clear_items(ctx, player)
@@ -308,7 +332,8 @@ function TestGameDriver:test_dispatches_a_real_slot_click_applied_and_the_item_f
 end
 
 -- #201:黑市只读视角——不开窗读取陈列与售罄/可购标记。
-function TestGameDriver:test_returns_the_catalog_view_without_opening_a_market_window()
+local function
+returns_the_catalog_view_without_opening_a_market_window()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
   ctx.game.market_limits[TEST_PRODUCT_ID] = 0
@@ -322,7 +347,8 @@ function TestGameDriver:test_returns_the_catalog_view_without_opening_a_market_w
   check.is_false(opt.can_buy, "a sold-out product is not buyable")
 end
 
-function TestGameDriver:test_marks_a_stocked_product_as_buyable()
+local function
+marks_a_stocked_product_as_buyable()
   local ctx = game_driver.new_game()
   local player = game_driver.current_player(ctx)
 
@@ -334,4 +360,33 @@ function TestGameDriver:test_marks_a_stocked_product_as_buyable()
 end
 
 
-return TestGameDriver
+describe("acceptance game driver", function()
+  it("returns_a_context_with_a_real_game_instance", returns_a_context_with_a_real_game_instance)
+  it("creates_players_starting_at_position_1", creates_players_starting_at_position_1)
+  it("provides_outer_ring_size", provides_outer_ring_size)
+  it("returns_the_first_player", returns_the_first_player)
+  it("updates_player_position_via_game_api", updates_player_position_via_game_api)
+  it("moves_player_forward_using_rules_movement_move", moves_player_forward_using_rules_movement_move)
+  it("tracks_pass_start_when_wrapping_around_outer_ring", tracks_pass_start_when_wrapping_around_outer_ring)
+  it("queues_deterministic_dice_results", queues_deterministic_dice_results)
+  it("returns_current_player_position", returns_current_player_position)
+  it("clear_items_items_of_round_trip_through_real_inventory", clear_items_items_of_round_trip_through_real_inventory)
+  it("open_item_phase_opens_a_pending_choice_and_reports_availability", open_item_phase_opens_a_pending_choice_and_reports_availability)
+  it("target_candidates_reads_the_real_item_registry_candidate_face", target_candidates_reads_the_real_item_registry_candidate_face)
+  it("tile_indices_in_range_reflects_real_board_geometry", tile_indices_in_range_reflects_real_board_geometry)
+  it("returns_player_balance_via_game_api", returns_player_balance_via_game_api)
+  it("consumes_the_monster_card_and_levels_the_target_building_through_the_real_apply", consumes_the_monster_card_and_levels_the_target_building_through_the_real_apply)
+  it("missile_injures_occupants_the_bombed_opponent_relocates_to_the_hospital_tile", missile_injures_occupants_the_bombed_opponent_relocates_to_the_hospital_tile)
+  it("angel_immunity_blocks_the_demolition_and_publishes_the_feedback_event", angel_immunity_blocks_the_demolition_and_publishes_the_feedback_event)
+  it("refuses_items_that_are_not_demolish_items", refuses_items_that_are_not_demolish_items)
+  it("dispatches_a_real_slot_click_applied_and_the_item_follow_up_choice_opens", dispatches_a_real_slot_click_applied_and_the_item_follow_up_choice_opens)
+  it("returns_the_catalog_view_without_opening_a_market_window", returns_the_catalog_view_without_opening_a_market_window)
+  it("marks_a_stocked_product_as_buyable", marks_a_stocked_product_as_buyable)
+end)
+
+describe("acceptance game driver global port baseline", function()
+  after_each(restore_global_ports)
+  it("resets_both_global_ports_before_configuring_its_own", resets_both_global_ports_before_configuring_its_own)
+  it("clears_leftover_runtime_port_config_from_a_previous_suite", clears_leftover_runtime_port_config_from_a_previous_suite)
+  it("replaces_a_leftover_paid_gateway_with_the_driver_noop_gateway", replaces_a_leftover_paid_gateway_with_the_driver_noop_gateway)
+end)
