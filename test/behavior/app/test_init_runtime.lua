@@ -1,21 +1,30 @@
 -- init_runtime 直测:has_game_time_api 守卫、build_ui_warn_sink 路径、
 -- try_show_tip_to_role 的 pcall 故障臂。
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 
 local init_runtime = require("src.app.init_runtime")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 
-TestInitRuntime = {}
+describe("TestInitRuntime", function()
+  local saved_global_api, saved_resolve_role
+  before_each(function()
+    saved_global_api = _G.GlobalAPI
+    saved_resolve_role = runtime_ports.resolve_role
+  end)
+  after_each(function()
+    _G.GlobalAPI = saved_global_api
+    runtime_ports.resolve_role = saved_resolve_role
+  end)
 
 -- ---- has_game_time_api ----
 
-function TestInitRuntime:test_has_game_time_api_nil_returns_false()
+local function _test_has_game_time_api_nil_returns_false()
   luassert.truthy(init_runtime.has_game_time_api(nil) == false,
     "nil game_api must return false")
 end
 
-function TestInitRuntime:test_has_game_time_api_missing_get_second_returns_false()
+local function _test_has_game_time_api_missing_get_second_returns_false()
   -- 缺 get_second 也应返回 false，闭合 _GAME_TIME_METHODS 表的所有条目循环分支。
   local api = {
     get_timestamp = function() return 0 end,
@@ -30,7 +39,7 @@ end
 -- #522:上屏是显式 opt-in——只有 entry.ui == true(logger.warn_ui 产出)的 warn
 -- 才路由到宿主;默认 logger.warn 的开发者留痕只进 log.txt。
 
-function TestInitRuntime:test_build_ui_warn_sink_skips_non_warn()
+local function _test_build_ui_warn_sink_skips_non_warn()
   local saved = _G.GlobalAPI
   _G.GlobalAPI = { show_tips = function(_, _) end }
   local sink = init_runtime.build_ui_warn_sink()
@@ -40,7 +49,7 @@ function TestInitRuntime:test_build_ui_warn_sink_skips_non_warn()
   _G.GlobalAPI = saved
 end
 
-function TestInitRuntime:test_build_ui_warn_sink_nil_entry_skips()
+local function _test_build_ui_warn_sink_nil_entry_skips()
   local saved = _G.GlobalAPI
   _G.GlobalAPI = { show_tips = function(_, _) end }
   local sink = init_runtime.build_ui_warn_sink()
@@ -48,7 +57,7 @@ function TestInitRuntime:test_build_ui_warn_sink_nil_entry_skips()
   _G.GlobalAPI = saved
 end
 
-function TestInitRuntime:test_build_ui_warn_sink_routes_through_marquee()
+local function _test_build_ui_warn_sink_routes_through_marquee()
   local saved = _G.GlobalAPI
   local called_text = nil
   _G.GlobalAPI = { show_message_marquee = function(text)
@@ -62,7 +71,7 @@ function TestInitRuntime:test_build_ui_warn_sink_routes_through_marquee()
   _G.GlobalAPI = saved
 end
 
-function TestInitRuntime:test_build_ui_warn_sink_nil_text_defaults_to_empty()
+local function _test_build_ui_warn_sink_nil_text_defaults_to_empty()
   -- entry.text 为 nil 时 or "" 补空串;变异 ""→nil 会产出 nil .. 字符串。
   local saved = _G.GlobalAPI
   local called_text = nil
@@ -77,7 +86,7 @@ function TestInitRuntime:test_build_ui_warn_sink_nil_text_defaults_to_empty()
   _G.GlobalAPI = saved
 end
 
-function TestInitRuntime:test_build_ui_warn_sink_falls_back_to_show_tips()
+local function _test_build_ui_warn_sink_falls_back_to_show_tips()
   local saved = _G.GlobalAPI
   local called_text = nil
   _G.GlobalAPI = { show_tips = function(text, duration)
@@ -90,7 +99,7 @@ function TestInitRuntime:test_build_ui_warn_sink_falls_back_to_show_tips()
   _G.GlobalAPI = saved
 end
 
-function TestInitRuntime:test_build_ui_warn_sink_skips_warn_without_ui_opt_in()
+local function _test_build_ui_warn_sink_skips_warn_without_ui_opt_in()
   -- #522:开发者留痕(默认 logger.warn,entry.ui 为 nil)只进 log.txt,不上屏;
   -- 真机事故原型即终局 AI 面板跳过留痕经 sink 广播成 toast。
   local saved = _G.GlobalAPI
@@ -107,12 +116,12 @@ end
 
 -- ---- try_show_tip_to_role: pcall 故障臂 ----
 
-function TestInitRuntime:test_try_show_tip_to_role_without_role_id_returns_false()
+local function _test_try_show_tip_to_role_without_role_id_returns_false()
   local result = init_runtime.try_show_tip_to_role({ text = "x" }, "text", 1.0)
   luassert.truthy(result == false, "tip without role_id must return false")
 end
 
-function TestInitRuntime:test_show_tips_pcall_error_returns_nil()
+local function _test_show_tips_pcall_error_returns_nil()
   -- 当 role.show_tips 索引抛错时，_show_tips_of 的 or 变 and 也应返回 nil。
   -- 用 runtime_ports.resolve_role 返回的对象带有会抛错的 __index 元表。
   local saved_resolve = runtime_ports.resolve_role
@@ -129,7 +138,7 @@ function TestInitRuntime:test_show_tips_pcall_error_returns_nil()
   runtime_ports.resolve_role = saved_resolve
 end
 
-function TestInitRuntime:test_call_show_tips_error_returns_false()
+local function _test_call_show_tips_error_returns_false()
   -- _call_show_tips 的 pcall 失败时，and 变 or 返回不同值。
   local saved_resolve = runtime_ports.resolve_role
   local role = { show_tips = function(_, _)
@@ -144,7 +153,7 @@ function TestInitRuntime:test_call_show_tips_error_returns_false()
   runtime_ports.resolve_role = saved_resolve
 end
 
-function TestInitRuntime:test_show_tips_not_a_function_returns_false()
+local function _test_show_tips_not_a_function_returns_false()
   -- role.show_tips 存在但不是函数时，_show_tips_of 的 or→and 变异等价因为
   -- 两种情况都触发 pcall 成功+show_tips 为非函数的路径。
   local saved_resolve = runtime_ports.resolve_role
@@ -158,4 +167,16 @@ function TestInitRuntime:test_show_tips_not_a_function_returns_false()
   runtime_ports.resolve_role = saved_resolve
 end
 
-return TestInitRuntime
+it("test_has_game_time_api_nil_returns_false", _test_has_game_time_api_nil_returns_false)
+it("test_has_game_time_api_missing_get_second_returns_false", _test_has_game_time_api_missing_get_second_returns_false)
+it("test_build_ui_warn_sink_skips_non_warn", _test_build_ui_warn_sink_skips_non_warn)
+it("test_build_ui_warn_sink_nil_entry_skips", _test_build_ui_warn_sink_nil_entry_skips)
+it("test_build_ui_warn_sink_routes_through_marquee", _test_build_ui_warn_sink_routes_through_marquee)
+it("test_build_ui_warn_sink_nil_text_defaults_to_empty", _test_build_ui_warn_sink_nil_text_defaults_to_empty)
+it("test_build_ui_warn_sink_falls_back_to_show_tips", _test_build_ui_warn_sink_falls_back_to_show_tips)
+it("test_build_ui_warn_sink_skips_warn_without_ui_opt_in", _test_build_ui_warn_sink_skips_warn_without_ui_opt_in)
+it("test_try_show_tip_to_role_without_role_id_returns_false", _test_try_show_tip_to_role_without_role_id_returns_false)
+it("test_show_tips_pcall_error_returns_nil", _test_show_tips_pcall_error_returns_nil)
+it("test_call_show_tips_error_returns_false", _test_call_show_tips_error_returns_false)
+it("test_show_tips_not_a_function_returns_false", _test_show_tips_not_a_function_returns_false)
+end)
