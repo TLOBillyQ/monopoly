@@ -103,7 +103,6 @@ end)
 
 it("test_landing_visual_hold_state_with_active_source_forces_wait_landing_visual", function()
   _configure_idle(true)
-  local runtime_state = require("src.state.runtime")
   local hold_state = {}
   -- 注入 runtime_state 桩:source 非 nil → 走 runtime_state 分支
   local orig_source = runtime_state.get_landing_visual_hold_source

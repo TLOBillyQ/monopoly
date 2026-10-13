@@ -603,6 +603,26 @@ end
 
 describe("TestUiSyncFeedback", function()
 
+local constants = require("src.config.content.constants")
+local tick_ui_gate = require("src.turn.waits.ui_gate")
+local saved
+before_each(function()
+  saved = {
+    timeout = constants.action_timeout_seconds,
+    pending_choice = runtime_state.get_pending_choice,
+    pending_elapsed = runtime_state.get_pending_choice_elapsed,
+    resolve_gate = tick_ui_gate.resolve_ui_gate,
+    info = logger.info,
+  }
+end)
+after_each(function()
+  constants.action_timeout_seconds = saved.timeout
+  runtime_state.get_pending_choice = saved.pending_choice
+  runtime_state.get_pending_choice_elapsed = saved.pending_elapsed
+  tick_ui_gate.resolve_ui_gate = saved.resolve_gate
+  logger.info = saved.info
+end)
+
 it("test_both_nil_amounts_merge_to_zero", function()
   local queue = {
     { kind = "cash_receive" },

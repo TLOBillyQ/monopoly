@@ -242,15 +242,7 @@ for _, case in ipairs(cases) do
 end
 end)
 
--- 与 TestValidator 同处一个 do 块:共享 _assert_eq / _make_game_with_player 等辅助。
-
-local validator = require("src.turn.actions.validator")
-
-local function _assert_eq(a, b, msg)
-  check.equal(a, b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
-end
-
-local _config_reset = require("test.support.config_reset")
+-- 三个 describe 共用原有辅助函数,每例仍独立重置配置。
 
 describe("TestValidatorExtendedCoverage", function()
 
