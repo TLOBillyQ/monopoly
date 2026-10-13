@@ -198,6 +198,14 @@ function bootstrap.ensure_luaunit_tree(repo_root)
   return _ensure_rock_installed(repo_root, "luaunit", "3.5-1", "share/lua/5.4/luaunit.lua")
 end
 
+-- luassert(断言层迁移期,#74):终态 busted 的断言库,迁移期先由
+-- test/support/luassert_loader.lua 从同一 tree 局部加载。marker 取 init.lua;
+-- say 是 luassert 的 rockspec 依赖,由 luarocks 依赖解析一并带进同一 tree,
+-- 不单独 ensure(单独钉 say 版本会与 luassert 的依赖声明漂移)。
+function bootstrap.ensure_luassert_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "luassert", "1.9.0-1", "share/lua/5.4/luassert/init.lua")
+end
+
 -- 覆盖率引擎 luacov 由上游 rockspec（crap4lua/mutate4lua
 -- v0.1.0)以依赖形式带入 tree,这里只做显式确保——runner `-c` 与 coverage.lua
 -- 车道在无 crap4lua 前置调用时也能直接落地它。钉 0.17.0-1 与上游一致。

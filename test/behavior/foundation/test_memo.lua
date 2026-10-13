@@ -1,4 +1,15 @@
-local lu = require("luaunit")
+-- foundation.memo 直测:惰性求值、快照未变不重算、变化重算、快照冻结、投影、标量输入、派生链。
+--
+-- 断言层迁移(#74 第一步「先断言、后结构」):断言后端换成项目工具缓存里的真
+-- luassert,结构、用例集合与期望值不变。迁移口径见 CODING_STANDARDS.md。
+--
+-- 本文件里的两处 lu.assertError 是最容易译错的一类:LuaUnit 的 assertError(f, ...)
+-- 会把尾参**传给 f** 只验「有没有抛」,luassert 的 has_error(fn, expected) 不传参
+-- 且给了 expected 就**精确比文本**。这里保住原义(只验抛错),故显式包一层闭包,
+-- 不顺手把期望值升级成精确文本——那属于改期望值,不属切断言。
+require("test.bootstrap").install_package_paths()
+
+local luassert = assert(require("test.support.luassert_loader").load())
 local memo = require("src.foundation.memo")
 
 TestMemo = {}
@@ -11,8 +22,8 @@ function TestMemo:test_compute_does_not_run_until_first_get()
     calls = calls + 1
     return snapshot
   end)
-  lu.assertNotNil(cell)
-  lu.assertEquals(calls, 0, "compute should not run at construction")
+  luassert.is_not_nil(cell)
+  luassert.is.equal(0, calls, "compute should not run at construction")
 end
 
 -- ===== 输入快照未变不重算 =====
@@ -25,9 +36,9 @@ function TestMemo:test_unchanged_snapshot_returns_cached_value_without_recompute
   end)
   local first = cell:get({ a = 1 })
   local second = cell:get({ a = 1 })
-  lu.assertEquals(first, 1)
-  lu.assertEquals(second, 1)
-  lu.assertEquals(calls, 1, "equal snapshot should not recompute")
+  luassert.is.equal(1, first)
+  luassert.is.equal(1, second)
+  luassert.is.equal(1, calls, "equal snapshot should not recompute")
 end
 
 function TestMemo:test_same_table_identity_hit_counts_as_unchanged()
@@ -39,7 +50,7 @@ function TestMemo:test_same_table_identity_hit_counts_as_unchanged()
   local input = { a = 1 }
   cell:get(input)
   cell:get(input)
-  lu.assertEquals(calls, 1, "same table with same content should not recompute")
+  luassert.is.equal(1, calls, "same table with same content should not recompute")
 end
 
 -- ===== 输入变化重算 =====
@@ -50,9 +61,9 @@ function TestMemo:test_changed_snapshot_recomputes()
     calls = calls + 1
     return snapshot.a
   end)
-  lu.assertEquals(cell:get({ a = 1 }), 1)
-  lu.assertEquals(cell:get({ a = 2 }), 2)
-  lu.assertEquals(calls, 2, "changed snapshot should recompute")
+  luassert.is.equal(1, cell:get({ a = 1 }))
+  luassert.is.equal(2, cell:get({ a = 2 }))
+  luassert.is.equal(2, calls, "changed snapshot should recompute")
 end
 
 function TestMemo:test_field_removal_counts_as_change()
@@ -63,8 +74,8 @@ function TestMemo:test_field_removal_counts_as_change()
   end)
   cell:get({ a = 1 })
   local value = cell:get({})
-  lu.assertNil(value, "removed field should produce recomputed value")
-  lu.assertEquals(calls, 2)
+  luassert.is_nil(value, "removed field should produce recomputed value")
+  luassert.is.equal(2, calls)
 end
 
 -- ===== 快照冻结：防御调用方复用并原地改写的输入表 =====
@@ -76,12 +87,12 @@ function TestMemo:test_caller_mutated_input_table_does_not_corrupt_stored_snapsh
     return snapshot.a
   end)
   local input = { a = 1 }
-  lu.assertEquals(cell:get(input), 1)
+  luassert.is.equal(1, cell:get(input))
   input.a = 2
-  lu.assertEquals(cell:get(input), 2, "mutated input should be seen as change")
+  luassert.is.equal(2, cell:get(input), "mutated input should be seen as change")
   input.a = 1
-  lu.assertEquals(cell:get(input), 1, "snapshot should be frozen, not aliasing caller table")
-  lu.assertEquals(calls, 3)
+  luassert.is.equal(1, cell:get(input), "snapshot should be frozen, not aliasing caller table")
+  luassert.is.equal(3, calls)
 end
 
 -- ===== take_snapshot 投影 =====
@@ -94,11 +105,13 @@ function TestMemo:test_take_snapshot_projects_inputs_and_ignores_noise()
   end, function(input)
     return { flag = input.flag }
   end)
-  lu.assertEquals(cell:get({ flag = true, noise = 1 }), true)
+  -- 注意:这里比的是**值** true/false(原 lu.assertEquals 口径),不是 truthiness
+  -- ——换成 truthy 会把「返回了 1」也放过,是静默放松。
+  luassert.is.equal(true, cell:get({ flag = true, noise = 1 }))
   cell:get({ flag = true, noise = 2 })
-  lu.assertEquals(calls, 1, "change outside projection should not recompute")
-  lu.assertEquals(cell:get({ flag = false, noise = 2 }), false)
-  lu.assertEquals(calls, 2, "change inside projection should recompute")
+  luassert.is.equal(1, calls, "change outside projection should not recompute")
+  luassert.is.equal(false, cell:get({ flag = false, noise = 2 }))
+  luassert.is.equal(2, calls, "change inside projection should recompute")
 end
 
 function TestMemo:test_compute_receives_snapshot_not_raw_input()
@@ -109,9 +122,9 @@ function TestMemo:test_compute_receives_snapshot_not_raw_input()
   end, function(input)
     return { projected = input.raw }
   end)
-  lu.assertEquals(cell:get({ raw = "x" }), "x")
-  lu.assertEquals(received.projected, "x", "compute should receive the projected snapshot")
-  lu.assertNil(received.raw, "compute should not see raw input fields")
+  luassert.is.equal("x", cell:get({ raw = "x" }))
+  luassert.is.equal("x", received.projected, "compute should receive the projected snapshot")
+  luassert.is_nil(received.raw, "compute should not see raw input fields")
 end
 
 -- ===== 标量输入 =====
@@ -122,11 +135,11 @@ function TestMemo:test_scalar_snapshot_compared_by_value()
     calls = calls + 1
     return snapshot
   end)
-  lu.assertEquals(cell:get("x"), "x")
-  lu.assertEquals(cell:get("x"), "x")
-  lu.assertEquals(calls, 1)
-  lu.assertEquals(cell:get("y"), "y")
-  lu.assertEquals(calls, 2)
+  luassert.is.equal("x", cell:get("x"))
+  luassert.is.equal("x", cell:get("x"))
+  luassert.is.equal(1, calls)
+  luassert.is.equal("y", cell:get("y"))
+  luassert.is.equal(2, calls)
 end
 
 -- ===== 派生链：下游派生显式消费上游值，不自动级联 =====
@@ -142,9 +155,9 @@ function TestMemo:test_derived_chain_composes_explicitly_without_cascade()
   local is_animating = memo.new(function(snapshot)
     return is_alive:get(snapshot) and not snapshot.frozen
   end)
-  lu.assertEquals(is_animating:get({ hp = 10, frozen = false }), true)
-  lu.assertEquals(is_animating:get({ hp = 10, frozen = true }), false)
-  lu.assertEquals(upstream_calls, 1, "upstream memo should cache across downstream recomputes")
+  luassert.is.equal(true, is_animating:get({ hp = 10, frozen = false }))
+  luassert.is.equal(false, is_animating:get({ hp = 10, frozen = true }))
+  luassert.is.equal(1, upstream_calls, "upstream memo should cache across downstream recomputes")
 end
 
 -- ===== 单元间独立 =====
@@ -156,21 +169,26 @@ function TestMemo:test_cells_do_not_share_state()
   local cell_b = memo.new(function(snapshot)
     return snapshot
   end)
-  lu.assertEquals(cell_a:get(1), 1)
-  lu.assertEquals(cell_b:get(2), 2)
-  lu.assertEquals(cell_a:get(1), 1, "cell A cache should be unaffected by cell B")
+  luassert.is.equal(1, cell_a:get(1))
+  luassert.is.equal(2, cell_b:get(2))
+  luassert.is.equal(1, cell_a:get(1), "cell A cache should be unaffected by cell B")
 end
 
 -- ===== 构造校验 =====
 
 function TestMemo:test_new_rejects_non_function_compute()
-  lu.assertError(memo.new, "not a function")
+  -- 原义是「memo.new("not a function") 会抛」,尾参是传给 memo.new 的实参。
+  luassert.has_error(function()
+    memo.new("not a function")
+  end)
 end
 
 function TestMemo:test_new_rejects_non_function_take_snapshot()
-  lu.assertError(memo.new, function()
-    return true
-  end, "not a function")
+  luassert.has_error(function()
+    memo.new(function()
+      return true
+    end, "not a function")
+  end)
 end
 
 -- mutate 车道契约：内建 runner 只跑 spec return 的表，单类文件直接 return。

@@ -1,10 +1,17 @@
 -- foundation.tables 深拷贝直测：M.copy 递归复制、非表透传、引用隔离。
+--
+-- 断言层迁移(#74 第一步「先断言、后结构」):断言后端换成项目工具缓存里的真
+-- luassert,结构、用例集合与期望值不变。迁移口径见 CODING_STANDARDS.md。
+require("test.bootstrap").install_package_paths()
 
-local lu = require("luaunit")
+local luassert = assert(require("test.support.luassert_loader").load())
 local tables = require("src.foundation.tables")
 
+-- 文件内局部断言 helper:调用点与语义(值相等,即 `==`)不变,只把后端换成
+-- luassert 的 is.equal(expected, actual, message)——参数顺序翻过来。表不做深比较
+-- 是有意的:这里的期望值本来就是「同一个引用」。
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 -- 原生 LuaUnit 迁移:两个平级 describe 均无钩子 → 合并为一个 Test* 类,
@@ -22,7 +29,7 @@ end
 function TestTables:test_deep_copies_a_flat_table_into_a_distinct_reference()
   local src = { a = 1, b = 2 }
   local out = tables.copy(src)
-  lu.assertEvalToTrue(out ~= src, "copy is a new table reference")
+  luassert.truthy(out ~= src, "copy is a new table reference")
   _assert_eq(out.a, 1, "value a copied")
   _assert_eq(out.b, 2, "value b copied")
 end
@@ -30,9 +37,9 @@ end
 function TestTables:test_recursively_copies_nested_tables_no_shared_sub_references()
   local src = { outer = { inner = { leaf = 42 } }, list = { 1, 2, 3 } }
   local out = tables.copy(src)
-  lu.assertEvalToTrue(out.outer ~= src.outer, "nested table is a distinct reference")
-  lu.assertEvalToTrue(out.outer.inner ~= src.outer.inner, "deeply nested table is distinct")
-  lu.assertEvalToTrue(out.list ~= src.list, "array-part table is distinct")
+  luassert.truthy(out.outer ~= src.outer, "nested table is a distinct reference")
+  luassert.truthy(out.outer.inner ~= src.outer.inner, "deeply nested table is distinct")
+  luassert.truthy(out.list ~= src.list, "array-part table is distinct")
   _assert_eq(out.outer.inner.leaf, 42, "leaf value preserved")
   _assert_eq(out.list[2], 2, "array value preserved")
 end
