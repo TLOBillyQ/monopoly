@@ -1,5 +1,5 @@
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local camera_helper = require("src.host.camera")
 
 local function _assert_eq(actual, expected, message)
@@ -12,39 +12,38 @@ local function _new_helper()
   return camera_helper.new(nil, {})
 end
 
-TestCameraHelper = {}
+describe("TestCameraHelper", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
-function TestCameraHelper:setUp()
-  _config_reset.reset_all()
-end
-
-function TestCameraHelper:test_camera_helper_new_returns_object_with_target_nil()
+local function _test_camera_helper_new_returns_object_with_target_nil()
   local helper = _new_helper()
   luassert.truthy(type(helper) == "table", "new should return table")
   luassert.truthy(helper.target_role_id == nil, "target_role_id should default nil")
 end
 
-function TestCameraHelper:test_camera_helper_set_target_sets_target_role_id()
+local function _test_camera_helper_set_target_sets_target_role_id()
   local helper = _new_helper()
   helper.set_target(5)
   _assert_eq(helper.target_role_id, 5, "set_target should set target_role_id")
   _assert_eq(helper.get_target(), 5, "get_target should return target_role_id")
 end
 
-function TestCameraHelper:test_camera_helper_get_target_returns_set_value()
+local function _test_camera_helper_get_target_returns_set_value()
   local helper = _new_helper()
   helper.set_target(9)
   _assert_eq(helper.get_target(), 9, "get_target should return value previously set")
 end
 
-function TestCameraHelper:test_camera_helper_follow_sets_target_role_and_returns_true()
+local function _test_camera_helper_follow_sets_target_role_and_returns_true()
   local helper = _new_helper()
   local ok = helper.follow(3)
   _assert_eq(ok, true, "follow should return true")
   _assert_eq(helper.target_role_id, 3, "follow should set target_role_id")
 end
 
-function TestCameraHelper:test_camera_helper_follow_rejects_nil_role()
+local function _test_camera_helper_follow_rejects_nil_role()
   -- #293:follow(nil) 的 false 分支未测,false→true 变异存活。
   local helper = _new_helper()
   local ok = helper.follow(nil)
@@ -53,4 +52,9 @@ function TestCameraHelper:test_camera_helper_follow_rejects_nil_role()
 end
 
 
-return TestCameraHelper
+it("test_camera_helper_new_returns_object_with_target_nil", _test_camera_helper_new_returns_object_with_target_nil)
+it("test_camera_helper_set_target_sets_target_role_id", _test_camera_helper_set_target_sets_target_role_id)
+it("test_camera_helper_get_target_returns_set_value", _test_camera_helper_get_target_returns_set_value)
+it("test_camera_helper_follow_sets_target_role_and_returns_true", _test_camera_helper_follow_sets_target_role_and_returns_true)
+it("test_camera_helper_follow_rejects_nil_role", _test_camera_helper_follow_rejects_nil_role)
+end)

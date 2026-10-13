@@ -2,7 +2,7 @@
 -- These wrappers isolate src/ui/render/board/scene.lua from direct LuaAPI calls.
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local host_runtime = require("src.host.init")
 local runtime_context = require("src.host.context")
 
@@ -15,9 +15,9 @@ local function _with_current(ctx, fn)
   return res
 end
 
-TestQueryUnitsSeam = {}
+describe("TestQueryUnitsSeam", function()
 
-function TestQueryUnitsSeam:test_forwards_names_to_luaapi_query_units_and_returns_the_result()
+local function _test_forwards_names_to_luaapi_query_units_and_returns_the_result()
   local captured = {}
   local ctx = {
     env = {
@@ -39,21 +39,21 @@ function TestQueryUnitsSeam:test_forwards_names_to_luaapi_query_units_and_return
   luassert.truthy(captured.names[2] == "b", "query_units should forward names")
 end
 
-function TestQueryUnitsSeam:test_returns_nil_when_luaapi_query_units_is_missing()
+local function _test_returns_nil_when_luaapi_query_units_is_missing()
   local result = _with_current({ env = { LuaAPI = {} } }, function()
     return host_runtime.query_units({ "a" })
   end)
   luassert.truthy(result == nil, "query_units should return nil when host API is missing")
 end
 
-function TestQueryUnitsSeam:test_returns_nil_when_no_runtime_context_is_installed()
+local function _test_returns_nil_when_no_runtime_context_is_installed()
   local result = _with_current(nil, function()
     return host_runtime.query_units({ "a" })
   end)
   luassert.truthy(result == nil, "query_units should return nil without a runtime context")
 end
 
-function TestQueryUnitsSeam:test_forwards_name_to_luaapi_query_unit_and_returns_the_result()
+local function _test_forwards_name_to_luaapi_query_unit_and_returns_the_result()
   local captured = {}
   local ctx = {
     env = {
@@ -73,21 +73,21 @@ function TestQueryUnitsSeam:test_forwards_name_to_luaapi_query_unit_and_returns_
   luassert.truthy(captured.name == "ground", "query_unit should forward the name")
 end
 
-function TestQueryUnitsSeam:test_returns_nil_when_luaapi_query_unit_is_missing()
+local function _test_returns_nil_when_luaapi_query_unit_is_missing()
   local result = _with_current({ env = { LuaAPI = {} } }, function()
     return host_runtime.query_unit("ground")
   end)
   luassert.truthy(result == nil, "query_unit should return nil when host API is missing")
 end
 
-function TestQueryUnitsSeam:test_returns_nil_when_no_runtime_context_is_installed_2()
+local function _test_returns_nil_when_no_runtime_context_is_installed_2()
   local result = _with_current(nil, function()
     return host_runtime.query_unit("ground")
   end)
   luassert.truthy(result == nil, "query_unit should return nil without a runtime context")
 end
 
-function TestQueryUnitsSeam:test_forwards_trigger_to_luaapi_global_unregister_custom_event()
+local function _test_forwards_trigger_to_luaapi_global_unregister_custom_event()
   local captured = {}
   local ctx = {
     env = {
@@ -105,14 +105,14 @@ function TestQueryUnitsSeam:test_forwards_trigger_to_luaapi_global_unregister_cu
   luassert.truthy(captured.trigger == 42, "unregister_custom_event should forward trigger")
 end
 
-function TestQueryUnitsSeam:test_returns_false_when_trigger_is_nil()
+local function _test_returns_false_when_trigger_is_nil()
   local result = _with_current({ env = { LuaAPI = {} } }, function()
     return host_runtime.unregister_custom_event(nil)
   end)
   luassert.truthy(result == false, "unregister_custom_event should reject nil trigger")
 end
 
-function TestQueryUnitsSeam:test_returns_false_when_luaapi_global_unregister_custom_event_is_missing()
+local function _test_returns_false_when_luaapi_global_unregister_custom_event_is_missing()
   local result = _with_current({ env = { LuaAPI = {} } }, function()
     return host_runtime.unregister_custom_event(42)
   end)
@@ -120,4 +120,13 @@ function TestQueryUnitsSeam:test_returns_false_when_luaapi_global_unregister_cus
 end
 
 
-return TestQueryUnitsSeam
+it("test_forwards_names_to_luaapi_query_units_and_returns_the_result", _test_forwards_names_to_luaapi_query_units_and_returns_the_result)
+it("test_returns_nil_when_luaapi_query_units_is_missing", _test_returns_nil_when_luaapi_query_units_is_missing)
+it("test_returns_nil_when_no_runtime_context_is_installed", _test_returns_nil_when_no_runtime_context_is_installed)
+it("test_forwards_name_to_luaapi_query_unit_and_returns_the_result", _test_forwards_name_to_luaapi_query_unit_and_returns_the_result)
+it("test_returns_nil_when_luaapi_query_unit_is_missing", _test_returns_nil_when_luaapi_query_unit_is_missing)
+it("test_returns_nil_when_no_runtime_context_is_installed_2", _test_returns_nil_when_no_runtime_context_is_installed_2)
+it("test_forwards_trigger_to_luaapi_global_unregister_custom_event", _test_forwards_trigger_to_luaapi_global_unregister_custom_event)
+it("test_returns_false_when_trigger_is_nil", _test_returns_false_when_trigger_is_nil)
+it("test_returns_false_when_luaapi_global_unregister_custom_event_is_missing", _test_returns_false_when_luaapi_global_unregister_custom_event_is_missing)
+end)
