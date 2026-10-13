@@ -380,7 +380,6 @@ return {
     "tools/packages/acceptance/test/test_game_driver.lua",
     "tools/packages/acceptance/test/test_regenerate.lua",
     "tools/packages/acceptance/test/test_scenario_manifest.lua",
-    "tools/packages/acceptance/test/test_step_dsl.lua",
     "tools/packages/acceptance/test/test_turn_driver.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_level.lua",
     "tools/packages/acceptance_mutate/test/test_mutator_status.lua",
@@ -393,6 +392,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/acceptance/test/test_step_dsl.lua",
     "tools/packages/acceptance/test/test_runtime.lua",
     "tools/packages/acceptance/test/test_run_all_serial.lua",
     "tools/packages/acceptance/test/test_spec_hash.lua",
