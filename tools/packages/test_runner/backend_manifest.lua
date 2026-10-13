@@ -583,7 +583,6 @@ return {
     "tools/packages/crap/test/test_crap_tooling_contract.lua",
     "tools/packages/data_sync/test/test_sync_data.lua",
     "tools/packages/encoding/test/test_script_tools_contract.lua",
-    "tools/packages/luaunit_runner/test/test_spec_sharding.lua",
     "tools/packages/mutate/test/test_lua54_guard.lua",
     "tools/packages/mutate/test/test_mutate4lua_tooling_contract.lua",
     "tools/packages/mutate/test/test_script_tools_contract.lua",
@@ -595,6 +594,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "tools/packages/luaunit_runner/test/test_spec_sharding.lua",
     "tools/packages/acceptance_mutate/test/test_acceptance_mutate_cli.lua",
     "tools/packages/acceptance_mutate/test/test_mutate_lane.lua",
     "tools/packages/dry/test/test_dry_cli.lua",
