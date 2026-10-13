@@ -1,7 +1,7 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
 require("test.bootstrap").install_package_paths()
-local luassert = assert(require("test.support.luassert_loader").load())
+local luassert = assert
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 
@@ -48,9 +48,9 @@ local function _contains(list, value)
   return false
 end
 
-TestUiBootstrap = {}
+describe("TestUiBootstrap", function()
 
-function TestUiBootstrap:test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras()
+local function _test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras()
   local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
   local base_nodes = require("src.ui.schema.base")
   local player_choice_nodes = require("src.ui.schema.player_choice")
@@ -70,14 +70,14 @@ function TestUiBootstrap:test_bootstrap_nodes_build_required_click_nodes_include
   luassert.truthy(_contains(required, "额外_按钮"), "required nodes should include caller extras")
 end
 
-function TestUiBootstrap:test_bootstrap_nodes_ignores_non_table_extra_nodes()
+local function _test_bootstrap_nodes_ignores_non_table_extra_nodes()
   local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
   local required = bootstrap_nodes.build_required_click_nodes({ extra = "not-a-list" })
 
   luassert.truthy(_contains(required, "not-a-list") == false, "non-table extras should not be appended")
 end
 
-function TestUiBootstrap:test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes()
+local function _test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes()
   local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
   local ui_manager_nodes = {
     { "已知按钮" },
@@ -112,7 +112,7 @@ function TestUiBootstrap:test_bootstrap_nodes_fallback_validation_filters_known_
   luassert.truthy(#empty_missing == 0, "empty required node names should be ignored")
 end
 
-function TestUiBootstrap:test_bootstrap_nodes_assert_reports_single_missing_node()
+local function _test_bootstrap_nodes_assert_reports_single_missing_node()
   local bootstrap_nodes = require("src.app.ui_bootstrap_nodes")
   local ok, err = pcall(function()
     bootstrap_nodes.assert_required_nodes({
@@ -127,7 +127,7 @@ function TestUiBootstrap:test_bootstrap_nodes_assert_reports_single_missing_node
     "bootstrap validation error should include the missing node")
 end
 
-function TestUiBootstrap:test_required_click_nodes_appends_extras()
+local function _test_required_click_nodes_appends_extras()
   local ui_manager_nodes = {
     { "基础屏_行动按钮" },
   }
@@ -144,7 +144,7 @@ function TestUiBootstrap:test_required_click_nodes_appends_extras()
   luassert.truthy(tostring(missing):find("UI 节点缺失", 1, true) ~= nil, "ui bootstrap should report missing required nodes")
 end
 
-function TestUiBootstrap:test_reports_missing_host_child_nodes_before_building_ui_manager()
+local function _test_reports_missing_host_child_nodes_before_building_ui_manager()
   local ui_manager_nodes = {
     ["1519736575|2147314485"] = { "基础屏", "ECanvas" },
   }
@@ -186,7 +186,7 @@ function TestUiBootstrap:test_reports_missing_host_child_nodes_before_building_u
     "ui bootstrap should validate host children before creating UIManager nodes")
 end
 
-function TestUiBootstrap:test_scheduled_callback_switches_canvas_to_base_to_hide_non_base_canvases()
+local function _test_scheduled_callback_switches_canvas_to_base_to_hide_non_base_canvases()
   local canvas_coordinator = require("src.ui.coord.canvas_coordinator")
   local base_nodes = require("src.ui.schema.base")
 
@@ -213,7 +213,7 @@ function TestUiBootstrap:test_scheduled_callback_switches_canvas_to_base_to_hide
     "bootstrap should switch canvas to base to hide non-base canvases at startup")
 end
 
-function TestUiBootstrap:test_install_uses_existing_current_game_ref_without_start_runtime()
+local function _test_install_uses_existing_current_game_ref_without_start_runtime()
   local board_scene = require("src.ui.render.board.scene")
   local map = { path = { 9, 8, 7 } }
   local current_game = { board = { map = map } }
@@ -243,7 +243,7 @@ function TestUiBootstrap:test_install_uses_existing_current_game_ref_without_sta
   luassert.truthy(captured.map == map, "bootstrap should pass current game board map to board scene")
 end
 
-function TestUiBootstrap:test_install_falls_back_to_start_runtime_when_current_game_ref_is_empty()
+local function _test_install_falls_back_to_start_runtime_when_current_game_ref_is_empty()
   local board_scene = require("src.ui.render.board.scene")
   local map = { path = { 1 } }
   local current_game = { board = { map = map } }
@@ -273,7 +273,7 @@ function TestUiBootstrap:test_install_falls_back_to_start_runtime_when_current_g
   luassert.truthy(captured.map == map, "bootstrap should pass runtime-created board map to board scene")
 end
 
-function TestUiBootstrap:test_install_accepts_nil_opts_when_current_game_ref_is_present()
+local function _test_install_accepts_nil_opts_when_current_game_ref_is_present()
   local ui_manager_nodes = { validate = function() return {} end }
   local ok, err
   _with_install_patches({
@@ -287,7 +287,7 @@ function TestUiBootstrap:test_install_accepts_nil_opts_when_current_game_ref_is_
   luassert.truthy(ok == true, "nil opts should be accepted when current_game already exists: " .. tostring(err))
 end
 
-function TestUiBootstrap:test_spawns_startup_synthetic_actors()
+local function _test_spawns_startup_synthetic_actors()
   local ui_bootstrap = require("src.app.ui_bootstrap")
   local capture = {
     registered_specs = nil,
@@ -330,7 +330,7 @@ end
 
 -- 批3 击杀 L44：_install_role_globals 必须把解析出的角色列表传给 role_globals，
 -- 不能传 nil（0→nil 变异把 resolve_roles() 整体吞掉）。
-function TestUiBootstrap:test_role_globals_install_receives_the_resolved_roles()
+local function _test_role_globals_install_receives_the_resolved_roles()
   local captured = nil
   _with_install_patches({
     { target = package.loaded, key = "Data.UIManagerNodes", value = { validate = function() return {} end } },
@@ -346,7 +346,7 @@ end
 -- #466:点赞/收藏/订阅事件链路开局接线——GAME_INIT 必须调用
 -- like_collect_subscribe.setup 并传入已解析的 current_game,真机无需编辑器侧
 -- 开局触发器。
-function TestUiBootstrap:test_game_init_wires_like_collect_subscribe_setup()
+local function _test_game_init_wires_like_collect_subscribe_setup()
   local setup_calls = {}
   _with_install_patches({
     { target = package.loaded, key = "Data.UIManagerNodes", value = { validate = function() return {} end } },
@@ -363,7 +363,7 @@ end
 
 -- 批3 击杀 L49：空字符串名称的条目（name == ""）标签必须回落为纯节点 id，
 -- 不能拼出 "(id)" 括号形式。
-function TestUiBootstrap:test_empty_name_entry_label_keeps_plain_node_id()
+local function _test_empty_name_entry_label_keeps_plain_node_id()
   local ui_manager_nodes = {
     ["PARENT"] = { "" },
   }
@@ -391,7 +391,7 @@ end
 
 -- 批3 击杀 L58（两处 and→or）与 L76（seen 置位）：已配置子节点不能被误报缺失，
 -- 重复缺失子节点必须去重只报一次。
-function TestUiBootstrap:test_configured_and_repeated_children_are_not_reported_missing()
+local function _test_configured_and_repeated_children_are_not_reported_missing()
   local ui_manager_nodes = {
     ["PARENT"] = { "父" },
     ["CONFIGURED"] = { "子" },
@@ -423,7 +423,7 @@ end
 
 -- 批3 击杀 L63 四处：子节点读取失败的错误消息必须带前缀、标签、分隔符与失败值，
 -- 四段拼接一处变异即断（nil 拼接直接崩，消息对不上）。
-function TestUiBootstrap:test_children_read_failure_message_carries_label_and_error()
+local function _test_children_read_failure_message_carries_label_and_error()
   local ui_manager_nodes = {
     ["PARENT"] = { "父" },
   }
@@ -450,7 +450,7 @@ function TestUiBootstrap:test_children_read_failure_message_carries_label_and_er
 end
 
 -- 批3 击杀 L106：多个缺失子节点必须用 ", " 连接，分隔符变异可分。
-function TestUiBootstrap:test_missing_children_join_with_comma_separator()
+local function _test_missing_children_join_with_comma_separator()
   local ui_manager_nodes = {
     ["PARENT"] = { "父" },
   }
@@ -478,7 +478,7 @@ end
 
 -- 批3 击杀 L123：canvas_event_router 绑定的 getter 必须读共享 current_game_ref
 -- 的 1 号位（1→0 变异会让 getter 恒返 nil）。
-function TestUiBootstrap:test_bind_getter_reads_the_shared_current_game_ref()
+local function _test_bind_getter_reads_the_shared_current_game_ref()
   local ui_bootstrap = require("src.app.ui_bootstrap")
   local canvas_event_router = require("src.ui.coord.canvas_event_router")
   local captured_getter = nil
@@ -501,7 +501,7 @@ end
 
 -- 批3 击杀 L129：_sync_ui_event_roles 必须把解析出的角色列表传给 ui_events，
 -- 不能传 nil。
-function TestUiBootstrap:test_sync_ui_event_roles_forwards_the_resolved_roles()
+local function _test_sync_ui_event_roles_forwards_the_resolved_roles()
   local ui_events = require("src.ui.coord.ui_events")
   local captured = "unset"
 
@@ -519,7 +519,7 @@ end
 
 -- 批3 击杀 L135：必需节点校验必须带上市场购买项 extra（item_buttons or {}
 -- 变异为 and {} 会把 10 个黑市购买项清空）。
-function TestUiBootstrap:test_required_nodes_include_market_item_buttons()
+local function _test_required_nodes_include_market_item_buttons()
   local captured_required = nil
 
   _with_install_patches({
@@ -539,7 +539,7 @@ function TestUiBootstrap:test_required_nodes_include_market_item_buttons()
 end
 
 -- 批3 击杀 L140/L153：加载屏的显示/隐藏必须使用注册表中的事件名，不能传 nil。
-function TestUiBootstrap:test_loading_screen_show_and_hide_use_the_registered_events()
+local function _test_loading_screen_show_and_hide_use_the_registered_events()
   local ui_events = require("src.ui.coord.ui_events")
   local sentinel_show = {}
   local sentinel_hide = {}
@@ -562,7 +562,7 @@ function TestUiBootstrap:test_loading_screen_show_and_hide_use_the_registered_ev
     "the loading transition should broadcast the registered loading-screen hide event")
 end
 
-function TestUiBootstrap:test_missing_child_label_falls_back_to_node_id_for_unnamed_entries()
+local function _test_missing_child_label_falls_back_to_node_id_for_unnamed_entries()
   local ui_manager_nodes = {
     ["1519736575|2147314485"] = {},
   }
@@ -590,4 +590,26 @@ function TestUiBootstrap:test_missing_child_label_falls_back_to_node_id_for_unna
 end
 
 
-return TestUiBootstrap
+it("test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras", _test_bootstrap_nodes_build_required_click_nodes_includes_schema_groups_and_extras)
+it("test_bootstrap_nodes_ignores_non_table_extra_nodes", _test_bootstrap_nodes_ignores_non_table_extra_nodes)
+it("test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes", _test_bootstrap_nodes_fallback_validation_filters_known_and_dedupes_missing_nodes)
+it("test_bootstrap_nodes_assert_reports_single_missing_node", _test_bootstrap_nodes_assert_reports_single_missing_node)
+it("test_required_click_nodes_appends_extras", _test_required_click_nodes_appends_extras)
+it("test_reports_missing_host_child_nodes_before_building_ui_manager", _test_reports_missing_host_child_nodes_before_building_ui_manager)
+it("test_scheduled_callback_switches_canvas_to_base_to_hide_non_base_canvases", _test_scheduled_callback_switches_canvas_to_base_to_hide_non_base_canvases)
+it("test_install_uses_existing_current_game_ref_without_start_runtime", _test_install_uses_existing_current_game_ref_without_start_runtime)
+it("test_install_falls_back_to_start_runtime_when_current_game_ref_is_empty", _test_install_falls_back_to_start_runtime_when_current_game_ref_is_empty)
+it("test_install_accepts_nil_opts_when_current_game_ref_is_present", _test_install_accepts_nil_opts_when_current_game_ref_is_present)
+it("test_spawns_startup_synthetic_actors", _test_spawns_startup_synthetic_actors)
+it("test_role_globals_install_receives_the_resolved_roles", _test_role_globals_install_receives_the_resolved_roles)
+it("test_game_init_wires_like_collect_subscribe_setup", _test_game_init_wires_like_collect_subscribe_setup)
+it("test_empty_name_entry_label_keeps_plain_node_id", _test_empty_name_entry_label_keeps_plain_node_id)
+it("test_configured_and_repeated_children_are_not_reported_missing", _test_configured_and_repeated_children_are_not_reported_missing)
+it("test_children_read_failure_message_carries_label_and_error", _test_children_read_failure_message_carries_label_and_error)
+it("test_missing_children_join_with_comma_separator", _test_missing_children_join_with_comma_separator)
+it("test_bind_getter_reads_the_shared_current_game_ref", _test_bind_getter_reads_the_shared_current_game_ref)
+it("test_sync_ui_event_roles_forwards_the_resolved_roles", _test_sync_ui_event_roles_forwards_the_resolved_roles)
+it("test_required_nodes_include_market_item_buttons", _test_required_nodes_include_market_item_buttons)
+it("test_loading_screen_show_and_hide_use_the_registered_events", _test_loading_screen_show_and_hide_use_the_registered_events)
+it("test_missing_child_label_falls_back_to_node_id_for_unnamed_entries", _test_missing_child_label_falls_back_to_node_id_for_unnamed_entries)
+end)

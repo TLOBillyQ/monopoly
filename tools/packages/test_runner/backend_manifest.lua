@@ -15,7 +15,6 @@ return {
     "test/behavior/app/test_leaderboard.lua",
     "test/behavior/app/test_sign_in.lua",
     "test/behavior/app/test_startup_profile.lua",
-    "test/behavior/app/test_ui_bootstrap.lua",
     "test/behavior/host/test_default_ports.lua",
     "test/behavior/host/test_entity_pool.lua",
     "test/behavior/host/test_init_mutation.lua",
@@ -389,6 +388,7 @@ return {
     "tools/packages/verify/test/test_verify_full.lua",
   },
   busted = {
+    "test/behavior/app/test_ui_bootstrap.lua",
     "test/behavior/host/test_synthetic_actor_registry.lua",
     "test/behavior/app/test_share_task.lua",
     "test/behavior/app/test_roster_roles.lua",
