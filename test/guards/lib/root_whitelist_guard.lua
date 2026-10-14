@@ -22,6 +22,8 @@ local _WHITELIST = {
   ["AGENTS.md"] = true,
   ["GLOSSARY.md"] = true,
   ["CODING_STANDARDS.md"] = true,
+  -- 版本基线变更记录(#68):人维护的发布台账,住根部。
+  ["CHANGELOG.md"] = true,
   -- 项目使命。
   ["mission.md"] = true,
   -- 运营方任务书 tasks/<task-name>.md：由 master 角色随该任务首次 git 工作提交
