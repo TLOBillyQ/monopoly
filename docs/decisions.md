@@ -119,6 +119,8 @@ CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-view
 
 理由：uml-viewer 已占据「非 Clojure 的 CRAP 与变异」这一角色，具备 Lua 扫描与原生 Windows 复验记录；本仓的 `crap4lua` / `mutate4lua` 是同一角色的第二实现，`arch_view` 与它的架构面是同一件事的两套真源，留着即两套会漂移的真源。留下的是 uml-viewer 没有对应物的两件：`dry4lua`（结构重复检测）与 `acceptance4lua`（中文 Gherkin 验收管线），仍按 `tools/tools.lock` 跟随上游主干装载。
 
+落地（#93）：本仓的受支持入口是 `lua tools/cli.lua uml <check|crap|mutate>`，它在钉死 `LUA_PATH`/`LUA_CPATH` 的 cmd 批处理里调用同一个 `uml-command.ps1`，派发次序与 validResult（crap 0/2、mutate 0/3）仍由 uml-viewer 判定。安装器拷到仓根的 `./uml` / `uml.ps1` 被忽略，不作为入口：它们继承用户 `LUA_PATH`，会从全局 `%APPDATA%\luarocks` tree 解析出假绿。`.metrics/` 有意不入库，偏离上游 README。契约见 `tools/specs/uml_quality.prompt`。
+
 ## ADR 0069 — 测试框架的终态是 busted
 
 本仓测试后端定为 busted，LuaUnit 与自研运行器退场。三项约束随决策一并钉死：

@@ -19,7 +19,7 @@ L7 state | config
 
 `packages.arch_policy.project_arch_view_config(policy)` 产生旧 `tools/packages/arch_view/config.json` 的兼容投影，guard 的投影测试阻止其独立漂移。旧工具和消费者保留，退场由 #94 统一处理。改边界只改 policy，再重投影旧配置。
 
-`packages.arch_policy.project_uml_policy(policy)` 产生 uml-viewer 消费的 EDN；输出到 `tmp/`，不要另存一份可手改配置。`:levels` 使用内层优先顺序（foundation、state/config、rules、player/computer、turn、ui、host、app），与门禁声明层互逆。使用 uml-viewer 公共 IR 主入口 `uml-viewer.main.ir-generator <policy.edn> <out.edn>`；#93 接管安装与用户命令。IR 只表达图和层方向，禁向规则、未分类和投影环仍由本项目 guard 执行。
+`packages.arch_policy.project_uml_policy(policy)` 产生 uml-viewer 消费的 EDN；输出到 `tmp/`，不要另存一份可手改配置。`:levels` 使用内层优先顺序（foundation、state/config、rules、player/computer、turn、ui、host、app），与门禁声明层互逆。使用 uml-viewer 公共 IR 主入口 `uml-viewer.main.ir-generator <policy.edn> <out.edn>`；#93 接管安装与 CRAP/变异的用户命令 `lua tools/cli.lua uml <check|crap|mutate>`（契约见 `tools/specs/uml_quality.prompt`）。IR 只表达图和层方向，禁向规则、未分类和投影环仍由本项目 guard 执行。
 
 #92 在真实 policy/源码上验证：guard 与 uml-viewer IR 同为 570 模块、1788 内部依赖边，集合逐项相等，均无层违规。`require("src.host.init")` 沿用旧扫描口径作为外部依赖（模块 `.init` 折叠为 `src.host`）；另外两项外部依赖是 `Data.Prefab` 与 `Data.UIManagerNodes`。
 

@@ -32,6 +32,14 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({}, guard.check({ "tasks" }))
   end)
 
+  -- uml-viewer 只在项目根读 uml-quality.json(#93);它的产物与安装拷贝
+  -- 走 .gitignore,不进白名单——放开它们即破此钉。
+  it("test_uml_quality_config_whitelisted_but_not_its_outputs", function()
+    luassert.is.same({}, guard.check({ "uml-quality.json" }))
+    luassert.is.same({ ".uml-viewer", ".metrics", "target", "uml", "uml.ps1" },
+      guard.check({ ".uml-viewer", ".metrics", "target", "uml", "uml.ps1" }))
+  end)
+
   -- 常规根级条目不受影响。
   it("test_regular_entries_stay_whitelisted", function()
     local violations = guard.check({

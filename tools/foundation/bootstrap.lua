@@ -225,6 +225,17 @@ function bootstrap.ensure_cluacov_tree(repo_root)
     end)
 end
 
+-- luacov-reporter-lcov(#93):crapper 的 Lua 覆盖率路径 require("luacov.reporter.lcov")
+-- 产 lcov.info。钉 0.2-0;rockspec 依赖 luacov,先确保 base engine 在项目 tree,
+-- 不借用户全局 %APPDATA%\luarocks tree(那里同名 rock 会造成假绿)。
+function bootstrap.ensure_luacov_reporter_lcov_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "luacov-reporter-lcov", "0.2-0",
+    "share/lua/5.4/luacov/reporter/lcov.lua",
+    function()
+      return bootstrap.ensure_luacov_tree(repo_root)
+    end)
+end
+
 function bootstrap.ensure_tool(name, env_or_opts)
   local env = env_or_opts
   if env == nil or env.repo_root == nil then
