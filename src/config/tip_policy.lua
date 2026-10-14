@@ -19,6 +19,8 @@ M[event_kinds.bankruptcy] = { tip = false }
 M[event_kinds.victory] = { tip = false }
 -- 遥控骰子（#103）:全场可见提示谁用了遥控骰子、设定了多少点。
 M[event_kinds.remote_dice] = { tip = true }
+-- AI 遥控骰子的目标格（#109）:一次用卡只弹一条提示,目标格只进行动日志。
+M[event_kinds.remote_dice_target] = { tip = false }
 -- 骰子加倍明细（#103）:只进行动日志(骰面 × 倍率 = 步数),提示归 item_used 的使用播报。
 M[event_kinds.dice_multiplier_breakdown] = { tip = false }
 
