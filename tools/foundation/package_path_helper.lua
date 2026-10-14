@@ -69,9 +69,7 @@ end
 
 -- 把 luarocks 本地 tree 的 Lua 模块路径接进 package.path / package.cpath。
 -- tree 由 bootstrap 按需写入 <repo_root>/.toolcache/luarocks(由 .gitignore 排除)。
--- cpath 是 cluacov 等 C 扩展(lib/lua/5.4/*.so)的装载面;luacov 在
--- require("luacov.runner") 顶层 pcall(require, "cluacov.version") 决定是否
--- 走 C hook——cpath 缺位时 cluacov 永远静默回退纯 Lua。
+-- cpath 是 tree 内 C 扩展(lib/lua/5.4/*.so)的装载面。
 function package_path_helper.install_luarocks_tree_paths(opts)
   opts = opts or {}
   local repo_root = _normalize_path(opts.repo_root or ".")

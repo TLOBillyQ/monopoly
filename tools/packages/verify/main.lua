@@ -6,40 +6,16 @@ require("test.bootstrap").install_package_paths()
 
 -- 工具树与 repo_root 在模块加载时解析一次(与其它包入口同口径:
 -- `bootstrap.install(<本文件>)` 从源文件路径向上找仓库根,不依赖 cwd)。
-local bootstrap_env = require("foundation.bootstrap").install(debug.getinfo(1, "S").source)
-local fs_lib = require("foundation.fs")
+require("foundation.bootstrap").install(debug.getinfo(1, "S").source)
 local runner_bin = require("packages.test_runner.lua54")
 local lanes_mod = require("packages.verify.lanes")
 local runner = require("packages.verify.runner")
 
 -- lua5.4 探测(候选表 + `<candidate> -v` 验证 + 记忆化)原先在这里有一份逐字副本,
 -- 与 packages.test_runner.lua54 靠"同口径"的注释手工同步。归一到
--- lua54.detect_lua54():探不到返回 nil,正是这里判定 coverage 车道能否开所需要的语义。
+-- lua54.detect_lua54():探不到返回 nil。
 local function _resolve_lua54()
   return runner_bin.detect_lua54()
-end
-
--- 覆盖率车道跑在 luacov.runner 下，luacov 经上游 rockspec 硬钉并从
--- rockspec 依赖装入 .toolcache/luarocks tree。可用性 = lua5.4 解释器解析到
--- (spec 与 Eggy 宿主同版本)+ luacov 在 tree(coverage.lua 车道入口会 ensure)。
-local function _coverage_toolchain_available(lua54_bin)
-  return lua54_bin ~= nil
-    and fs_lib.path_exists(bootstrap_env.repo_root .. "/.toolcache/luarocks/share/lua/5.4/luacov/runner.lua") == true
-end
-
--- crap 的两步(analyze + gate)在并行车道跑完后串行补跑:它们吃的是 crap_collect
--- 落下的 json,必须等那条车道结束。
-local function _run_crap_steps(results)
-  results[#results + 1] = runner.run_step(
-    "crap",
-    "lua tools/packages/coverage/crap_analyze.lua --in tmp/crap_collect.json --out tmp/crap_report.json"
-  )
-  -- Flat CRAP gate: fails on any function scoring above the configured
-  -- threshold. No baseline, no per-file budget, no complexity exemption.
-  results[#results + 1] = runner.run_step(
-    "crap_gate",
-    "lua tools/packages/coverage/crap_gate.lua --in tmp/crap_collect.json"
-  )
 end
 
 local function _main(opts)
@@ -48,16 +24,9 @@ local function _main(opts)
 
   local env = { lua54_bin = _resolve_lua54() }
   if env.lua54_bin == nil then error("Lua 5.4 interpreter required; check LUA54_BIN") end
-  if opts.coverage or opts.full then
-    assert(require("foundation.bootstrap").ensure_luacov_tree(bootstrap_env.repo_root))
-  end
-  env.coverage_available = _coverage_toolchain_available(env.lua54_bin)
 
   local plan = lanes_mod.resolve({
     tooling = opts.tooling,
-    coverage = opts.coverage,
-    crap = opts.crap,
-    full = opts.full,
     serial = opts.serial,
     env = env,
   })
@@ -86,10 +55,6 @@ local function _main(opts)
     all_results[#all_results + 1] = r
   end
 
-  if lanes_mod.have(plan.lanes, "crap_collect") then
-    _run_crap_steps(all_results)
-  end
-
   local output = runner.build_output({
     results = all_results,
     skipped = plan.skipped,
@@ -112,7 +77,6 @@ local M = {
   run = _main,
   build_output = runner.build_output,
   _resolve_lanes = lanes_mod.resolve,
-  _coverage_toolchain_available = _coverage_toolchain_available,
 }
 
 if ... == "packages.verify.main" then
@@ -127,15 +91,6 @@ for i = 1, #(arg or {}) do
     opts.serial = false
   elseif arg[i] == "--tooling" then
     opts.tooling = true
-  elseif arg[i] == "--no-coverage" then
-    -- Silent no-op; coverage is already opt-out by default.
-    opts.coverage = false
-  elseif arg[i] == "--coverage" then
-    opts.coverage = true
-  elseif arg[i] == "--crap" then
-    opts.crap = true
-  elseif arg[i] == "--full" then
-    opts.full = true
   elseif arg[i] == "--verbose" then
     opts.verbose = true
   else

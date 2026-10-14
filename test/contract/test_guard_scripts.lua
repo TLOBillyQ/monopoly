@@ -1,17 +1,17 @@
 -- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 
-luassert.truthy(require("test.bootstrap").ensure_tool("arch_view"))
+require("test.bootstrap").install_package_paths()
 
 local dep_rules = require("test.guards.lib.dep_rules")
 local forbidden_globals = require("test.guards.lib.forbidden_globals")
 local fixed_type_guard = require("test.guards.lib.fixed_type_guard")
-local arch_common = require("arch_view.runtime.common")
+local path_lib = require("foundation.path")
 
-local fixture_root = arch_common.normalize_path("test/fixtures/guards")
+local fixture_root = path_lib.normalize_path("test/fixtures/guards")
 
 local function _fixture_path(relpath)
-  return arch_common.join_path(fixture_root, relpath)
+  return path_lib.join_path(fixture_root, relpath)
 end
 
 describe("TestGuardScripts", function()

@@ -45,10 +45,6 @@ local guards = {
     module = "test.guards.lib.arch_policy_guard",
   },
   {
-    name = "arch_view_guard",
-    module = "test.guards.lib.arch_view_guard",
-  },
-  {
     name = "fixed_type_guard",
     module = "test.guards.lib.fixed_type_guard",
   },

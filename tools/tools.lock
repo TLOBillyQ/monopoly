@@ -2,7 +2,4 @@
 # Format: <name> <gitea-repo-url>
 # HEAD 解析缓存于 .toolcache/resolved-tools.tsv(24h TTL);删除该文件强制重新解析。
 acceptance4lua http://lzxsvn:3000/eggy/acceptance4lua
-arch_view http://lzxsvn:3000/eggy/arch-view
-crap4lua http://lzxsvn:3000/eggy/crap4lua
 dry4lua http://lzxsvn:3000/eggy/dry4lua
-mutate4lua http://lzxsvn:3000/eggy/mutate4lua

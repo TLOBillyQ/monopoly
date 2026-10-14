@@ -25,7 +25,6 @@ end
 -- 拦截生成物/本地件误提交；acceptance/generated 是 gitignored 生成物。
 local _TRACKED_PATHSPEC_RULES = {
   { pathspec = ".claude/worktrees", message = "tracked generated/local artifact" },
-  { pathspec = "tools/packages/arch_view/viewer", message = "tracked generated/local artifact" },
   { pathspec = "tools/packages/acceptance/generated/", message = "tracked generated/local artifact" },
 }
 

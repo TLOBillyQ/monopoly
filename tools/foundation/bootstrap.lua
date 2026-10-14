@@ -156,7 +156,8 @@ end
 
 -- 用 luarocks 往 tree 里装一个工具/库,装好(或已装)返回 true。marker 判据
 -- 各不相同,由调用方给出 marker 相对子路径;name/version 是 `luarocks install`
--- 的实参。cluacov 额外依赖 luacov,用 before_install 钩子表达,装前先确保依赖。
+-- 的实参。依赖 luacov 的 rock(如 luacov-reporter-lcov)用 before_install 钩子
+-- 表达,装前先确保依赖。
 local function _ensure_rock_installed(repo_root, name, version, marker_rel, before_install)
   local path_lib = require("foundation.path")
   local fs_lib = require("foundation.fs")
@@ -206,23 +207,10 @@ function bootstrap.ensure_busted_tree(repo_root)
   return _ensure_rock_installed(repo_root, "busted", "2.3.0-1", "share/lua/5.4/busted/runner.lua")
 end
 
--- 覆盖率引擎 luacov 由上游 rockspec（crap4lua/mutate4lua
--- v0.1.0)以依赖形式带入 tree,这里只做显式确保——runner `-c` 与 coverage.lua
--- 车道在无 crap4lua 前置调用时也能直接落地它。钉 0.17.0-1 与上游一致。
+-- 覆盖率引擎 luacov:uml crap(crapper)的 Lua 覆盖率路径 require("luacov.runner"),
+-- 只从项目 tree 落地(#93/#94)。钉 0.17.0-1。
 function bootstrap.ensure_luacov_tree(repo_root)
   return _ensure_rock_installed(repo_root, "luacov", "0.17.0-1", "share/lua/5.4/luacov/runner.lua")
-end
-
--- cluacov = luacov 的可选 C hook 加速器(lunarmodules/cluacov 1.0.0-1)。
--- luacov.runner 顶层 pcall(require, "cluacov.version") 成功即改用 C hook;
--- mutate4lua 归因矩阵构建是全套 spec 下的 line-hook 热点,启用后显著降 wall。
--- 钉 1.0.0-1;C 扩展 marker 是 hook.so(仅 version.lua 不够——证明 .so 已编进 tree)。
--- cluacov rockspec 依赖 luacov >= 0.13;先确保 base engine 在 tree。
-function bootstrap.ensure_cluacov_tree(repo_root)
-  return _ensure_rock_installed(repo_root, "cluacov", "1.0.0-1", "lib/lua/5.4/cluacov/hook.dll",
-    function()
-      return bootstrap.ensure_luacov_tree(repo_root)
-    end)
 end
 
 -- luacov-reporter-lcov(#93):crapper 的 Lua 覆盖率路径 require("luacov.reporter.lcov")

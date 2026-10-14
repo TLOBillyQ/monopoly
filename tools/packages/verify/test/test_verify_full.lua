@@ -18,7 +18,7 @@ local function _all_pass_results()
     results = {
       { label = "contract", ok = true, elapsed = 5, output = "ok 1\nok 2\n1..2\n" },
       { label = "guards", ok = true, elapsed = 3, output = "ok 1\n1..1\n" },
-      { label = "arch", ok = true, elapsed = 1, output = "arch ok\n" },
+      { label = "encoding", ok = true, elapsed = 1, output = "encoding ok\n" },
     },
     skipped = {},
     total_elapsed = 10,
@@ -67,7 +67,7 @@ happy_path_suppresses_per_lane_stdout()
   local input = _all_pass_results()
   local out = verify_full.build_output(input)
   check.is_nil(out.stdout:find("ok 1", 1, true), "lane stdout should be suppressed on success")
-  check.is_nil(out.stdout:find("arch ok", 1, true), "lane stdout should be suppressed on success")
+  check.is_nil(out.stdout:find("encoding ok", 1, true), "lane stdout should be suppressed on success")
 end
 
 local function
@@ -92,10 +92,10 @@ end
 local function
 skipped_lanes_appear_in_summary()
   local input = _all_pass_results()
-  input.skipped = { "lint", "coverage" }
+  input.skipped = { "lint-src", "lint-test" }
   local out = verify_full.build_output(input)
   check.truthy(out.stdout:find("skipped=2", 1, true))
-  check.truthy(out.stdout:find("skipped: lint, coverage", 1, true))
+  check.truthy(out.stdout:find("skipped: lint-src, lint-test", 1, true))
 end
 
 -- Verbose output contracts.
@@ -105,7 +105,7 @@ verbose_preserves_all_lane_stdout_on_success()
   local input = _all_pass_results()
   input.verbose = true
   local out = verify_full.build_output(input)
-  check.truthy(out.stdout:find("arch ok", 1, true), "verbose must include lane stdout")
+  check.truthy(out.stdout:find("encoding ok", 1, true), "verbose must include lane stdout")
   check.truthy(out.stdout:find("ok 1", 1, true), "verbose must include lane stdout")
 end
 
@@ -167,6 +167,20 @@ missing_global_luacheck_keeps_project_install_lanes()
   check.is_nil(skipped["lint-tools"])
 end
 
+-- #94:旧外部架构工具 / CRAP / 覆盖率车道退场;层边界门禁住 guards 车道,
+-- CRAP 与变异走显式 `uml crap|mutate`。slim 计划恰好七条车道。
+local function
+slim_plan_has_exactly_the_retained_lanes()
+  local plan = verify_full._resolve_lanes({
+    env = { lua54_bin = "lua5.4" },
+  })
+  local labels = {}
+  for _, lane in ipairs(plan.lanes) do
+    labels[#labels + 1] = lane.label
+  end
+  check.same({ "contract", "guards", "behavior", "lint-src", "lint-test", "lint-tools", "encoding" }, labels)
+  check.same({}, plan.skipped)
+end
 
 describe("verify public output and lane plan", function()
   it("happy_path_emits_at_most_3_lines", happy_path_emits_at_most_3_lines)
@@ -180,4 +194,5 @@ describe("verify public output and lane plan", function()
   it("verbose_includes_per_step_pass_fail_trace_lines", verbose_includes_per_step_pass_fail_trace_lines)
   it("slim_plan_splits_lint_into_three_directory_lanes", slim_plan_splits_lint_into_three_directory_lanes)
   it("missing_global_luacheck_keeps_project_install_lanes", missing_global_luacheck_keeps_project_install_lanes)
+  it("slim_plan_has_exactly_the_retained_lanes", slim_plan_has_exactly_the_retained_lanes)
 end)

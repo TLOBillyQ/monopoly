@@ -21,7 +21,7 @@ local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
 
--- 内置文件分片（与 behavior_parallel / coverage 共用 packages/test_runner）：
+-- 内置文件分片（与 behavior_parallel 共用 packages/test_runner）：
 -- 命名 profile 的文件数超过阈值时,按文件边界拆成 N 条 runner 子进程 lane
 -- 并行（不拆文件内顺序）；窄目录点跑（--profile <目录>）、文件数少、
 -- worker=1、--verbose 一律走原单进程路径,命令形态逐字节不变。

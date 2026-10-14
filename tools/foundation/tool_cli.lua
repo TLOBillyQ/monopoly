@@ -1,19 +1,17 @@
 -- tool_cli.lua —— 包内 cli.lua 进程内适配共享砖(#320 收尾 2,#322)。
 --
--- 背景:5 个 tools/packages/<pkg>/cli.lua 的 in-process 直调曾分化为三种形态——
--- crap/mutate 带 _shell_quote + _forward_subprocess 兜底但退出码归一各自为政
--- (crap 布尔 / mutate 数字);lint/arch_view 是 pre-bootstrap + pcall + return 1
--- 无兜底;dry 把 runner 顶部已做的 bootstrap+ensure_tool 重做一遍(双重
--- bootstrap)。本文件把四步收敛为单点:
+-- 背景:各 tools/packages/<pkg>/cli.lua 的 in-process 直调曾分化为多种形态
+-- (子进程兜底与退出码归一各自为政、pre-bootstrap 无兜底、双重 bootstrap;
+-- 涉及的旧质量工具包已于 #94 退役)。本文件把四步收敛为单点:
 --
 --   require runner → 归一化退出码 → 子进程兜底
 --
 -- 各 cli.lua 的 main 只剩 --help 路由 + 一次 tool_cli.run 调用。env merge 的
 -- 唯一落点在 runner 侧(#323):runner 以自身 _env 为底经 tool_cli.merge_env
--- 合并调用方 env;cli adapter 只透传,不替 runner 合并——否则 arch_view 路径
--- 会出现 cli/runner 双侧各 merge 一遍的冗余。
+-- 合并调用方 env;cli adapter 只透传,不替 runner 合并——否则会出现
+-- cli/runner 双侧各 merge 一遍的冗余。
 --
--- 语义(以原 crap/mutate 形态为准,lint/arch_view/dry 向其对齐):
+-- 语义:
 --   pcall(require, runner_module) 失败(缺上游工具、package.path 未装等)→
 --   子进程兜底 `lua <runner_script> <args...>`,退出码透传(runner 脚本经
 --   script_bootstrap 自举,不依赖调用方 package.path)。
@@ -29,7 +27,7 @@ local proc_lib = require("foundation.proc")
 local tool_cli = {}
 
 -- 归一化 run 返回值:数字退出码原样;布尔/真值语义 truthy→0、falsy→1。
--- 覆盖 crap/arch_view(布尔)与 mutate/dry/lint(数字)两种 runner 契约。
+-- 覆盖布尔与数字(dry/lint)两种 runner 契约。
 function tool_cli.normalize_exit_code(result)
   if type(result) == "number" then
     return result
@@ -39,8 +37,8 @@ end
 
 -- 子进程兜底:require runner 失败(缺上游工具、package.path 未装等)时改以
 -- `<lua_bin> <runner_script>` 直跑脚本形态——runner 经 script_bootstrap 自举,不依赖
--- 调用方 package.path;退出码透传。lua_bin 缺省 "lua";crap 在非 5.4 解释器下
--- 用它 re-exec 到钉定 lua5.4(#453)。非 "exit" 收场(signal 等)归 1。
+-- 调用方 package.path;退出码透传。lua_bin 缺省 "lua";显式传入时
+-- re-exec 到钉定解释器(#453 引入;原调用方 crap 已于 #94 退役)。非 "exit" 收场(signal 等)归 1。
 function tool_cli.forward_subprocess(runner_script, args, lua_bin)
   local parts = { lua_bin or "lua", runner_script }
   for _, value in ipairs(args or {}) do

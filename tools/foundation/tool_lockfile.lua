@@ -6,10 +6,7 @@ local tool_lockfile = {}
 
 local _TOOL_DEFS = {
   acceptance4lua = {},
-  arch_view = {},
-  crap4lua = {},
   dry4lua = {},
-  mutate4lua = {},
 }
 
 local function _split_fields(line)

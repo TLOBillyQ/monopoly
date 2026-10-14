@@ -50,15 +50,6 @@ local function _only(modules, edges, policy)
 end
 
 describe("TestArchPolicy", function()
-  local pending_root
-
-  after_each(function()
-    if pending_root then
-      local root = pending_root
-      pending_root = nil
-      assert(require("foundation.fs").remove_path(root))
-    end
-  end)
 
 
 it("test_declared_layers_match_the_registry", function()
@@ -186,12 +177,23 @@ it("test_namespace_projection_cycle_without_module_cycle_is_rejected", function(
   luassert.is.same({ "rules.a", "rules.b" }, violation.nodes)
 end)
 
-it("test_complex_scc_path_waivers_match_legacy_public_analyzer", function()
-  local fs = require("foundation.fs")
-  local json = require("foundation.json_writer")
-  local legacy = require("arch_view")
-  local root = require("foundation.env").make_temp_path("monopoly_76_arch_policy_cycle")
-  pending_root = root
+-- 下面两条的期望值原先在运行时与旧外部分析器的公开 analyze 逐项比对;
+-- 旧工具 #94 退场时把当时双方一致的输出冻结成字面量,语义不变。
+local function _cycle_shape(violations)
+  local shape = {}
+  for _, violation in ipairs(violations) do
+    shape[#shape + 1] = {
+      view = violation.view,
+      cycle = violation.cycle,
+      nodes = violation.nodes,
+      waived = violation.waived,
+      reason = violation.reason,
+    }
+  end
+  return shape
+end
+
+it("test_complex_scc_path_waivers_keep_frozen_analyzer_results", function()
   local graph = {
     modules = { "src.rules.a", "src.rules.b", "src.rules.c" },
     edges = {
@@ -201,72 +203,66 @@ it("test_complex_scc_path_waivers_match_legacy_public_analyzer", function()
       { from = "src.rules.c", to = "src.rules.b" },
     },
   }
-  assert(fs.write_file(root .. "/src/rules/a.lua", 'require("src.rules.b")'))
-  assert(fs.write_file(root .. "/src/rules/b.lua", 'require("src.rules.a")\nrequire("src.rules.c")'))
-  assert(fs.write_file(root .. "/src/rules/c.lua", 'require("src.rules.b")'))
-  for _, waivers in ipairs({
-    {},
-    { { view = "rules", nodes = { "rules.b", "rules.a" }, reason = "first path" } },
-    { { view = "rules", nodes = { "rules.a", "rules.b" }, reason = "first path" },
+  local ab = { "rules.a", "rules.b" }
+  local bc = { "rules.b", "rules.c" }
+  local function open(nodes)
+    return { view = "rules", cycle = table.concat(nodes, "->") .. "->" .. nodes[1], nodes = nodes, waived = false }
+  end
+  local function waived(nodes, reason)
+    local cycle = open(nodes)
+    cycle.waived, cycle.reason = true, reason
+    return cycle
+  end
+  for _, case in ipairs({
+    { waivers = {}, ok = false, failing = 2, cycles = { open(ab), open(bc) } },
+    { waivers = { { view = "rules", nodes = { "rules.b", "rules.a" }, reason = "first path" } },
+      ok = false, failing = 1, cycles = { waived(ab, "first path"), open(bc) } },
+    { waivers = { { view = "rules", nodes = { "rules.a", "rules.b" }, reason = "first path" },
       { view = "rules", nodes = { "rules.b", "rules.c" }, reason = "second path" } },
-    { { view = "wrong", nodes = { "rules.a", "rules.b" }, reason = "wrong view" } },
-    { { view = "rules", nodes = { "rules.a", "rules.b", "rules.c" }, reason = "SCC is not a path" } },
+      ok = true, failing = 0, cycles = { waived(ab, "first path"), waived(bc, "second path") } },
+    { waivers = { { view = "wrong", nodes = { "rules.a", "rules.b" }, reason = "wrong view" } },
+      ok = false, failing = 2, cycles = { open(ab), open(bc) } },
+    { waivers = { { view = "rules", nodes = { "rules.a", "rules.b", "rules.c" }, reason = "SCC is not a path" } },
+      ok = false, failing = 2, cycles = { open(ab), open(bc) } },
   }) do
     local policy = {
       source_roots = POLICY.source_roots,
       abstract_rules = POLICY.abstract_rules,
       component_rules = POLICY.component_rules,
       forbidden_dependency_rules = POLICY.forbidden_dependency_rules,
-      allowed_cycles = waivers,
+      allowed_cycles = case.waivers,
     }
-    assert(fs.write_file(root .. "/config.json", json.encode(arch_policy.project_arch_view_config(policy))))
-    local old = legacy.analyze({ project_root = root, config_path = root .. "/config.json" }).check
     local current = arch_policy.check(policy, graph)
-    luassert.is.equal(old.ok, current.ok)
-    luassert.is.equal(#old.violations, #current.violations)
-    luassert.is.equal(#old.projection_cycles, #current.all_violations)
-    for index, cycle in ipairs(old.projection_cycles) do
-      local actual = current.all_violations[index]
-      luassert.is.equal(cycle.view, actual.view)
-      luassert.is.equal(cycle.cycle, actual.cycle)
-      luassert.is.same(cycle.nodes, actual.nodes)
-      luassert.is.equal(cycle.waived, actual.waived)
-      luassert.is.equal(cycle.reason, actual.reason)
-    end
+    luassert.is.equal(case.ok, current.ok)
+    luassert.is.equal(case.failing, #current.violations)
+    luassert.is.same(case.cycles, _cycle_shape(current.all_violations))
   end
-  assert(fs.remove_path(root))
-  pending_root = nil
 end)
 
-it("test_large_scc_greedy_paths_match_legacy_public_analyzer", function()
-  local fs = require("foundation.fs")
-  local json = require("foundation.json_writer")
-  local root = require("foundation.env").make_temp_path("monopoly_76_arch_policy_greedy")
-  pending_root = root
+it("test_large_scc_greedy_paths_keep_frozen_analyzer_results", function()
   local graph = { modules = {}, edges = {} }
   for index = 1, 9 do
     local id = "src.rules.n" .. index
     graph.modules[#graph.modules + 1] = id
-    local source = {}
     for _, offset in ipairs({ 1, 3 }) do
-      local target = "src.rules.n" .. ((index - 1 + offset) % 9 + 1)
-      graph.edges[#graph.edges + 1] = { from = id, to = target }
-      source[#source + 1] = 'require("' .. target .. '")'
+      graph.edges[#graph.edges + 1] = { from = id, to = "src.rules.n" .. ((index - 1 + offset) % 9 + 1) }
     end
-    assert(fs.write_file(root .. "/src/rules/n" .. index .. ".lua", table.concat(source, "\n")))
   end
-  assert(fs.write_file(root .. "/config.json", json.encode(arch_policy.project_arch_view_config(POLICY))))
-  local old = require("arch_view").analyze({ project_root = root, config_path = root .. "/config.json" }).check
   local current = arch_policy.check(POLICY, graph)
   luassert.is_false(current.ok)
-  luassert.is.equal(#old.projection_cycles, #current.all_violations)
-  for index, cycle in ipairs(old.projection_cycles) do
-    luassert.is.equal(cycle.cycle, current.all_violations[index].cycle)
-    luassert.is.same(cycle.nodes, current.all_violations[index].nodes)
-    luassert.is.equal(cycle.view, current.all_violations[index].view)
+  local cycles = {}
+  for _, violation in ipairs(current.all_violations) do
+    luassert.is.equal("rules", violation.view)
+    cycles[#cycles + 1] = violation.cycle
   end
-  assert(fs.remove_path(root))
-  pending_root = nil
+  luassert.is.same({
+    "rules.n1->rules.n4->rules.n7->rules.n1",
+    "rules.n2->rules.n3->rules.n4->rules.n7->rules.n1->rules.n2",
+    "rules.n5->rules.n8->rules.n2->rules.n5",
+    "rules.n6->rules.n7->rules.n1->rules.n2->rules.n5->rules.n6",
+    "rules.n6->rules.n9->rules.n3->rules.n6",
+    "rules.n8->rules.n9->rules.n3->rules.n4->rules.n7->rules.n8",
+  }, cycles)
 end)
 
 it("test_external_and_self_edges_are_outside_the_graph", function()
