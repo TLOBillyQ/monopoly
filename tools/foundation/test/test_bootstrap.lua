@@ -285,4 +285,49 @@ it("ensure cluacov tree stops when luacov dependency fails", function()
   check.equal(0, command_calls)
 end)
 
+-- #93:crapper 的 Lua 覆盖率走 luacov.reporter.lcov;只能装进项目 tree,不能借全局 tree。
+it("ensure luacov lcov reporter tree stops when luacov dependency fails", function()
+  local command_calls = 0
+  _with_stubs({
+    { target = fs_lib, key = "path_exists", value = function(path)
+      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/luacov/reporter/lcov.lua", path)
+      return false
+    end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function()
+      command_calls = command_calls + 1
+      return { ok = true }
+    end },
+    { target = bootstrap, key = "ensure_luacov_tree", value = function(repo_root)
+      check.equal("/repo", repo_root)
+      return nil, "luacov failed"
+    end },
+  }, function()
+    local ok, err = bootstrap.ensure_luacov_reporter_lcov_tree("/repo")
+    check.is_nil(ok)
+    check.equal("luacov failed", err)
+  end)
+  check.equal(0, command_calls)
+end)
+
+it("ensure luacov lcov reporter tree installs the pinned rock", function()
+  _with_stubs({
+    { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      local probe = _native_probe(command)
+      if probe then return probe end
+      check.equal("luacov-reporter-lcov", command[#command - 3])
+      check.equal("0.2-0", command[#command - 2])
+      return { ok = false, output = "offline" }
+    end },
+    { target = bootstrap, key = "ensure_luacov_tree", value = function() return true end },
+  }, function()
+    local ok, err = bootstrap.ensure_luacov_reporter_lcov_tree("/repo")
+    check.is_nil(ok)
+    check.equal("luarocks install failed for luacov-reporter-lcov: offline", err)
+  end)
+end)
+
 end)
