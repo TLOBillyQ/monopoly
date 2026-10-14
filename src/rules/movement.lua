@@ -204,9 +204,12 @@ end
 -- #102:纯预测走与 move 完全相同的步进/障碍/黑市判定（dry 模式只跳过事件与落账），
 -- 黑市中断按 move 阶段 continue_from_market 的同一映射恢复剩余步数。
 local function _predict_walk(game, player, steps, opts)
-  opts = opts or {}
-  opts.dry = true
-  local ctx = movement_context.build(game, player, steps, opts)
+  -- 不改调用方传入的 opts:复制一份再钉 dry。
+  local dry_opts = { dry = true }
+  for key, value in pairs(opts or {}) do
+    dry_opts[key] = value
+  end
+  local ctx = movement_context.build(game, player, steps, dry_opts)
   if not _check_obstacles(ctx) then
     _run_move_steps(ctx)
   end
@@ -215,8 +218,13 @@ end
 
 local function _predict_market_resume(game, player, interrupt)
   -- 真实恢复流用同一玩家（位置已被 move 更新到黑市格）；预测不改状态,
-  -- 用同 id/状态的影子玩家从黑市格继续。
-  local shadow = { id = player.id, position = interrupt.position, status = player.status }
+  -- 用同 id/状态的影子玩家从黑市格继续。影子拷全表再覆盖落点,
+  -- movement_context.build 今后新增字段读取不会在预测与真实路径间静默分叉。
+  local shadow = {}
+  for key, value in pairs(player) do
+    shadow[key] = value
+  end
+  shadow.position = interrupt.position
   return _predict_walk(game, shadow, interrupt.remaining_steps, {
     direction = interrupt.facing,
     branch_parity = interrupt.branch_parity,
