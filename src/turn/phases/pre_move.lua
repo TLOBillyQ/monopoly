@@ -37,8 +37,13 @@ local function _phase_pre_move(turn_mgr, args)
   end
 
   local last_turn = assert(game.last_turn, "missing game.last_turn")
-  local updated_total = dice_multiplier.apply_roll_total(game, assert(last_turn.raw_total, "missing game.last_turn.raw_total"), player)
+  local raw = assert(last_turn.raw_total, "missing game.last_turn.raw_total")
+  local pending_multiplier = game:player_pending_dice_multiplier(player)
+  local updated_total = dice_multiplier.apply_roll_total(game, raw, player)
   last_turn.total = updated_total
+  if pending_multiplier > 1 then
+    dice_multiplier.publish_breakdown(game, player, raw, updated_total, pending_multiplier)
+  end
   return "move", { player = player, total = updated_total, raw_total = raw_total }
 end
 
