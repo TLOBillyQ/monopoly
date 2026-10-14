@@ -1,5 +1,5 @@
 ---@diagnostic disable: undefined-global
-if arg then rawset(arg, 0, "tools/packages/luaunit_runner/test/test_spec_sharding.lua") end
+if arg then rawset(arg, 0, "tools/foundation/test/test_spec_sharding.lua") end
 require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local fs_lib = require("foundation.fs")
@@ -35,7 +35,7 @@ describe("spec sharding discover spec files", function()
     check.equal(1, #files)
     check.equal(_expected_discovered_path(_TMP_ROOT .. "/test_dynamic.lua"), files[1])
   end)
-  it("discovers luaunit native spec files", function()
+  it("discovers Test class native spec files", function()
     _write_file(_TMP_ROOT .. "/test_native_colon.lua", "TestFoo = {}\nfunction TestFoo:test_bar(self) end\n")
     _write_file(_TMP_ROOT .. "/test_native_bracket.lua", "TestBar = {}\nTestBar[\"test_中文名\"] = function(self) end\n")
     _write_file(_TMP_ROOT .. "/support_mod.lua", "local M = {}\nreturn M\n")
@@ -62,7 +62,7 @@ describe("spec sharding file cost", function()
   it("returns 1 for missing path", function()
     check.equal(1, sharding.file_cost(_TMP_ROOT .. "/test_missing.lua"))
   end)
-  it("counts luaunit native test definitions", function()
+  it("counts Test class native test definitions", function()
     local path = _TMP_ROOT .. "/test_native.lua"
     _write_file(path, "TestFoo = {}\nfunction TestFoo:test_a(self) end\nfunction TestFoo.test_dot_form(self) end\nTestFoo[\"test_b\"] = function(self) end\nTestFoo[\"test_\" .. case.name] = function(self) case.run() end\n")
     check.equal(4, sharding.file_cost(path))

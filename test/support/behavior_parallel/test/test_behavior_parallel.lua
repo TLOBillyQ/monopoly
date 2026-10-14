@@ -21,16 +21,16 @@ end)
 
 it("discovers specs across multiple roots", function()
   local files = behavior_parallel._test_support.discover_spec_files_for_roots({
-    "tools/packages/luaunit_runner/test",
-    "test/support/luaunit_runner_infra/test",
+    "tools/foundation/test",
+    "test/support/runner_infra/test",
   })
 
   local seen = {}
   for _, path in ipairs(files) do
     seen[path] = true
   end
-  check.is_true(_seen_path(seen, "tools/packages/luaunit_runner/test/test_spec_sharding.lua"))
-  check.is_true(_seen_path(seen, "test/support/luaunit_runner_infra/test/test_luaunit_runner_infra_tooling.lua"))
+  check.is_true(_seen_path(seen, "tools/foundation/test/test_spec_sharding.lua"))
+  check.is_true(_seen_path(seen, "test/support/runner_infra/test/test_runner_infra_tooling.lua"))
 end)
 
 it("parses quiet result summaries from the shared output handler", function()

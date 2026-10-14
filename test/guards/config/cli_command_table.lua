@@ -6,8 +6,7 @@ return {
   non_routed_packages = {
     "coverage",           -- 覆盖率车道实现件,由 verify --full 包内消费,非用户子命令
     "encoding",           -- 编码检查实现件,由 verify encoding 车道直接调入口,非子命令
-    "test_runner",       -- 临时双后端内部调度，由 verify/spec-lane 消费，不增加用户命令
-    "luaunit_runner",     -- 底层运行器，不进封闭命令集（包内 cli 供 verify/coverage/spec_lane 消费）
+    "test_runner",       -- 真实 busted 运行器与可信 loader,由 verify/spec-lane 包内消费,不增加用户命令
     "arch_policy",        -- 层边界 policy 真源与门禁核,由 test/guards 消费,无用户子命令形态
   },
 }

@@ -432,7 +432,7 @@ it("user message is honoured across assertion families", function()
   for _, case in ipairs(cases) do
     local message = _must_fail(case.call, case.custom, case.assertion)
     -- 自定义消息落在 `文件:行: ` 位置前缀之后的第一行(前缀剥法与
-    -- luax.has_error / luassert.has_error 同口径:只剥一层 `:数字: `)。
+    -- luassert.has_error 同口径:只剥一层 `:数字: `)。
     local stripped = message:gsub("^.-:%d+: ", "", 1)
     _expect(stripped:find(case.custom, 1, true) == 1,
       case.assertion .. ": the user message must be the first line of the failure, got: " .. message)

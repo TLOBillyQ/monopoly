@@ -4,8 +4,8 @@ local shell_lib = require("foundation.shell")
 
 local builders = {}
 
--- spec-lane 车道默认后端 = LuaUnit 运行器
--- (packages.luaunit_runner.lua54.argv_prefix)。--busted-bin / BUSTED_BIN
+-- spec-lane 车道默认后端 = 真实 busted 运行器
+-- (packages.test_runner.lua54.argv_prefix)。--busted-bin / BUSTED_BIN
 -- 逃生舱已删,verify_full 不注入任何覆写。
 local function _spec_lane_cmd(profile)
   return shell_lib.build_command({

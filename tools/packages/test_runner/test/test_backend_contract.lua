@@ -1,9 +1,11 @@
+---@diagnostic disable: undefined-global
+if arg then rawset(arg, 0, "tools/packages/test_runner/test/test_backend_contract.lua") end
 require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local proc = require("foundation.proc")
 local lua54 = require("foundation.lua54")
 local root = require("foundation.bootstrap").resolve(debug.getinfo(1, "S").source).repo_root
-local fixtures = "test/fixtures/dual_backend/"
+local fixtures = "test/fixtures/busted_backend/"
 local function run(files, helper)
   local command = { lua54.lua54_bin(), root .. "/tools/packages/test_runner/runner.lua", "--output=TAP" }
   if helper then command[#command + 1] = "--helper=test/helper.lua" end

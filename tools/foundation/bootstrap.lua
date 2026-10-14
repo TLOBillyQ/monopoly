@@ -38,7 +38,7 @@ local function _luarocks_tree_dir(repo_root)
 end
 
 -- 解释器解析与全仓同源:LUA54_BIN 覆写 + 候选表 + `<candidate> -v` 版本验证全在
--- packages.luaunit_runner.lua54 一处表达;这里不再自造第二套规则(旧实现读 arg[-1],
+-- packages.test_runner.lua54 一处表达;这里不再自造第二套规则(旧实现读 arg[-1],
 -- 而 `-e` 形态下 arg[-1] 恒为 nil,等于沉默退回 PATH 猜测)。调用点均已装好
 -- package.path(install / script_bootstrap 在前)。
 local function _selected_interpreter()
@@ -147,7 +147,7 @@ local function _fetch_tool_source(repo_url, src_dir)
 end
 
 -- 从克隆的工作树构建安装。仓库根的 rockspec 是构建清单与依赖声明
--- (luacheck/luacov/luaunit 由它带入),luarocks make 自动拾取。
+-- (luacheck/luacov 由它带入),luarocks make 自动拾取。
 -- 先 remove 兜底:同版本号重复 make 会报 already installed。
 local function _luarocks_make(tree, name, src_dir)
   _rocks_run(tree, { "remove", name })

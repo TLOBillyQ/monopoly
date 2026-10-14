@@ -48,7 +48,7 @@ local function _test_behavior_warns_data_has_entries()
 end
 
 return {
-  name = "luaunit_runner_infra_tooling",
+  name = "runner_infra_tooling",
   tests = {
     { name = "behavior_warns_data_has_entries", run = _test_behavior_warns_data_has_entries },
     { name = "contract_files_require_native_events_modules", run = _test_contract_files_require_native_events_modules },

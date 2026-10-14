@@ -1,4 +1,4 @@
---- Output handler（直接消费 luaunit_runner 事件面，#321）：TAP + warn
+--- Output handler（直接消费真实 busted 生命周期，#321）：TAP + warn
 --- whitelist + slow tracker + quiet mode.
 -- luacheck: ignore 122
 ---

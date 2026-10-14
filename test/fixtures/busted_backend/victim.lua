@@ -1,4 +1,4 @@
-local shared = require("test.fixtures.dual_backend.shared")
+local shared = require("test.fixtures.busted_backend.shared")
 describe("cross file victim", function()
   it("observes the identical module and restored patch", function()
     assert.equals(shared.logger, require("src.foundation.log"))

@@ -102,7 +102,7 @@ it("project cache exposes native DLL modules", function()
 end)
 
 it("selected interpreter rejects non Lua override", function()
-  local result = proc.run_command('set "LUA54_BIN=cmd.exe" && lua -e "package.path=package.path..\';./tools/?.lua\'; assert(require(\'packages.luaunit_runner.lua54\').detect_lua54()==nil)"')
+  local result = proc.run_command('set "LUA54_BIN=cmd.exe" && lua -e "package.path=package.path..\';./tools/?.lua\'; assert(require(\'packages.test_runner.lua54\').detect_lua54()==nil)"')
   check.truthy(result.ok, result.output)
 end)
 
