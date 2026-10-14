@@ -1,6 +1,7 @@
 --- Real busted execution; project events bracket the complete hook chain.
 local M = {}
-function M.run(files, helper, output, arguments, configure, settings)
+local initialize
+local function run(files, helper, output, arguments, configure, settings)
   local busted = require("busted.core")()
   local real_it
   local register = busted.register
@@ -8,7 +9,11 @@ function M.run(files, helper, output, arguments, configure, settings)
     if descriptor == "it" and type(executor) == "function" then real_it = executor end
     return register(descriptor, executor, attributes)
   end
-  require("busted")(busted)
+  local api = require("busted")
+  -- busted removes __call after initialization; retain its genuine initializer
+  -- while preserving the verified module object and creating a fresh core.
+  initialize = initialize or assert(getmetatable(api).__call, "busted initializer unavailable")
+  initialize(api, busted)
   busted.register = register
   -- Preserve ordinary require identity across files. Specs own singleton patches.
   busted.register("file", "file", {})
@@ -85,5 +90,13 @@ function M.run(files, helper, output, arguments, configure, settings)
   end
   busted.publish({ "project", "suite", "end" })
   return counts
+end
+function M.run(files, helper, output, arguments, configure, settings)
+  local original_print, original_write = _G.print, io.write
+  local ok, result = pcall(run, files, helper, output, arguments, configure, settings)
+  _G.print = original_print
+  rawset(io, "write", original_write)
+  if not ok then error(result, 0) end
+  return result
 end
 return M
