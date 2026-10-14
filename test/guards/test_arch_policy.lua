@@ -7,6 +7,9 @@ local luassert = assert
 local arch_policy = require("packages.arch_policy")
 local policy_scan = require("packages.arch_policy.scan")
 local guard = require("test.guards.lib.arch_policy_guard")
+local env_lib = require("foundation.env")
+local fs_lib = require("foundation.fs")
+local path_lib = require("foundation.path")
 
 -- #92:层边界门禁吃 `tools/packages/arch_policy/policy.json` 这一份 policy。
 -- 真实仓库恒为绿(没有违规就是没有),所以合法与违规两侧一律用合成图喂给
@@ -308,5 +311,28 @@ end)
 it("test_module_id_folds_init_and_separators", function()
   luassert.is.equal("src.rules", policy_scan.module_id("src/rules/init.lua"))
   luassert.is.equal("src.ui.panel", policy_scan.module_id("src/ui/panel.lua"))
+end)
+
+-- `require("src.app.init")` 与 `require("src.app")` 解析到同一文件。require 名不按
+-- 模块 id 的口径折叠 `.init`,这条边就掉进「外部模块」桶,禁止层的依赖被放行。
+it("test_require_of_init_module_is_gated_like_its_package", function()
+  local root = env_lib.make_temp_path("arch_policy_init_require", "")
+  fs_lib.remove_path(root)
+  local ok, err = xpcall(function()
+    luassert.is_true(fs_lib.write_file(path_lib.join_path(root, "src/app/init.lua"), "return {}\n"))
+    luassert.is_true(fs_lib.write_file(path_lib.join_path(root, "src/rules/bootstrap.lua"),
+      "local app = require(\"src.app.init\")\nreturn app\n"))
+    local graph = assert(policy_scan.graph(root, { source_roots = { "src" } }))
+    luassert.is.same({ { from = "src.rules.bootstrap", to = "src.app" } }, graph.edges)
+    luassert.is.same({}, graph.external)
+    local violation = _only(graph.modules, graph.edges)
+    luassert.is.equal("layer_violation", violation.kind)
+    luassert.is.equal("src.rules.bootstrap", violation.from)
+    luassert.is.equal("src.app", violation.to)
+  end, debug.traceback)
+  fs_lib.remove_path(root)
+  if not ok then
+    error(err)
+  end
 end)
 end)

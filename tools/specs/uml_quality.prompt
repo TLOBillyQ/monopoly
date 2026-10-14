@@ -35,7 +35,8 @@ Python environment (crapper / mutator):
 
 Outputs and version control:
 - crapper writes `.metrics/crap.edn` and `target/coverage/lua/lcov.info`; mutator writes `.metrics/mutate/*.edn`.
-- Upstream README recommends committing `.metrics/`. This repository intentionally deviates: `.metrics/` and `target/` are regenerated local outputs and are ignored, like `.uml-viewer/` and `uml-viewer-log.txt` (installer-maintained block at the end of `.gitignore`).
+- Following the upstream README, `.metrics/` is versioned: metrics produced by real `lua tools/cli.lua uml crap|mutate` runs are committed. Never hand-write or fabricate metric files. `.metrics/` is a whitelisted root entry (`test/guards/lib/root_whitelist_guard.lua`).
+- `target/` (coverage intermediates) stays ignored, like `.uml-viewer/` and `uml-viewer-log.txt` (installer-maintained block at the end of `.gitignore`).
 
 Known gaps (not part of #93's reduced scope):
 - Real CRAP scoring, full-tree coverage and source mutation (#93 acceptance criterion 3) have not been executed. Per the 2026-10-14 maintainer scope reduction, only tool availability is verified.

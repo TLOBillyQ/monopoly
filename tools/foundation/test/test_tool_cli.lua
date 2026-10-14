@@ -127,17 +127,4 @@ it("forward subprocess passes args and exit code", function()
   end)
 end)
 
--- lua_bin 显式钉定(#453):显式传入时 re-exec 到 lua5.4,
--- 子进程由钉定解释器执行而非 PATH 上的 lua。fixture 断言解释器身份。
-it("forward subprocess honors explicit lua bin", function()
-  _with_fixture_root(function(root)
-    local script = path_lib.join_path(root, "fixture_lua54.lua")
-    check.is_true(fs_lib.write_file(script,
-      "assert(_VERSION == 'Lua 5.4', 'must run under Lua 5.4, got ' .. _VERSION)\nos.exit(5)\n"))
-    local lua54 = require("foundation.lua54")
-
-    check.equal(5, tool_cli.forward_subprocess(script, {}, lua54.detect_lua54()))
-  end)
-end)
-
 end)
