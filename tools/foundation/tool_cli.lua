@@ -36,11 +36,10 @@ function tool_cli.normalize_exit_code(result)
 end
 
 -- 子进程兜底:require runner 失败(缺上游工具、package.path 未装等)时改以
--- `<lua_bin> <runner_script>` 直跑脚本形态——runner 经 script_bootstrap 自举,不依赖
--- 调用方 package.path;退出码透传。lua_bin 缺省 "lua";显式传入时
--- re-exec 到钉定解释器(#453 引入;原调用方 crap 已于 #94 退役)。非 "exit" 收场(signal 等)归 1。
-function tool_cli.forward_subprocess(runner_script, args, lua_bin)
-  local parts = { lua_bin or "lua", runner_script }
+-- `lua <runner_script>` 直跑脚本形态——runner 经 script_bootstrap 自举,不依赖
+-- 调用方 package.path;退出码透传。非 "exit" 收场(signal 等)归 1。
+function tool_cli.forward_subprocess(runner_script, args)
+  local parts = { "lua", runner_script }
   for _, value in ipairs(args or {}) do
     parts[#parts + 1] = value
   end

@@ -43,7 +43,7 @@ function Resolve-PlatformName {
     param([string]$RawPlatform)
 
     $value = ([string]$RawPlatform).Trim().ToLowerInvariant()
-    # 部署目标只剩 Windows 侧(WSL 下经 /mnt 访问),平台一律解析为 win。
+    # 原生 Windows 单平台(ADR 0066),平台一律解析为 win。
     if ([string]::IsNullOrWhiteSpace($value) -or $value -eq "auto") {
         return "win"
     }
@@ -63,20 +63,6 @@ function Resolve-DefaultTargetPath {
     }
 
     $home_dir = Resolve-HomeDir
-    # WSL 下 $HOME 是 WSL 内部目录,部署落点在 Windows 侧:经 cmd.exe 读
-    # %USERPROFILE% 再 wslpath 转 /mnt 路径(与 tools/packages/ops/deploy.lua 同约定)。
-    if (-not $IsWindows) {
-        try {
-            $win_profile = ([string](& cmd.exe /c "echo %USERPROFILE%" 2>$null | Select-Object -First 1)).Trim()
-            if ($win_profile -match '^[A-Za-z]:\\') {
-                $wsl_home = ([string](& wslpath -u $win_profile 2>$null | Select-Object -First 1)).Trim()
-                if (-not [string]::IsNullOrWhiteSpace($wsl_home)) {
-                    $home_dir = $wsl_home
-                }
-            }
-        } catch {
-        }
-    }
     switch ($ResolvedPlatform) {
         "win" { return (Join-Path (Join-Path (Join-Path $home_dir "Desktop") "dev") "LuaSource_大富翁") }
         default { throw "Unsupported platform '$ResolvedPlatform'." }
