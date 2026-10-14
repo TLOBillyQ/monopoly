@@ -11,7 +11,7 @@
 local M = {}
 
 local tool_cli = require("foundation.tool_cli")
-local lua54_lib = require("packages.luaunit_runner.lua54")
+local lua54_lib = require("foundation.lua54")
 
 local RUN_OPTS = {
   runner_module = "packages.crap.runner",

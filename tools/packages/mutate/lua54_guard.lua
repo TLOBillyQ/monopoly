@@ -5,7 +5,7 @@
 -- 机器上整条车道假红(稀疏表 # 边界语义不同,land_pricing_spec 之类回归失败),
 -- 且与代码改动无关。
 --
--- 口径与 packages/luaunit_runner/lua54.lua 完全同源:解释器解析一律走
+-- 口径与 foundation/lua54.lua 完全同源:解释器解析一律走
 -- lua54.detect_lua54()(LUA54_BIN 覆写 + 候选表),此处不造第二套规则。引擎不可改
 -- (tools.lock 跟随的 .toolcache 参考实现),所以本模块在调引擎前保证:
 --   1. 能解析到 Lua 5.4,否则在跑任何测试前大声失败;
@@ -29,7 +29,7 @@ function M.needs_reexec(version, path_lua_is_54, marker_set)
 end
 
 local function _detect_lua54()
-  local ok, bin = pcall(require, "packages.luaunit_runner.lua54")
+  local ok, bin = pcall(require, "foundation.lua54")
   if not ok or type(bin) ~= "table" or type(bin.detect_lua54) ~= "function" then
     return nil
   end
@@ -79,7 +79,7 @@ end
 
 -- env 形式 re-exec:shim 目录 prepend PATH,LUA_PATH/LUA_CPATH 钉 tree 前缀
 -- (子进程 runner 需要 luaunit/luacov/cluacov),LUA54_BIN 钉给下游
--- packages.luaunit_runner.lua54,marker 防循环。输出实时落终端(os.execute 不重定向)。
+-- foundation.lua54,marker 防循环。输出实时落终端(os.execute 不重定向)。
 local function _reexec(repo_root, lua54, script_path, args)
   local shim_dir, err = _write_shim(repo_root, lua54)
   if shim_dir == nil then return nil, err end

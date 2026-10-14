@@ -139,12 +139,17 @@ function adapter.run(suites, opts)
   luacov_runner.configuration.runreport = true
   luacov_runner.configuration.deletestats = true
 
-  local result = harness.run_all(suites, {
-    quiet = true,
-    capture_logs = opts.capture_logs,
-    reporter = opts.reporter,
-    raise_on_failure = false,
-  })
+  local result
+  if suites.busted_files then
+    result = catalog.run_behavior_suites(suites, opts)
+  else
+    result = harness.run_all(suites, {
+      quiet = true,
+      capture_logs = opts.capture_logs,
+      reporter = opts.reporter,
+      raise_on_failure = false,
+    })
+  end
 
   -- 同文件多 key 合并:luacov 以模块加载时的 source 为 key。同一文件若被以
   -- 相对/绝对两种路径形态加载(spec 链 vs with_patches 重新 require),stats

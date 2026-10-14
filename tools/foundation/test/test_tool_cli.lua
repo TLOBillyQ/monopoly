@@ -134,7 +134,7 @@ it("forward subprocess honors explicit lua bin", function()
     local script = path_lib.join_path(root, "fixture_lua54.lua")
     check.is_true(fs_lib.write_file(script,
       "assert(_VERSION == 'Lua 5.4', 'must run under Lua 5.4, got ' .. _VERSION)\nos.exit(5)\n"))
-    local lua54 = require("packages.luaunit_runner.lua54")
+    local lua54 = require("foundation.lua54")
 
     check.equal(5, tool_cli.forward_subprocess(script, {}, lua54.detect_lua54()))
   end)

@@ -67,19 +67,18 @@ function M.run()
   local entries = {}
   local paths = { M.LOADER_PATH }
   for _, path in ipairs(M.PILOT_FILES) do paths[#paths + 1] = path end
-  local migrated = {}
-  for _, path in ipairs(dofile(env.repo_root .. "/tools/packages/test_runner/backend_manifest.lua").busted) do
-    migrated[path] = true
-  end
   for _, path in ipairs(paths) do
-    -- Busted verifies its assertion object before loading specs. Migrated
-    -- sources still forbid replacing global assert; legacy sources use loader.
+    -- The dual-backend file-identity manifest is retired (#90): genuine busted
+    -- is the only backend, so every pilot spec is verified-busted. Busted
+    -- verifies its assertion object before loading specs. Migrated sources
+    -- still forbid replacing global assert; the legacy loader source alone
+    -- keeps the loader rules.
     local source, err = fs_lib.read_file(env.repo_root .. "/" .. path)
     if source == nil then
       return { ok = false, error = "luassert_migration_pilot_guard error: " .. tostring(err) }
     end
     entries[#entries + 1] = {
-      path = path, source = source, backend = migrated[path] and "busted" or "legacy",
+      path = path, source = source, backend = path == M.LOADER_PATH and "legacy" or "busted",
     }
   end
   local violations = M.check(entries)

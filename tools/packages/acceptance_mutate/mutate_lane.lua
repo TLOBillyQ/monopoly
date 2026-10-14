@@ -38,7 +38,7 @@ local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 local text_lib = require("foundation.text")
 local json = require("acceptance4lua.json")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 
 -- 子进程统一使用探测到的 Lua 5.4，与 rock tree 保持一致。
 -- 缺 lua5.4 时 lua54_bin() 照既有约定退回 "lua"。

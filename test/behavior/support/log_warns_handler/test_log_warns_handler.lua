@@ -61,18 +61,12 @@ end
 
 local function _run_with_handler(spec_path, extra_args)
   local args = _runner_argv(extra_args)
-  local manifest_path = spec_path .. ".manifest.lua"
-  assert(fs_lib.write_file(manifest_path, "return { legacy = {}, busted = { " .. string.format("%q", spec_path:gsub("\\", "/")) .. " } }"))
-  args[#args + 1] = "--backend-manifest=" .. manifest_path
   args[#args + 1] = spec_path
   return proc_lib.run_command(args, { cwd = project_root })
 end
 
 local function _run_verbose_drop_info(spec_path)
   local args = _runner_argv({ "-Xoutput", "drop-info" })
-  local manifest_path = spec_path .. ".manifest.lua"
-  assert(fs_lib.write_file(manifest_path, "return { legacy = {}, busted = { " .. string.format("%q", spec_path:gsub("\\", "/")) .. " } }"))
-  args[#args + 1] = "--backend-manifest=" .. manifest_path
   args[#args + 1] = spec_path
   local run_command = shell_lib.build_command(args)
   return proc_lib.run_command('set "EGGY_TEST_VERBOSE=1" && ' .. run_command, { cwd = project_root })

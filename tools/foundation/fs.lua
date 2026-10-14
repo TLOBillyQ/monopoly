@@ -94,7 +94,7 @@ end
 --
 -- 必须显式收成一个布尔再 return:exit_status 返回 (成功, 退出码),
 -- 先前两个函数都直接 `return exit_status(...)`,于是谓词实际返回 (true, 0)
--- ——两个值。verify_full 和 packages/luaunit_runner/lua54.lua 里的
+-- ——两个值。verify_full 和 packages/test_runner/lua54.lua 里的
 -- _path_or_command_available 又原样 `return fs_lib.path_exists(text)`,把这对值
 -- 继续往上传。谓词就该只答"是/否"。
 local function _probe_path(path, directory)

@@ -79,7 +79,7 @@ end)
 
 it("explicit retained engine test request is unavailable", function()
   for _, identity in ipairs({ "test_mutator_level.lua", "test_mutator_status.lua" }) do
-    local result = proc_lib.run_command({ "lua", "tools/packages/luaunit_runner/runner.lua", "--",
+    local result = proc_lib.run_command({ "lua", "tools/packages/test_runner/runner.lua", "--",
       "tools/packages/acceptance_mutate/test/" .. identity })
     check.same(3, result.code, result.output)
     check.matches("status=unavailable", result.output, 1, true)

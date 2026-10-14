@@ -13,7 +13,7 @@ CLI contract:
 - Default mode is differential mutation against the inlined v4 manifest footer.
 - When worker limits are available, architects use `--max-workers 8`.
 - `--test-command` disables coverage filtering and bypasses the built-in runner; the project treats it as a minefield and does not use it.
-- Interpreter pinning (issue #203): the engine spawns the driver via the literal `lua`; the wrapper resolves the project's Lua 5.4 through `packages.luaunit_runner.lua54` `detect_lua54()` (LUA54_BIN override + candidate list) and re-execs with a shim PATH when the host or PATH `lua` is not 5.4. If no 5.4 is found the lane fails fast before running tests.
+- Interpreter pinning (issue #203): the engine spawns the driver via the literal `lua`; the wrapper resolves the project's Lua 5.4 through `packages.test_runner.lua54` `detect_lua54()` (LUA54_BIN override + candidate list) and re-execs with a shim PATH when the host or PATH `lua` is not 5.4. If no 5.4 is found the lane fails fast before running tests.
 - cluacov: `bootstrap.ensure_cluacov_tree` installs cluacov 1.0.0-1 into `.toolcache/luarocks`; `lua54_guard` injects tree `LUA_PATH` + `LUA_CPATH` so the built-in runner's attribution matrix pass uses luacov's C hook (auto-detected via `require("cluacov.version")`). Missing cluacov is a hard fail at mutate entry (no silent pure-Lua fallback).
 
 Manifest contract:

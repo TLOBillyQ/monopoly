@@ -2,7 +2,7 @@
 ---
 --- 覆盖率引擎为 luacov 0.17.0-1(经上游 rockspec 依赖带入 luarocks tree),本表是
 --- include/exclude/includeuntestedfiles 口径的唯一真源:
----   - luaunit_runner `-c` 在 LUACOV_CONFIG 未设时回退读它(luacov 自身查找顺序
+---   - test_runner `-c` 在 LUACOV_CONFIG 未设时回退读它(luacov 自身查找顺序
 ---     即 LUACOV_CONFIG -> .luacov);
 ---   - coverage.lua per-shard/per-merged 临时 config 从这里派生,只覆写 statsfile;
 ---   - crap4lua 的 luacov adapter(tools/packages/crap/luacov_adapter.lua)顶层 init

@@ -57,10 +57,10 @@ compress_tap_collapses_all_pass_tap_to_single_passed_line()
 end
 
 -- 不再支持 busted_bin 单 token 覆写，命令
--- 前缀恒为 argv_prefix 默认值({ lua5.4, runner.lua })。workers=1 强制单进程
+-- 前缀恒为 argv_prefix 默认值({ lua5.4, test_runner/runner.lua })。workers=1 强制单进程
 -- 串行路径(分片判定要求 worker > 1 且 profile 文件数超过阈值)。
 local function
-run_defaults_to_explicit_dual_backend_runner()
+run_defaults_to_explicit_real_busted_runner()
   local captured
   local result = spec_lane.run({
     profile = "contract",
@@ -188,8 +188,8 @@ discover_test_roots_adopts_both_layout_shapes()
   -- 同名对时代:test/support/behavior_parallel.lua + behavior_parallel/test/
   check.is_true(index["test/support/behavior_parallel/test"],
     "support same-name-pair root must be adopted")
-  -- 目录即包时代:test/support/luaunit_runner_infra/ 无同名 .lua,纯 <pkg>/test/ 形态
-  check.is_true(index["test/support/luaunit_runner_infra/test"],
+  -- 目录即包时代:test/support/runner_infra/ 无同名 .lua,纯 <pkg>/test/ 形态
+  check.is_true(index["test/support/runner_infra/test"],
     "package-as-dir root must be adopted")
 end
 
@@ -200,7 +200,7 @@ describe("spec lane public contracts", function()
   it("parse_args_parses_verbose_alongside_profile", parse_args_parses_verbose_alongside_profile)
   it("parse_args_rejects_removed_busted_bin_escape_hatch", parse_args_rejects_removed_busted_bin_escape_hatch)
   it("compress_tap_collapses_all_pass_tap_to_single_passed_line", compress_tap_collapses_all_pass_tap_to_single_passed_line)
-  it("run_defaults_to_explicit_dual_backend_runner", run_defaults_to_explicit_dual_backend_runner)
+  it("run_defaults_to_explicit_real_busted_runner", run_defaults_to_explicit_real_busted_runner)
   it("sharded_profile_runs_one_runner_lane_per_worker", sharded_profile_runs_one_runner_lane_per_worker)
   it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)
   it("discover_test_roots_covers_both_scopes", discover_test_roots_covers_both_scopes)

@@ -29,21 +29,26 @@ local ok, err = xpcall(function()
     local parts = {}; for index = 1, select("#", ...) do parts[index] = tostring(select(index, ...)) end
     output[#output + 1] = table.concat(parts, "\t") .. "\n"
   end)
-  local events = require("packages.test_runner.events")
   require("test.env_runtime").refresh()
   local leaks, execution_start = 0, 0
   local runtime = require("packages.acceptance.runtime")
-  events.subscribe({ "test", "start" }, function()
-    execution_start = #runtime.executions
-    require("test.support.env").reseed_defaults()
+  local counts = require("packages.test_runner.busted_backend").run({ arg[1] }, nil, "TAP", {}, function(busted, totals)
+    busted.subscribe({ "project", "case", "start" }, function()
+      execution_start = #runtime.executions
+      require("test.support.env").reseed_defaults()
+      return nil, true
+    end)
+    busted.subscribe({ "project", "case", "end" }, function(_, _, status)
+      for index = execution_start + 1, #runtime.executions do runtime.executions[index].status = status end
+      local missing = require("test.support.runtime_baseline_guard").check_and_restore()
+      if #missing > 0 then leaks = leaks + 1; io.write("# BASELINE LEAK: " .. table.concat(missing, ", ") .. "\n") end
+      return nil, true
+    end)
+    busted.subscribe({ "project", "suite", "end" }, function()
+      totals.errors = totals.errors + leaks
+      return nil, true
+    end)
   end)
-  events.subscribe({ "test", "end" }, function(_, _, status)
-    for index = execution_start + 1, #runtime.executions do runtime.executions[index].status = status end
-    local missing = require("test.support.runtime_baseline_guard").check_and_restore()
-    if #missing > 0 then leaks = leaks + 1; io.write("# BASELINE LEAK: " .. table.concat(missing, ", ") .. "\n") end
-  end)
-  events.subscribe({ "suite", "end" }, function() events.results.errors = events.results.errors + leaks end)
-  local counts = require("packages.test_runner.busted_backend").run({ arg[1] }, nil, "TAP", {})
   response.counts = counts
   response.executions = require("packages.acceptance.runtime").executions
   if arg[2] and arg[2] ~= "" and counts.errors == 0 then

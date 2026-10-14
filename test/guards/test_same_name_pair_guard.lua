@@ -65,7 +65,7 @@ describe("TestSameNamePairGuard", function()
   -- 只有 test/ 目录而没有同名 .lua 文件 → 不是同名对,不违规。
   it("test_test_dir_without_peer_lua_is_allowed", function()
     local violations = _check({
-      "tools/packages/luaunit_runner/test/test_events.lua",
+      "tools/packages/test_runner/test/test_backend_contract.lua",
     })
     luassert.is.equal(0, #violations, _joined(violations))
   end)

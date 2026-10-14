@@ -5,7 +5,7 @@
 -- 本文件的三类译法值得单独记:
 --   - lu.assertFalse 是**严格布尔**(pcall 的 ok 恰好是布尔,故 is_false 等价);
 --   - lu.assertEvalToTrue 是 truthiness → luassert 的 truthy;
---   - luax.has_error(fn, msg) 与 luassert 的 has_error(fn, msg) 同口径
+--   - luassert 的 has_error(fn, msg) 同口径
 --     (先剥一层 `文件:行: ` 位置前缀,字符串精确比较、表深比较),故直接换名。
 --     精确文本不是子串——子串口径要写成 has_error.match(fn, pat, 1, true)。
 require("test.bootstrap").install_package_paths()

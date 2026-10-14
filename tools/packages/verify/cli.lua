@@ -14,7 +14,7 @@ local ENTRY = "tools/packages/verify/main.lua"
 local function _forward(args)
   require("test.bootstrap").install_package_paths()
   local proc = require("foundation.proc")
-  local lua54 = require("packages.luaunit_runner.lua54")
+  local lua54 = require("foundation.lua54")
   local command = { lua54.lua54_bin(), ENTRY }
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value

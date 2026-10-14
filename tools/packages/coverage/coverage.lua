@@ -17,12 +17,12 @@ local path_lib = require("foundation.path")
 local shell_lib = require("foundation.shell")
 local text_lib = require("foundation.text")
 local parallel_lanes = require("foundation.parallel_lanes")
-local sharding = require("packages.luaunit_runner.spec_sharding")
--- 收集 lane 走项目 LuaUnit 运行器（argv_prefix 默认
--- { lua5.4, runner.lua }),runner `-c` 在 luacov.runner 下跑 spec、退出时落
+local sharding = require("foundation.spec_sharding")
+-- 收集 lane 走真实 busted 运行器（argv_prefix 默认
+-- { lua5.4, test_runner/runner.lua }),runner `-c` 在 luacov.runner 下跑 spec、退出时落
 -- per-shard stats;分片合并后由 luacov 原生 reporter 产 report.out。luacov 经
 -- 上游 rockspec 依赖带入 luarocks tree,runner 与 reporter 都从 tree require。
-local runner_bin = require("packages.luaunit_runner.lua54")
+local runner_bin = require("packages.test_runner.lua54")
 
 -- 单源 config 的绝对路径(coverage_config.lua 与本文件同层);per-lane 临时 config
 -- dofile 它、只覆写 statsfile,使收集侧 include/exclude 单一真源(自研收集器决策 pt5)。

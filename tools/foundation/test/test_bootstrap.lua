@@ -148,12 +148,12 @@ it("resolves a repo root from the lockfile based tool layout", function()
   check.equal(path_lib.join_path(path_lib.normalize_path(root), ".toolcache"), env.tool_cache_dir)
 end)
 
-it("ensure luaunit tree skips install when marker exists", function()
+it("ensure busted tree skips install when marker exists", function()
   local ensure_calls = 0
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
-      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua", path)
+      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/busted/runner.lua", path)
       return true
     end },
     { target = fs_lib, key = "ensure_dir", value = function()
@@ -165,13 +165,13 @@ it("ensure luaunit tree skips install when marker exists", function()
       return { ok = true }
     end },
   }, function()
-    check.is_true(bootstrap.ensure_luaunit_tree("/repo"))
+    check.is_true(bootstrap.ensure_busted_tree("/repo"))
   end)
   check.equal(0, ensure_calls)
   check.equal(0, command_calls)
 end)
 
-it("ensure luaunit tree installs pinned rock and checks marker", function()
+it("ensure busted tree installs pinned rock and checks marker", function()
   local marker_checks = 0
   local captured_command
   _with_stubs({
@@ -180,7 +180,7 @@ it("ensure luaunit tree installs pinned rock and checks marker", function()
       -- 解释器候选路径(/opt/homebrew/bin/lua5.4 之类)不参与 marker 计数。
       if path:match("%.lua$") == nil then return false end
       marker_checks = marker_checks + 1
-      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/luaunit.lua", path)
+      check.equal("/repo/.toolcache/luarocks/share/lua/5.4/busted/runner.lua", path)
       return marker_checks > 1
     end },
     { target = fs_lib, key = "ensure_dir", value = function(path)
@@ -195,11 +195,11 @@ it("ensure luaunit tree installs pinned rock and checks marker", function()
       return { ok = true, output = "" }
     end },
   }, function()
-    check.is_true(bootstrap.ensure_luaunit_tree("/repo"))
+    check.is_true(bootstrap.ensure_busted_tree("/repo"))
   end)
   check.same({ "--tree", "/repo/.toolcache/luarocks", "--lua-version", "5.4" },
     { table.unpack(captured_command, 2, 5) })
-  check.same({ "install", "luaunit", "3.5-1", "--deps-mode", "one" },
+  check.same({ "install", "busted", "2.3.0-1", "--deps-mode", "one" },
     { table.unpack(captured_command, 8) })
   check.equal("--lua-dir", captured_command[6])
   -- --lua-dir 取真实解释器(lua.exe)所在前缀,而不是 where.exe 首行的
@@ -208,7 +208,7 @@ it("ensure luaunit tree installs pinned rock and checks marker", function()
   check.equal(2, marker_checks)
 end)
 
-it("ensure luaunit tree propagates tree creation failure", function()
+it("ensure busted tree propagates tree creation failure", function()
   local command_calls = 0
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
@@ -220,7 +220,7 @@ it("ensure luaunit tree propagates tree creation failure", function()
       return { ok = true }
     end },
   }, function()
-    local ok, err = bootstrap.ensure_luaunit_tree("/repo")
+    local ok, err = bootstrap.ensure_busted_tree("/repo")
     check.is_nil(ok)
     check.equal("mkdir failed", err)
   end)

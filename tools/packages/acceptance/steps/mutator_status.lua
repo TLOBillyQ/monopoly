@@ -4,7 +4,7 @@ local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 
 local mutator_status_steps = {}
 

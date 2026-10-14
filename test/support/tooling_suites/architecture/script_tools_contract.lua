@@ -283,7 +283,7 @@ end
 
 -- 同一缺陷类的第三、四例(前两例见 trim 那条契约)。path_exists / is_dir 先前直接
 -- `return _os_execute_success(...)`,而它返回 (成功, 退出码),于是这两个谓词实际返回
--- (true, 0)。verify_full 与 packages/luaunit_runner/lua54.lua 的
+-- (true, 0)。verify_full 与 packages/test_runner/lua54.lua 的
 -- _path_or_command_available 又原样 `return fs_lib.path_exists(text)` 把这对值
 -- 继续上传。谓词只该答"是/否"。
 local function _test_path_predicates_return_one_boolean()

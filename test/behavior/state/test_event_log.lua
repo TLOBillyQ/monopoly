@@ -56,7 +56,7 @@ describe("TestEventLog", function()
     -- L43 `_now_hms()` 尾部的 `or ""` 换 nil:双时钟全缺时 time_text 必须空串;
     -- L33 `os_lib and type(os_lib.date) == "function"` 的 and->or 在 os 为 nil 时
     -- 撞 nil 索引报错(Eggy 沙箱 os 可缺,守卫是真实契约),基线走空回退。
-    -- 注:_G.os 置 nil 会连 luaunit 自身一起带崩,故断言后立即还原。
+    -- 注:_G.os 置 nil 会连 busted 自身一起带崩,故断言后立即还原。
     _stub_wall(nil)
     local saved_os = _G.os
     _G.os = nil

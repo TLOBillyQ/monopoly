@@ -1,20 +1,16 @@
 --- #74 试点契约:luassert 断言语义与失败传播。
 ---
---- 「先断言、后结构」第一步的验收面:不换旧 LuaUnit 结构、不换旧运行器,只把
---- 断言层切到真 luassert,证明迁移后的断言仍然会红、红在哪一桶、试点集合的用例
---- 数对得上。四个接缝:
+--- 结构迁移后保留真 luassert 语义、真实 busted 失败传播及原试点集合对账。
+--- 四个公共接缝:
 ---   1. 装载:luassert/say 只从项目工具缓存解析,全局 Lua assert 不被覆盖;
 ---   2. 语义:深比较/身份、严格布尔/truthiness、nil/false、异常文本/模式/类型
 ---      各自的正例与故意失败反例(进程内 pcall 观察,不污染车道计数);
----   3. 传播:反例 fixture 交给真实旧 runner 子进程,退出码非零、落在明确的
+---   3. 传播:反例 fixture 交给真实 busted runner 子进程,退出码非零、落在明确的
 ---      failure/error 桶里,且同文件的控制用例必须为绿(排除「加载即失败」的假红);
 ---   4. 对账:#74 试点 5 个文件的类/用例集合与试点前逐一对应,一个都不少。
 ---
---- 计数口径(实测):luassert 抛的是普通字符串错误,不带 LuaUnit 的
---- `LuaUnit test FAILURE: ` 前缀,因此旧 runner 把它计进 **errors** 桶;
---- `lu.fail()` 一类的 FAILURE_PREFIX 错误计进 **failures**。两桶都进
---- `# COUNTS:`,且 runner 退出码取 `failures + errors > 0`,两桶各自独立顶非零,
---- 谁都吞不掉。
+--- 真实 busted 将 luassert 断言反例计入 failed，将运行时错误计入 errors。
+--- 两桶均进入唯一 COUNTS，任一非零都使进程失败。
 ---
 --- 另一条实测到的坑(Lua 的 LUA_IDSIZE=60):spec 路径较长时,报错里的 chunk
 --- 名会被 Lua 自身截成 `...<尾部>`,所以 TAP 的 `# <src> @ <line>` 不保证是完整
@@ -65,7 +61,7 @@ end
 
 -- ------------------------------------------------------------ runner 子进程面
 
-local _RUNNER = "tools/packages/luaunit_runner/runner.lua"
+local _RUNNER = "tools/packages/test_runner/runner.lua"
 local _FIXTURE_DIR = "test/fixtures/luassert_migration/"
 
 -- 显式 --output TAP:default profile 的 log_warns_handler 在 quiet 模式会吞掉
@@ -138,8 +134,7 @@ local function _record(records, full_name)
 end
 
 -- fixture 清单:控制用例名、反例用例名、反例失败消息必须带上的片段。
--- 前 6 个反例都是 luassert 抛错 → errors 桶;luaunit_failure_bucket 是 lu.fail
--- → failures 桶,单独一轮跑,用来证明两个桶各自独立顶非零。
+-- 六个反例由真实 busted 归入 failed；每个同文件控制例必须通过。
 local _LUASSERT_FIXTURES = {
   {
     basename = "deep_compare_and_identity.lua",
@@ -185,13 +180,6 @@ local _LUASSERT_FIXTURES = {
   },
 }
 
-local _FAILURES_BUCKET_FIXTURE = {
-  basename = "luaunit_failure_bucket.lua",
-  class = "TestLuassertFixtureLuaunitFailureBucket",
-  control = "test_control_luassert_green_beside_a_luaunit_failure",
-  counterexample = "test_counterexample_lu_fail_lands_in_the_failures_bucket",
-  fragment = "必须落 failures 桶",
-}
 
 -- #74 试点范围(冻结):5 个真实 spec 文件的断言层就地切换,文件/类/用例集合
 -- 切断言前后必须逐一对应。
@@ -444,7 +432,7 @@ it("user message is honoured across assertion families", function()
   for _, case in ipairs(cases) do
     local message = _must_fail(case.call, case.custom, case.assertion)
     -- 自定义消息落在 `文件:行: ` 位置前缀之后的第一行(前缀剥法与
-    -- luax.has_error / luassert.has_error 同口径:只剥一层 `:数字: `)。
+    -- luassert.has_error 同口径:只剥一层 `:数字: `)。
     local stripped = message:gsub("^.-:%d+: ", "", 1)
     _expect(stripped:find(case.custom, 1, true) == 1,
       case.assertion .. ": the user message must be the first line of the failure, got: " .. message)
@@ -526,28 +514,10 @@ it("exception type covers table payloads and type assertions", function()
   end, "type table", "is_table on a number")
 end)
 
-it("luassert errors are plain while lu fail carries the luaunit failure prefix", function()
-  local lu = require("luaunit")
-  local luassert = _luassert()
-
-  -- 桶归属就是前缀归属:LuaUnit 认 `FAILURE_PREFIX` 在行首或紧跟 `文件:行: `。
-  local luassert_message = _must_fail(function()
-    luassert.is.equal(1, 2)
-  end, "Expected objects to be equal.", "luassert failure message")
-  _expect(luassert_message:find(lu.FAILURE_PREFIX, 1, true) == nil,
-    "luassert must not fake a LuaUnit failure: its error text has no FAILURE_PREFIX (errors bucket), got: "
-      .. luassert_message)
-
-  local lu_fail_message = _must_fail(function()
-    lu.fail("断言层迁移试点")
-  end, "断言层迁移试点", "lu.fail message")
-  _expect(lu_fail_message:find(lu.FAILURE_PREFIX, 1, true) ~= nil,
-    "lu.fail must carry FAILURE_PREFIX (failures bucket), got: " .. lu_fail_message)
-end)
 
 -- ---------------------------------------------------------------- 3. 传播契约
 
-it("luassert counterexamples land in the errors bucket and gate the exit code", function()
+it("luassert counterexamples land in busted failures and gate the exit code", function()
   local files = {}
   for _, fixture in ipairs(_LUASSERT_FIXTURES) do
     files[#files + 1] = _FIXTURE_DIR .. fixture.basename
@@ -568,20 +538,19 @@ it("luassert counterexamples land in the errors bucket and gate the exit code", 
   _expect(counts.passed == #_LUASSERT_FIXTURES,
     string.format("every control case must stay green: passed=%d, expected %d",
       counts.passed, #_LUASSERT_FIXTURES))
-  _expect(counts.errors == #_LUASSERT_FIXTURES,
-    string.format("luassert errors must land in the errors bucket: errors=%d, expected %d",
-      counts.errors, #_LUASSERT_FIXTURES))
-  _expect(counts.failed == 0,
-    string.format("luassert errors must not be counted as failures: failed=%d", counts.failed))
+  _expect(counts.failed == #_LUASSERT_FIXTURES,
+    string.format("busted assertion failures=%d, expected %d", counts.failed, #_LUASSERT_FIXTURES))
+  _expect(counts.errors == 0,
+    string.format("assertion counterexamples must load and execute: errors=%d", counts.errors))
 
   local records = _records(output)
   _expect(#records == counts.cases,
     string.format("TAP emitted %d cases but # COUNTS says %d — a case was dropped", #records, counts.cases))
   for _, fixture in ipairs(_LUASSERT_FIXTURES) do
-    local control = _record(records, fixture.class .. "." .. fixture.control)
+    local control = _record(records, fixture.class .. " " .. fixture.control)
     _expect(control ~= nil and control.ok == true,
       fixture.basename .. ": the control case must be reported as ok")
-    local red = _record(records, fixture.class .. "." .. fixture.counterexample)
+    local red = _record(records, fixture.class .. " " .. fixture.counterexample)
     _expect(red ~= nil, fixture.basename .. ": the counterexample must be reported")
     _expect(red ~= nil and red.ok == false,
       fixture.basename .. ": the counterexample must be reported as not ok")
@@ -595,31 +564,6 @@ it("luassert counterexamples land in the errors bucket and gate the exit code", 
   end
 end)
 
-it("luaunit failures bucket gates the exit code on its own", function()
-  local fixture = _FAILURES_BUCKET_FIXTURE
-  local result, output = _run_specs({ _FIXTURE_DIR .. fixture.basename })
-
-  _expect(result.code ~= nil and result.code ~= 0,
-    "the old runner must exit non-zero on a lu.fail counterexample")
-  _expect(output:find("failed to load", 1, true) == nil,
-    "the fixture must load:\n" .. output)
-
-  -- 与 errors 桶那一轮对称:只有 failures 也能顶非零,两桶都不被忽略。
-  local counts = _counts(output)
-  _expect(counts.files == 1 and counts.cases == 2,
-    string.format("files=%d cases=%d, expected files=1 cases=2", counts.files, counts.cases))
-  _expect(counts.passed == 1 and counts.failed == 1 and counts.errors == 0,
-    string.format("expected passed=1 failed=1 errors=0, got passed=%d failed=%d errors=%d",
-      counts.passed, counts.failed, counts.errors))
-
-  local records = _records(output)
-  local control = _record(records, fixture.class .. "." .. fixture.control)
-  local red = _record(records, fixture.class .. "." .. fixture.counterexample)
-  _expect(control ~= nil and control.ok == true,
-    fixture.basename .. ": the luassert control case must stay green beside a lu.fail")
-  _expect(red ~= nil and red.ok == false and red.message:find(fixture.fragment, 1, true) ~= nil,
-    fixture.basename .. ": the lu.fail counterexample must be reported as not ok with its own message")
-end)
 
 -- ---------------------------------------------------------------- 4. 试点对账
 

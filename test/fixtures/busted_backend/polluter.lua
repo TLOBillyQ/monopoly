@@ -1,4 +1,4 @@
-local shared = require("test.fixtures.dual_backend.shared")
+local shared = require("test.fixtures.busted_backend.shared")
 describe("cross file polluter", function()
   after_each(function() shared.logger.warn = shared.warn end)
   it("patches the shared module", function()

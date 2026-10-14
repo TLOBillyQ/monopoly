@@ -11,7 +11,7 @@
 -- 原生 LuaUnit 改写：10 个带同款 before_each 的 describe 合并为一个 Test* 类
 -- （46 例，before_each → setUp），describe 级 helper 提到文件级；describe 5
 -- 与 describe 2 同名的 _runner_state 因签名不同改名 _runner_state_actor_fill；
--- assert.has_error → luax.has_error。
+-- assert.has_error → luassert.has_error。
 local check = require("luassert")
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")

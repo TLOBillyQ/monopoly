@@ -77,7 +77,7 @@ end
 local function _test_luacov_adapter_resolves_lanes_and_delegates_run()
   local adapter = require("packages.crap.luacov_adapter")
   local behavior_suites = adapter.resolve_suites("behavior")
-  check.truthy(#behavior_suites > 0, "behavior lane should expose behavior suites")
+  check.truthy(#behavior_suites.busted_files > 0, "behavior lane should expose real busted files")
   local contract_suites = adapter.resolve_suites("contract")
   check.truthy(#contract_suites > 0, "contract lane should expose contract suites")
   check.truthy(type(adapter.run) == "function", "adapter should expose the run contract")

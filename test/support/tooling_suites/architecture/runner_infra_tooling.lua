@@ -26,10 +26,12 @@ local function _test_contract_files_require_native_events_modules()
     "helper must not require the busted facade")
   _assert(not handler_text:find('require("busted"', 1, true),
     "output handler must not require the busted facade")
-  _assert(not handler_text:find("busted%.subscribe", 1, true),
-    "output handler must subscribe via the events module")
-  _assert(handler_text:find('packages.test_runner.events', 1, true) ~= nil,
-    "output handler must require the runner events module")
+  _assert(not helper_text:find('packages.test_runner.events', 1, true),
+    "helper must use the real busted lifecycle")
+  _assert(not handler_text:find('packages.test_runner.events', 1, true),
+    "output handler must use the real busted lifecycle")
+  _assert(handler_text:find('options.busted', 1, true) ~= nil,
+    "output handler must receive the verified busted instance")
 end
 
 local function _test_behavior_warns_data_has_entries()
@@ -46,7 +48,7 @@ local function _test_behavior_warns_data_has_entries()
 end
 
 return {
-  name = "luaunit_runner_infra_tooling",
+  name = "runner_infra_tooling",
   tests = {
     { name = "behavior_warns_data_has_entries", run = _test_behavior_warns_data_has_entries },
     { name = "contract_files_require_native_events_modules", run = _test_contract_files_require_native_events_modules },

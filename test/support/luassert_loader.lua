@@ -1,12 +1,12 @@
 --- luassert 装载器(#74 断言层迁移试点)。
 ---
---- 契约(与 tools/packages/luaunit_runner/runner.lua 的 luaunit 装载同口径):
+--- 契约(与 tools/packages/test_runner/cache_loader.lua 的真身校验同口径):
 ---   - 只从 `<repo>/.toolcache/luarocks` 解析真身;解析到 tree 之外(用户 tree、
 ---     全局 PATH)即显式失败,不静默降级到另一份 luassert;
 ---   - tree 缺 rock 时按项目既有口径就地 bootstrap(luassert 的 say 依赖由
 ---     luarocks 依赖解析一并带进同一 tree),失败返回 nil, err;
----   - 返回断言对象本身,绝不写 `_G.assert`——旧运行器与 LuaUnit 的后端语义都
----     挂在全局 Lua assert 上,覆盖它等于换执行后端,而不是换断言词汇。
+---   - 返回断言对象本身,绝不写 `_G.assert`——后端语义若挂在全局 Lua assert
+---     上,覆盖它等于换执行后端,而不是换断言词汇。
 ---
 --- 调用方需已装好 package.path(runner / test/helper.lua 的既有前置),本模块
 --- 不再自建第二套路径引导。

@@ -14,14 +14,14 @@ local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
 local tap_summary = require("foundation.tap_summary")
 local parallel_lanes = require("foundation.parallel_lanes")
-local sharding = require("packages.luaunit_runner.spec_sharding")
+local sharding = require("foundation.spec_sharding")
 local lane_args = require("packages.spec_lane.spec_lane_args")
 local lane_tools = require("packages.spec_lane.spec_lane_tools")
-local runner_bin = require("packages.luaunit_runner.lua54")
+local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
 
--- 内置文件分片（与 behavior_parallel / coverage 共用 tools/packages/luaunit_runner）：
+-- 内置文件分片（与 behavior_parallel / coverage 共用 packages/test_runner）：
 -- 命名 profile 的文件数超过阈值时,按文件边界拆成 N 条 runner 子进程 lane
 -- 并行（不拆文件内顺序）；窄目录点跑（--profile <目录>）、文件数少、
 -- worker=1、--verbose 一律走原单进程路径,命令形态逐字节不变。
@@ -165,8 +165,8 @@ function M.run(options)
     return { stdout = tostring(tool_err) .. "\n", code = 1, passed = 0, failed = 1 }
   end
 
-  -- 默认后端 = LuaUnit 运行器(argv_prefix 返回 { lua5.4, runner.lua },
-  -- tools/packages/luaunit_runner）。--busted-bin / BUSTED_BIN 已删除，
+  -- 默认后端 = 真实 busted 运行器(argv_prefix 返回 { lua5.4,
+  -- tools/packages/test_runner/runner.lua }）。--busted-bin / BUSTED_BIN 已删除，
   -- PATH 无 busted,迁移已完成)。
   local prefix = runner_bin.argv_prefix()
   local run_command = options.run_command or proc_lib.run_command

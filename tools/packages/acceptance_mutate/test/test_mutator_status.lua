@@ -5,7 +5,7 @@ local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 local json = require("acceptance4lua.json")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 
 local function _tmp_dir(name)
   local token = tostring(os.time()) .. "_" .. tostring({}):gsub("[^%w]+", "")

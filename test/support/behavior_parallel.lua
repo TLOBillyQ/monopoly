@@ -2,8 +2,8 @@ require("test.bootstrap").install_package_paths()
 
 local proc_lib = require("foundation.proc")
 local parallel_lanes = require("foundation.parallel_lanes")
-local sharding = require("packages.luaunit_runner.spec_sharding")
-local runner_bin = require("packages.luaunit_runner.lua54")
+local sharding = require("foundation.spec_sharding")
+local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
 
@@ -82,8 +82,8 @@ local function _resolve_workers(file_count)
 end
 
 local function _build_lane_args(files)
-  -- 默认后端 = LuaUnit 运行器(argv_prefix 返回 { lua5.4, runner.lua },
-  -- tools/packages/luaunit_runner）。BUSTED_BIN 已删除。
+  -- 默认后端 = 真实 busted 运行器(argv_prefix 返回 { lua5.4,
+  -- tools/packages/test_runner/runner.lua })。BUSTED_BIN 已删除。
   local args = {}
   for _, token in ipairs(runner_bin.argv_prefix()) do
     args[#args + 1] = token

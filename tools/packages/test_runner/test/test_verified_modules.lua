@@ -1,7 +1,7 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local proc = require("foundation.proc")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 local root = require("foundation.bootstrap").resolve(debug.getinfo(1, "S").source).repo_root
 
 describe("verified cache modules", function()
@@ -24,7 +24,7 @@ describe("verified cache modules", function()
   it("runs shared cases and reports deliberately false assertions through real busted", function()
     for _, sample in ipairs({ { "shared", 0, "passed=1 failed=0 errors=0" }, { "failing", 1, "passed=0 failed=1 errors=0" } }) do
       local result = proc.run_command({ lua54.lua54_bin(), root .. "/tools/packages/test_runner/runner.lua",
-        "--backend-manifest=test/fixtures/verified_modules/manifest.lua", "--helper=test/helper.lua", "--output=TAP", "--",
+        "--helper=test/helper.lua", "--output=TAP", "--",
         "test/fixtures/verified_modules/" .. sample[1] .. ".lua" })
       luassert.is.equal(sample[2], result.code, result.output)
       luassert.matches(sample[3], result.output, 1, true)
