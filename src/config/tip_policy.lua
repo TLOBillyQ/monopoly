@@ -17,7 +17,8 @@ M[event_kinds.roadblock_triggered] = { tip = false }
 M[event_kinds.mine_placed] = { tip = false }
 M[event_kinds.bankruptcy] = { tip = false }
 M[event_kinds.victory] = { tip = false }
-M[event_kinds.remote_dice] = { tip = false }
+-- 遥控骰子（#103）:全场可见提示谁用了遥控骰子、设定了多少点。
+M[event_kinds.remote_dice] = { tip = true }
 
 M[event_kinds.rent_multiplier_breakdown] = { tip = true }
 M[event_kinds.afk_auto_enabled] = { tip = true }
