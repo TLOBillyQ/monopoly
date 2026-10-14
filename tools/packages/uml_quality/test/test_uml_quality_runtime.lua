@@ -38,6 +38,24 @@ it("puts the selected lua 5.4 directory first on PATH", function()
   check.equal("/lua/bin;/sys;/tools", env.PATH)
 end)
 
+-- uml view(#99 / ADR 0070):图窗与 companion 继承同一套钉死的 Lua 装载面,
+-- 且上游精确要求 herdr 0.9.3,所以它的目录排在 PATH 最前,先于 lua 与继承的 PATH。
+it("pins the view environment with herdr 0.9.3 first on PATH", function()
+  local pinned = _env_map(runtime.pinned_env(ROOT, "/lua/bin", "/sys"))
+  local env = _env_map(runtime.view_env(ROOT, "/lua/bin", "/herdr/0.9.3", "/sys"))
+  for _, key in ipairs({ "LUA_PATH_5_4", "LUA_PATH", "LUA_CPATH_5_4", "LUA_CPATH", "LUA_INIT", "LUA_INIT_5_4" }) do
+    check.equal(pinned[key], env[key], key)
+  end
+  check.equal("/herdr/0.9.3;/lua/bin;/sys", env.PATH)
+end)
+
+it("accepts only an exact herdr 0.9.3 version line", function()
+  check.is_true(runtime.herdr_verdict("herdr 0.9.3\r\n").ok)
+  check.is_false(runtime.herdr_verdict("herdr 0.9.4\n").ok)
+  check.is_false(runtime.herdr_verdict("herdr 0.9.31\n").ok)
+  check.is_false(runtime.herdr_verdict(nil).ok)
+end)
+
 it("accepts a module resolved inside the project cache", function()
   local verdict = runtime.module_verdict("luacov.reporter.lcov",
     CACHE .. "/share/lua/5.4/luacov/reporter/lcov.lua", ROOT)

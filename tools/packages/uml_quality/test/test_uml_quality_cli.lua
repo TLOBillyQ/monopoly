@@ -40,13 +40,14 @@ describe("uml quality cli", function()
 it("prints usage on --help", function()
   local code, output = _quiet(function() return cli.main({ "--help" }, {}) end)
   check.equal(0, code)
-  check.truthy(output:find("check|crap|mutate", 1, true))
+  check.truthy(output:find("check|crap|mutate|ir|view", 1, true))
 end)
 
 it("rejects a missing or unknown operation as usage error", function()
   check.equal(2, (_quiet(function() return cli.main({}, {}) end)))
-  check.equal(2, (_quiet(function() return cli.main({ "ir" }, {}) end)))
+  check.equal(2, (_quiet(function() return cli.main({ "graph" }, {}) end)))
   check.equal(2, (_quiet(function() return cli.main({ "check", "--extra" }, {}) end)))
+  check.equal(2, (_quiet(function() return cli.main({ "ir", "out.edn" }, {}) end)))
 end)
 
 -- 反例:依赖缺失必须大声失败(非零,不是 3——3 是 mutate 的有效结果),
@@ -68,6 +69,140 @@ it("fails preflight loudly and clears a stale quality result", function()
   check.truthy(output:find("uml-command.ps1 missing", 1, true))
   check.truthy(output:find("crapper: ", 1, true))
   check.truthy(output:find("crap was not started", 1, true))
+end)
+
+-- ir / view(#99 / ADR 0070):上游启动器用替身 launch 记录 argv 与子进程环境;
+-- ir 的生成面从临时仓根读 policy.json 与覆盖文件,写出 policy.edn。
+local POLICY_JSON = "tools/packages/arch_policy/policy.json"
+local OVERRIDE = "docs/architecture.proposals.edn"
+
+local function _temp_root(override)
+  local root = env_lib.make_temp_path("uml_quality_ir", "")
+  fs.ensure_parent_dir(root .. "/" .. POLICY_JSON)
+  fs.write_file(root .. "/" .. POLICY_JSON, assert(fs.read_raw(POLICY_JSON)))
+  if override ~= nil then
+    fs.ensure_parent_dir(root .. "/" .. OVERRIDE)
+    fs.write_file(root .. "/" .. OVERRIDE, override)
+  end
+  return root
+end
+
+local function _stubs(state, code)
+  local calls = { preflight = 0, launch = {} }
+  return calls, {
+    preflight = function(_, op)
+      calls.preflight = calls.preflight + 1
+      calls.op = op
+      return state
+    end,
+    launch = function(root, env_list, argv)
+      calls.launch[#calls.launch + 1] = { root = root, env_list = env_list, argv = argv }
+      return code or 0
+    end,
+  }
+end
+
+local function _run_ir(root, calls_state, code)
+  local calls, hooks = _stubs(calls_state or { ok = true, scripts = "/up/scripts", env_list = {} }, code)
+  hooks.repo_root = root
+  local exit_code, output = _quiet(function() return cli.main({ "ir" }, hooks) end)
+  local policy = fs.read_raw(root .. "/policy.edn")
+  local out_dir = fs.is_dir(root .. "/tmp/uml")
+  fs.remove_path(root)
+  return exit_code, policy, calls, output, out_dir
+end
+
+it("ir writes policy.edn from the projection and passes the upstream exit code through", function()
+  local root = _temp_root(nil)
+  local code, policy, calls, _, out_dir = _run_ir(root, nil, 7)
+  check.equal(7, code)
+  check.truthy(policy:find(":levels [[:foundation]", 1, true))
+  check.truthy(policy:find(':out "tmp/uml/monopoly.edn"', 1, true))
+  check.truthy(policy:find(":proposals []", 1, true))
+  check.truthy(policy:find(":omit []", 1, true))
+  check.is_true(out_dir)
+  check.equal("ir", calls.op)
+  check.equal(1, #calls.launch)
+  check.same({ "pwsh", "-NoProfile", "-File", "/up/scripts/uml-command.ps1", calls.launch[1].root,
+    "ir", "tmp/uml/monopoly.edn" }, calls.launch[1].argv)
+end)
+
+-- 推演只写覆盖文件;每次重生都必须把它带回 policy.edn,不被投影冲掉。
+it("ir keeps a proposal from the override file across regeneration", function()
+  local proposal = '{:id :split :name "rules split" :layers [:rules :turn]}'
+  local root = _temp_root("{:proposals [" .. proposal .. "]\n :omit []}\n")
+  local code, policy = _run_ir(root)
+  check.equal(0, code)
+  check.truthy(policy:find(":proposals [" .. proposal .. "]", 1, true))
+end)
+
+it("ir treats an empty override file as no proposals", function()
+  local code, policy = _run_ir(_temp_root(""))
+  check.equal(0, code)
+  check.truthy(policy:find(":proposals []", 1, true))
+end)
+
+-- 反例:非法或含多余键的覆盖文件退 1、可读报错、不写半成品 policy.edn、不起上游。
+it("ir rejects an invalid or over-wide override file without writing policy.edn", function()
+  for _, override in ipairs({ "{:proposals [", "{:proposals [] :levels []}" }) do
+    local code, policy, calls, output = _run_ir(_temp_root(override))
+    check.equal(1, code, override)
+    check.is_nil(policy, override)
+    check.equal(0, #calls.launch, override)
+    check.truthy(output:find(OVERRIDE, 1, true), override)
+    check.truthy(output:find("policy.edn was not written", 1, true), override)
+  end
+end)
+
+it("ir writes nothing and starts nothing when the preflight fails", function()
+  local code, policy, calls = _run_ir(_temp_root(nil), { ok = false })
+  check.equal(1, code)
+  check.is_nil(policy)
+  check.equal(0, #calls.launch)
+end)
+
+-- view 在启动上游前钉死 LUA_PATH/LUA_CPATH(项目缓存)并把 herdr 0.9.3 放在 PATH 首位;
+-- 钉环境只发生在子进程里,父进程环境不变。
+it("view pins the launcher environment and leaves the parent environment unchanged", function()
+  local before = { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") }
+  local calls, hooks = _stubs({ ok = true, scripts = "/up/scripts", lua_dir = "C:/lua/bin",
+    herdr_dir = "C:/herdr/0.9.3" }, 0)
+  hooks.repo_root = "."
+  local code = _quiet(function() return cli.main({ "view", "--restart" }, hooks) end)
+  check.equal(0, code)
+  check.equal("view", calls.op)
+  check.equal(1, #calls.launch)
+  local launched = calls.launch[1]
+  local env = {}
+  for _, entry in ipairs(launched.env_list) do env[entry[1]] = entry[2] end
+  local cache = launched.root:gsub("\\", "/") .. "/.toolcache/luarocks"
+  check.truthy(env.LUA_PATH:find(cache .. "/share/lua/5.4/?.lua", 1, true))
+  check.equal(env.LUA_PATH, env.LUA_PATH_5_4)
+  check.equal(cache .. "/lib/lua/5.4/?.dll", env.LUA_CPATH)
+  check.equal(env.LUA_CPATH, env.LUA_CPATH_5_4)
+  check.equal(1, env.PATH:find("C:/herdr/0.9.3;C:/lua/bin", 1, true))
+  check.same({ "pwsh", "-NoProfile", "-File", "/up/scripts/uml-command.ps1", launched.root, "--restart" },
+    launched.argv)
+  check.same(before, { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") })
+end)
+
+it("view fails before launching when herdr 0.9.3 or the upstream checkout is missing", function()
+  local root = env_lib.make_temp_path("uml_quality_view", "")
+  fs.ensure_dir(root)
+  local launched = 0
+  local code, output
+  _with_offline_rocks(function()
+    code, output = _quiet(function()
+      return cli.main({ "view" }, { repo_root = root, herdr_home = root,
+        launch = function() launched = launched + 1 return 0 end })
+    end)
+  end)
+  fs.remove_path(root)
+  check.equal(1, code)
+  check.equal(0, launched)
+  check.truthy(output:find("FAIL herdr 0.9.3", 1, true))
+  check.truthy(output:find("uml-command.ps1 missing", 1, true))
+  check.truthy(output:find("view was not started", 1, true))
 end)
 
 end)

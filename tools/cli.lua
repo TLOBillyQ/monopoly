@@ -23,7 +23,7 @@ local commands = {
   { name = "acceptance",        pkg = "acceptance",         summary = "验收套件:重生成 generated specs 后全量跑(按需)" },
   { name = "acceptance-mutate", pkg = "acceptance_mutate",  summary = "验收突变软车道(POSIX 专用;Windows 退 3)" },
   { name = "dry",               pkg = "dry",                summary = "结构重复检测(POSIX 专用;Windows 退 3)" },
-  { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 质量入口(check/crap/mutate;项目缓存钉死)" },
+  { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 入口(check/crap/mutate/ir/view;项目缓存钉死)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
   { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(原生 Windows;零参数)" },
   { name = "sync-data",         pkg = "data_sync",          summary = "从部署目录回同步导出(Data;EggyAPI/EggyEditorAPI 存根)" },
@@ -62,8 +62,9 @@ local root = _repo_root()
 -- 包内 cli.lua 的装载面:模块名自带 packages. 前缀(#300 决议
 -- require("packages.<pkg>.cli")),path 拼到 tools/ 一层即可命中
 -- tools/packages/<pkg>/cli.lua(命名契约,#300 Q4——伪入口文件名不匹配
--- packages.<name>.cli,物理进不了路由)。
-package.path = package.path .. ";" .. root .. "/tools/?.lua"
+-- packages.<name>.cli,物理进不了路由)。?/init.lua 让包内 cli 能 require 目录式
+-- 包(如 uml ir 用的 packages.arch_policy)。
+package.path = package.path .. ";" .. root .. "/tools/?.lua;" .. root .. "/tools/?/init.lua"
 
 local raw_args = arg or {}
 local name = raw_args[1]

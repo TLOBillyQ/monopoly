@@ -35,6 +35,12 @@ push 前唯一硬地板是 slim：`lua tools/cli.lua verify`。
 
 uml-viewer 质量入口（ADR 0068 / #93）：`lua tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/` 派发。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，会从全局 luarocks tree 解析出假绿。契约见 `tools/specs/uml_quality.prompt`。
 
+uml-viewer companion 边界（ADR 0070 / #99）：
+
+- 仓根 `./uml` 只在 `lua tools/cli.lua uml view` 拉起的 companion 内可用（环境已钉死并沿启动链下传）；其他场合仍按上一段不作入口。
+- companion 不改仓根 `policy.edn`（`uml ir` 的生成物）。层序或归属不对，改 `docs/architecture.md` 与 guard；推演写 `docs/architecture.proposals.edn`（只含 `:proposals` / `:omit`），再跑 `uml ir` 重生。
+- companion 只改 `docs/architecture.proposals.edn` 与 `src/`；不碰 git 远端、不关单。
+
 ## 平台保证边界（#96 / ADR 0066）
 
 原生 Windows 是唯一受支持的开发平台，但两件保留能力当前仍按 POSIX 专用能力声明，**不在 Windows 保证面内**：

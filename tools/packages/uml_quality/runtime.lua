@@ -43,6 +43,27 @@ function M.pinned_env(repo_root, lua_dir, inherited_path)
   }
 end
 
+-- uml view 的启动环境(#99 / ADR 0070):Lua 装载面与 pinned_env 同源,herdr 0.9.3 所在
+-- 目录排 PATH 首位。环境沿上游启动链下传到 companion 及其子 shell,仓根 ./uml 在其中才可用。
+function M.view_env(repo_root, lua_dir, herdr_dir, inherited_path)
+  local env_list = M.pinned_env(repo_root, lua_dir, inherited_path)
+  for _, entry in ipairs(env_list) do
+    if entry[1] == "PATH" then entry[2] = _normalize(herdr_dir) .. ";" .. entry[2] end
+  end
+  return env_list
+end
+
+-- 上游 companion 预检精确匹配 `herdr --version` 输出 "herdr 0.9.3";这里同口径。
+M.HERDR_VERSION = "0.9.3"
+
+function M.herdr_verdict(version_output)
+  local line = tostring(version_output or ""):match("^%s*(.-)%s*$")
+  if line == "herdr " .. M.HERDR_VERSION then
+    return { ok = true, message = "herdr " .. M.HERDR_VERSION }
+  end
+  return { ok = false, message = "herdr " .. M.HERDR_VERSION .. " required, got " .. (line ~= "" and line or "nothing") }
+end
+
 function M.module_verdict(name, resolved, repo_root)
   if resolved == nil or resolved == "" then
     return { ok = false, message = name .. ": not found in pinned package.path" }

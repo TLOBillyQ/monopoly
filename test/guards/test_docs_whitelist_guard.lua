@@ -45,6 +45,12 @@ describe("TestDocsWhitelistGuard", function()
     luassert.is.equal(0, #violations)
   end)
 
+  -- uml ir 的推演覆盖文件(ADR 0070 / #99)入库在 docs/ 下,是唯一放行的非 Markdown 资产。
+  it("test_passes_the_uml_proposals_override", function()
+    local violations = check({ ["docs/architecture.proposals.edn"] = "{:proposals []\n :omit []}\n" })
+    luassert.is.equal(0, #violations)
+  end)
+
   it("test_flags_a_doc_outside_the_explicit_allowlist", function()
     local violations = check({ ["docs/notes.md"] = document })
     luassert.is.equal(1, #violations)

@@ -51,6 +51,8 @@ local _WHITELIST = {
   -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README
   -- 入库(#69 维护者决定),是已跟踪的根级目录。
   [".metrics"] = true,
+  -- `uml ir` 生成的仓根 policy.edn(ADR 0070 / #99)走 .gitignore,不进白名单;
+  -- 人手维护的推演在 docs/architecture.proposals.edn。
   -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md
   -- 条目随 squad 范式退役，guard 恢复报违规，spec 有退役钉。
 }
