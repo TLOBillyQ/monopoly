@@ -20,6 +20,8 @@ local _WHITELIST = {
   ["EggyEditorAPI.lua"] = true,
   ["CLAUDE.md"] = true,
   ["AGENTS.md"] = true,
+  -- v1.0 基线变更记录（#68）。
+  ["CHANGELOG.md"] = true,
   ["GLOSSARY.md"] = true,
   ["CODING_STANDARDS.md"] = true,
   -- 项目使命。
