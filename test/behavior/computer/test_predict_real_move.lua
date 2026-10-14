@@ -1,5 +1,7 @@
 require("test.bootstrap").install_package_paths()
-local luassert = require("luassert")
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 -- #102: 遥控骰子预测必须与真实移动走同一套计算语义。
 -- 接缝：
 --   预测侧 = path_planner.predict_landing(game, player, steps)（电脑落点预测的公共入口）

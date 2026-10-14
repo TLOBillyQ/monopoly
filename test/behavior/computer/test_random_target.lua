@@ -111,6 +111,39 @@ local function test_rng_called_with_full_candidate_range()
   luassert.is.same({ { 1, 2 } }, rng.calls)
 end
 
+-- #101 验收·财富平局:候选现金相同不改变均匀随机口径,偷窃与导弹仍均摊。
+local function test_wealth_tie_steal_still_spreads_evenly()
+  local ai = _make_player("ai")
+  local game = _make_game(
+    { _make_player("human"), ai, _make_player("p3") },
+    { balances = { human = 800, ai = 800, p3 = 800 } }
+  )
+  local counts = _tally(game, ai, item_ids.steal, nil, 20)
+  luassert.is.same({ human = 10, p3 = 10 }, counts)
+end
+
+local function test_wealth_tie_missile_still_spreads_evenly()
+  local ai = _make_player("ai")
+  local game = _make_game(
+    { _make_player("human"), ai, _make_player("p3") },
+    { balances = { human = 800, ai = 800, p3 = 800 } }
+  )
+  local counts = _tally(game, ai, item_ids.missile, nil, 20)
+  luassert.is.same({ human = 10, p3 = 10 }, counts)
+end
+
+-- 财富系道具(放逐/税/均穷)不在 #101 范围内,仍取最富者;
+-- 平局时按名单顺序取第一个,钉为既定意图。
+local function test_wealth_tie_richest_picker_keeps_first_in_roster_order()
+  local ai = _make_player("ai")
+  local game = _make_game(
+    { _make_player("human"), ai, _make_player("p3") },
+    { balances = { human = 800, ai = 800, p3 = 800 } }
+  )
+  local target = agent.pick_target_player(game, ai, item_ids.exile, nil)
+  luassert.is.equal("human", target.id)
+end
+
 local function test_no_legal_target_returns_nil()
   local ai = _make_player("ai")
   local game = _make_game({ ai, _make_player("human", { inventory = _make_inventory(0) }) })
@@ -125,5 +158,8 @@ describe("TestRandomTarget", function()
   it("test_eliminated_player_never_targeted", test_eliminated_player_never_targeted)
   it("test_player_without_items_never_stolen", test_player_without_items_never_stolen)
   it("test_rng_called_with_full_candidate_range", test_rng_called_with_full_candidate_range)
+  it("test_wealth_tie_steal_still_spreads_evenly", test_wealth_tie_steal_still_spreads_evenly)
+  it("test_wealth_tie_missile_still_spreads_evenly", test_wealth_tie_missile_still_spreads_evenly)
+  it("test_wealth_tie_richest_picker_keeps_first_in_roster_order", test_wealth_tie_richest_picker_keeps_first_in_roster_order)
   it("test_no_legal_target_returns_nil", test_no_legal_target_returns_nil)
 end)
