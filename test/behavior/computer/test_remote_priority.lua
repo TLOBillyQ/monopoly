@@ -97,21 +97,25 @@ local function test_remote_priority_ranks_market_tile()
 end
 
 -- 批3 击杀：线性棋盘构建器——tiles 按绝对下标给板子，走步每步 +1。
-local function _flat_board(tiles)
+-- #102 后预测复用真实移动计算，stub game 需带 occupants（真实 game 恒有）。
+local function _flat_game(tiles)
   return {
-    tiles = tiles,
-    has_roadblock = function()
-      return false
-    end,
-    has_mine = function()
-      return false
-    end,
-    get_tile = function(_, index)
-      return tiles[index]
-    end,
-    step_forward_by_facing = function(_, current)
-      return current + 1, nil, nil, false
-    end,
+    occupants = {},
+    board = {
+      tiles = tiles,
+      has_roadblock = function()
+        return false
+      end,
+      has_mine = function()
+        return false
+      end,
+      get_tile = function(_, index)
+        return tiles[index]
+      end,
+      step_forward_by_facing = function(_, current)
+        return current + 1, 0, nil, false
+      end,
+    },
   }
 end
 
@@ -131,8 +135,8 @@ local function test_pick_remote_dice_value_defaults_to_single_dice()
   for index = 0, 6 do
     tiles[index] = _item_tile()
   end
-  local board = _flat_board(tiles)
-  local ok, value, tile_ref = pcall(path_planner.pick_remote_dice_value, { board = board }, { id = 7, position = 0 })
+  local game = _flat_game(tiles)
+  local ok, value, tile_ref = pcall(path_planner.pick_remote_dice_value, game, { id = 7, position = 0 })
   luassert.truthy(ok == true, "pick_remote_dice_value must tolerate a missing dice_count")
   _assert_eq(value, 6, "item tiles rank by step count; max steps should win")
   _assert_eq(tile_ref, tiles[6], "winning candidate should expose its tile")
@@ -147,8 +151,8 @@ local function test_pick_remote_dice_value_uses_dice_count_multiplier()
     tiles[index] = _unowned_land()
   end
   tiles[12] = _item_tile()
-  local board = _flat_board(tiles)
-  local value, tile_ref = path_planner.pick_remote_dice_value({ board = board }, { id = 7, position = 0 }, 2)
+  local game = _flat_game(tiles)
+  local value, tile_ref = path_planner.pick_remote_dice_value(game, { id = 7, position = 0 }, 2)
   _assert_eq(value, 6, "twelve-step item tile should beat the six-step lands")
   _assert_eq(tile_ref, tiles[12], "winning candidate should be the doubled-step item tile")
 end
@@ -162,8 +166,8 @@ local function test_pick_remote_dice_value_never_considers_zero_dice_value()
   for index = 1, 6 do
     tiles[index] = _unowned_land()
   end
-  local board = _flat_board(tiles)
-  local value, tile_ref = path_planner.pick_remote_dice_value({ board = board }, { id = 7, position = 0 })
+  local game = _flat_game(tiles)
+  local value, tile_ref = path_planner.pick_remote_dice_value(game, { id = 7, position = 0 })
   _assert_eq(value, 6, "zero-step item tile must not win over ranked land candidates")
   _assert_eq(tile_ref, tiles[6], "the six-step land candidate should win")
 end
@@ -174,14 +178,20 @@ local function test_pick_remote_dice_value_tie_keeps_lower_value()
   for index = 1, 6 do
     tiles[index] = { type = "land", owner_id = 2, level = 1, rents = { 120, 300 } }
   end
-  local board = _flat_board(tiles)
-  local value, tile_ref = path_planner.pick_remote_dice_value({ board = board }, { id = 7, position = 0 })
+  local game = _flat_game(tiles)
+  local value, tile_ref = path_planner.pick_remote_dice_value(game, { id = 7, position = 0 })
   _assert_eq(value, 1, "an equal-score tie must keep the earlier (lower) dice value")
   _assert_eq(tile_ref, tiles[1], "tie winner should be the first candidate's tile")
 end
 
 local function _simulate_landing()
   return _require_upvalue(path_planner.pick_remote_dice_value, "_simulate_landing")
+end
+
+-- #102 后 _simulate_landing 复用真实移动计算：stub game 带 occupants，
+-- stub 棋盘按需补 get_mine（真实 board 恒有）。
+local function _sim_game(board)
+  return { occupants = {}, board = board }
 end
 
 local function test_simulate_landing_reads_tile_when_no_obstacle_interrupts()
@@ -196,11 +206,11 @@ local function test_simulate_landing_reads_tile_when_no_obstacle_interrupts()
       return { id = index, type = "land" }
     end,
     step_forward_by_facing = function(_, current)
-      return current + 1, nil, 0, false
+      return current + 1, 0, 0, false
     end,
   }
 
-  local sim = _simulate_landing()({ board = board }, { position = 0 }, 2)
+  local sim = _simulate_landing()(_sim_game(board), { id = 7, position = 0 }, 2)
 
   _assert_eq(sim.idx, 2, "simulation should advance by all steps without obstacles")
   _assert_eq(sim.tile.id, 2, "simulation should expose the final tile")
@@ -208,24 +218,28 @@ local function test_simulate_landing_reads_tile_when_no_obstacle_interrupts()
 end
 
 local function test_simulate_landing_stops_on_a_mine_tile()
+  -- 可触发的地雷（非自雷宽限）必须停走；{} 雷无 owner 且未标未武装，按可触发处理。
   local board = {
     has_roadblock = function()
       return false
     end,
-    has_mine = function()
-      return true
+    has_mine = function(_, index)
+      return index == 1
+    end,
+    get_mine = function()
+      return {}
     end,
     get_tile = function()
       return { type = "land" }
     end,
     step_forward_by_facing = function(_, current)
-      return current + 1, nil, 0, false
+      return current + 1, 0, 0, false
     end,
   }
 
-  local sim = _simulate_landing()({ board = board }, { position = 0 }, 3)
+  local sim = _simulate_landing()(_sim_game(board), { id = 7, position = 0 }, 3)
 
-  _assert_eq(sim.idx, 1, "mine should stop the walk on the first step")
+  _assert_eq(sim.idx, 1, "a triggerable mine should stop the walk on the first step")
   _assert_eq(sim.steps, 3, "simulation should keep the requested step count")
 end
 
@@ -242,17 +256,18 @@ local function test_simulate_landing_stops_on_a_roadblock_tile()
       return { type = "land" }
     end,
     step_forward_by_facing = function(_, current)
-      return current + 1, nil, 0, false
+      return current + 1, 0, 0, false
     end,
   }
 
-  local sim = _simulate_landing()({ board = board }, { position = 0 }, 3)
+  local sim = _simulate_landing()(_sim_game(board), { id = 7, position = 0 }, 3)
 
   _assert_eq(sim.idx, 1, "roadblock should stop the walk on the first step")
 end
 
--- 批3 击杀 L71 两处：market 位且非末步必须停走；无 type 的瓷砖则必须继续走。
-local function test_simulate_landing_stops_on_market_only_before_the_final_step()
+-- #102：market 位且非末步触发黑市中断，预测按真实流程恢复剩余步数继续走；
+-- 无 type 的瓷砖则必须继续走。
+local function test_simulate_landing_resumes_after_a_market_interrupt()
   local board = {
     has_roadblock = function()
       return false
@@ -267,12 +282,12 @@ local function test_simulate_landing_stops_on_market_only_before_the_final_step(
       return { type = "land" }
     end,
     step_forward_by_facing = function(_, current)
-      return current + 1, nil, 0, false
+      return current + 1, 0, 0, false
     end,
   }
 
-  local sim = _simulate_landing()({ board = board }, { position = 0 }, 3)
-  _assert_eq(sim.idx, 1, "market before the final step should stop the walk")
+  local sim = _simulate_landing()(_sim_game(board), { id = 7, position = 0 }, 3)
+  _assert_eq(sim.idx, 3, "a market interrupt should resume the remaining steps like the real move")
 
   local type_less_board = {
     has_roadblock = function()
@@ -288,14 +303,14 @@ local function test_simulate_landing_stops_on_market_only_before_the_final_step(
       return { type = "land" }
     end,
     step_forward_by_facing = function(_, current)
-      return current + 1, nil, 0, false
+      return current + 1, 0, 0, false
     end,
   }
-  local walked = _simulate_landing()({ board = type_less_board }, { position = 0 }, 3)
+  local walked = _simulate_landing()(_sim_game(type_less_board), { id = 7, position = 0 }, 3)
   _assert_eq(walked.idx, 3, "a type-less tile must not interrupt the walk")
 end
 
--- 批3 击杀 L78/L87：entered_inner 首步必须 false（初始值），跨步后保持置位。
+-- entered_inner 首步必须 false（初始值），跨步后保持置位。
 local function test_simulate_landing_forwards_entered_inner_progress()
   local received = {}
   local board = {
@@ -310,11 +325,11 @@ local function test_simulate_landing_forwards_entered_inner_progress()
     end,
     step_forward_by_facing = function(_, current, _, opts)
       received[#received + 1] = opts and opts.entered_inner
-      return current + 1, nil, 0, current == 0
+      return current + 1, 0, 0, current == 0
     end,
   }
 
-  _simulate_landing()({ board = board }, { position = 0 }, 3)
+  _simulate_landing()(_sim_game(board), { id = 7, position = 0 }, 3)
 
   _assert_eq(received[1], false, "the first step must start with entered_inner cleared")
   _assert_eq(received[2], true, "a step that entered inner must latch entered_inner for later steps")
@@ -349,7 +364,7 @@ describe("TestRemotePriority", function()
   it("test_simulate_landing_reads_tile_when_no_obstacle_interrupts", test_simulate_landing_reads_tile_when_no_obstacle_interrupts)
   it("test_simulate_landing_stops_on_a_mine_tile", test_simulate_landing_stops_on_a_mine_tile)
   it("test_simulate_landing_stops_on_a_roadblock_tile", test_simulate_landing_stops_on_a_roadblock_tile)
-  it("test_simulate_landing_stops_on_market_only_before_the_final_step", test_simulate_landing_stops_on_market_only_before_the_final_step)
+  it("test_simulate_landing_resumes_after_a_market_interrupt", test_simulate_landing_resumes_after_a_market_interrupt)
   it("test_simulate_landing_forwards_entered_inner_progress", test_simulate_landing_forwards_entered_inner_progress)
   it("test_enemy_land_without_level_rents_at_zero", test_enemy_land_without_level_rents_at_zero)
 end)
