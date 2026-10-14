@@ -87,22 +87,34 @@ local function _has_inventory(p)
   return p.inventory ~= nil and p.inventory:count() > 0
 end
 
-local function _pick_steal_target(game, player, allowed)
+-- #101：合法目标中经共享 game.rng 均匀随机，名单顺序不再决定集火对象。
+local function _random_from(candidates, game)
+  if #candidates == 0 then
+    return nil
+  end
+  local rng = assert(game and game.rng, "missing game.rng for random target pick")
+  assert(type(rng.next_int) == "function", "missing game.rng.next_int for random target pick")
+  return candidates[rng:next_int(1, #candidates)]
+end
+
+local function _pick_random_target(game, player, allowed, keep)
+  local candidates = {}
   for _, p in ipairs(game.players) do
     if _targetable(p, player, allowed) then
-      if _has_inventory(p) then return p end
+      if not keep or keep(p) then
+        candidates[#candidates + 1] = p
+      end
     end
   end
-  return nil
+  return _random_from(candidates, game)
+end
+
+local function _pick_steal_target(game, player, allowed)
+  return _pick_random_target(game, player, allowed, _has_inventory)
 end
 
 local function _pick_missile_target(game, player, allowed)
-  for _, p in ipairs(game.players) do
-    if _targetable(p, player, allowed) then
-      return p
-    end
-  end
-  return nil
+  return _pick_random_target(game, player, allowed, nil)
 end
 
 local function _pick_send_poor_target(game, player, allowed)
