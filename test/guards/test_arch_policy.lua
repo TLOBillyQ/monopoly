@@ -177,8 +177,9 @@ it("test_namespace_projection_cycle_without_module_cycle_is_rejected", function(
   luassert.is.same({ "rules.a", "rules.b" }, violation.nodes)
 end)
 
--- 下面两条的期望值原先在运行时与旧外部分析器的公开 analyze 逐项比对;
--- 旧工具 #94 退场时把当时双方一致的输出冻结成字面量,语义不变。
+-- 下面两条的期望值原先在运行时与旧外部分析器 arch_view 的公开 analyze 逐项比对。
+-- 旧工具 #94 退场前,在 60369b5 上用 arch_view rock 0.1.4-1(commit a354d63)对同一
+-- 图与同一组豁免真实跑出 check.ok / #violations / projection_cycles,冻结成下面的字面量。
 local function _cycle_shape(violations)
   local shape = {}
   for _, violation in ipairs(violations) do
@@ -250,19 +251,20 @@ it("test_large_scc_greedy_paths_keep_frozen_analyzer_results", function()
   end
   local current = arch_policy.check(POLICY, graph)
   luassert.is_false(current.ok)
-  local cycles = {}
-  for _, violation in ipairs(current.all_violations) do
-    luassert.is.equal("rules", violation.view)
-    cycles[#cycles + 1] = violation.cycle
+  luassert.is.equal(6, #current.violations)
+  local function path(...)
+    local nodes = {}
+    for _, index in ipairs({ ... }) do nodes[#nodes + 1] = "rules.n" .. index end
+    return { view = "rules", cycle = table.concat(nodes, "->") .. "->" .. nodes[1], nodes = nodes, waived = false }
   end
   luassert.is.same({
-    "rules.n1->rules.n4->rules.n7->rules.n1",
-    "rules.n2->rules.n3->rules.n4->rules.n7->rules.n1->rules.n2",
-    "rules.n5->rules.n8->rules.n2->rules.n5",
-    "rules.n6->rules.n7->rules.n1->rules.n2->rules.n5->rules.n6",
-    "rules.n6->rules.n9->rules.n3->rules.n6",
-    "rules.n8->rules.n9->rules.n3->rules.n4->rules.n7->rules.n8",
-  }, cycles)
+    path(1, 4, 7),
+    path(2, 3, 4, 7, 1),
+    path(5, 8, 2),
+    path(6, 7, 1, 2, 5),
+    path(6, 9, 3),
+    path(8, 9, 3, 4, 7),
+  }, _cycle_shape(current.all_violations))
 end)
 
 it("test_external_and_self_edges_are_outside_the_graph", function()
