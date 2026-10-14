@@ -4,7 +4,7 @@
 --   M.main(args, env) -> 退出码
 --   M.usage()         -> 完整 usage 文本
 --
--- 质量算法、派发次序(operations > Clojure alias > standardTools)与 validResult
+-- 质量算法、派发优先级(operations > standardTools > Clojure alias)与 validResult
 -- 判定全在 .uml-viewer/uml-viewer/scripts/uml-command.ps1;本包只做两件事:
 --   1. 预检:Lua 模块只从项目 .toolcache/luarocks 解析(不借全局 %APPDATA%\luarocks
 --      tree)、PowerShell 7、uml-viewer 检出、uml-quality.json(用 uml-viewer 自己的

@@ -13,7 +13,7 @@ CLI contract:
 - Missing or unknown operation exits 2.
 - The installer copies `uml` / `uml.ps1` into the repo root. They are ignored and are not the supported entry, because they inherit the user's `LUA_PATH`.
 
-Dispatch (owned by uml-viewer, recorded here): `operations` > Clojure alias (only with `deps.edn` and no `standardTools`) > `standardTools`. `uml-quality.json` declares `standardTools` only:
+Dispatch precedence (owned by uml-viewer `scripts/uml-command.ps1`, recorded here): `operations` > `standardTools` > Clojure alias. The alias route is taken only when `deps.edn` exists and no `standardTools` is declared; with neither, the standard tools run with installed defaults. `uml-quality.json` declares `standardTools` only:
 - `sourceRoots: ["src"]`: the whole `src/` tree is business code, the same scope as the retired crap4lua lane.
 - `exclude: []` must stay declared. uml-viewer's mutation scope adapter wraps an absent `exclude` as `@($null)` and fails, so the empty array is part of the contract.
 - No routing flags (`--root`, `--source-root`, `--exclude`, `--full-tree`, `--changed`, `--mutate-all`) in `crapperOptions` / `mutatorOptions`. uml-viewer rejects them.
