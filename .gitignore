@@ -67,6 +67,9 @@ Thumbs.db
 # 解析出假绿;受支持的入口是 `lua tools/cli.lua uml`,这两份拷贝不入库。
 /uml
 /uml.ps1
+# `lua tools/cli.lua uml ir` 的生成物(ADR 0070 / #99):从 arch_policy 投影 +
+# docs/architecture.proposals.edn 重生,不入库;推演只改覆盖文件。IR 写到已忽略的 tmp/uml/。
+/policy.edn
 # 下面这段由 get-uml-viewer 维护(重装时整段删除再追加到文件末尾),保持原样、保持在末尾。
 # BEGIN UML-VIEWER
 .uml-viewer/

@@ -13,16 +13,27 @@
 --   2. 派发:在钉死 LUA_PATH/LUA_CPATH/PATH 的 cmd 批处理里跑 uml-command.ps1,
 --      退出码原样回传(crap 0/2、mutate 0/3 是有效结果,不改写成 0/1)。
 -- 预检失败退 1 而不是 3:3 是 mutate 的有效结果码(存活突变),不能复用为「不可用」。
+--
+-- ir / view(#99 / ADR 0070):
+--   ir   从 arch_policy 投影 + docs/architecture.proposals.edn 生成仓根 policy.edn
+--        (gitignore),再经 uml-command.ps1 ir 调上游 ir-generator 写 tmp/uml/monopoly.edn。
+--   view 在钉死 LUA_PATH/LUA_CPATH 且 herdr 0.9.3 居 PATH 首位的批处理里调上游启动器;
+--        环境沿启动链下传到 companion,父进程与全局环境不变。
+-- env.preflight / env.launch 可注入替身(测试用);缺省走真实预检与 cmd 批处理。
 local M = {}
 
 local runtime = require("packages.uml_quality.runtime")
+local proposals = require("packages.uml_quality.proposals")
+local arch_policy = require("packages.arch_policy")
 local bootstrap = require("foundation.bootstrap")
 local proc = require("foundation.proc")
 local fs = require("foundation.fs")
 local env_lib = require("foundation.env")
 local path_lib = require("foundation.path")
 
-local _TOOLS = { check = { "crapper", "mutator" }, crap = { "crapper" }, mutate = { "mutator" } }
+local _TOOLS = { check = { "crapper", "mutator" }, crap = { "crapper" }, mutate = { "mutator" }, ir = {}, view = {} }
+
+local _IR_OUT = "tmp/uml/monopoly.edn"
 
 -- 必需 rock 与 bootstrap 中的钉版本一一对应;lcov reporter 依赖 luacov,自带前置。
 local _ROCKS = {
@@ -41,7 +52,7 @@ local _PYTHON_PROBE = {
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua uml <check|crap|mutate> [args...]",
+    "用法: lua tools/cli.lua uml <check|crap|mutate|ir|view> [args...]",
     "",
     "check   只做预检:项目缓存 Lua 模块来源、PowerShell 7、uml-viewer 检出、",
     "        uml-quality.json、crapper/mutator Python 3.11+ venv。0 = 全过 / 1 = 有缺失。",
@@ -49,8 +60,14 @@ function M.usage()
     "        退出码原样回传:0/2 有效结果,其余失败。",
     "mutate  预检后经 uml-command.ps1 跑 mutator;args 原样转发(目标文件或 --changed)。",
     "        退出码原样回传:0/3 有效结果,其余失败。",
+    "ir      arch_policy 投影 + " .. proposals.OVERRIDE_PATH .. " 的 :proposals/:omit",
+    "        生成仓根 policy.edn(不入库),再经 uml-command.ps1 ir 写 " .. _IR_OUT .. "。",
+    "        覆盖文件缺失/为空视为无推演;非法或含多余键退 1,不写 policy.edn。",
+    "        退出码原样回传。不接受额外参数。",
+    "view    预检(含 herdr 0.9.3)后,在钉死 LUA_PATH/LUA_CPATH、herdr 0.9.3 居 PATH 首位的",
+    "        环境里经 uml-command.ps1 启动图窗;args 原样转发(如 --restart)。退出码原样回传。",
     "",
-    "预检失败退 1,并删除陈旧的 .uml-viewer/quality-result.json。",
+    "预检失败退 1;check/crap/mutate 另删除陈旧的 .uml-viewer/quality-result.json。",
     "Python venv 搭建见 tools/specs/uml_quality.prompt。",
     "",
   }, "\n") .. "\n"
@@ -118,11 +135,11 @@ local function _check_pwsh(state)
     "PowerShell 7 (pwsh): " .. (result.ok == true and ("major " .. tostring(major)) or "not runnable"))
 end
 
-local function _check_viewer(state, root)
+local function _check_viewer(state, root, with_config)
   local scripts = root .. "/.uml-viewer/uml-viewer/scripts"
   local present = fs.path_exists(scripts .. "/uml-command.ps1")
   _report(state, present, "uml-viewer checkout: " .. scripts .. "/uml-command.ps1" .. (present and "" or " missing"))
-  if not present then return nil end
+  if not present or not with_config then return present and scripts or nil end
   local result = proc.run_command({ "pwsh", "-NoProfile", "-File",
     root .. "/tools/packages/uml_quality/probe_config.ps1", "-Root", root, "-Scripts", scripts })
   for line in tostring(result.output or ""):gmatch("[^\r\n]+") do
@@ -154,15 +171,62 @@ local function _check_python(state, root, tool)
   end
 end
 
-local function _preflight(root, op)
+-- 上游精确匹配 herdr 0.9.3;只认官方 standalone 安装布局里的 0.9.3 发行目录,
+-- 不扫 PATH(PATH 上常是别的版本),也不下载或升级。
+local function _find_herdr(state, home)
+  local releases = path_lib.normalize_path(tostring(home or "")) .. "/.herdr/packages/standalone/releases"
+  local probed = false
+  for _, arch in ipairs({ "x86_64", "aarch64" }) do
+    local dir = releases .. "/" .. runtime.HERDR_VERSION .. "-" .. arch .. "-pc-windows-msvc"
+    if fs.path_exists(dir .. "/herdr.exe") then
+      probed = true
+      local result = proc.run_command({ dir .. "/herdr.exe", "--version" })
+      local verdict = runtime.herdr_verdict(result.ok == true and result.output or nil)
+      _report(state, verdict.ok, verdict.message .. ": " .. dir)
+      if verdict.ok then return dir end
+    end
+  end
+  if not probed then
+    _report(state, false, "herdr " .. runtime.HERDR_VERSION .. ": not found under " .. releases .. "/"
+      .. runtime.HERDR_VERSION .. "-<arch>-pc-windows-msvc/herdr.exe"
+      .. " (install https://github.com/herdrdev/herdr/releases/tag/v" .. runtime.HERDR_VERSION .. ")")
+  end
+  return nil
+end
+
+-- uml-command.ps1 ir 先选 examples/*.policy.edn,其次才是仓根 policy.edn;仓根有
+-- examples/ 就可能静默顶替生成物(根白名单本就不放行它)。
+local function _check_policy_unshadowed(state, root)
+  local shadowed = fs.is_dir(root .. "/examples")
+  _report(state, not shadowed, "policy.edn " .. (shadowed
+    and "may be shadowed: " .. root .. "/examples exists (uml-command.ps1 ir prefers examples/*.policy.edn)"
+    or "is the policy uml-command.ps1 ir reads"))
+end
+
+local function _preflight(root, op, env)
   local state = { ok = true }
-  local lua_exe = _lua_exe(state)
-  _ensure_rocks(state, root)
-  if lua_exe ~= nil then state.env_list = _probe_lua_modules(state, root, lua_exe) end
+  if op ~= "ir" then
+    local lua_exe = _lua_exe(state)
+    _ensure_rocks(state, root)
+    if lua_exe ~= nil then
+      state.lua_dir = path_lib.parent_dir(lua_exe)
+      state.env_list = _probe_lua_modules(state, root, lua_exe)
+    end
+  end
   _check_pwsh(state)
-  state.scripts = _check_viewer(state, root)
+  state.scripts = _check_viewer(state, root, op ~= "ir")
   for _, tool in ipairs(_TOOLS[op]) do _check_python(state, root, tool) end
+  if op == "ir" then
+    state.env_list = {}
+    _check_policy_unshadowed(state, root)
+  end
+  if op == "view" then state.herdr_dir = _find_herdr(state, env.herdr_home or os.getenv("USERPROFILE")) end
   return state
+end
+
+local function _launch(root, env_list, argv)
+  local _, code = _run_batch(root, env_list, argv, nil)
+  return code
 end
 
 local function _echo_result(root)
@@ -174,30 +238,61 @@ local function _echo_result(root)
   end
 end
 
+-- 投影 + 覆盖文件在内存里合并;覆盖文件非法时不落盘任何东西。
+local function _ir_policy(root)
+  local policy, err = arch_policy.load(root .. "/" .. arch_policy.DEFAULT_POLICY_PATH)
+  if policy == nil then return nil, err end
+  return proposals.merge(arch_policy.project_uml_policy(policy), fs.read_raw(root .. "/" .. proposals.OVERRIDE_PATH), _IR_OUT)
+end
+
 function M.main(args, env)
   args = args or {}
+  env = env or {}
   local op = args[1]
   if op == "--help" or op == "-h" then
     io.write(M.usage())
     return 0
   end
-  if _TOOLS[op] == nil or (op == "check" and #args > 1) then
-    io.stderr:write((op == nil and "缺少子命令" or ("未知参数: " .. tostring(op))) .. "\n\n" .. M.usage())
+  if _TOOLS[op] == nil or ((op == "check" or op == "ir") and #args > 1) then
+    io.stderr:write((op == nil and "缺少子命令" or ("未知参数: " .. tostring(args[#args]))) .. "\n\n" .. M.usage())
     return 2
   end
 
-  local root = _absolute_root((env and env.repo_root) or ".")
-  local state = _preflight(root, op)
+  local root = _absolute_root(env.repo_root or ".")
+  local preflight, launch = env.preflight or _preflight, env.launch or _launch
+  local policy_text
+  if op == "ir" then
+    local err
+    policy_text, err = _ir_policy(root)
+    if policy_text == nil then
+      io.stderr:write("uml: " .. tostring(err) .. "\numl: policy.edn was not written; ir was not started\n")
+      return 1
+    end
+  end
+
+  local state = preflight(root, op, env)
   if not state.ok then
-    fs.remove_path(root .. "/.uml-viewer/quality-result.json")
+    if op ~= "ir" and op ~= "view" then fs.remove_path(root .. "/.uml-viewer/quality-result.json") end
     io.stderr:write("uml: preflight failed; " .. (op == "check" and "environment is not ready" or (op .. " was not started")) .. "\n")
     return 1
   end
   if op == "check" then return 0 end
 
-  local argv = { "pwsh", "-NoProfile", "-File", state.scripts .. "/uml-command.ps1", root, op }
+  -- view 直接走上游启动器(无子命令名);ir 不接受额外参数,输出路径由本包钉死。
+  local argv = { "pwsh", "-NoProfile", "-File", state.scripts .. "/uml-command.ps1", root }
+  if op ~= "view" then argv[#argv + 1] = op end
+  if op == "ir" then argv[#argv + 1] = _IR_OUT end
   for index = 2, #args do argv[#argv + 1] = args[index] end
-  local _, code = _run_batch(root, state.env_list, argv, nil)
+
+  if op == "ir" then
+    fs.write_file(root .. "/policy.edn", policy_text)
+    fs.ensure_parent_dir(root .. "/" .. _IR_OUT)
+    return launch(root, state.env_list, argv)
+  end
+  if op == "view" then
+    return launch(root, runtime.view_env(root, state.lua_dir, state.herdr_dir, os.getenv("PATH")), argv)
+  end
+  local code = launch(root, state.env_list, argv)
   _echo_result(root)
   return code
 end

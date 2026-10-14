@@ -130,3 +130,12 @@ CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-view
 3. **完成的判据是数量与红绿双钉**。迁移前先在车道上取逐车道 passed / failed 基线，迁移后必须一致；另加 spec 文件集数量的 guard，防止文件被静默漏跑；再加一组故意写错的断言样本，迁移后仍须为红——直接钉住「断言没有退化成恒真」，这是九千处机械替换的真实风险面。
 
 理由：本仓今天并存两套 harness——`test/**` 走 LuaUnit 类风格，`features/**` 的生成物已是 `describe` / `it` 加自带 harness（上游 generator 天然输出 busted 形状）。迁到真 busted 把两者统一成一套，并让 crapper / mutator 的 Lua 默认路径（busted + luacov）不必再包一层适配；此前替换掉 busted 的决定没有留下任何登记，本决策取代之。
+
+## ADR 0070 — uml-viewer 可视化接入：生成式 policy 与 companion 环境钉死
+
+接入 uml-viewer 的图窗与 companion 时，两件事按本仓口径而非上游默认处理：
+
+1. **policy 是生成物，推演另存**。仓根 `policy.edn` 由 `lua tools/cli.lua uml ir` 从 `arch_policy.project_uml_policy` 投影生成、不入库；上游 policy 中唯一需要人手维护的 `:proposals` 与 `:omit` 存于入库的 `docs/architecture.proposals.edn`，生成时合并。companion 不得直接改写 `policy.edn`：层序或归属不对，改 `docs/architecture.md` 与 guard；推演只写覆盖文件，再经 `uml ir` 重生。
+2. **companion 继承钉死的环境**。图窗只经 `lua tools/cli.lua uml view` 启动，它在调用上游启动器前钉死 `LUA_PATH` / `LUA_CPATH` 并把 Herdr 0.9.3 置于 PATH 首位。上游每次全新启动都为本项目新建 Herdr server，环境沿启动链原样下传到 companion 及其子 shell，`--restart` 与崩溃恢复复用同一 server；因此仓根 `./uml` 在该 companion 内可用，在其他场合仍按 ADR 0068 不作入口。
+
+理由：上游 policy 是单个 EDN 文件、不支持引用，companion 的系统提示要求它「写或更新 policy」——照做即生成与 `docs/architecture.md` 并行漂移的第二真源；而每次重生又会冲掉 `:proposals`，所以只把推演拆出。上游提示词硬编码 `./uml crap|mutate|ir`，仅靠 AGENTS.md 让 companion 改用 `lua tools/cli.lua uml` 会与系统提示冲突、遵从不可预期；在入口处钉环境让上游命令本身变对。上游版本检查精确匹配 `herdr 0.9.3`，局部置前不改全局 Herdr，也不改只读的上游检出。companion 以 `--dangerously-skip-permissions` 运行，维护者接受，并以 AGENTS.md 限定其边界：只改覆盖文件与 `src/`，不动 git 远端、不关单。
