@@ -160,6 +160,16 @@ local function _append_auto_candidate(list, game, player, board, seen, entry)
   end
 end
 
+-- #105:电脑候选先与真人 UI 接纳口径取交集——manual_candidates 的
+-- 7 槽截断会把岔口/内环附近的格子挡在窗外,直放路径不能再落到窗外格。
+local function _ui_accepted_indices(game, player, distance)
+  local accepted = {}
+  for _, cand in ipairs(roadblock.manual_candidates(game, player, distance)) do
+    accepted[cand.idx] = true
+  end
+  return accepted
+end
+
 function roadblock.auto_candidates(game, player, distance)
   local board = game.board
   local seen = {}
@@ -181,11 +191,16 @@ function roadblock.auto_candidates(game, player, distance)
     return a.priority < b.priority
   end)
 
+  local accepted = _ui_accepted_indices(game, player, distance)
+  local filtered = {}
   for _, cand in ipairs(list) do
-    cand.label = _format_label(cand)
+    if accepted[cand.idx] then
+      cand.label = _format_label(cand)
+      filtered[#filtered + 1] = cand
+    end
   end
 
-  return list
+  return filtered
 end
 
 function roadblock.manual_candidates(game, player, distance)
