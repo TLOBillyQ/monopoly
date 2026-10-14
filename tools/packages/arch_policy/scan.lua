@@ -2,7 +2,7 @@
 --
 -- 门禁自己读源码,不再经外部 rock 的分析器:`source_roots` 下的每个 `.lua`
 -- 是一个模块,模块 id 与旧 arch_view 口径一致(项目根相对路径,`/`→`.`,
--- 去掉结尾 `.init`),`require` 到的模块 id 命中即一条内部依赖边,否则是外部
+-- 去掉结尾 `.init`),`require` 名按同口径折叠 `.init` 后命中模块 id 即一条内部依赖边,否则是外部
 -- 依赖(外部依赖不进门禁图,与旧工具同口径)。
 --
 -- 注释与字符串处理与 uml-viewer 的 LuaGraph 同源:行注释、长注释、长括号串
@@ -203,9 +203,14 @@ function M.graph(project_root, policy)
   local external = {}
   local seen_external = {}
   for _, module_id in ipairs(module_ids) do
-    for _, required in ipairs(requires_by_module[module_id]) do
+    local seen_targets = {}
+    for _, name in ipairs(requires_by_module[module_id]) do
+      -- `require("src.x.init")` 与 `require("src.x")` 落到同一文件:require 名按
+      -- 模块 id 同口径折叠 `.init`,否则这条边掉进 external 桶、门禁漏判。
+      local required = name:gsub("%.init$", "")
       if modules[required] ~= nil then
-        if required ~= module_id then
+        if required ~= module_id and not seen_targets[required] then
+          seen_targets[required] = true
           edges[#edges + 1] = { from = module_id, to = required }
         end
       elseif not seen_external[required] then
