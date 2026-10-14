@@ -1,6 +1,6 @@
 local tile = require("src.rules.board.tile")
 local pricing = require("src.rules.land.pricing")
-local facing_policy = require("src.rules.board.facing_policy")
+local movement = require("src.rules.movement")
 local path_planner = {}
 
 local tile_state = tile.get_state
@@ -52,40 +52,15 @@ for tile_type, rank in pairs(remote_step_rank_by_type) do
   end
 end
 
--- Walking stops early on a roadblock or mine, and on a market tile that is not
--- the final step (landing on the market itself is not an interruption).
-local function _stops_walk(board, index, step, steps)
-  if board:has_roadblock(index) then
-    return true
-  end
-  if board:has_mine(index) then
-    return true
-  end
-  local tile_ref = board:get_tile(index)
-  return tile_ref ~= nil and tile_ref.type == "market" and step < steps
+-- #102:预测不再自带一份走步规则,直接复用真实移动的纯计算（movement.predict_landing）,
+-- 黑市恢复、自雷宽限、内圈朝向与入口跳过因此与真实落点天然一致。
+local function _simulate_landing(game, player, steps)
+  local index = movement.predict_landing(game, player, steps)
+  return { idx = index, tile = game.board:get_tile(index), steps = steps }
 end
 
-local function _simulate_landing(game, player, steps)
-  local board = game.board
-  local current = player.position
-  local facing = facing_policy.resolve_initial_facing("fresh_forward", player)
-  local entered_inner = false
-  for step = 1, steps do
-    local next_index, _, next_facing, step_entered_inner = board:step_forward_by_facing(current, facing, {
-      parity = steps,
-      entered_inner = entered_inner,
-    })
-    current = next_index
-    facing = next_facing
-    if step_entered_inner then
-      entered_inner = true
-    end
-
-    if _stops_walk(board, current, step, steps) then
-      break
-    end
-  end
-  return { idx = current, tile = board:get_tile(current), steps = steps }
+function path_planner.predict_landing(game, player, steps)
+  return movement.predict_landing(game, player, steps)
 end
 
 local function _remote_priority_for_tile_type(tile_type, steps)
