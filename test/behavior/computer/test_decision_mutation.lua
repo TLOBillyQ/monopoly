@@ -99,8 +99,12 @@ it("test_L56/L57 roadblock branch uses resolver(game,actor) with no count arg", 
     pick_demolish_target = function() return "demolish" end,
     pick_target_player = function() return nil end,
   })
+  -- #105 之后 pick 须落在 options 内才会被采用;两个判别值都放进选项,
+  -- 原作取 "two"、变异取 "three",仍互相区分(空 options 会让两者都回退成
+  -- 第一个选项而杀不死变异)。
   local game = _ai_game({ id = "ai_1", is_ai = true })
-  local choice = { id = 56, kind = "roadblock_target", options = {}, meta = {} }
+  local choice = { id = 56, kind = "roadblock_target",
+    options = { { id = "two" }, { id = "three" } }, meta = {} }
   local result = fn(game, choice)
   luassert.truthy(result ~= nil, "roadblock_target must produce an action")
   luassert.truthy(result.option_id == "two",
