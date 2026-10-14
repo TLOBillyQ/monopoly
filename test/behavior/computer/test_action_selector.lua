@@ -37,6 +37,8 @@ local function _make_game(players, opts)
   local balances = opts.balances or {}
   local deity_flags = opts.deity_flags or {}
   local g = { players = players }
+  -- 共享 RNG 桩（#101）：恒取第一个候选，保住既有「首个合法目标」预期。
+  g.rng = { next_int = function() return 1 end }
   function g:player_cash(p)
     return balances[p.id] or 0
   end
