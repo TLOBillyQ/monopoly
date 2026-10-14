@@ -3,9 +3,6 @@ local luassert = require("luassert")
 local board = require("src.rules.board.init")
 local _config_reset = require("test.support.config_reset")
 
--- 原生 LuaUnit 迁移:describe/it 拍平为文件级 TestBoardInit 类,
--- before_each → setUp,断言切到 lu.assertXxx,用例数与改写前一一对应(31 例)。
-
 local _sorted_dirs_comparator = board._M_test._sorted_dirs_comparator
 local _pick_any_dir = board._M_test._pick_any_dir
 

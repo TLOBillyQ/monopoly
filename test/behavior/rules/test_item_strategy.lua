@@ -6,8 +6,6 @@ local luassert = assert
 -- Extracted verbatim from test_item.lua (formerly the _effect_pipeline_tests
 -- helper array wired far from its definitions).
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestItemStrategy 类,
--- before_each → setUp,用例数与改写前一一对应(19 例)。
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local function _new_game()

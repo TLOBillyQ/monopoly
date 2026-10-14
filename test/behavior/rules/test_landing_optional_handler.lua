@@ -6,10 +6,6 @@ local landing_optional = require("src.rules.choice_handlers.landing_optional")
 local land_settlement = require("src.rules.land.settlement")
 local logger = require("src.foundation.log")
 
--- 原生 LuaUnit 转换(busted → LuaUnit):describe 拍平为文件级 Test 类,
--- has_error 双参形式走 luassert.has_error(实参序与消息剥壳语义对齐 busted),
--- 断言词汇切到 lu.assertXxx,用例数与改写前一一对应(14 例)。
-
 local function _handler(finish_choice)
   local registry = {}
   landing_optional.register(registry, { finish_choice = finish_choice })

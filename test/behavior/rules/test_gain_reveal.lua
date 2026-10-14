@@ -1,8 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
--- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(7 例)。
 -- 2026-08-22 #543 口径反转:全来源统一「卡牌展示屏」弹窗广播,
 -- 不再按 source 分流,item_get_reveal 图鉴放大卡私有展示链整条拆除。
 local support = require("test.support.shared_support")

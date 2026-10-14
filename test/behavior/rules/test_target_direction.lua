@@ -1,9 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 拍平为文件级 Test* 类,
--- before_each 转 setUp,用例数与改写前一一对应(6 例)。
-
 local target_direction = require("src.rules.board.target_direction")
 
 local function _assert_eq(a, b, msg)

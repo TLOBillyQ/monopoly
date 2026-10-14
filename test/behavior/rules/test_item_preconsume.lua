@@ -1,10 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit 迁移:三个 do 块 + describe 按钩子边界拍平为三个 Test* 类
--- (crap_coverage 与 guard paths 带 before_each → setUp;mutation pins 无钩子
--- → 无 setUp 类),重复的 local 辅助合并到文件级,断言词汇从 luassert
--- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(5 + 1 + 10 = 16 例)。
 local item_preconsume_policy = require("src.rules.choice.item_preconsume_policy")
 local policy = require("src.rules.choice.item_preconsume_policy")
 

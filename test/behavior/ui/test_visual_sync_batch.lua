@@ -15,8 +15,6 @@ local function _stub_state(board)
   }
 end
 
--- describe("visual_sync_batch.sync_many") 拍平为文件级 TestVisualSyncBatch,
--- _assert_eq 自研 helper 原样保留,用例数与改写前一一对应(3 例)。
 describe("TestVisualSyncBatch", function()
 
   it("test_returns_false_when_payload_is_nil", function()

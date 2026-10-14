@@ -2,8 +2,6 @@
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 -- luacheck: ignore 211
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,断言从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(12 例)。
 local support = require("test.support.shared_support")
 local _new_game = support.new_game
 local _open_choice = support.open_choice

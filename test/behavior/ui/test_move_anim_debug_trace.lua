@@ -1,10 +1,6 @@
 -- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert
---- 原生 LuaUnit 迁移(busted → luaunit):两个顶层 describe 拍平为两个文件级
---- Test* 类(无钩子,不拆子类),断言词汇切到 lu.assertXxx,用例数与改写前
---- 一一对应(8 + 3 = 11 例)。
-
 local move_anim = require("src.ui.render.move_anim")
 local rt = require("src.ui.render.move_anim.runtime")
 local debug_alias = require("src.ui.render.move_anim.debug")

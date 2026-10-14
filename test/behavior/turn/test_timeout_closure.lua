@@ -7,11 +7,6 @@
 -- (L22 _positive_numeric, L35 scoped-timeout fallback, L43 _resolve_modal_ports,
 -- L81 _resolve_modal_timeout) plus the modal asserts and elapsed boundaries.
 --
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):5 个 describe 钩子同为
--- before_each config_reset.reset_all(),拍平合并为 TestTimeoutClosure 类
--- (setUp 承接);describe 内的辅助函数提升为文件级 local;用例数与改写前
--- 一一对应(8 + 8 + 9 + 5 + 2 = 32 例)。
-
 local check = require("luassert")
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")

@@ -4,10 +4,6 @@ local luassert = assert
 -- camera_sync 各分支行为规约:pan_camera_to_position / follow_camera /
 -- sync_camera_position / 守卫分支 / release_target_pan。
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):五个顶层 describe 均无嵌套、四个
--- after_each 内容完全相同(reload 端口基线),按「同层多钩子拼接」合并拍平为
--- TestCameraPan 单类 + 统一 tearDown,裸 assert(cond, msg) 机械映射为
--- lu.assertEvalToTrue,用例数与改写前一一对应(6+5+3+4+2 = 20 例)。
 local support = require("test.support.shared_support")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local runtime_state = require("src.ui.state.runtime")

@@ -1,9 +1,4 @@
 ---@diagnostic disable: missing-fields
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):四个 describe 拍平成四个 Test* 类,
--- after_each → tearDown,断言从裸 assert 切到 luassert.truthy,用例数与
--- 改写前一一对应(build_startup_roster 11 + build_startup_ai_map 2 +
--- build_synthetic_player_specs 2 + 迁自 property 车道的 seating invariants 1 = 16 例)。
-
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143

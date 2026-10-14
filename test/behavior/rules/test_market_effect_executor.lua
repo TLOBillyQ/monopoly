@@ -3,9 +3,6 @@ local luassert = require("luassert")
 local market_service = require("src.rules.market")
 local market_effects = require("src.rules.market.effects")
 
--- 原生 LuaUnit 转换(busted → LuaUnit):describe 拍平为文件级 Test 类,
--- 断言词汇切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
-
 local executor = market_effects.executors.market
 
 local function _with_market_stubs(stubs, fn)

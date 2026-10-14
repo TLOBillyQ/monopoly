@@ -14,8 +14,6 @@ local luassert = assert
 --   L156      `type(candidates) == "table" and #candidates > 0`
 --                 and->or, >->>=, 0->1
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):四个无钩子 describe 拍平合并进
--- TestAvailabilityMutation 类,用例数与改写前一一对应(9 例)。
 local availability = require("src.rules.items.availability")
 local item_ids = require("src.config.gameplay.item_ids")
 local auto_play_port = require("src.rules.ports.auto_play")

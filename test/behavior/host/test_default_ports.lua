@@ -9,11 +9,6 @@ local function _assert_equal(actual, expected, message)
 end
 local default_ports = require("src.host.default_ports")
 
--- 原生 LuaUnit 试点(推翻自研 busted 兼容运行器决策的迁移):describe 嵌套按钩子边界拍平成两个
--- Test* 类(外层无用例子句 → 无钩子类;内层「custom archive access」的
--- before_each/after_each → setUp/tearDown,共享 local original_enums → self
--- 字段),用例数与改写前一一对应(2 + 4 = 6 例)。
-
 describe("TestDefaultPorts", function()
 
 local function _test_end_game_routes_to_host_and_leaves_diagnostics()

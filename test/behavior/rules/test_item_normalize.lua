@@ -5,9 +5,6 @@ local luassert = assert
 -- 这些纯函数被 choice_handlers 各 completion 复用,集成 spec 只覆盖成功路径;
 -- 本 spec 补缺失/非法输入的 fail-fast 契约(变异清扫 #259 survivor 真缺口闭合)。
 --
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
--- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(7 例)。
-
 -- 窄车道自备共享运行时端口基线（#217）：缺失才补装，在位 no-op。
 do
   local baseline_guard = require("test.support.runtime_baseline_guard")

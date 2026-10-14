@@ -1,4 +1,3 @@
--- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(8 例)。
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
 local intent_output = require("src.rules.ports.intent_output")

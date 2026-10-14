@@ -44,9 +44,6 @@ local function failing_suites(calls)
   }
 end
 
--- 原生 LuaUnit 迁移:单个 describe 拍平成一个 TestHarnessFailFast 类,
--- 用例数与改写前一一对应(3 例)。
-
 describe("harness fail fast", function()
 
 it("stops at first failing case across suites when stop on first failure is set", function()

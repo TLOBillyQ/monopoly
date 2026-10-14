@@ -1,8 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个平级 describe 合并为文件级 Test* 类,
--- 均无钩子,直接合并进 TestTargetLayout,用例数与改写前一一对应(12 例)。
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local target_layout = require("src.rules.board.target_layout")

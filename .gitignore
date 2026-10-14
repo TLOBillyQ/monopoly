@@ -5,9 +5,6 @@
 # 扫描/构建产物目录与标记文件。
 /build/
 *.luac
-# 旧 mutate4lua / arch_view 已于 #94 退役;保留忽略以防旧工作树残留被提交。
-*.mutate4lua
-*.arch_view
 # spec_lane junit 车道输出。
 /junit-output.xml
 # 车道/工具日志残留兜底（仓根与子树都不版本化 .log）。
@@ -16,10 +13,6 @@
 # 报违规；gitignore 兜底保证 clean 前不把残留提交进来。
 /luacov.report.out
 /luacov.stats.out
-
-# mutate4lua 外部 store 已退场（#283），工具本身 #94 退役；
-# 保留 cache 忽略以防旧工作树残留。
-.mutate4lua/cache/
 
 # ── 本地工具缓存 ─────────────────────────────────────────────────
 # quality tool cache（本地状态，下载/安装的工具钉）。

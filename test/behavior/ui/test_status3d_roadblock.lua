@@ -1,8 +1,6 @@
 -- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,用例数与改写前一一对应(11 例)。
 local signals = require("src.ui.render.status3d.status_signals")
 
 local _has_pending_roadblock_trigger = signals.has_pending_roadblock_trigger

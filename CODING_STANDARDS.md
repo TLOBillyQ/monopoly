@@ -40,7 +40,7 @@
 
 - 仍走旧 Test 风格的 spec 文件头两行固定:`require("test.bootstrap").install_package_paths()` 之后 `local luassert = assert(require("test.support.luassert_loader").load())`,断言只走这个局部对象。该 loader 仍服务于场景套件、`shared_support`、`property`、`fuzz` 等尚未切 DSL 的支撑模块。
 - loader 只从**项目工具缓存** `<repo>/.toolcache/luarocks/` 装载 `luassert`、其子模块及 `say`。未验证的 `package.loaded` 预注入即失败;装载期间的优先 searcher 按缓存文件显式 loadfile,避免 preload/searcher 绕过;后续调用复核已加载对象身份。解析路径在缓存中不代表预加载对象来自缓存。真实 busted 侧由 `packages.test_runner.cache_loader` 施加同一口径的真身校验。
-- **不覆盖全局 `assert`**。后端语义若挂在全局 `assert` 上,覆盖它等于换执行后端而不是换断言词汇;`test/guards/lib/luassert_migration_pilot_guard.lua` 会扫 `_G.assert =` 一类写法。
+- **不覆盖全局 `assert`**。后端语义若挂在全局 `assert` 上,覆盖它等于换执行后端而不是换断言词汇。
 
 - #75 显式登记为 busted 的真实 `describe` / `it` 文件使用 busted 注入的断言对象（可写 `local luassert = assert`）；运行器先验证并从项目缓存装载真实 busted/luassert 依赖。不得将旧 Test 表动态包成 DSL，不得在 spec 中替换全局断言对象。普通 require 保持跨文件模块身份，singleton patch 由 spec 在 teardown 中显式恢复。
 
@@ -70,13 +70,6 @@
 - 测试体或钩子里未捕获的运行时抛错、加载失败、空 spec 文件、拆了共享端口基线未装回(见 `test/helper.lua` 的 `# BASELINE LEAK`)计 **errors**。
 
 三个桶都**独立**作用于退出码:只 failed、只 errors、或 cases == 0,退出码都是非零。改动断言层后如果 `errors` 归零而 `failed` 也归零,先怀疑断言被吞了,而不是修好了。
-
-### 试点范围与对账
-
-- #74 试点 5 个文件(见 `test/guards/lib/luassert_migration_pilot_guard.lua` 的 `PILOT_FILES`),迁移前后用例集合逐类一致:45 例(9 / 9 / 5 / 13 / 9),基线由 `test/support/luassert_migration/test/test_luassert_assertion_contract.lua` 对账。
-- 试点交付**不跳过特殊结构**:`setUp` 钩子、`multi_class_return.merge` 的多类 return、`runtime_baseline_guard` 补装、局部断言 helper 均保留,由迁移前后 diff 与真实 45 例对账验收,不设永久源码字面锚点、调用数量下界或 describe 禁令。
-- 45 例逐类对账是断言阶段的可撤契约;断言有效性由真实正负语义与非零退出钉住。
-- 反例 fixture(`test/fixtures/luassert_migration/`)只保留真 luassert 侧:控制例为绿、反例必须为红且带 luassert 的失败消息片段。旧 `lu.fail` 分桶 fixture 已随旧后端一并删除——那个桶不再存在。
 
 ### 诊断
 

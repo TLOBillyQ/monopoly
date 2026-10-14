@@ -1,6 +1,4 @@
 -- luacheck: ignore 211
--- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp（31 例），
--- 语句位裸 assert(cond, msg) → lu.assertEvalToTrue，表达式位内建 assert 保留。
 local check = require("luassert")
 local support = require("test.support.shared_support")
 local _new_game = support.new_game

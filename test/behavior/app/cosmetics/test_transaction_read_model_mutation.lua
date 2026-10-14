@@ -2,10 +2,6 @@
 -- State shapes kept inline (no shared helpers); each test drives real module
 -- behavior and asserts a value that DIFFERS between original and mutant.
 --
--- 原生 LuaUnit 改写:两个无钩子 describe 合并为文件级 TestTransactionReadModelMutation
--- 单类(describe 无钩子 → 不拆类);describe 级 local catalog 原样留在 do 块内;
--- 语句位裸 assert → luassert.truthy。用例数与改写前一一对应(4 例)。
-
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local read_model = require("src.app.cosmetics.transaction_read_model")

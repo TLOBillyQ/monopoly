@@ -4,9 +4,6 @@
 --   * transaction_purchase 付费入场私有契约 →
 --     test_cosmetics_transaction_paid_entry_pin.lua（paid-entry pin）
 --
--- 原生 LuaUnit 改写:describe 带 before_each/after_each → setUp/tearDown,
--- 用例数与改写前一一对应(17 例)。
-
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143

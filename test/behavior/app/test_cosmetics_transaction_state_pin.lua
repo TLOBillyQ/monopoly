@@ -7,9 +7,6 @@
 -- test_cosmetics_transaction.lua 等价迁出，独立成本 pin spec。
 -- 这里是内部契约的钉子而非门面行为规约：门面级可观察行为仍住门面 spec。
 --
--- 原生 LuaUnit 改写:describe 带 before_each/after_each → setUp/tearDown,
--- 用例数与改写前一一对应(4 例)。
-
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143

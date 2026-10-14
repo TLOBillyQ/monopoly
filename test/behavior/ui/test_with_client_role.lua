@@ -6,8 +6,6 @@ local function _assert_eq(a, b, msg)
   luassert.is.equal(b, a, msg)
 end
 
--- describe("with_client_role") 拍平为文件级 TestWithClientRole,文件内自研
--- _assert_eq 原样保留,用例数与改写前一一对应(4 例)。
 describe("TestWithClientRole", function()
 
 it("test_delegates_to_runtime_with_client_role_when_present", function()

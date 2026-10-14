@@ -4,9 +4,6 @@ local luassert = assert
 -- presentation.board_sync 行为规约:board_view.refresh 的停移动/同步序、
 -- wait_move_anim 抑制与回放、player_units 解析、tile_anchors 缓存、building_effects 分支。
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestBoardSync 单类
--- (无钩子不拆类),it 名 _test_xxx 去掉前导 _ 作方法名,裸 assert(cond, msg)
--- 机械映射为 lu.assertEvalToTrue,用例数与改写前一一对应(24 例)。
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message) luassert.is.equal(expected, actual, message) end
 local _with_patches = support.with_patches

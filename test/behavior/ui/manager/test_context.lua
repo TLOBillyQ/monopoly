@@ -5,9 +5,6 @@ require("test.support.ui_manager_nodes_support")
 
 local luassert = assert
 
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert 兼容层
--- 切到 lu.assertXxx,用例数与改写前一一对应(2 例)。
-
 local function _load_fresh()
   local chunk = assert(loadfile("src/ui/manager/context.lua"))
   return chunk()
