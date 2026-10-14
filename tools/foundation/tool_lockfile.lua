@@ -12,7 +12,7 @@ local _TOOL_DEFS = {
 local function _split_fields(line)
   local fields = {}
   -- 第一个 token 是 name,剩余部分是仓库 URL(URL 内部不能有空格)。
-  -- 钉版废弃后 URL 是 Gitea 仓库地址,不再带 tag/rockspec 版本信息。
+  -- 钉版废弃后 URL 是上游 git 仓库地址(#94 起为 GitHub),不再带 tag/rockspec 版本信息。
   local name, url = line:match("^(%S+)%s+(%S+)$")
   if name ~= nil and url ~= nil then
     fields[1] = name

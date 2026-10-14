@@ -2,7 +2,7 @@
 --
 -- 钉版(tag + rockspec URL 命名约定)废弃后,tools.lock 只记仓库地址,
 -- 新鲜度 = 上游 HEAD commit。解析结果缓存于 .toolcache/resolved-tools.tsv
--- (24h TTL),避免每个工具入口每次调用都打 Gitea(约 19 个入口共享
+-- (24h TTL),避免每个工具入口每次调用都打上游远端(约 19 个入口共享
 -- bootstrap.ensure_tool)。网络失败回退过期缓存;无缓存可回退时由调用方
 -- 决定是否降级到 tree 里已装版本。
 --

@@ -12,7 +12,7 @@
 --
 -- 平台保证边界(#96):dry 当前按 POSIX 专用能力声明,原生 Windows 上不可用。
 -- 判定与诊断收在 foundation.platform_boundary 一处,且必须发生在 tool_cli.run
--- 之前 —— runner 顶部的 ensure_tool 会先从私有 Gitea 装工具,再让上游的
+-- 之前 —— runner 顶部的 ensure_tool 会先从 tools.lock 的上游仓库装工具,再让上游的
 -- `find` + `2>/dev/null` 扫描静默零候选退 0;把边界挡在装工具之前,才不会
 -- 出现「一次扫描都没跑却报通过」。
 local M = {}
