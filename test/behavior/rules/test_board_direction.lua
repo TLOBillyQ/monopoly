@@ -4,10 +4,6 @@ local board = require("src.rules.board.init")
 local direction = require("src.rules.board.direction")
 local _config_reset = require("test.support.config_reset")
 
--- 原生 LuaUnit 迁移:两个平级 describe 拍平为两个文件级类(各自 before_each →
--- setUp,共享 _config_reset 提升为文件级),断言切到 lu.assertXxx /
--- luassert.has_error,用例数与改写前一一对应(8 + 27 = 35 例)。
-
 local _pick_any_dir = board._M_test._pick_any_dir
 local _resolve_outer_next = board._M_test._resolve_outer_next
 local _resolve_fresh_forward_next = board._M_test._resolve_fresh_forward_next

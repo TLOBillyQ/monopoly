@@ -4,9 +4,6 @@ local luassert = assert
 -- board placement mutation 覆盖:build_snapshot 双缓冲、build_occupants 原位复用、
 -- resolve_min_player_y 配置偏移、place_players 网格/单格/零间距/抬升各路径。
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):describe 拍平为 TestBoardPlacementMutation,
--- before_each → setUp(每个用例前 _ensure_vector3),裸 assert(cond, msg) 机械
--- 映射为 lu.assertEvalToTrue,用例数与改写前一一对应(12 例)。
 local placement = require("src.ui.render.board.placement")
 local runtime_state = require("src.ui.state.runtime")
 local move_anim = require("src.ui.render.move_anim")

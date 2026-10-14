@@ -1,9 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit(busted → LuaUnit 迁移):两个 describe 各拍平成一个 Test* 类
--- (coverage 47 例带 before_each → setUp;auto dispatch 6 例无钩子,describe 级
--- local 留在对应 do 块内),用例数与改写前一一对应(53 例)。
 local phase_module = require("src.rules.items.phase")
 local support = require("test.support.shared_support")
 local item_ids = require("src.config.gameplay.item_ids")

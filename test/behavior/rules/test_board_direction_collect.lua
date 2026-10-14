@@ -3,9 +3,6 @@ local luassert = require("luassert")
 local direction = require("src.rules.board.direction")
 local _config_reset = require("test.support.config_reset")
 
--- 原生 LuaUnit 迁移:describe/it 拍平为文件级 TestBoardDirectionCollect 类,
--- before_each → setUp,断言切到 lu.assertXxx,用例数与改写前一一对应(9 例)。
-
 local function _assert_eq(a, b, msg)
   luassert.is.same(b, a, msg)
 end

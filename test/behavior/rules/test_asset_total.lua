@@ -1,6 +1,3 @@
--- 内层 describe 均无钩子,不拆类直接合并进 TestAssetTotal,辅助函数提升到
--- 文件级,裸 assert(语句位)切 luassert.truthy,用例数与改写前一一对应
--- (4 + 3 = 7 例)。
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local support = require("test.support.shared_support")

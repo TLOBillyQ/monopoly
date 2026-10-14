@@ -35,12 +35,6 @@ local function _build_board(tiles, neighbors)
   return board
 end
 
--- 原生 LuaUnit 迁移(busted → LuaUnit):外层 describe 与内层无钩子嵌套
--- describe 拍平进同一个 TestContiguousVisualSync(35 + 3 = 38 例,与改写前
--- 一一对应);断言走 support.assert_eq,语句位 assert(cond, msg)
--- → lu.assertEvalToTrue。内层 property 用例原有 do 块与 describe 级 local
--- (property / OWNERS / _gen_board / _oracle_counts)原样保留在块内。
-
 describe("TestContiguousVisualSync", function()
 
   it("test_contiguous_count_ignores_non_land_neighbors_when_building_owner_components", function()

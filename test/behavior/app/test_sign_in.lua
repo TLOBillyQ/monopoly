@@ -1,8 +1,3 @@
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):三个 describe 拍平成三个 Test* 类(sign_in.install
--- 的 describe 体 local 辅助留在 do 块内),断言从裸 assert 切到 lu.assertEvalToTrue,
--- 用例数与改写前一一对应(sign_in 8 + install 4 + 迁自 property 车道的
--- parsing and claim properties 3 = 15 例)。
-
 -- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert

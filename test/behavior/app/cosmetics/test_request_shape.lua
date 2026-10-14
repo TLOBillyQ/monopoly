@@ -1,6 +1,3 @@
--- 原生 LuaUnit 改写:无钩子 describe → 文件级 TestRequestShape 单类(不拆类),
--- 语句位裸 assert → luassert.truthy,用例数与改写前一一对应(5 例)。
-
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local property = require("test.support.property")

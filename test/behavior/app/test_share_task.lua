@@ -1,7 +1,3 @@
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):两个 describe 拍平成两个 Test* 类,断言从
--- 裸 assert 切到 luassert.truthy,用例数与改写前一一对应
--- (host-managed rewards 3 例 + 迁自 property 车道的 config properties 2 例 = 5 例)。
-
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143

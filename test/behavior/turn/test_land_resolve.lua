@@ -1,5 +1,3 @@
--- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp、
--- after_each → tearDown（17 例），语句位裸 assert(cond, msg) → lu.assertEvalToTrue。
 local check = require("luassert")
 local support = require("test.support.shared_support")
 local land_resolve = require("src.turn.phases.land")

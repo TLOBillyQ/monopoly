@@ -5,10 +5,6 @@ local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local _config_reset = require("test.support.config_reset")
 
--- 原生 LuaUnit 迁移:三个平级 describe 拍平为三个文件级类(各自 before_each →
--- setUp,共享 _config_reset 提升为文件级),断言切到 lu.assertXxx,用例数与
--- 改写前一一对应(6 + 5 + 8 = 19 例)。
-
 local function _new_game()
   return support.new_game({ map = default_map })
 end

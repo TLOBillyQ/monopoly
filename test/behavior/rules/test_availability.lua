@@ -5,10 +5,6 @@ local availability = require("src.rules.items.availability")
 local item_ids = require("src.config.gameplay.item_ids")
 local _config_reset = require("test.support.config_reset")
 
--- 原生 LuaUnit 迁移:describe/it 拍平为文件级 TestAvailability 类,
--- before_each → setUp(_config_reset 提升为文件级共享),断言切到 lu.assertXxx,
--- 用例数与改写前一一对应(22 例)。
-
 local function _assert_eq(a, b, msg)
   luassert.is.same(b, a, msg)
 end

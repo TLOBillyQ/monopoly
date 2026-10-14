@@ -18,9 +18,6 @@ local luassert = assert
 --   * handle_demolish cfg dispatch (monster / missile) and missing-cfg assert.
 -- Routed by architect (agent_context/rules-mutation-bootstrap-debt.md).
 --
--- 原生 LuaUnit 迁移:各 describe 按钩子边界拍平为独立 Test* 类(带
--- before_each 的六个 → setUp;guard closure 无钩子 → 无 setUp 类),断言词汇
--- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(26 例)。
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local item_ids = require("src.config.gameplay.item_ids")

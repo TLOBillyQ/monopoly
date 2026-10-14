@@ -31,7 +31,7 @@
 
 push 前唯一硬地板是 slim：`lua tools/cli.lua verify`。
 
-按改动风险另选（都是显式步骤，不是硬地板）：`lua tools/cli.lua uml crap`、`lua tools/cli.lua uml mutate`、`lua tools/cli.lua acceptance`、`lua tools/cli.lua acceptance-mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 与 `lua tools/cli.lua uml --help` 为准。旧 crap4lua / mutate4lua / arch_view 及 `verify --coverage|--crap|--full` 已于 #94 退役。
+按改动风险另选（都是显式步骤，不是硬地板）：`lua tools/cli.lua uml crap`、`lua tools/cli.lua uml mutate`、`lua tools/cli.lua acceptance`、`lua tools/cli.lua acceptance-mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 与 `lua tools/cli.lua uml --help` 为准。
 
 uml-viewer 质量入口（ADR 0068 / #93）：`lua tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/` 派发。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，会从全局 luarocks tree 解析出假绿。契约见 `tools/specs/uml_quality.prompt`。
 

@@ -1,9 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 拍平为文件级 Test* 类,
--- 嵌套 describe 均无钩子,直接合并进 TestRoadblock,用例数与改写前一一对应(16 例)。
-
 local P = require("test.support.shared_support")
 local function _assert_eq(a, b, msg) luassert.is.equal(b, a, msg) end
 local _with_patches = P.with_patches

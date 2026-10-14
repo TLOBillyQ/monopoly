@@ -4,9 +4,6 @@ local context = require("src.ui.manager.context")
 local EImage = require("src.ui.manager.eimage")
 local support = require("test.support.ui_manager_nodes_support")
 
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,before_each/after_each 收成
--- setUp/tearDown,共享 local role_a/role_b 收成 self 字段,用例数与改写前一致(9 例)。
-
 describe("TestEImage", function()
 local role_a, role_b
 

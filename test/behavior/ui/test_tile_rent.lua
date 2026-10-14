@@ -3,8 +3,6 @@ require("test.bootstrap").install_package_paths()
 local luassert = assert
 -- ui/view/tile_rent 的 for_level 租金计算,按地皮价格与升级等级算租金。
 --
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,断言从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(6 例)。
 local tile_rent = require("src.ui.view.tile_rent")
 
 describe("TestTileRent", function()

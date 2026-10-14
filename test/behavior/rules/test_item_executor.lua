@@ -6,8 +6,6 @@ local luassert = assert
 -- 两条都只在注入式 handler 下可达(见 executor.lua 的历史 handler 契约注释),
 -- 所以放在这个专门的注入式 spec 里,不去搅动真实道具的行为规约。
 --
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
--- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(4 例)。
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
 local executor = require("src.rules.items.executor")

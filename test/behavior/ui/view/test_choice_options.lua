@@ -48,8 +48,6 @@ local function _gen_choice(rng)
   }
 end
 
--- describe("choice_options properties") 拍平为文件级 TestChoiceOptions,断言
--- 词汇从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(6 例)。
 describe("TestChoiceOptions", function()
 
 it("test_resolve_option_id_is_the_identity_for_scalars_and_the_id_for_table_options", function()

@@ -12,9 +12,6 @@ local baseline_execute
 before_each(function() baseline_execute = effect_runner.execute end)
 after_each(function() effect_runner.execute = baseline_execute end)
 
--- 原生 LuaUnit 转换(busted → LuaUnit):describe 拍平为文件级 Test 类,
--- before_each → setUp,断言词汇切到 lu.assertXxx,用例数与改写前一一对应(14 例)。
-
 local function _new_game()
   return support.new_game({ map = default_map })
 end

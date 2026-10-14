@@ -5,8 +5,6 @@ local luassert = assert
 -- The three completion paths used to branch by phase (post_action early-finished).
 -- After the deep-module convergence they delegate to item_phase.resolve_completion
 -- / reopen_or_finish and no longer perceive phase differences.
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 嵌套均无钩子,拍平合并进文件级
--- Test* 类;before_each → setUp。用例数与改写前一一对应(2 + 2 + 2 = 6 例)。
 local support = require("test.support.shared_support")
 local config_reset = require("test.support.config_reset")
 local item_phase = require("src.rules.items.phase")

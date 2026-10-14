@@ -1,5 +1,3 @@
--- 原生 LuaUnit 改写：两个无钩子 describe 合并为一个 Test* 类（4 例），
--- assert.equals / assert.is_true / assert.has_no.errors 按映射切到 luassert.*。
 local check = require("luassert")
 local gameplay_loop = require("src.turn.loop.init")
 local choice_auto_policy = require("src.turn.policies.choice_auto")

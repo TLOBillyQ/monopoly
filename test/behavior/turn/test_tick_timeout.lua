@@ -1,9 +1,3 @@
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):原文件为单 describe「domain tick
--- timeout coverage」+ describe 外的 3 个顶层 it(step_modal_timeout 守卫、
--- _capture_default_choice_opts 驱动的 2 个闭包用例),全部拍平进 TestTickTimeout
--- 类(setUp reset_all,describe 内 before_each 语义同);用例数与改写前一一对应
--- (11 + 3 = 14 例)。
-
 local check = require("luassert")
 local ChoiceTimeout = require("src.turn.waits.choice_timeout")
 local modal_timeout = require("src.turn.waits.modal_timeout")

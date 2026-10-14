@@ -1,7 +1,3 @@
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,
--- after_each → tearDown,断言从裸 assert 切到 luassert.truthy,
--- 用例数与改写前一一对应(9 例)。
-
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143

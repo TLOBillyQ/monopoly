@@ -1,7 +1,3 @@
--- 原生 LuaUnit 改写:describe/it 拍平为 TestAchievement(20 例)与
--- TestAchievementProgressProperties(3 例)两个类,after_each → tearDown;
--- 用例数与改写前一一对应(23 例)。
-
 require("test.bootstrap").install_package_paths()
 -- busted injects luassert fields on assert.
 -- luacheck: ignore 143

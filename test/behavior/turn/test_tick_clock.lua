@@ -1,7 +1,3 @@
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):单 describe「domain tick clock
--- coverage」带 before_each,拍平为 TestTickClock 类(setUp 承接);用例数与
--- 改写前一一对应(14 例)。
-
 if not math.tofixed then
   math.tofixed = function(v) return v end
 end

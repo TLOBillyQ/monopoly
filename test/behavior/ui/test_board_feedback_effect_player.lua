@@ -4,8 +4,6 @@ local luassert = assert
 -- board_feedback/effect_player 直驱规约(#262 幸存闭合):with_sound 的
 -- payload 优先、rot/bind_offset 的 or 链回落、effect_track.spawn 的 kind 载荷。
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):describe/it 拍平为 TestBoardFeedbackEffectPlayer,
--- 断言走 support.assert_eq / lu.assertXxx,用例数与改写前一一对应(4 例)。
 local support = require("test.support.shared_support")
 local function _assert_eq(actual, expected, message) luassert.is.equal(expected, actual, message) end
 local _with_patches = support.with_patches

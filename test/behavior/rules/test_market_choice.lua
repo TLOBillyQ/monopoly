@@ -21,11 +21,6 @@ end)
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
 
--- 原生 LuaUnit 转换(busted → LuaUnit):合并文件按原 do 块边界切成 8 个 Test*
--- 类(块内 local 辅助函数互相隔离,保持原合并结构),before_each → setUp,
--- 断言词汇切到 lu.assertXxx,用例数与改写前一一对应(112 例);
--- 测试清扫(2026-08-23):段 1 两例空转断言删除(见下),现 110 例。
-
 -- ===== 段 1:market_choice 主 describe(2 例,带配置 reset) =====
 do
 local _config_reset = require("test.support.config_reset")
