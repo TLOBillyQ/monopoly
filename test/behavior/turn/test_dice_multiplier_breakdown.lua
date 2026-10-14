@@ -7,11 +7,16 @@
 local luassert = assert
 local phase_pre_move = require("src.turn.phases.pre_move")
 local dice_multiplier_phase = require("src.turn.phases.dice_multiplier")
-local item_phase = require("src.rules.items.phase")
 local status_ops = require("src.player.actions.status")
 local event_feed_adapter = require("src.turn.output.event_feed_adapter")
 local event_log = require("src.state.event_log")
 local event_kinds = require("src.config.gameplay.event_kinds")
+
+-- 空手玩家经真实 item_phase.run 无可选道具直接落定,不需要也不允许
+-- 打桩内层模块;桩只放在端口边界(auto_play_port / tip_output_port)。
+local function _empty_inventory()
+  return { items = {} }
+end
 
 local function _build_game(player, raw_total)
   local tips = {}
@@ -22,7 +27,7 @@ local function _build_game(player, raw_total)
     last_turn = { raw_total = raw_total, total = raw_total, player_id = player.id },
     turn = { item_phase = {} },
     auto_play_port = {
-      is_auto_player = function() return false end,
+      is_computer_controlled = function() return false end,
       pick_target_player = function() return nil end,
       pick_remote_dice_value = function() return nil end,
       pick_roadblock_target = function() return nil end,
@@ -41,25 +46,15 @@ local function _build_game(player, raw_total)
   return { game = game }, tips
 end
 
-local function _with_item_phase_run(stub_fn, fn)
-  local orig = item_phase.run
-  item_phase.run = stub_fn
-  local ok, err = pcall(fn)
-  item_phase.run = orig
-  if not ok then error(err, 2) end
-end
-
 describe("TestDiceMultiplierBreakdown", function()
 
 it("test_pre_move_logs_face_times_multiplier_equals_steps", function()
-  local player = { id = 1, name = "P1", status = { pending_dice_multiplier = 2 } }
+  local player = { id = 1, name = "P1", status = { pending_dice_multiplier = 2 }, inventory = _empty_inventory() }
   local turn_mgr, tips = _build_game(player, 7)
 
-  _with_item_phase_run(function() return nil end, function()
-    local state, args = phase_pre_move(turn_mgr, { player = player, total = 7, raw_total = 7 })
-    luassert.is.equal("move", state)
-    luassert.is.equal(14, args.total, "total must be face 7 x multiplier 2")
-  end)
+  local state, args = phase_pre_move(turn_mgr, { player = player, total = 7, raw_total = 7 })
+  luassert.is.equal("move", state)
+  luassert.is.equal(14, args.total, "total must be face 7 x multiplier 2")
 
   local entries = event_log.get_entries(turn_mgr.game.state.event_log)
   luassert.is.equal(1, #entries, "multiplier application must add one action log line")
@@ -69,14 +64,12 @@ it("test_pre_move_logs_face_times_multiplier_equals_steps", function()
 end)
 
 it("test_pre_move_without_multiplier_adds_no_breakdown_log", function()
-  local player = { id = 1, name = "P1", status = {} }
+  local player = { id = 1, name = "P1", status = {}, inventory = _empty_inventory() }
   local turn_mgr, _ = _build_game(player, 5)
 
-  _with_item_phase_run(function() return nil end, function()
-    local state, args = phase_pre_move(turn_mgr, { player = player, total = 5, raw_total = 5 })
-    luassert.is.equal("move", state)
-    luassert.is.equal(5, args.total)
-  end)
+  local state, args = phase_pre_move(turn_mgr, { player = player, total = 5, raw_total = 5 })
+  luassert.is.equal("move", state)
+  luassert.is.equal(5, args.total)
 
   local entries = event_log.get_entries(turn_mgr.game.state.event_log)
   luassert.is.equal(0, #entries, "no multiplier pending means no breakdown line")
