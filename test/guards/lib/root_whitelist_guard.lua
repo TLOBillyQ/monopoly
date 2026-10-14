@@ -51,6 +51,8 @@ local _WHITELIST = {
   -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README
   -- 入库(#69 维护者决定),是已跟踪的根级目录。
   [".metrics"] = true,
+  -- crapper / mutator 以最近的 .busted 定模块根并读 busted 配置(#99),只认仓根。
+  [".busted"] = true,
   -- `uml ir` 生成的仓根 policy.edn(ADR 0070 / #99)走 .gitignore,不进白名单;
   -- 人手维护的推演在 docs/architecture.proposals.edn。
   -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md

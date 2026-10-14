@@ -1,0 +1,14 @@
+-- crapper / mutator 的 Lua 覆盖与变异测试入口(#99,tools/specs/uml_quality.prompt):
+-- 它们以仓根为模块根直接调 busted.runner,不经本仓 test_runner。
+-- 只取覆盖 src/ 的 behavior + contract;guards / tooling 测的是 tools/,不计入 CRAP。
+return {
+  default = {
+    ROOT = { "test/behavior", "test/contract" },
+    pattern = "test_",
+    helper = "test/busted_helper.lua",
+    output = "TAP",
+    -- 关掉 busted 默认前缀的 ./src/?.lua、./csrc/?.dll:模块只从钉死的仓根 + 项目缓存解析。
+    lpath = "",
+    cpath = "",
+  },
+}

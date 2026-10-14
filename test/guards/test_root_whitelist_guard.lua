@@ -53,6 +53,12 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({}, guard.check({ "docs" }))
   end)
 
+  -- crapper / mutator 只从模块根(最近的 .busted)取 busted 配置(#99),
+  -- 位置由上游契约决定,入库的仓根配置必须放行。
+  it("test_uml_busted_config_whitelisted", function()
+    luassert.is.same({}, guard.check({ ".busted" }))
+  end)
+
   -- 常规根级条目不受影响。
   it("test_regular_entries_stay_whitelisted", function()
     local violations = guard.check({
