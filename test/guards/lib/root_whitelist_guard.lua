@@ -46,8 +46,11 @@ local _WHITELIST = {
   -- 根级 .mutate4lua 不再需要白名单条目。
   ["skills-lock.json"] = true,
   -- 邻接 uml-viewer 的质量配置(#93):uml-command.ps1 只在项目根读 uml-quality.json,
-  -- 位置由上游契约决定。.uml-viewer/、.metrics/ 等产物走 .gitignore,不进白名单。
+  -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
   ["uml-quality.json"] = true,
+  -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README
+  -- 入库(#69 维护者决定),是已跟踪的根级目录。
+  [".metrics"] = true,
   -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md
   -- 条目随 squad 范式退役，guard 恢复报违规，spec 有退役钉。
 }

@@ -32,12 +32,18 @@ describe("TestRootWhitelistGuard", function()
     luassert.is.same({}, guard.check({ "tasks" }))
   end)
 
-  -- uml-viewer 只在项目根读 uml-quality.json(#93);它的产物与安装拷贝
+  -- uml-viewer 只在项目根读 uml-quality.json(#93);安装拷贝、覆盖率 target/
   -- 走 .gitignore,不进白名单——放开它们即破此钉。
-  it("test_uml_quality_config_whitelisted_but_not_its_outputs", function()
+  it("test_uml_quality_config_whitelisted_but_not_its_local_outputs", function()
     luassert.is.same({}, guard.check({ "uml-quality.json" }))
-    luassert.is.same({ ".uml-viewer", ".metrics", "target", "uml", "uml.ps1" },
-      guard.check({ ".uml-viewer", ".metrics", "target", "uml", "uml.ps1" }))
+    luassert.is.same({ ".uml-viewer", "target", "uml", "uml.ps1" },
+      guard.check({ ".uml-viewer", "target", "uml", "uml.ps1" }))
+  end)
+
+  -- 维护者决定按上游 README 将 .metrics/(真实 uml crap|mutate 的度量)入库(#69):
+  -- 入库后它是已跟踪的根级条目,必须在白名单里,否则 guard 会拦住提交。
+  it("test_versioned_uml_metrics_dir_whitelisted", function()
+    luassert.is.same({}, guard.check({ ".metrics" }))
   end)
 
   -- 常规根级条目不受影响。
