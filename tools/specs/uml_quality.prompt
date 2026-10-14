@@ -1,0 +1,43 @@
+# uml quality entry Tool Spec (#93)
+
+Purpose: native Windows invocation surface for the adjacent uml-viewer quality dispatch (ADR 0068). CRAP and mutation run through uml-viewer's standard tools (crapper / mutator Lua paths); this repository owns only the scope config, the pinned Lua environment and the preflight.
+
+Upstream (adjacent checkout, ignored by git): `.uml-viewer/uml-viewer/scripts/uml-command.ps1`, `.uml-viewer/crapper`, `.uml-viewer/mutator`, installed by uml-viewer's `get-uml-viewer`. These repositories are read-only from this project.
+Project wrapper: `lua tools/cli.lua uml <check|crap|mutate> [args]` (package `tools/packages/uml_quality/`).
+
+CLI contract:
+- `check` runs the preflight only: exit 0 when everything resolves, 1 otherwise.
+- `crap` / `mutate` run the preflight, then `pwsh -NoProfile -File .uml-viewer/uml-viewer/scripts/uml-command.ps1 <root> crap|mutate [args]` inside a cmd batch, and pass its exit code through unchanged.
+- Valid results are decided by uml-viewer and published to `.uml-viewer/quality-result.json` (echoed after the run): crap `0` or `2`; mutate `0` or `3`. Exit 3 is a valid mutate result (surviving mutants), not "unavailable", and not a universal success code: crap 3 is a failure.
+- Preflight failure exits 1 (never 3), prints `FAIL` lines, deletes any stale `.uml-viewer/quality-result.json` and starts no tool.
+- Missing or unknown operation exits 2.
+- The installer copies `uml` / `uml.ps1` into the repo root. They are ignored and are not the supported entry, because they inherit the user's `LUA_PATH`.
+
+Dispatch (owned by uml-viewer, recorded here): `operations` > Clojure alias (only with `deps.edn` and no `standardTools`) > `standardTools`. `uml-quality.json` declares `standardTools` only:
+- `sourceRoots: ["src"]`: the whole `src/` tree is business code, the same scope as the retired crap4lua lane.
+- `exclude: []` must stay declared. uml-viewer's mutation scope adapter wraps an absent `exclude` as `@($null)` and fails, so the empty array is part of the contract.
+- No routing flags (`--root`, `--source-root`, `--exclude`, `--full-tree`, `--changed`, `--mutate-all`) in `crapperOptions` / `mutatorOptions`. uml-viewer rejects them.
+- crap always runs `--full-tree`. The preflight validates the file with uml-viewer's own `Read-UmlQualityConfig`, `Get-UmlBusinessRoots` and `Select-UmlMutationTargets` (`probe_config.ps1`), not with a local re-implementation.
+
+Pinned Lua environment (the false-green guard):
+- The user tree `%APPDATA%\luarocks` also carries busted / luacov / luacov-reporter-lcov, and the user `LUA_PATH` points at it. A child that inherits it would "work" without the project cache.
+- The child batch therefore sets `LUA_PATH(_5_4)` = repo root + `.toolcache/luarocks/share/lua/5.4`, `LUA_CPATH(_5_4)` = `.toolcache/luarocks/lib/lua/5.4`, empty `LUA_INIT(_5_4)`, and puts the native `lua.exe` directory first on `PATH` (crapper uses `shutil.which("lua")`).
+- There is no `;;` default path. `luarocks.loader` must stay unresolvable, otherwise it would re-attach the user trees.
+- The preflight runs `probe_lua_modules.lua` under that environment. Every required module (`busted.runner`, `luassert`, `luacov.runner`, `luacov.reporter.lcov`) and every file loaded while requiring them, C modules included, must resolve under `.toolcache/luarocks`.
+- Rocks come from `foundation.bootstrap` into the project tree only: busted 2.3.0-1, luassert 1.9.0-1, luacov 0.17.0-1, luacov-reporter-lcov 0.2-0, all from luarocks.org with `--tree <project cache>`. There is no mirror, no copy from the user tree and no write to the user tree.
+
+Python environment (crapper / mutator):
+- Python 3.11+ (both pyprojects: `requires-python >=3.11`; deps `tree-sitter>=0.24`, `tree-sitter-language-pack>=0.7`).
+- One venv per checkout, created by uml-viewer's documented commands:
+  - `py -3 -m venv .uml-viewer\crapper\.venv`, then `.uml-viewer\crapper\.venv\Scripts\python.exe -m pip install -e .uml-viewer\crapper`
+  - the same for `mutator`.
+- The preflight runs each venv's `python.exe -I` and requires the version >= 3.11 and the package imported from its own checkout (`.uml-viewer/<tool>/src`). It also requires mutator's `ensure_crapper()` to resolve crapper from `.uml-viewer/crapper/src`.
+
+Outputs and version control:
+- crapper writes `.metrics/crap.edn` and `target/coverage/lua/lcov.info`; mutator writes `.metrics/mutate/*.edn`.
+- Upstream README recommends committing `.metrics/`. This repository intentionally deviates: `.metrics/` and `target/` are regenerated local outputs and are ignored, like `.uml-viewer/` and `uml-viewer-log.txt` (installer-maintained block at the end of `.gitignore`).
+
+Known gaps (not part of #93's reduced scope):
+- Real CRAP scoring, full-tree coverage and source mutation (#93 acceptance criterion 3) have not been executed. Per the 2026-10-14 maintainer scope reduction, only tool availability is verified.
+- There is no `.busted` config at the repo root. crapper / mutator pick the Lua module root from the nearest `.busted` or rockspec, otherwise the project root, so a real run would use busted's default `spec/` pattern instead of this repo's `test/` layout. Wire this before running criterion 3.
+- The `.toolcache` of an isolated worktree may be a junction to the main checkout's cache. Installs then land in the shared project cache, never in the user tree.

@@ -57,3 +57,19 @@ Thumbs.db
 .opencode
 .sisyphus/
 .omo/
+
+# ── uml-viewer 质量入口(#93)───────────────────────────────────────
+# crapper/mutator 的产物:.metrics/(crap.edn、mutate/*.edn)与 target/coverage/。
+# 上游 README 建议把 .metrics/ 入库;本仓有意偏离——度量是本地重算的生成物,
+# 不进版本(见 tools/specs/uml_quality.prompt)。
+.metrics/
+/target/
+# get-uml-viewer 拷到仓根的 uml / uml.ps1 不钉 LUA_PATH,会从全局 luarocks tree
+# 解析出假绿;受支持的入口是 `lua tools/cli.lua uml`,这两份拷贝不入库。
+/uml
+/uml.ps1
+# 下面这段由 get-uml-viewer 维护(重装时整段删除再追加到文件末尾),保持原样、保持在末尾。
+# BEGIN UML-VIEWER
+.uml-viewer/
+uml-viewer-log.txt
+# END UML-VIEWER

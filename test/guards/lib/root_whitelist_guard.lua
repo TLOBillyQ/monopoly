@@ -45,6 +45,9 @@ local _WHITELIST = {
   -- mutate4lua 外部 store 已随 #283 退场(manifest 内嵌源码 footer),
   -- 根级 .mutate4lua 不再需要白名单条目。
   ["skills-lock.json"] = true,
+  -- 邻接 uml-viewer 的质量配置(#93):uml-command.ps1 只在项目根读 uml-quality.json,
+  -- 位置由上游契约决定。.uml-viewer/、.metrics/ 等产物走 .gitignore,不进白名单。
+  ["uml-quality.json"] = true,
   -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md
   -- 条目随 squad 范式退役，guard 恢复报违规，spec 有退役钉。
 }
