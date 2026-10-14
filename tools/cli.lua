@@ -18,14 +18,11 @@
 -- (return { main = function(args, env) -> 退出码, usage = function() -> string }),
 -- 各子命令转发到现状入口(旧物理位置不动);包迁票逐个替换为包内实现。
 local commands = {
-  { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--full/--coverage/--crap)" },
+  { name = "verify",            pkg = "verify",             summary = "质量门禁编排器(默认 slim;--tooling 加跑工具链测试)" },
   { name = "spec-lane",         pkg = "spec_lane",          summary = "测试车道运行器(--profile behavior|tooling)" },
   { name = "acceptance",        pkg = "acceptance",         summary = "验收套件:重生成 generated specs 后全量跑(按需)" },
   { name = "acceptance-mutate", pkg = "acceptance_mutate",  summary = "验收突变软车道(POSIX 专用;Windows 退 3)" },
-  { name = "mutate",            pkg = "mutate",             summary = "单文件变异测试(mutate4lua)" },
   { name = "dry",               pkg = "dry",                summary = "结构重复检测(POSIX 专用;Windows 退 3)" },
-  { name = "crap",              pkg = "crap",               summary = "CRAP 风险热点 + 覆盖率聚合(crap4lua)" },
-  { name = "arch-view",         pkg = "arch_view",          summary = "静态架构扫描(默认 check;viewer/scan 等见包内帮助)" },
   { name = "uml",               pkg = "uml_quality",        summary = "邻接 uml-viewer 质量入口(check/crap/mutate;项目缓存钉死)" },
   { name = "lint",              pkg = "lint",              summary = "luacheck 静态检查(默认扫 src/test/tools)" },
   { name = "deploy",            pkg = "ops",                summary = "部署到本地 Eggy 目录(原生 Windows;零参数)" },

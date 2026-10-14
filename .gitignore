@@ -5,6 +5,7 @@
 # 扫描/构建产物目录与标记文件。
 /build/
 *.luac
+# 旧 mutate4lua / arch_view 已于 #94 退役;保留忽略以防旧工作树残留被提交。
 *.mutate4lua
 *.arch_view
 # spec_lane junit 车道输出。
@@ -16,14 +17,14 @@
 /luacov.report.out
 /luacov.stats.out
 
-# mutate4lua 外部 store 已退场（#283，manifest 内嵌源码 footer），
+# mutate4lua 外部 store 已退场（#283），工具本身 #94 退役；
 # 保留 cache 忽略以防旧工作树残留。
 .mutate4lua/cache/
 
 # ── 本地工具缓存 ─────────────────────────────────────────────────
 # quality tool cache（本地状态，下载/安装的工具钉）。
-# 不带斜杠：同时匹配目录形态与隔离 worktree 常用的软链形态（symlink 被 git
-# 视为文件，.toolcache/ 规则不会忽略它，会被 root_whitelist_guard 报违规）。
+# 隔离 worktree 用 bootstrap 装出的自有真实目录，不用 junction/软链/镜像主仓缓存。
+# 不带斜杠只是兜底：误建的 symlink 被 git 视为文件，.toolcache/ 规则不会忽略它。
 .toolcache
 
 # ── 外部 overlay 与编辑器缓存 ────────────────────────────────────

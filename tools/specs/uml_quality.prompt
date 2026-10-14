@@ -40,4 +40,4 @@ Outputs and version control:
 Known gaps (not part of #93's reduced scope):
 - Real CRAP scoring, full-tree coverage and source mutation (#93 acceptance criterion 3) have not been executed. Per the 2026-10-14 maintainer scope reduction, only tool availability is verified.
 - There is no `.busted` config at the repo root. crapper / mutator pick the Lua module root from the nearest `.busted` or rockspec, otherwise the project root, so a real run would use busted's default `spec/` pattern instead of this repo's `test/` layout. Wire this before running criterion 3.
-- The `.toolcache` of an isolated worktree may be a junction to the main checkout's cache. Installs then land in the shared project cache, never in the user tree.
+- An isolated worktree uses its own real `.toolcache`, filled by bootstrap (`luarocks --tree <worktree>/.toolcache/luarocks`). Never use a junction, symlink or mirror of the main checkout's cache: installs would land in the shared cache and the link cannot be cleanly removed. Never use the user tree either.

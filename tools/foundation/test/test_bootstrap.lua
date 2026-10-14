@@ -54,16 +54,16 @@ describe("bootstrap", function()
 it("parses the repo url lockfile format", function()
   local lock, err = tool_lockfile.parse_contents(table.concat({
     "# comment",
-    "mutate4lua http://example.invalid/eggy/mutate4lua",
+    "acceptance4lua http://example.invalid/eggy/acceptance4lua",
     "dry4lua http://example.invalid/eggy/dry4lua.git",
     "",
   }, "\n"))
 
   check.is_nil(err)
   check.is_not_nil(lock)
-  check.equal("http://example.invalid/eggy/mutate4lua", lock.tools.mutate4lua.url)
+  check.equal("http://example.invalid/eggy/acceptance4lua", lock.tools.acceptance4lua.url)
   check.equal("http://example.invalid/eggy/dry4lua.git", lock.tools.dry4lua.url)
-  check.same({ "mutate4lua", "dry4lua" }, lock.ordered)
+  check.same({ "acceptance4lua", "dry4lua" }, lock.ordered)
 end)
 
 it("rejects unknown tools", function()
@@ -73,6 +73,15 @@ it("rejects unknown tools", function()
 
   check.is_nil(lock)
   check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil)
+end)
+
+-- #94:旧 CRAP/变异/架构工具退场后,锁文件白名单不再接受它们。
+it("rejects retired quality tools", function()
+  for _, name in ipairs({ "arch_view", "crap4lua", "mutate4lua" }) do
+    local lock, err = tool_lockfile.parse_contents(name .. " http://example.invalid/eggy/" .. name .. "\n")
+    check.is_nil(lock)
+    check.truthy(tostring(err):find("unknown tool", 1, true) ~= nil, name)
+  end
 end)
 
 it("install appends luarocks tree paths", function()
@@ -259,30 +268,6 @@ it("ensure luacov tree reports missing post install marker", function()
     check.is_nil(ok)
     check.equal("luacov not found in luarocks tree after install", err)
   end)
-end)
-
-it("ensure cluacov tree stops when luacov dependency fails", function()
-  local command_calls = 0
-  _with_stubs({
-    { target = fs_lib, key = "path_exists", value = function(path)
-      check.equal("/repo/.toolcache/luarocks/lib/lua/5.4/cluacov/hook.dll", path)
-      return false
-    end },
-    { target = fs_lib, key = "ensure_dir", value = function() return true end },
-    { target = proc_lib, key = "run_command", value = function()
-      command_calls = command_calls + 1
-      return { ok = true }
-    end },
-    { target = bootstrap, key = "ensure_luacov_tree", value = function(repo_root)
-      check.equal("/repo", repo_root)
-      return nil, "luacov failed"
-    end },
-  }, function()
-    local ok, err = bootstrap.ensure_cluacov_tree("/repo")
-    check.is_nil(ok)
-    check.equal("luacov failed", err)
-  end)
-  check.equal(0, command_calls)
 end)
 
 -- #93:crapper 的 Lua 覆盖率走 luacov.reporter.lcov;只能装进项目 tree,不能借全局 tree。

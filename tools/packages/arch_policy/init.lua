@@ -1,15 +1,13 @@
 -- packages/arch_policy —— 层边界的唯一 policy 真源(工单 #92)。
 --
--- 为什么存在:层边界此前有两处可独立漂移的配置——旧 `arch_view` 工具的
--- `tools/packages/arch_view/config.json`,和散落在 `test/guards/` 里的规则
--- 断言。本模块把边界收敛成一份数据(`policy.json`),并让三件事消费同一份:
+-- 为什么存在:层边界此前有两处可独立漂移的配置——旧外部架构工具的
+-- config.json,和散落在 `test/guards/` 里的规则断言。本模块把边界收敛成
+-- 一份数据(`policy.json`),并让两件事消费同一份(旧工具与其投影 #94 退场):
 --   1. `test/guards/lib/arch_policy_guard.lua` 执行门禁(层方向/环/未分类/
---      禁向边),不再依赖外部 rock 的分析器;
---   2. `project_arch_view_config` 投影出旧工具仍需要的 config.json,由
---      `test/guards/test_arch_policy_projection.lua` 钉住两者语义一致,
---      旧工具退场(#94)前不可能静默漂移;
---   3. `project_uml_policy` 投影出 uml-viewer 侧 policy(EDN),架构图的层序
---      与门禁同源,不构成第二真源。
+--      禁向边),不依赖外部 rock 的分析器;
+--   2. `project_uml_policy` 投影出 uml-viewer 侧 policy(EDN),架构图的层序
+--      与门禁同源,不构成第二真源,由 `test/guards/test_arch_policy_projection.lua`
+--      钉住。
 --
 -- 规则语义与 ADR 0001/0002、ADR 0039 D2 一致:L1 最高、数字越大层越低;
 -- foundation 是 substrate(谁都能依赖它,它不依赖任何整型层)。环检测契约保留:
@@ -265,19 +263,6 @@ function M.check(policy, graph)
   end
 
   return { ok = #failing == 0, violations = failing, all_violations = violations }
-end
-
--- 旧 arch_view 工具的 config.json 是同一份 policy 的投影:四个键逐一对应,
--- 不放宽也不新增。旧工具退场前由投影测试钉住两者语义一致。
-function M.project_arch_view_config(policy)
-  local config = {
-    abstract_rules = policy.abstract_rules or {},
-    component_rules = policy.component_rules or {},
-    forbidden_dependency_rules = policy.forbidden_dependency_rules or {},
-    source_roots = policy.source_roots or {},
-  }
-  if #(policy.allowed_cycles or {}) > 0 then config.allowed_cycles = policy.allowed_cycles end
-  return config
 end
 
 local function _edn_string(value)

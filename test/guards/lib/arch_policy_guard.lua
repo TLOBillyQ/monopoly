@@ -4,8 +4,7 @@ local arch_policy = require("packages.arch_policy")
 local policy_scan = require("packages.arch_policy.scan")
 
 -- 层边界门禁(#92):执行 `tools/packages/arch_policy/policy.json` 这一份 policy,
--- 不再经外部 arch_view rock 的分析器。旧工具退场(#94)前 `arch_view_guard`
--- 仍跑同一份边界的投影,两者不一致由 test_arch_policy_projection 钉住。
+-- 是 slim 里唯一的层边界门禁(旧外部分析器与其投影已于 #94 退场)。
 local M = {}
 
 local POLICY_PATH = arch_policy.DEFAULT_POLICY_PATH

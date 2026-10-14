@@ -1,26 +1,14 @@
 local bootstrap = require("test.bootstrap")
-local arch_tool = assert(bootstrap.ensure_tool("arch_view"))
 local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local text_lib = require("foundation.text")
-local arch_common = require("arch_view.runtime.common")
-local arch_cli = require("packages.arch_view.runner")
 
 bootstrap.install_package_paths()
 local check = require("luassert")
 
 local project_root = path_lib.normalize_path(env_lib.current_dir())
-
-local function _first_existing(paths)
-  for _, path in ipairs(paths or {}) do
-    if fs_lib.path_exists(path) == true then
-      return path
-    end
-  end
-  return paths and paths[1] or nil
-end
 
 local function _make_tmp_root(tag)
   return env_lib.make_temp_path("script_tools_contract_" .. tostring(tag or "tmp"), "") .. "_中文 English"
@@ -63,27 +51,6 @@ local function _with_ascii_tmp(tag, fn)
   if not ok then
     error(err)
   end
-end
-
-local function _generate_arch_view_input_json(tmp_root)
-  local out_path = path_lib.join_path(tmp_root, "arch_view_input/architecture.json")
-  local default_config_path = _first_existing({
-    path_lib.join_path(project_root, "tools/packages/arch_view/config.json"),
-  })
-  local ok, err = xpcall(function()
-    return arch_cli.run({
-      "scan",
-      "--out",
-      out_path,
-    }, {
-      cwd = project_root,
-      default_config_path = default_config_path,
-    })
-  end, debug.traceback)
-  if not ok then
-    error(err)
-  end
-  return out_path, default_config_path
 end
 
 local function _run_lua(args)
@@ -231,33 +198,6 @@ local function _test_foundation_handles_unicode_paths_for_file_ops()
   end)
 end
 
-local function _test_arch_common_reuses_unicode_safe_file_ops()
-  _with_clean_tmp("arch_common_file_ops", function(tmp_root)
-    local out_dir = arch_common.join_path(tmp_root, "arch_view_输出/子目录")
-    local ok, err = arch_common.ensure_dir(out_dir)
-    if not ok then
-      error(err)
-    end
-
-    ok, err = arch_common.write_file(arch_common.join_path(out_dir, "demo.lua"), "return {}\n")
-    if not ok then
-      error(err)
-    end
-
-    local content, read_err = arch_common.read_file(arch_common.join_path(out_dir, "demo.lua"))
-    if content == nil then
-      error(read_err)
-    end
-    _assert_contains(content, "return {}", "arch_common should reuse shared file io")
-
-    local files, list_err = arch_common.collect_lua_files(tmp_root)
-    if files == nil then
-      error(list_err)
-    end
-    check.equal(1, #files, "arch_common should collect unicode lua files through shared utility")
-  end)
-end
-
 local function _test_command_exists_reports_present_and_missing_commands()
   check.is_true(proc_lib.command_exists("lua") == true, "lua should exist in the test environment")
   check.is_true(proc_lib.command_exists("monopoly_command_that_should_not_exist_12345") == false,
@@ -304,10 +244,7 @@ end
 
 local function _test_cli_help_text_is_bilingual()
   local help_commands = {
-    { "tools/packages/arch_view/runner.lua", "--help" },
-    { "tools/packages/crap/runner.lua", "--help" },
     { "tools/packages/encoding/encoding.lua", "--help" },
-    { "tools/packages/mutate/runner.lua", "--help" },
   }
 
   -- 并行执行所有 help 命令以减少总耗时
@@ -477,67 +414,14 @@ local function _test_run_command_preserves_bilingual_stderr_and_utf8_stdin()
   end)
 end
 
-local function _test_arch_view_viewer_supports_unicode_output_path()
-  _with_clean_tmp("arch_view_unicode_output", function(tmp_root)
-    local out_dir = path_lib.join_path(tmp_root, "arch_view_目标/中文 English")
-    local input_json, default_config_path = _generate_arch_view_input_json(tmp_root)
-    local messages = {}
-    local original_print = print
-    print = function(...)
-      local parts = {}
-      for index = 1, select("#", ...) do
-        parts[#parts + 1] = tostring(select(index, ...))
-      end
-      messages[#messages + 1] = table.concat(parts, "\t")
-    end
-
-    local ok, err = xpcall(function()
-      return arch_cli.run({
-      "viewer",
-      "--out-dir",
-      out_dir,
-      "--in-json",
-      input_json,
-      }, {
-        cwd = project_root,
-        default_config_path = default_config_path,
-      })
-    end, debug.traceback)
-    print = original_print
-
-    if not ok then
-      error(err)
-    end
-
-    local output = table.concat(messages, "\n")
-    _assert_contains(output, "arch_view 视图已生成", "arch viewer logs should include Chinese text")
-    _assert_contains(output, "arch_view viewer ok", "arch viewer logs should include English text")
-    check.is_true(fs_lib.path_exists(path_lib.join_path(out_dir, "index.html")) == true, "arch viewer should write index.html")
-    check.is_true(fs_lib.path_exists(path_lib.join_path(out_dir, "architecture.json")) == true, "arch viewer should write architecture.json")
-  end)
-end
-
-local function _test_mutate_wrapper_scan_output()
-  local result = _run_lua({
-    "tools/packages/mutate/runner.lua",
-    "src/foundation/identity.lua",
-    "--scan",
-  })
-
-  check.is_true(result.ok == true, "mutate wrapper scan should succeed")
-  _assert_contains(result.output, "file: src/foundation/identity.lua",
-    "mutate scan should report the normalized target path")
-  _assert_contains(result.output, "sites: ",
-    "mutate scan should emit discovered mutation site count")
-end
-
 local function _test_reference_tools_do_not_expose_bin_entrypoints()
   -- tree 形态下 root 即 luarocks tree,bin/ 住着其它工具的入口(dry4lua 等);
-  -- arch_view 自身的契约改为检查 rock 安装清单不含 bin 条目。
-  local version = arch_tool.version
-  check.is_not_nil(version, "arch_view should report its installed version from ensure_tool")
-  local manifest_path = path_lib.join_path(arch_tool.root,
-    "lib/luarocks/rocks-5.4/arch_view/" .. version .. "/rock_manifest")
+  -- 参考形态的 4lua 库(acceptance4lua)契约改为检查 rock 安装清单不含 bin 条目。
+  local tool = assert(bootstrap.ensure_tool("acceptance4lua"))
+  local version = tool.version
+  check.is_not_nil(version, "acceptance4lua should report its installed version from ensure_tool")
+  local manifest_path = path_lib.join_path(tool.root,
+    "lib/luarocks/rocks-5.4/acceptance4lua/" .. version .. "/rock_manifest")
   local manifest = assert(fs_lib.read_file(manifest_path))
   check.is_nil(manifest:find("bin =", 1, true),
     "reference 4lua tools should not expose bin entrypoints: " .. manifest_path)
@@ -552,7 +436,7 @@ local function _test_bootstrap_resolves_repo_root_from_non_repo_cwd()
     end
 
     local bootstrap_path = path_lib.join_path(project_root, "tools/foundation/bootstrap.lua")
-    local script_path = path_lib.join_path(project_root, "tools/packages/crap/runner.lua")
+    local script_path = path_lib.join_path(project_root, "tools/packages/encoding/encoding.lua")
     local expected_root = path_lib.normalize_path(project_root)
     local lua_snippet = table.concat({
       "local bootstrap = dofile(" .. string.format("%q", bootstrap_path) .. ")",
@@ -582,9 +466,7 @@ local contract_tests = {
   { group = "shared", owner = "foundation", name = "trim_strips_whitespace_and_returns_one_value", run = _test_trim_strips_whitespace_and_returns_one_value },
   { group = "shared", owner = "foundation", name = "path_predicates_return_one_boolean", run = _test_path_predicates_return_one_boolean },
   { group = "shared", owner = "foundation", name = "foundation_handles_unicode_paths_for_file_ops", run = _test_foundation_handles_unicode_paths_for_file_ops },
-  { group = "shared", owner = "arch", name = "arch_common_reuses_unicode_safe_file_ops", run = _test_arch_common_reuses_unicode_safe_file_ops },
   { group = "shared", owner = "tooling_policy", name = "cli_help_text_is_bilingual", run = _test_cli_help_text_is_bilingual },
-  { group = "quality", owner = "arch", name = "arch_view_viewer_supports_unicode_output_path", run = _test_arch_view_viewer_supports_unicode_output_path },
   { group = "quality", owner = "tooling_policy", name = "reference_tools_do_not_expose_bin_entrypoints", run = _test_reference_tools_do_not_expose_bin_entrypoints },
   { group = "shared", owner = "bootstrap", name = "bootstrap_resolves_repo_root_from_non_repo_cwd", run = _test_bootstrap_resolves_repo_root_from_non_repo_cwd },
   { group = "ops", owner = "deploy", name = "deploy_lua_matches_simplified_cli", run = _test_deploy_lua_matches_simplified_cli },
@@ -594,7 +476,6 @@ local tooling_tests = {
   { group = "quality", owner = "encoding", name = "encoding_check_accepts_utf8_chinese_strings", run = _test_encoding_check_accepts_utf8_chinese_strings },
   { group = "quality", owner = "encoding", name = "encoding_check_reports_suspicious_english_comment", run = _test_encoding_check_reports_suspicious_english_comment },
   { group = "quality", owner = "encoding", name = "encoding_check_reports_invalid_utf8_bytes", run = _test_encoding_check_reports_invalid_utf8_bytes },
-  { group = "quality", owner = "mutate", name = "mutate_wrapper_scan_output", run = _test_mutate_wrapper_scan_output },
   { group = "ops", owner = "deploy", name = "deploy_comprehensive", run = _test_deploy_comprehensive },
   { group = "shared", owner = "foundation", name = "run_command_preserves_bilingual_stderr_and_utf8_stdin", run = _test_run_command_preserves_bilingual_stderr_and_utf8_stdin },
 }
@@ -606,12 +487,10 @@ local valid_groups = {
 }
 
 local valid_owners = {
-  arch = true,
   bootstrap = true,
   foundation = true,
   deploy = true,
   encoding = true,
-  mutate = true,
   tooling_policy = true,
 }
 

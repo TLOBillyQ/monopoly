@@ -10,7 +10,7 @@
 |---|---|
 | 修改 `src/**` 或 `test/**` | [`CODING_STANDARDS.md`](CODING_STANDARDS.md)，再读目标模块与对应测试 |
 | 领域词汇、对象命名或产品概念 | [`GLOSSARY.md`](GLOSSARY.md) |
-| 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md)，再以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 为执行真源；旧 `arch_view/config.json` 仅为兼容投影 |
+| 模块归属、依赖方向或层边界 | [`docs/architecture.md`](docs/architecture.md)，再以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 为执行真源（slim 的 guards 车道即层门禁） |
 | 决策理由、已批准例外或 ADR | [`docs/decisions.md`](docs/decisions.md) |
 | 工单登记、台账或 triage | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)、[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | 术语登记或领域模型维护 | [`docs/agents/domain.md`](docs/agents/domain.md) |
@@ -24,14 +24,14 @@
 | 改动 | 先取窄反馈 | 收尾 |
 |---|---|---|
 | `src/**` | `lua tools/cli.lua spec-lane --profile <目录>`，或直接跑相关 spec | `lua tools/cli.lua verify` |
-| `tools/**` | `lua tools/cli.lua spec-lane --profile tooling`；涉及 PATH/env/subprocess 时加 `verify --tooling --coverage` | `lua tools/cli.lua verify --tooling` |
+| `tools/**` | `lua tools/cli.lua spec-lane --profile tooling`；涉及 PATH/env/subprocess 时加 `verify --tooling` | `lua tools/cli.lua verify --tooling` |
 | `test/**` | `lua tools/cli.lua spec-lane --profile <目录>` | `lua tools/cli.lua verify` |
 | `features/**` | `lua tools/cli.lua acceptance` | `lua tools/cli.lua verify`；行为变更再跑 acceptance |
 | 只改叙事 Markdown | 检查内部链接，并确认 docs 白名单 guard | 无额外车道 |
 
 push 前唯一硬地板是 slim：`lua tools/cli.lua verify`。
 
-按改动风险另选（都是显式步骤，不是硬地板）：`--coverage`、`--crap`、`lua tools/cli.lua acceptance`、`lua tools/cli.lua acceptance-mutate`、`lua tools/cli.lua mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 为准。
+按改动风险另选（都是显式步骤，不是硬地板）：`lua tools/cli.lua uml crap`、`lua tools/cli.lua uml mutate`、`lua tools/cli.lua acceptance`、`lua tools/cli.lua acceptance-mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 与 `lua tools/cli.lua uml --help` 为准。旧 crap4lua / mutate4lua / arch_view 及 `verify --coverage|--crap|--full` 已于 #94 退役。
 
 uml-viewer 质量入口（ADR 0068 / #93）：`lua tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/` 派发。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，会从全局 luarocks tree 解析出假绿。契约见 `tools/specs/uml_quality.prompt`。
 

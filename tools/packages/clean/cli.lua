@@ -8,9 +8,10 @@
 -- 路由约定:clean 与 distclean 两个子命令都路由到本包,经 env.action
 -- ("clean" / "distclean")分流(顶层 cli.lua 按 commands 表条目注入)。
 --
--- 清单与生产者对应：build/ tmp/ .arch_view/viewer/ 为本地
--- 构建/扫描产物;tools/packages/acceptance/generated/ 由 acceptance regenerate
--- 生成;junit-output.xml 由 spec_lane 生成;luacov.* 由 coverage 车道生成。
+-- 清单与生产者对应：build/ tmp/ 为本地
+-- 构建产物;tools/packages/acceptance/generated/ 由 acceptance regenerate
+-- 生成;junit-output.xml 由 spec_lane 生成;luacov.* 是 luacov 默认落点的残留
+-- (uml crap 的 crapper 经 luacov 采集覆盖率)。
 -- clean 保留 .toolcache/；distclean 连工具缓存一起清。
 --
 -- 实现:开发环境限 macOS + WSL(#127),直接 sh -c rm,语义与被取代的
@@ -20,7 +21,7 @@ local M = {}
 
 local proc = require("foundation.proc")
 
-local _CLEAN_DIRS = { "build/", "tmp/", ".arch_view/viewer/", "tools/packages/acceptance/generated/" }
+local _CLEAN_DIRS = { "build/", "tmp/", "tools/packages/acceptance/generated/" }
 local _CLEAN_FILES = {
   "junit-output.xml",
   "luacov.*.stats.out",
@@ -34,7 +35,7 @@ function M.usage()
   return table.concat({
     "用法: lua tools/cli.lua clean | distclean",
     "",
-    "clean     清生成物:build/ tmp/ .arch_view/viewer/ acceptance generated/、",
+    "clean     清生成物:build/ tmp/ acceptance generated/、",
     "          junit-output.xml、luacov 残留。保留 .toolcache/。",
     "distclean clean 之上再清 .toolcache/(工具缓存)。",
     "",

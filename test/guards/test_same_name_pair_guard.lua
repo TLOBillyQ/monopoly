@@ -9,7 +9,7 @@ local guard = require("test.guards.lib.same_name_pair_guard")
 
 -- 合成白名单:让本 spec 语料无关(项目白名单快照为空时判定分支照样被验)。
 local _SYNTHETIC_WHITELIST = {
-  ["tools/packages/arch_view"] = true,
+  ["tools/packages/legacy_pair"] = true,
   ["test/support/behavior_parallel"] = true,
 }
 
@@ -44,8 +44,8 @@ describe("TestSameNamePairGuard", function()
   -- 白名单内存量同名对豁免(迁移期并存,由迁移工单销账)。
   it("test_whitelisted_pair_is_allowed", function()
     local violations = _check({
-      "tools/packages/arch_view.lua",
-      "tools/packages/arch_view/test/test_arch_view.lua",
+      "tools/packages/legacy_pair.lua",
+      "tools/packages/legacy_pair/test/test_legacy_pair.lua",
       "test/support/behavior_parallel.lua",
       "test/support/behavior_parallel/test/test_behavior_parallel.lua",
     })
@@ -73,7 +73,7 @@ describe("TestSameNamePairGuard", function()
   -- 同名 .lua 存在但没有 test/ 目录 → 不是同名对,不违规。
   it("test_peer_lua_without_test_dir_is_allowed", function()
     local violations = _check({
-      "tools/packages/coverage/coverage_config.lua",
+      "tools/packages/encoding/encoding.lua",
     })
     luassert.is.equal(0, #violations, _joined(violations))
   end)

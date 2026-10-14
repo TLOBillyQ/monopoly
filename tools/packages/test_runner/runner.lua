@@ -43,7 +43,6 @@ while index <= #arg do
     opts[name] = parameter
   elseif value == "-Xoutput" then
     index = index + 1; opts.arguments[#opts.arguments + 1] = arg[index]
-  elseif value == "-c" or value == "--coverage" then opts.coverage = true
   else opts.roots[#opts.roots + 1] = value end
   index = index + 1
 end
@@ -92,10 +91,6 @@ local ok, err = pcall(function()
   assert(#files > 0, "no available spec files selected")
   assert(bootstrap.ensure_busted_tree(root))
   require("packages.test_runner.cache_loader").install(root)
-  if opts.coverage then
-    assert(bootstrap.ensure_luacov_tree(root))
-    require("luacov.runner").init(os.getenv("LUACOV_CONFIG") or "tools/packages/coverage/coverage_config.lua")
-  end
   local total = require("packages.test_runner.busted_backend").run(files, opts.helper, opts.output, opts.arguments)
   io.write(string.format("# COUNTS: files=%d cases=%d passed=%d failed=%d errors=%d\n", total.files, total.cases, total.passed, total.failed, total.errors))
   if total.cases == 0 then io.stderr:write("test_runner: busted backend empty result\n") end

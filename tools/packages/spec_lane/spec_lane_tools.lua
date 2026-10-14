@@ -4,10 +4,8 @@ local spec_lane_tools = {}
 
 local _PROFILE_TOOLS = {
   acceptance = { "acceptance4lua" },
-  contract = { "arch_view" },
-  guards = { "arch_view" },
   -- dry 的 Windows 边界用例无需加载上游 POSIX 扫描器(#96)。
-  tooling = { "acceptance4lua", "arch_view", "crap4lua", "mutate4lua" },
+  tooling = { "acceptance4lua" },
 }
 
 -- #298 的发现式包结构：tooling 车道 33 行

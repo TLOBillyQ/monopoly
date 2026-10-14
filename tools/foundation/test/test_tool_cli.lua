@@ -127,7 +127,7 @@ it("forward subprocess passes args and exit code", function()
   end)
 end)
 
--- lua_bin 显式钉定(#453):crap 在非 5.4 解释器下 re-exec 到 lua5.4,
+-- lua_bin 显式钉定(#453):显式传入时 re-exec 到 lua5.4,
 -- 子进程由钉定解释器执行而非 PATH 上的 lua。fixture 断言解释器身份。
 it("forward subprocess honors explicit lua bin", function()
   _with_fixture_root(function(root)
