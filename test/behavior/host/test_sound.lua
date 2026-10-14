@@ -2,14 +2,20 @@
 -- paths for src.host.sound. These boundary branches are only reachable by
 -- driving the module directly with a patched host API surface.
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 local sound = require("src.host.sound")
 local logger = require("src.foundation.log")
 
-TestSound = {}
+describe("TestSound", function()
 
-function TestSound:test_bind_sfx_to_unit_reports_success_and_a_missing_host_function()
+local function _test_bind_sfx_to_unit_reports_success_and_a_missing_host_function()
   local calls = 0
   local unit = {}
 
@@ -38,19 +44,19 @@ function TestSound:test_bind_sfx_to_unit_reports_success_and_a_missing_host_func
 end
 
 -- play_sfx_by_key 的 scale 校验:数组形态向量(仅有 index 分量)判定为无效并跳过。
-function TestSound:test_play_sfx_by_key_rejects_array_vector_scale()
+local function _test_play_sfx_by_key_rejects_array_vector_scale()
   local result = sound.play_sfx_by_key(100, { x = 0 }, nil, { 1, 2, 3 }, 0.1, 1.0, true, { cue_name = "cue" })
   _assert_eq(result, nil, "array vector scale should be rejected")
 end
 
-function TestSound:test_bind_sfx_to_unit_rejects_missing_sfx_id_or_unit()
+local function _test_bind_sfx_to_unit_rejects_missing_sfx_id_or_unit()
   _assert_eq(sound.bind_sfx_to_unit(nil, {}), false,
     "missing sfx id should return false before touching the host")
   _assert_eq(sound.bind_sfx_to_unit(7, nil), false,
     "missing unit should return false before touching the host")
 end
 
-function TestSound:test_play_sfx_by_key_validates_rate_and_routes_a_valid_host_call()
+local function _test_play_sfx_by_key_validates_rate_and_routes_a_valid_host_call()
   local calls = {}
 
   _with_patches({
@@ -84,7 +90,7 @@ function TestSound:test_play_sfx_by_key_validates_rate_and_routes_a_valid_host_c
   _assert_eq(calls[2].rate, 1.0, "invalid rate input should use default")
 end
 
-function TestSound:test_play_sfx_by_key_returns_nil_when_the_host_call_is_missing_or_errors()
+local function _test_play_sfx_by_key_returns_nil_when_the_host_call_is_missing_or_errors()
   _with_patches({
     { key = "GameAPI", value = {} },
   }, function()
@@ -117,17 +123,17 @@ end
 -- exercised through play_sfx_by_key(_resolve_sfx_params → _scale_invalid →
 -- _is_vector_like).
 
-function TestSound:test_play_sfx_by_key_rejects_table_with_only_x_component()
+local function _test_play_sfx_by_key_rejects_table_with_only_x_component()
   _assert_eq(sound.play_sfx_by_key(100, nil, nil, { x = 5 }, 0.1, 1.0, true, { cue_name = "cue" }), nil,
     "table with only x component (named vector) should be rejected as scale")
 end
 
-function TestSound:test_play_sfx_by_key_rejects_table_with_only_first_indexed_component()
+local function _test_play_sfx_by_key_rejects_table_with_only_first_indexed_component()
   _assert_eq(sound.play_sfx_by_key(100, nil, nil, { 7 }, 0.1, 1.0, true, { cue_name = "cue" }), nil,
     "table with only [1] (indexed vector) should be rejected as scale")
 end
 
-function TestSound:test_play_sfx_by_key_accepts_plain_number_two_point_zero_as_scale()
+local function _test_play_sfx_by_key_accepts_plain_number_two_point_zero_as_scale()
   local calls = {}
   _with_patches({
     { key = "GameAPI", value = {
@@ -145,7 +151,7 @@ end
 
 -- ── _resolve_rotation: explicit rot provided ──────────────────────
 
-function TestSound:test_play_sfx_by_key_passes_explicit_rotation_to_host()
+local function _test_play_sfx_by_key_passes_explicit_rotation_to_host()
   local calls = {}
   local rot = { x = 0, y = 0, z = 1 }
   _with_patches({
@@ -163,7 +169,7 @@ end
 
 -- ── _with_sound_flag: with_sound=false ────────────────────────────
 
-function TestSound:test_play_sfx_by_key_passes_explicit_with_sound_false_to_host()
+local function _test_play_sfx_by_key_passes_explicit_with_sound_false_to_host()
   local calls = {}
   _with_patches({
     { key = "GameAPI", value = {
@@ -180,7 +186,7 @@ end
 
 -- ── _invalid_sfx_key: boundary sfx_key=1 ──────────────────────────
 
-function TestSound:test_play_sfx_by_key_accepts_sfx_key_of_one_as_valid()
+local function _test_play_sfx_by_key_accepts_sfx_key_of_one_as_valid()
   local calls = {}
   _with_patches({
     { key = "GameAPI", value = {
@@ -198,7 +204,7 @@ end
 
 -- ── play_3d_sound: valid sound_id=1 boundary ──────────────────────
 
-function TestSound:test_play_3d_sound_accepts_sound_id_of_one_as_valid()
+local function _test_play_3d_sound_accepts_sound_id_of_one_as_valid()
   local calls = {}
   _with_patches({
     { key = "GameAPI", value = {
@@ -216,7 +222,7 @@ end
 
 -- ── play_3d_sound: game_api exists but no play_3d_sound function ──
 
-function TestSound:test_play_3d_sound_returns_nil_when_game_api_missing_play_3d_sound()
+local function _test_play_3d_sound_returns_nil_when_game_api_missing_play_3d_sound()
   _with_patches({
     { key = "GameAPI", value = { get_timestamp = function() return 0 end } },
   }, function()
@@ -227,7 +233,7 @@ end
 
 -- ── play_3d_sound: host call raises ───────────────────────────────
 
-function TestSound:test_play_3d_sound_returns_nil_when_host_call_raises()
+local function _test_play_3d_sound_returns_nil_when_host_call_raises()
   local warned = 0
   _with_patches({
     { key = "GameAPI", value = {
@@ -245,7 +251,7 @@ end
 
 -- ── bind_sfx_to_unit: GlobalAPI present but bind_sfx_to_unit not function ──
 
-function TestSound:test_bind_sfx_to_unit_returns_false_when_bind_is_not_a_function()
+local function _test_bind_sfx_to_unit_returns_false_when_bind_is_not_a_function()
   _with_patches({
     { key = "GlobalAPI", value = { bind_sfx_to_unit = "not-a-function" } },
   }, function()
@@ -256,7 +262,7 @@ end
 
 -- ── bind_sfx_to_unit: both sfx_id and unit present, host call succeeds ──
 
-function TestSound:test_bind_sfx_to_unit_calls_host_when_both_params_valid()
+local function _test_bind_sfx_to_unit_calls_host_when_both_params_valid()
   local unit = { id = "u1" }
   local captured = {}
   _with_patches({
@@ -274,4 +280,20 @@ function TestSound:test_bind_sfx_to_unit_calls_host_when_both_params_valid()
 end
 
 
-return TestSound
+it("test_bind_sfx_to_unit_reports_success_and_a_missing_host_function", _test_bind_sfx_to_unit_reports_success_and_a_missing_host_function)
+it("test_play_sfx_by_key_rejects_array_vector_scale", _test_play_sfx_by_key_rejects_array_vector_scale)
+it("test_bind_sfx_to_unit_rejects_missing_sfx_id_or_unit", _test_bind_sfx_to_unit_rejects_missing_sfx_id_or_unit)
+it("test_play_sfx_by_key_validates_rate_and_routes_a_valid_host_call", _test_play_sfx_by_key_validates_rate_and_routes_a_valid_host_call)
+it("test_play_sfx_by_key_returns_nil_when_the_host_call_is_missing_or_errors", _test_play_sfx_by_key_returns_nil_when_the_host_call_is_missing_or_errors)
+it("test_play_sfx_by_key_rejects_table_with_only_x_component", _test_play_sfx_by_key_rejects_table_with_only_x_component)
+it("test_play_sfx_by_key_rejects_table_with_only_first_indexed_component", _test_play_sfx_by_key_rejects_table_with_only_first_indexed_component)
+it("test_play_sfx_by_key_accepts_plain_number_two_point_zero_as_scale", _test_play_sfx_by_key_accepts_plain_number_two_point_zero_as_scale)
+it("test_play_sfx_by_key_passes_explicit_rotation_to_host", _test_play_sfx_by_key_passes_explicit_rotation_to_host)
+it("test_play_sfx_by_key_passes_explicit_with_sound_false_to_host", _test_play_sfx_by_key_passes_explicit_with_sound_false_to_host)
+it("test_play_sfx_by_key_accepts_sfx_key_of_one_as_valid", _test_play_sfx_by_key_accepts_sfx_key_of_one_as_valid)
+it("test_play_3d_sound_accepts_sound_id_of_one_as_valid", _test_play_3d_sound_accepts_sound_id_of_one_as_valid)
+it("test_play_3d_sound_returns_nil_when_game_api_missing_play_3d_sound", _test_play_3d_sound_returns_nil_when_game_api_missing_play_3d_sound)
+it("test_play_3d_sound_returns_nil_when_host_call_raises", _test_play_3d_sound_returns_nil_when_host_call_raises)
+it("test_bind_sfx_to_unit_returns_false_when_bind_is_not_a_function", _test_bind_sfx_to_unit_returns_false_when_bind_is_not_a_function)
+it("test_bind_sfx_to_unit_calls_host_when_both_params_valid", _test_bind_sfx_to_unit_calls_host_when_both_params_valid)
+end)

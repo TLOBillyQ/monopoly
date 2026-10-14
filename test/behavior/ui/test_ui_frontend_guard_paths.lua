@@ -1,12 +1,13 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- UI 前端各模块的兜底/守卫分支：这些路径在常规流程里不会走到
 -- （宿主对象缺失、payload 缺字段、上游已先行判空），只能直接从模块入口打。
 --
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,describe 级 local 辅助函数提升到文件顶层,断言从 luassert 兼容层切到
--- lu.assertXxx,用例数与改写前一一对应(18 例)。
-local lu = require("luaunit")
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 
 local gameplay_read_port = require("src.ui.view.gameplay_read_port")
 local state_callback_ports = require("src.ui.ports.callbacks")
@@ -60,29 +61,43 @@ local function _capture_closer()
   return captured
 end
 
-TestUiFrontendGuardPaths = {}
+describe("TestUiFrontendGuardPaths", function()
+  local loaded_before_case
+  before_each(function()
+    loaded_before_case = {}
+    for name, object in pairs(package.loaded) do
+      if name:match("^src%.") then loaded_before_case[name] = object end
+    end
+  end)
+  after_each(function()
+    for name in pairs(package.loaded) do
+      if name:match("^src%.") and loaded_before_case[name] == nil then package.loaded[name] = nil end
+    end
+    for name, object in pairs(loaded_before_case) do package.loaded[name] = object end
+  end)
 
-function TestUiFrontendGuardPaths:test_returns_just_the_purchase_price_when_the_tile_carries_no_upgrade_costs()
+
+it("test_returns_just_the_purchase_price_when_the_tile_carries_no_upgrade_costs", function()
   local total = gameplay_read_port.total_land_invested({ price = 100 }, 3)
   _assert_eq(total, 100, "no upgrade_costs table means nothing to add")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_clamps_the_level_to_the_number_of_upgrade_costs_available()
+it("test_clamps_the_level_to_the_number_of_upgrade_costs_available", function()
   -- level 5 但只有 2 档升级费：多出来的档位不能凭空计价。
   local tile = { price = 100, upgrade_costs = { 10, 20 } }
   _assert_eq(gameplay_read_port.total_land_invested(tile, 5), 130, "clamped to 2 levels")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_sums_the_purchase_price_plus_the_costs_up_to_the_given_level()
+it("test_sums_the_purchase_price_plus_the_costs_up_to_the_given_level", function()
   local tile = { price = 100, upgrade_costs = { 10, 20 } }
   _assert_eq(gameplay_read_port.total_land_invested(tile, 1), 110, "one upgrade level")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_treats_a_non_table_tile_as_zero_invested()
+it("test_treats_a_non_table_tile_as_zero_invested", function()
   _assert_eq(gameplay_read_port.total_land_invested(nil, 2), 0, "nil tile")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_rejects_a_non_table_intent_without_reaching_the_host_bridge()
+it("test_rejects_a_non_table_intent_without_reaching_the_host_bridge", function()
   local calls = 0
   support.with_patches({
     { target = tip_queue, key = "enqueue", value = function()
@@ -95,9 +110,9 @@ function TestUiFrontendGuardPaths:test_rejects_a_non_table_intent_without_reachi
     _assert_eq(state:show_tip(nil), false, "nil intent is rejected")
     _assert_eq(calls, 0, "host bridge must not be called for a non-table intent")
   end)
-end
+end)
 
-function TestUiFrontendGuardPaths:test_forwards_a_table_intent_to_the_host_bridge_and_returns_its_result()
+it("test_forwards_a_table_intent_to_the_host_bridge_and_returns_its_result", function()
   local seen
   support.with_patches({
     { target = tip_queue, key = "enqueue", value = function(intent)
@@ -108,20 +123,20 @@ function TestUiFrontendGuardPaths:test_forwards_a_table_intent_to_the_host_bridg
     local state = _install()
     local intent = { text = "hi", duration = 1.5 }
     _assert_eq(state:show_tip(intent), true, "enqueued tip returns true")
-    lu.assertEvalToTrue(seen == intent, "the intent is forwarded verbatim")
+    luassert.truthy(seen == intent, "the intent is forwarded verbatim")
   end)
-end
+end)
 
-function TestUiFrontendGuardPaths:test_coerces_a_truthy_but_not_true_host_result_to_false()
+it("test_coerces_a_truthy_but_not_true_host_result_to_false", function()
   support.with_patches({
     { target = tip_queue, key = "enqueue", value = function() return "queued" end },
   }, function()
     local state = _install()
     _assert_eq(state:show_tip({ text = "hi" }), false, "pins the `== true` coercion")
   end)
-end
+end)
 
-function TestUiFrontendGuardPaths:test_ignores_a_payload_that_carries_no_choice()
+it("test_ignores_a_payload_that_carries_no_choice", function()
   local game_lookups = 0
   local state = {}
   runtime_event_ports.on_need_choice(state, function()
@@ -129,20 +144,20 @@ function TestUiFrontendGuardPaths:test_ignores_a_payload_that_carries_no_choice(
     return {}
   end, { elapsed_seconds = 3 })
   _assert_eq(game_lookups, 0, "must return before resolving the current game")
-  lu.assertEvalToTrue(runtime_state.get_pending_choice(state) == nil, "no pending choice is recorded")
-end
+  luassert.truthy(runtime_state.get_pending_choice(state) == nil, "no pending choice is recorded")
+end)
 
-function TestUiFrontendGuardPaths:test_ignores_a_nil_payload()
+it("test_ignores_a_nil_payload", function()
   local game_lookups = 0
   runtime_event_ports.on_need_choice({}, function()
     game_lookups = game_lookups + 1
     return {}
   end, nil)
   _assert_eq(game_lookups, 0, "nil payload short-circuits too")
-end
+end)
 
 -- 地块升级事件:payload 带 tile_id 且 state 有同步回调时转发单块地同步。
-function TestUiFrontendGuardPaths:test_on_tile_upgraded_syncs_single_tile()
+it("test_on_tile_upgraded_syncs_single_tile", function()
   local synced = nil
   local state = {
     on_board_visual_sync = function(_, payload)
@@ -150,14 +165,14 @@ function TestUiFrontendGuardPaths:test_on_tile_upgraded_syncs_single_tile()
     end,
   }
   runtime_event_ports.on_tile_upgraded(state, { tile_id = 9 })
-  lu.assertNotNil(synced, "on_tile_upgraded should sync the upgraded tile")
-  lu.assertEquals(synced.tile_ids[1], 9, "sync payload should carry the upgraded tile id")
+  luassert.is_not_nil(synced, "on_tile_upgraded should sync the upgraded tile")
+  luassert.is.same( 9,synced.tile_ids[1], "sync payload should carry the upgraded tile id")
 
   runtime_event_ports.on_tile_upgraded(state, {})
   runtime_event_ports.on_tile_upgraded({}, { tile_id = 9 })
-end
+end)
 
-function TestUiFrontendGuardPaths:test_falls_back_to_the_permanent_schema_node_names_when_state_ui_carries_no_slot_list()
+it("test_falls_back_to_the_permanent_schema_node_names_when_state_ui_carries_no_slot_list", function()
   -- 兜底分支：宿主还没把槽位节点名写进 state.ui（首帧/热重载）时，route 直接吃
   -- 常驻屏 schema 的节点表。槽位号跟节点序一一对应，不依赖任何局面数据。
   local state = { ui = {} }
@@ -173,16 +188,16 @@ function TestUiFrontendGuardPaths:test_falls_back_to_the_permanent_schema_node_n
       slot_spec = spec
     end
   end
-  lu.assertEvalToTrue(slot_spec ~= nil, "an intent spec is built for the schema slot node " .. tostring(node_name))
+  luassert.truthy(slot_spec ~= nil, "an intent spec is built for the schema slot node " .. tostring(node_name))
 
   local intent = slot_spec.build_intent({ role = { get_roleid = function() return 7 end } })
-  lu.assertEvalToTrue(intent ~= nil, "an unoccluded click always dispatches")
+  luassert.truthy(intent ~= nil, "an unoccluded click always dispatches")
   _assert_eq(intent.type, "item_slot_click", "intent type")
   _assert_eq(intent.slot_index, 3, "slot index follows the schema node order")
   _assert_eq(intent.actor_role_id, 7, "the clicker rides along for the turn-side verdict")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_refuses_to_open_when_the_intent_resolves_no_option_id()
+it("test_refuses_to_open_when_the_intent_resolves_no_option_id", function()
   local state = {}
   runtime_state.set_ui_model(state, {
     choice = { id = "c1" },
@@ -192,13 +207,13 @@ function TestUiFrontendGuardPaths:test_refuses_to_open_when_the_intent_resolves_
   -- choice_select 但没带 option_id：_resolve_enter_params 解不出参数。
   local opened = pre_confirm_flow.enter(state, { type = "choice_select", actor_role_id = "p1" })
   _assert_eq(opened, false, "enter must report failure")
-  lu.assertEvalToTrue(not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT),
+  luassert.truthy(not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT),
     "no pre-confirm session is opened")
-end
+end)
 
 -- #443:owner 门控只认事件载荷里的 actor_role_id;「上一次点击者缓存」随 #601
 -- 整体退役后,身份更无第二来源。
-function TestUiFrontendGuardPaths:test_refuses_to_open_when_the_intent_actor_is_not_the_choice_owner()
+it("test_refuses_to_open_when_the_intent_actor_is_not_the_choice_owner", function()
   local state = {}
   runtime_state.set_ui_model(state, {
     choice = { id = "c1", owner_role_id = "p1" },
@@ -206,11 +221,11 @@ function TestUiFrontendGuardPaths:test_refuses_to_open_when_the_intent_actor_is_
 
   local opened = pre_confirm_flow.enter(state, { type = "choice_select", option_id = "opt", actor_role_id = "p2" })
   _assert_eq(opened, false, "a non-owner click must be refused")
-  lu.assertEvalToTrue(not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT),
+  luassert.truthy(not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT),
     "no pre-confirm session is opened")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_refuses_to_open_when_the_intent_carries_no_actor_role_id()
+it("test_refuses_to_open_when_the_intent_carries_no_actor_role_id", function()
   local state = {}
   runtime_state.set_ui_model(state, {
     choice = { id = "c1", owner_role_id = "p1" },
@@ -218,11 +233,11 @@ function TestUiFrontendGuardPaths:test_refuses_to_open_when_the_intent_carries_n
 
   local opened = pre_confirm_flow.enter(state, { type = "choice_select", option_id = "opt" })
   _assert_eq(opened, false, "a missing actor_role_id must refuse to open without crashing")
-  lu.assertEvalToTrue(not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT),
+  luassert.truthy(not pending_confirmation.is_source_active(state, pending_confirmation.SOURCE_CHOICE_SELECT),
     "no pre-confirm session is opened")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_re_applies_the_lock_without_touching_the_exempt_tables_when_the_meta_carries_no_player_id()
+it("test_re_applies_the_lock_without_touching_the_exempt_tables_when_the_meta_carries_no_player_id", function()
   local applied = {}
   local state = {}
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
@@ -238,15 +253,15 @@ function TestUiFrontendGuardPaths:test_re_applies_the_lock_without_touching_the_
     end,
   })
 
-  lu.assertEvalToTrue(state.role_control_lock_exempt_count_by_role == nil,
+  luassert.truthy(state.role_control_lock_exempt_count_by_role == nil,
     "an anonymous sequence must not create per-role exempt bookkeeping")
-  lu.assertEvalToTrue(state.role_control_lock_exempt_by_role == nil,
+  luassert.truthy(state.role_control_lock_exempt_by_role == nil,
     "an anonymous sequence must not create per-role exempt bookkeeping")
   _assert_eq(applied[#applied], true, "the active lock flag is re-applied")
   _assert_eq(anim_ctx.role_control_exempt, true, "unlocking marks the context exempt")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_books_the_exemption_against_the_player_when_the_sequence_carries_a_player_id()
+it("test_books_the_exemption_against_the_player_when_the_sequence_carries_a_player_id", function()
   local applied = {}
   local state = {}
   local turn_runtime = runtime_state.ensure_turn_runtime(state)
@@ -262,18 +277,18 @@ function TestUiFrontendGuardPaths:test_books_the_exemption_against_the_player_wh
     end,
   })
 
-  lu.assertEvalToTrue(type(state.role_control_lock_exempt_by_role) == "table", "exempt table is created")
+  luassert.truthy(type(state.role_control_lock_exempt_by_role) == "table", "exempt table is created")
   _assert_eq(role_id_utils.read(state.role_control_lock_exempt_by_role, "p1"), true,
     "the player is booked as exempt")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_does_nothing_when_the_state_has_no_ui()
+it("test_does_nothing_when_the_state_has_no_ui", function()
   local closer = _capture_closer()
   local ok = pcall(closer, {}, nil)
-  lu.assertEvalToTrue(ok, "a state without ui must not crash the closer")
-end
+  luassert.truthy(ok, "a state without ui must not crash the closer")
+end)
 
-function TestUiFrontendGuardPaths:test_does_nothing_when_debug_visible_by_role_is_not_a_table()
+it("test_does_nothing_when_debug_visible_by_role_is_not_a_table", function()
   local closer = _capture_closer()
   local calls = 0
   local state = {
@@ -286,9 +301,9 @@ function TestUiFrontendGuardPaths:test_does_nothing_when_debug_visible_by_role_i
   }
   closer(state, nil)
   _assert_eq(calls, 0, "no visibility writes when the role map is malformed")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_closes_the_visible_event_log_of_every_role_when_no_active_role_is_given()
+it("test_closes_the_visible_event_log_of_every_role_when_no_active_role_is_given", function()
   local closer = _capture_closer()
   local visible_writes = {}
   local state = {
@@ -306,9 +321,9 @@ function TestUiFrontendGuardPaths:test_closes_the_visible_event_log_of_every_rol
   _assert_eq(role_id_utils.read(state.ui.debug_visible_by_role, "p1"), false,
     "the role's event log is marked hidden")
   _assert_eq(visible_writes[#visible_writes], false, "the ui hook is driven to hidden")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_restores_a_non_inline_source_screen_and_clears_the_pending_choice()
+it("test_restores_a_non_inline_source_screen_and_clears_the_pending_choice", function()
   local state = {
     gameplay_loop_ports = {
       modal = {},
@@ -336,14 +351,14 @@ function TestUiFrontendGuardPaths:test_restores_a_non_inline_source_screen_and_c
   _assert_eq(runtime_state.get_pending_choice_id(state), nil, "cancel should clear pending choice id")
   _assert_eq(open_calls, 1, "non-inline cancel should reopen prior modal")
   _assert_eq(close_calls, 0, "non-inline cancel should not close modal")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_needs_pre_confirm_returns_false_without_ui()
+it("test_needs_pre_confirm_returns_false_without_ui", function()
   _assert_eq(pre_confirm_flow.needs_pre_confirm({}, { type = "choice_select" }), false,
     "a state without ui should never require pre-confirm")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_cancel_with_inline_source_closes_the_choice_modal()
+it("test_cancel_with_inline_source_closes_the_choice_modal", function()
   local state = {
     gameplay_loop_ports = {
       modal = {},
@@ -370,9 +385,9 @@ function TestUiFrontendGuardPaths:test_cancel_with_inline_source_closes_the_choi
 
   _assert_eq(close_calls, 1, "inline cancel should close the choice modal")
   _assert_eq(open_calls, 0, "inline cancel should not reopen a modal")
-end
+end)
 
-function TestUiFrontendGuardPaths:test_records_the_popup_owner_index_on_a_successful_push()
+it("test_records_the_popup_owner_index_on_a_successful_push", function()
   local modal = require("src.ui.coord.popup_presenter")
   local state = { ui = {} }
   local game_with_turn = {
@@ -408,14 +423,14 @@ function TestUiFrontendGuardPaths:test_records_the_popup_owner_index_on_a_succes
     local ok = state3.push_popup(nil, "hello", {})
     _assert_eq(ok, true, "push_popup should succeed even without ui table")
   end)
-end
+end)
 
 
 
 	-- #524 时序裁定：事件路径只记账不开屏——任何路由键（含此前直开的
 	-- base_inline / item_phase_passive）都不得触达 modal.open_choice_modal、
 	-- choice_slice 构建或 gate 判定；开屏收敛到 dirty 刷新。
-	function TestUiFrontendGuardPaths:test_on_need_choice_records_only_without_opening_modal()
+	it("test_on_need_choice_records_only_without_opening_modal", function()
 	  local state = {}
 	  local modal_opened = nil
 	  local slice_consulted = false
@@ -438,15 +453,15 @@ end
 	      choice = { id = "c1" },
 	    })
 	  end)
-	  lu.assertNil(modal_opened, "event path must not open modal even for base_inline route (#524)")
-	  lu.assertEvalToTrue(not slice_consulted, "event path must not build choice view")
-	  lu.assertEvalToTrue(not route_consulted, "event path must not resolve route key")
-	  lu.assertEvalToTrue(not gate_consulted, "event path must not consult gate state")
-	end
+	  luassert.is_nil(modal_opened, "event path must not open modal even for base_inline route (#524)")
+	  luassert.truthy(not slice_consulted, "event path must not build choice view")
+	  luassert.truthy(not route_consulted, "event path must not resolve route key")
+	  luassert.truthy(not gate_consulted, "event path must not consult gate state")
+	end)
 
 	-- _record_pending_choice：elapsed_seconds 透传、缺失时默认 0、set_ui_dirty(true)
 	-- 的桩验证（杀掉 or→and、0→1、true→false 突变）。
-	function TestUiFrontendGuardPaths:test_record_pending_choice_passes_through_elapsed_seconds_and_defaults_to_zero()
+	it("test_record_pending_choice_passes_through_elapsed_seconds_and_defaults_to_zero", function()
 	  local state = {}
 	  local captured_choice = nil
 	  local captured_opts = nil
@@ -465,11 +480,11 @@ end
 	      choice = { id = "ca" },
 	      elapsed_seconds = 3.5,
 	    })
-	    lu.assertEvalToTrue(captured_choice ~= nil and captured_choice.id == "ca",
+	    luassert.truthy(captured_choice ~= nil and captured_choice.id == "ca",
 	      "choice is forwarded to set_pending_choice")
-	    lu.assertEquals(captured_opts.elapsed_seconds, 3.5,
+	    luassert.is.same( 3.5,captured_opts.elapsed_seconds,
 	      "elapsed_seconds is passed through from payload")
-	    lu.assertEquals(ui_dirty_value, true, "set_ui_dirty is called with true")
+	    luassert.is.same( true,ui_dirty_value, "set_ui_dirty is called with true")
 
 	    -- 不带 elapsed_seconds 的 payload：默认 0
 	    captured_opts = nil
@@ -477,7 +492,7 @@ end
 	    runtime_event_ports.on_need_choice(state, function() return nil end, {
 	      choice = { id = "cb" },
 	    })
-	    lu.assertEquals(captured_opts.elapsed_seconds, 0,
+	    luassert.is.same( 0,captured_opts.elapsed_seconds,
 	      "missing elapsed_seconds defaults to 0")
 
 	    -- nil payload：不触发 _record_pending_choice
@@ -485,9 +500,9 @@ end
 	    captured_opts = nil
 	    ui_dirty_value = nil
 	    runtime_event_ports.on_need_choice(state, function() return nil end, nil)
-	    lu.assertNil(captured_choice, "nil payload must not record pending choice")
+	    luassert.is_nil(captured_choice, "nil payload must not record pending choice")
 	  end)
-	end
+	end)
 
 
-return TestUiFrontendGuardPaths
+end)

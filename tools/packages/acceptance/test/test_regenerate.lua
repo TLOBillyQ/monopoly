@@ -1,61 +1,110 @@
--- LuaUnit 原生风格：两个顶层 describe（acceptance feature registry / acceptance regenerate）
--- 拍平为单个 TestRegenerate 类，共 4 个用例；regenerate 组的 after_each 收进 tearDown，
--- tmp 目录路径为只读共享数据，保留文件级 local。
-local lu = require("luaunit")
+-- 验收注册表与生成入口的七个公开契约。
+require("test.bootstrap").install_package_paths()
+local check = require("luassert")
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local registry = require("packages.acceptance.acceptance_features")
 local regenerate = require("packages.acceptance.regenerate")
 
-TestRegenerate = {}
-
 local tmp = path_lib.join_path("build/acceptance", "regenerate_spec_tmp")
 
-function TestRegenerate:tearDown()
-  fs_lib.remove_path(tmp)
-end
+describe("acceptance registry and regeneration", function()
+  local saved_open, saved_dofile
+  before_each(function()
+    saved_open, saved_dofile = io.open, dofile
+  end)
+  after_each(function()
+    rawset(io, "open", saved_open)
+    _G.dofile = saved_dofile
+    fs_lib.remove_path(tmp)
+  end)
 
-function TestRegenerate:test_lists_features_with_unique_well_formed_generated_spec_names()
-  lu.assertTrue(#registry.entries > 0)
-  lu.assertIsString(registry.generated_dir)
+it("lists unique well formed generated spec names", function()
+  check.is_true(#registry.entries > 0)
+  check.is_string(registry.generated_dir)
   local seen = {}
   for _, entry in ipairs(registry.entries) do
-    lu.assertIsString(entry.feature)
-    lu.assertIsString(entry.generated)
-    lu.assertEvalToTrue(entry.generated:match("^test_.*_acceptance%.lua$"))
-    lu.assertNil(seen[entry.generated], "duplicate generated name: " .. tostring(entry.generated))
+    check.is_string(entry.feature)
+    check.is_string(entry.generated)
+    check.truthy(entry.generated:match("^test_.*_acceptance%.lua$"))
+    check.is_nil(seen[entry.generated], "duplicate generated name: " .. tostring(entry.generated))
     seen[entry.generated] = true
   end
-end
+end)
 
-function TestRegenerate:test_points_every_entry_at_a_readable_feature_file()
-  for _, entry in ipairs(registry.entries) do
-    lu.assertEvalToTrue(fs_lib.path_exists(entry.feature), "missing feature: " .. entry.feature)
+it("empty explicit entries are infrastructure failure", function()
+  local ok, err = regenerate.run({ entries = {} })
+  check.is_nil(ok)
+  check.matches("no acceptance entries", err, 1, true)
+end)
+
+it("missing or invalid manifest never becomes empty success", function()
+  local original_open = io.open
+  local original_dofile = dofile
+  for _, value in ipairs({ false, { entries = {} } }) do
+    _G.dofile = function(path)
+      if tostring(path):match("features/manifest%.lua$") then return value end
+      return original_dofile(path)
+    end
+    local ok, err = pcall(original_dofile, "tools/packages/acceptance/acceptance_features.lua")
+    _G.dofile = original_dofile
+    check.is_false(ok)
+    check.matches("manifest invalid or empty", tostring(err), 1, true)
   end
-end
+  rawset(io, "open", function(path, mode)
+    if tostring(path):match("features/manifest%.lua$") then return nil end
+    return original_open(path, mode)
+  end)
+  local ok, err = pcall(original_dofile, "tools/packages/acceptance/acceptance_features.lua")
+  rawset(io, "open", original_open)
+  check.is_false(ok)
+  check.matches("manifest unavailable", tostring(err), 1, true)
+end)
 
-function TestRegenerate:test_regenerates_a_features_spec_into_the_target_dir_deterministically()
+it("native selection and exclusion partition complete manifest", function()
+  local selected, excluded = registry.select()
+  check.equal(#registry.entries, #selected + #excluded)
+  local seen = {}
+  for _, entries in ipairs({ selected, excluded }) do
+    for _, entry in ipairs(entries) do
+      check.is_nil(seen[entry.feature], "identity appears in both sets")
+      seen[entry.feature] = entry.generated
+    end
+  end
+  for _, entry in ipairs(registry.entries) do
+    check.equal(entry.generated, seen[entry.feature])
+  end
+  check.equal(1, #excluded)
+  check.equal("features/tooling/acceptance_mutator_status.feature", excluded[1].feature)
+  check.equal("acceptance-mutate", excluded[1].capability)
+end)
+
+it("points every entry at readable feature file", function()
+  for _, entry in ipairs(registry.entries) do
+    check.truthy(fs_lib.path_exists(entry.feature), "missing feature: " .. entry.feature)
+  end
+end)
+
+it("regenerates feature spec deterministically", function()
   local entry = registry.entries[1]
   local out = path_lib.join_path(tmp, entry.generated)
 
   local ok = regenerate.run({ generated_dir = tmp, entries = { entry } })
-  lu.assertTrue(ok)
-  lu.assertEvalToTrue(fs_lib.path_exists(out), "expected regenerated spec at " .. out)
+  check.is_true(ok)
+  check.truthy(fs_lib.path_exists(out), "expected regenerated spec at " .. out)
 
   -- Re-deriving the same feature must produce byte-identical output.
   local first = fs_lib.read_file(out)
-  lu.assertTrue(regenerate.run({ generated_dir = tmp, entries = { entry } }))
-  lu.assertIs(fs_lib.read_file(out), first)
-end
+  check.is_true(regenerate.run({ generated_dir = tmp, entries = { entry } }))
+  check.equal(first, fs_lib.read_file(out))
+end)
 
-function TestRegenerate:test_fails_loudly_when_a_feature_path_is_missing()
+it("fails loudly when feature path is missing", function()
   local ok, err = regenerate.run({
     generated_dir = tmp,
     entries = { { feature = "features/does-not-exist.feature", generated = "test_missing.lua" } },
   })
-  lu.assertNil(ok)
-  lu.assertEvalToTrue(tostring(err):match("does%-not%-exist"))
-end
-
-
-return TestRegenerate
+  check.is_nil(ok)
+  check.truthy(tostring(err):match("does%-not%-exist"))
+end)
+end)

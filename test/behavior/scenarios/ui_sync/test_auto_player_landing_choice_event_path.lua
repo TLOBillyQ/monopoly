@@ -1,4 +1,7 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local support = require("test.support.shared_support")
 local fixtures = require("test.support.gameplay_fixtures")
 local _config_reset = require("test.support.config_reset")
@@ -66,8 +69,8 @@ local function _run_choice_open_case(game_opts, expect_open, case_name)
   }, function()
     local runtime_event_ports = require("src.ui.ports.events")
     runtime_event_ports.on_need_choice(state, function() return game end, { choice = choice })
-    lu.assertFalse(opened, "event path must NOT open modal; it only records (#524): " .. case_name)
-    lu.assertTrue(state.ui_dirty == true or require("src.ui.state.runtime").is_ui_dirty(state),
+    luassert.is_false(opened, "event path must NOT open modal; it only records (#524): " .. case_name)
+    luassert.is_true(state.ui_dirty == true or require("src.ui.state.runtime").is_ui_dirty(state),
       "event path must mark ui_dirty so dirty refresh opens the modal: " .. case_name)
 
     local ui_model_sync = require("src.ui.ports.ui_sync")._model
@@ -81,21 +84,20 @@ local function _run_choice_open_case(game_opts, expect_open, case_name)
   end)
 
   if expect_open then
-    lu.assertTrue(opened, "dirty refresh MUST open modal: " .. case_name)
+    luassert.is_true(opened, "dirty refresh MUST open modal: " .. case_name)
   else
-    lu.assertFalse(opened, "dirty refresh must NOT open modal: " .. case_name)
+    luassert.is_false(opened, "dirty refresh must NOT open modal: " .. case_name)
   end
 end
 
-TestAutoPlayerLandingChoiceEventPath = {}
-
-function TestAutoPlayerLandingChoiceEventPath:setUp()
-  _config_reset.reset_all()
-end
+describe("TestAutoPlayerLandingChoiceEventPath", function()
+  before_each(function()
+    _config_reset.reset_all()
+  end)
 
 -- 无 tearDown:席位名册经 with_patches 单字段 patch 铺设,出入两侧自动还原。
 
-function TestAutoPlayerLandingChoiceEventPath:test_auto_player_landing_modal_opens_only_via_dirty_reconcile()
+local function _test_auto_player_landing_modal_opens_only_via_dirty_reconcile()
   _run_choice_open_case(
     { players = { "P1", "P2" }, auto_all = true, ai = {} },
     false,
@@ -103,7 +105,7 @@ function TestAutoPlayerLandingChoiceEventPath:test_auto_player_landing_modal_ope
   )
 end
 
-function TestAutoPlayerLandingChoiceEventPath:test_ai_player_landing_modal_opens_only_via_dirty_reconcile()
+local function _test_ai_player_landing_modal_opens_only_via_dirty_reconcile()
   _run_choice_open_case(
     { players = { "P1", "P2" }, ai = { [1] = true } },
     false,
@@ -111,7 +113,7 @@ function TestAutoPlayerLandingChoiceEventPath:test_ai_player_landing_modal_opens
   )
 end
 
-function TestAutoPlayerLandingChoiceEventPath:test_local_human_landing_modal_opens_only_via_dirty_reconcile()
+local function _test_local_human_landing_modal_opens_only_via_dirty_reconcile()
   _run_choice_open_case(
     { players = { "P1", "P2" }, ai = {} },
     true,
@@ -120,4 +122,7 @@ function TestAutoPlayerLandingChoiceEventPath:test_local_human_landing_modal_ope
 end
 
 
-return TestAutoPlayerLandingChoiceEventPath
+it("test_auto_player_landing_modal_opens_only_via_dirty_reconcile", _test_auto_player_landing_modal_opens_only_via_dirty_reconcile)
+it("test_ai_player_landing_modal_opens_only_via_dirty_reconcile", _test_ai_player_landing_modal_opens_only_via_dirty_reconcile)
+it("test_local_human_landing_modal_opens_only_via_dirty_reconcile", _test_local_human_landing_modal_opens_only_via_dirty_reconcile)
+end)

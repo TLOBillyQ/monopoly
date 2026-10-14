@@ -10,6 +10,9 @@
 -- seed 分片薄 spec 见 test/behavior/rules/items/test_item_timing_fuzz*.lua（#190 分片
 -- 让 LPT 并行吸收，总 seed 数不变）。MONOPOLY_FUZZ_SEEDS=2000 放大做 soak；
 -- FUZZ_ONLY_SEED=<n> 单 seed 复放（失败输出自带完整 trace）。
+require("test.bootstrap").install_package_paths()
+local luassert = require("packages.test_runner.cache_loader").verified_module("luassert")
+  or assert(require("test.support.luassert_loader").load())
 local support = require("test.support.shared_support")
 local property = require("test.support.property")
 local inventory = require("src.rules.items.inventory")
@@ -392,17 +395,11 @@ local function _find_violation(records)
 end
 
 
--- 行级插桩环境（coverage / crap 收集车道）下空跑：探针职责是时序活锁捕捉，不是
--- 覆盖率来源；插桩把 fuzz 热循环拖慢一个量级。迁移前 property 车道本就不进
--- coverage/crap 口径（#190），这里保持一致。
+-- 行级插桩环境（uml crap 经 luacov 挂 debug hook 采集覆盖率）下空跑：探针职责是
+-- 时序活锁捕捉，不是覆盖率来源；插桩把 fuzz 热循环拖慢一个量级。迁移前 property
+-- 车道本就不进 coverage/crap 口径（#190），这里保持一致。
 local function _instrumented()
-  if package.loaded["quality.coverage_collector"] ~= nil then
-    return true
-  end
-  if debug.gethook() ~= nil then
-    return true
-  end
-  return false
+  return debug.gethook() ~= nil
 end
 
 local M = {
@@ -452,7 +449,7 @@ function M.run_range(seed_from, seed_to)
       break
     end
   end
-  assert(#failures == 0, "\n" .. table.concat(failures, "\n----\n"))
+  luassert.truthy(#failures == 0, "\n" .. table.concat(failures, "\n----\n"))
 end
 
 return M

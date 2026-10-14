@@ -24,13 +24,18 @@ end
 
 function shell.shell_quote(value)
   local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
+  assert(not text:find("[\r\n\0]"), "Command arguments cannot contain NUL or newlines")
+  text = text:gsub('(\\*)"', '%1%1\\"'):gsub('(\\+)$', '%1%1')
+  return '"' .. text .. '"'
 end
 
 function shell.build_command(args)
   local parts = {}
-  for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = shell.shell_quote(value)
+  for index, value in ipairs(args or {}) do
+    local quoted = shell.shell_quote(value)
+    quoted = quoted:gsub("%%", "%%%%")
+    if index > 1 then quoted = quoted:gsub('([&|<>%^()" ])', '^%1') end
+    parts[#parts + 1] = quoted
   end
   return table.concat(parts, " ")
 end
@@ -40,7 +45,7 @@ function shell.wrap_command_with_cwd(command, cwd)
   if cwd_path == nil or cwd_path == "" then
     return tostring(command or "")
   end
-  return "cd " .. shell.shell_quote(cwd_path) .. " && " .. tostring(command or "")
+  return "cd /d " .. shell.shell_quote(cwd_path:gsub("/", "\\")) .. " && " .. tostring(command or "")
 end
 
 return shell

@@ -1,0 +1,154 @@
+---@diagnostic disable: undefined-global
+require("test.bootstrap").install_package_paths()
+local check = require("luassert")
+local env = require("foundation.env")
+local fs = require("foundation.fs")
+local proc = require("foundation.proc")
+local shell = require("foundation.shell")
+local parallel = require("foundation.parallel_lanes")
+local native_lua = assert(arg[-1], "native Lua interpreter identity required")
+
+describe("native parallel lanes", function()
+
+local function fixture(body)
+  local root = env.make_temp_path("parallel_中文 space", "")
+  assert(fs.ensure_dir(root))
+  local ok, err = xpcall(function() body(root) end, debug.traceback)
+  assert(fs.remove_path(root))
+  assert(ok, err)
+end
+
+local function script(root, name, text)
+  local file = root .. "/" .. name .. ".lua"
+  assert(fs.write_file(file, text))
+  return file
+end
+
+it("distinguishes success failure missing command and empty output", function()
+  fixture(function(root)
+    local writer = script(root, "writer", 'local d=os.time()+2; while os.time()<d do end; print("中文 success")')
+    local success = 'start "" /b lua "' .. writer:gsub("/", "\\") .. '"'
+    local failure = script(root, "bad", 'print("out"); io.stderr:write("err\\n"); os.exit(4)')
+    local silent = script(root, "empty", "os.exit(0)")
+    local ok, results = parallel.run({
+      { label = "ok", cmd = success },
+      { label = "bad", cmd = shell.build_command({ "lua", failure }) },
+      { label = "missing", cmd = shell.build_command({ root .. "/missing_91.exe" }) },
+      { label = "empty", cmd = shell.build_command({ "lua", silent }) },
+    }, { stream = false, timeout = 20 })
+    check.is_false(ok)
+    check.same(4, #results)
+    check.same("ok", results[1].label)
+    check.is_true(results[1].ok)
+    check.same(0, results[1].exit_code)
+    check.is_not.equal(nil, results[1].owner_pid)
+    check.is_not.equal(nil, results[1].child_pid)
+    check.matches("中文 success", results[1].output, 1, true)
+    check.same("exit", results[2].reason)
+    check.same(4, results[2].exit_code)
+    check.matches("err", results[2].output, 1, true)
+    check.same("launch_failed", results[3].reason)
+    check.same(9009, results[3].exit_code)
+    check.is_not.equal("", results[3].output)
+    check.same("output_incomplete", results[4].reason)
+    check.same(0, results[4].exit_code)
+    check.is_not.equal(nil, results[4].message)
+  end)
+end)
+
+it("parallel and serial preserve order results and Chinese arguments", function()
+  fixture(function(root)
+    local file = script(root, "echo args", 'for i=1,#arg do print(arg[i]) end; os.exit(tonumber(arg[1]))')
+    local first = { "lua", file, "0", "", "中文 space", 'quote"and&pipe|', "%PATH%", "bang!caret^", "tail\\" }
+    local second = { "lua", file, "5", "参数 空格" }
+    local lanes = {
+      { label = "first", cmd = first },
+      { label = "second", cmd = second },
+    }
+    local ok, results = parallel.run(lanes, { stream = false, timeout = 20 })
+    check.is_false(ok)
+    for index, lane in ipairs(lanes) do
+      local serial = proc.run_command(lane.cmd)
+      check.same(lane.label, results[index].label)
+      check.same(serial.ok, results[index].ok)
+      check.same(serial.code, results[index].exit_code)
+      check.same(serial.output, results[index].output)
+    end
+  end)
+end)
+
+it("Lua argv exceeds cmd limit and lanes overlap", function()
+  fixture(function(root)
+    local file = script(root, "wait", [[
+local started=os.time()
+local deadline=started+3
+while os.time()<deadline do end
+print('INTERVAL '..started..' '..os.time())
+print(#arg)
+print(arg[1])
+]])
+    local args = { "lua", file }
+    for i = 1, 1000 do args[#args + 1] = "中文 argument space" end
+    local ok, results = parallel.run({
+      { label = "a", cmd = args }, { label = "b", cmd = args },
+    }, { stream = false, timeout = 20 })
+    check.is_true(ok)
+    local a_start, a_end = results[1].output:match("INTERVAL (%d+) (%d+)")
+    local b_start, b_end = results[2].output:match("INTERVAL (%d+) (%d+)")
+    check.is_true(math.max(tonumber(a_start), tonumber(b_start)) < math.min(tonumber(a_end), tonumber(b_end)), "actual worker intervals must overlap")
+    check.matches("1000", results[1].output, 1, true)
+    check.matches("中文 argument space", results[2].output, 1, true)
+  end)
+end)
+
+it("timeout stops delayed writes and preserves unowned files", function()
+  fixture(function(root)
+    local marker = root .. "/late.txt"
+    local file = script(root, "slow", [[
+print("START")
+io.stdout:flush()
+local deadline=os.time()+8
+while os.time()<deadline do end
+local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()
+]])
+    assert(fs.write_file(root .. "/owned/sentinel.txt", "keep"))
+    local ok, results = parallel.run({ { label = "slow", cmd = { native_lua, file, marker } } },
+      { stream = false, timeout = 2, lane_dir = root .. "/owned" })
+    check.is_false(ok)
+    check.same("timeout", results[1].reason)
+    check.matches("START", results[1].output, 1, true)
+    check.is_nil(results[1].artifact_dir, "termination and cleanup must succeed")
+    proc.run_command({ "lua", "-e", "local d=os.time()+9; while os.time()<d do end; print('WAIT')" })
+    check.is_false(fs.path_exists(marker), "timed-out child must not perform its delayed write")
+    check.same("keep", fs.read_raw(root .. "/owned/sentinel.txt"))
+    check.same(1, #assert(proc.collect_files(root .. "/owned")))
+  end)
+end)
+
+it("builtin Windows owner requires no external compiler", function()
+  fixture(function(root)
+    local file = script(root, "builtin", 'print("BUILTIN_ONLY")')
+    local driver = script(root, "driver", 'require("test.bootstrap").install_package_paths(); local ok,r=require("foundation.parallel_lanes").run({{label="builtin",cmd={' .. string.format('%q', native_lua) .. ',' .. string.format('%q', file) .. '}}},{stream=false,timeout=20}); print(r[1].output); os.exit(ok and 0 or 1)')
+    local system = assert(os.getenv("SystemRoot"))
+    local command = 'set "PATH=' .. system .. '\\System32;' .. system .. '\\System32\\WindowsPowerShell\\v1.0" && "' .. native_lua .. '" "' .. driver:gsub("/", "\\") .. '"'
+    local result = proc.run_command(command)
+    check.is_true(result.ok, result.output)
+    check.matches("BUILTIN_ONLY", result.output, 1, true)
+  end)
+end)
+
+it("timeout stops detached writer after command parent exits", function()
+  fixture(function(root)
+    local marker = root .. "/detached_late.txt"
+    local file = script(root, "detached", 'print("DETACHED_START"); io.stdout:flush(); local d=os.time()+6; while os.time()<d do end; local f=assert(io.open(arg[1],"wb")); f:write("LATE"); f:close()')
+    local command = 'start "" /b "' .. native_lua .. '" "' .. file:gsub("/", "\\") .. '" "' .. marker:gsub("/", "\\") .. '"'
+    local ok, results = parallel.run({{label="detached", cmd=command}}, {stream=false, timeout=2})
+    check.is_false(ok)
+    check.same("timeout", results[1].reason)
+    check.matches("DETACHED_START", results[1].output, 1, true)
+    check.is_nil(results[1].artifact_dir)
+    proc.run_command({native_lua, "-e", "local d=os.time()+7; while os.time()<d do end; print('WAIT')"})
+    check.is_false(fs.path_exists(marker), "detached owned writer must stop before timeout result returns")
+  end)
+end)
+end)

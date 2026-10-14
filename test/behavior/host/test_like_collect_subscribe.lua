@@ -1,6 +1,11 @@
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local with_patches = support.with_patches
 
 -- 与 src/host/like_collect_subscribe.lua 的编辑器配置为真源：事件名逐字不可漂移。
@@ -109,9 +114,9 @@ local function _find_callback(env, event_name)
   return nil
 end
 
-TestLikeCollectSubscribe = {}
+describe("TestLikeCollectSubscribe", function()
 
-function TestLikeCollectSubscribe:test_setup_registers_three_listeners_once()
+local function _test_setup_registers_three_listeners_once()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
@@ -130,7 +135,7 @@ function TestLikeCollectSubscribe:test_setup_registers_three_listeners_once()
   end)
 end
 
-function TestLikeCollectSubscribe:test_setup_skips_registration_without_host_contract()
+local function _test_setup_skips_registration_without_host_contract()
   _with_env({
     register_trigger = function() error("should not be called") end,
   }, function(module, env, _)
@@ -148,14 +153,14 @@ function TestLikeCollectSubscribe:test_setup_skips_registration_without_host_con
       module.setup(_game())
     end)
 
-    lu.assertEvalToTrue(
+    luassert.truthy(
       #env.warnings > 0 and env.warnings[1]:find("host event contract missing", 1, true),
       "should warn when host event contract is missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_like_click_opens_panel_and_sends_event()
+local function _test_like_click_opens_panel_and_sends_event()
   _with_env({}, function(module, env, role)
     local game = _game()
     module.setup(game)
@@ -165,7 +170,7 @@ function TestLikeCollectSubscribe:test_like_click_opens_panel_and_sends_event()
     end
 
     local callback = _find_callback(env, LIKE_EVENT)
-    lu.assertNotNil(callback, "like listener should be registered")
+    luassert.is_not_nil(callback, "like listener should be registered")
     callback(nil, nil, { role = role })
 
     _assert_eq(#env.panel_calls, 1, "panel should be opened once")
@@ -176,7 +181,7 @@ function TestLikeCollectSubscribe:test_like_click_opens_panel_and_sends_event()
   end)
 end
 
-function TestLikeCollectSubscribe:test_collect_click_opens_panel_and_sends_event()
+local function _test_collect_click_opens_panel_and_sends_event()
   _with_env({}, function(module, env, role)
     local game = _game()
     module.setup(game)
@@ -186,7 +191,7 @@ function TestLikeCollectSubscribe:test_collect_click_opens_panel_and_sends_event
     end
 
     local callback = _find_callback(env, COLLECT_EVENT)
-    lu.assertNotNil(callback, "collect listener should be registered")
+    luassert.is_not_nil(callback, "collect listener should be registered")
     callback(nil, nil, { role = role })
 
     _assert_eq(#env.panel_calls, 1, "panel should be opened once")
@@ -195,7 +200,7 @@ function TestLikeCollectSubscribe:test_collect_click_opens_panel_and_sends_event
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscribe_click_opens_panel_and_shows_tips()
+local function _test_subscribe_click_opens_panel_and_shows_tips()
   _with_env({}, function(module, env, role)
     local game = _game()
     module.setup(game)
@@ -205,7 +210,7 @@ function TestLikeCollectSubscribe:test_subscribe_click_opens_panel_and_shows_tip
     end
 
     local callback = _find_callback(env, SUBSCRIBE_CLICK_EVENT)
-    lu.assertNotNil(callback, "subscribe listener should be registered")
+    luassert.is_not_nil(callback, "subscribe listener should be registered")
     callback(nil, nil, { role = role })
 
     _assert_eq(#env.panel_calls, 1, "panel should be opened once")
@@ -216,7 +221,7 @@ function TestLikeCollectSubscribe:test_subscribe_click_opens_panel_and_shows_tip
   end)
 end
 
-function TestLikeCollectSubscribe:test_map_enter_check_uses_zero_point_one_delay()
+local function _test_map_enter_check_uses_zero_point_one_delay()
   _with_env({}, function(module, env, _)
     module.setup(_game())
 
@@ -225,7 +230,7 @@ function TestLikeCollectSubscribe:test_map_enter_check_uses_zero_point_one_delay
   end)
 end
 
-function TestLikeCollectSubscribe:test_map_enter_subscribed_sends_subscribe_event()
+local function _test_map_enter_subscribed_sends_subscribe_event()
   _with_env({
     role = _role({ is_subscribed_map_author = function() return true end }),
   }, function(module, env, _)
@@ -241,7 +246,7 @@ function TestLikeCollectSubscribe:test_map_enter_subscribed_sends_subscribe_even
   end)
 end
 
-function TestLikeCollectSubscribe:test_map_enter_not_subscribed_sends_nothing()
+local function _test_map_enter_not_subscribed_sends_nothing()
   _with_env({
     role = _role({ is_subscribed_map_author = function() return false end }),
   }, function(module, env, _)
@@ -253,7 +258,7 @@ function TestLikeCollectSubscribe:test_map_enter_not_subscribed_sends_nothing()
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_event_not_sent_twice()
+local function _test_subscription_event_not_sent_twice()
   _with_env({
     role = _role({ is_subscribed_map_author = function() return true end }),
   }, function(module, env, _)
@@ -271,7 +276,7 @@ function TestLikeCollectSubscribe:test_subscription_event_not_sent_twice()
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_send_failure_is_not_latched_and_retries()
+local function _test_subscription_send_failure_is_not_latched_and_retries()
   local send_should_fail = true
   _with_env({
     role = _role({ is_subscribed_map_author = function() return true end }),
@@ -309,7 +314,7 @@ function TestLikeCollectSubscribe:test_subscription_send_failure_is_not_latched_
   end)
 end
 
-function TestLikeCollectSubscribe:test_host_call_failures_warn_only()
+local function _test_host_call_failures_warn_only()
   _with_env({
     role = _role({
       show_like_panel = function() error("panel boom") end,
@@ -327,11 +332,11 @@ function TestLikeCollectSubscribe:test_host_call_failures_warn_only()
 
     env.scheduled[1].callback()
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should log warnings for host failures")
+    luassert.truthy(#env.warnings > 0, "should log warnings for host failures")
   end)
 end
 
-function TestLikeCollectSubscribe:test_unit_send_failure_warns_only()
+local function _test_unit_send_failure_warns_only()
   _with_env({
     role = _role(),
   }, function(module, env, _)
@@ -349,26 +354,26 @@ function TestLikeCollectSubscribe:test_unit_send_failure_warns_only()
       like_callback(nil, nil, { role = _role() })
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when unit send fails")
+    luassert.truthy(#env.warnings > 0, "should warn when unit send fails")
   end)
 end
 
-function TestLikeCollectSubscribe:test_unit_send_missing_ctrl_unit_warns()
+local function _test_unit_send_missing_ctrl_unit_warns()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
     local like_callback = _find_callback(env, LIKE_EVENT)
     like_callback(nil, nil, { role = { show_like_panel = function() end } })
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when role has no get_ctrl_unit")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when role has no get_ctrl_unit")
+    luassert.truthy(
       env.warnings[1]:find("unit missing", 1, true) ~= nil,
       "should mention unit missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_unit_send_ctrl_unit_call_failure_warns()
+local function _test_unit_send_ctrl_unit_call_failure_warns()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
@@ -377,30 +382,30 @@ function TestLikeCollectSubscribe:test_unit_send_ctrl_unit_call_failure_warns()
       role = _role({ get_ctrl_unit = function() error("ctrl boom") end }),
     })
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when get_ctrl_unit raises")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when get_ctrl_unit raises")
+    luassert.truthy(
       env.warnings[1]:find("unit missing", 1, true) ~= nil,
       "should mention unit missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_unit_send_ctrl_unit_returns_nil_warns()
+local function _test_unit_send_ctrl_unit_returns_nil_warns()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
     local like_callback = _find_callback(env, LIKE_EVENT)
     like_callback(nil, nil, { role = _role({ get_ctrl_unit = function() return nil end }) })
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when get_ctrl_unit returns nil")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when get_ctrl_unit returns nil")
+    luassert.truthy(
       env.warnings[1]:find("unit missing", 1, true) ~= nil,
       "should mention unit missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_unit_send_missing_lua_api_warns()
+local function _test_unit_send_missing_lua_api_warns()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
@@ -411,15 +416,15 @@ function TestLikeCollectSubscribe:test_unit_send_missing_lua_api_warns()
       like_callback(nil, nil, { role = _role() })
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when LuaAPI is missing")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when LuaAPI is missing")
+    luassert.truthy(
       env.warnings[1]:find("LuaAPI missing", 1, true) ~= nil,
       "should mention LuaAPI missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_show_tips_missing_global_api_warns()
+local function _test_show_tips_missing_global_api_warns()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
@@ -430,15 +435,15 @@ function TestLikeCollectSubscribe:test_show_tips_missing_global_api_warns()
       subscribe_callback(nil, nil, { role = _role() })
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when GlobalAPI is missing")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when GlobalAPI is missing")
+    luassert.truthy(
       env.warnings[1]:find("GlobalAPI.show_tips missing", 1, true) ~= nil,
       "should mention show_tips missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_show_tips_failure_warns_only()
+local function _test_show_tips_failure_warns_only()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
@@ -454,11 +459,11 @@ function TestLikeCollectSubscribe:test_show_tips_failure_warns_only()
       subscribe_callback(nil, nil, { role = _role() })
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when show_tips raises")
+    luassert.truthy(#env.warnings > 0, "should warn when show_tips raises")
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_check_without_valid_role_warns()
+local function _test_subscription_check_without_valid_role_warns()
   _with_env({
     game_api = {
       get_all_valid_roles = function() return {} end,
@@ -468,15 +473,15 @@ function TestLikeCollectSubscribe:test_subscription_check_without_valid_role_war
     module.setup(game)
     env.scheduled[1].callback()
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when no valid role exists")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when no valid role exists")
+    luassert.truthy(
       env.warnings[1]:find("no valid role", 1, true) ~= nil,
       "should mention no valid role: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_check_missing_game_api_warns()
+local function _test_subscription_check_missing_game_api_warns()
   _with_env({}, function(module, env, _)
     local game = _game()
     module.setup(game)
@@ -486,15 +491,15 @@ function TestLikeCollectSubscribe:test_subscription_check_missing_game_api_warns
       env.scheduled[1].callback()
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when GameAPI is missing")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when GameAPI is missing")
+    luassert.truthy(
       env.warnings[1]:find("no valid role", 1, true) ~= nil,
       "should mention no valid role: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_check_role_fetch_failure_warns()
+local function _test_subscription_check_role_fetch_failure_warns()
   _with_env({
     game_api = {
       get_all_valid_roles = function() error("roles boom") end,
@@ -504,15 +509,15 @@ function TestLikeCollectSubscribe:test_subscription_check_role_fetch_failure_war
     module.setup(game)
     env.scheduled[1].callback()
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when get_all_valid_roles raises")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when get_all_valid_roles raises")
+    luassert.truthy(
       env.warnings[1]:find("no valid role", 1, true) ~= nil,
       "should mention no valid role: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_check_non_table_roles_warns()
+local function _test_subscription_check_non_table_roles_warns()
   _with_env({
     game_api = {
       get_all_valid_roles = function() return "not a table" end,
@@ -522,15 +527,15 @@ function TestLikeCollectSubscribe:test_subscription_check_non_table_roles_warns(
     module.setup(game)
     env.scheduled[1].callback()
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when roles is not a table")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when roles is not a table")
+    luassert.truthy(
       env.warnings[1]:find("no valid role", 1, true) ~= nil,
       "should mention no valid role: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_subscription_check_missing_method_warns()
+local function _test_subscription_check_missing_method_warns()
   _with_env({
     role = {
       show_like_panel = function() end,
@@ -541,15 +546,15 @@ function TestLikeCollectSubscribe:test_subscription_check_missing_method_warns()
     module.setup(game)
     env.scheduled[1].callback()
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when is_subscribed_map_author missing")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when is_subscribed_map_author missing")
+    luassert.truthy(
       env.warnings[1]:find("is_subscribed_map_author missing", 1, true) ~= nil,
       "should mention method missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_setup_missing_set_timeout_warns()
+local function _test_setup_missing_set_timeout_warns()
   _with_env({}, function(module, env, _)
     with_patches({
       { key = "SetTimeOut", value = nil },
@@ -557,15 +562,15 @@ function TestLikeCollectSubscribe:test_setup_missing_set_timeout_warns()
       module.setup(_game())
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when SetTimeOut is missing")
-    lu.assertEvalToTrue(
+    luassert.truthy(#env.warnings > 0, "should warn when SetTimeOut is missing")
+    luassert.truthy(
       env.warnings[1]:find("SetTimeOut missing", 1, true) ~= nil,
       "should mention SetTimeOut missing: " .. tostring(env.warnings[1])
     )
   end)
 end
 
-function TestLikeCollectSubscribe:test_setup_schedule_failure_warns_only()
+local function _test_setup_schedule_failure_warns_only()
   _with_env({}, function(module, env, _)
     with_patches({
       {
@@ -576,8 +581,33 @@ function TestLikeCollectSubscribe:test_setup_schedule_failure_warns_only()
       module.setup(_game())
     end)
 
-    lu.assertEvalToTrue(#env.warnings > 0, "should warn when SetTimeOut raises")
+    luassert.truthy(#env.warnings > 0, "should warn when SetTimeOut raises")
   end)
 end
 
-return TestLikeCollectSubscribe
+it("test_setup_registers_three_listeners_once", _test_setup_registers_three_listeners_once)
+it("test_setup_skips_registration_without_host_contract", _test_setup_skips_registration_without_host_contract)
+it("test_like_click_opens_panel_and_sends_event", _test_like_click_opens_panel_and_sends_event)
+it("test_collect_click_opens_panel_and_sends_event", _test_collect_click_opens_panel_and_sends_event)
+it("test_subscribe_click_opens_panel_and_shows_tips", _test_subscribe_click_opens_panel_and_shows_tips)
+it("test_map_enter_check_uses_zero_point_one_delay", _test_map_enter_check_uses_zero_point_one_delay)
+it("test_map_enter_subscribed_sends_subscribe_event", _test_map_enter_subscribed_sends_subscribe_event)
+it("test_map_enter_not_subscribed_sends_nothing", _test_map_enter_not_subscribed_sends_nothing)
+it("test_subscription_event_not_sent_twice", _test_subscription_event_not_sent_twice)
+it("test_subscription_send_failure_is_not_latched_and_retries", _test_subscription_send_failure_is_not_latched_and_retries)
+it("test_host_call_failures_warn_only", _test_host_call_failures_warn_only)
+it("test_unit_send_failure_warns_only", _test_unit_send_failure_warns_only)
+it("test_unit_send_missing_ctrl_unit_warns", _test_unit_send_missing_ctrl_unit_warns)
+it("test_unit_send_ctrl_unit_call_failure_warns", _test_unit_send_ctrl_unit_call_failure_warns)
+it("test_unit_send_ctrl_unit_returns_nil_warns", _test_unit_send_ctrl_unit_returns_nil_warns)
+it("test_unit_send_missing_lua_api_warns", _test_unit_send_missing_lua_api_warns)
+it("test_show_tips_missing_global_api_warns", _test_show_tips_missing_global_api_warns)
+it("test_show_tips_failure_warns_only", _test_show_tips_failure_warns_only)
+it("test_subscription_check_without_valid_role_warns", _test_subscription_check_without_valid_role_warns)
+it("test_subscription_check_missing_game_api_warns", _test_subscription_check_missing_game_api_warns)
+it("test_subscription_check_role_fetch_failure_warns", _test_subscription_check_role_fetch_failure_warns)
+it("test_subscription_check_non_table_roles_warns", _test_subscription_check_non_table_roles_warns)
+it("test_subscription_check_missing_method_warns", _test_subscription_check_missing_method_warns)
+it("test_setup_missing_set_timeout_warns", _test_setup_missing_set_timeout_warns)
+it("test_setup_schedule_failure_warns_only", _test_setup_schedule_failure_warns_only)
+end)

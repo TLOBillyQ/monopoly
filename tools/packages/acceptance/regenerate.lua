@@ -5,7 +5,7 @@
 -- listed in tools/packages/acceptance/acceptance_features.lua. It is the
 -- regenerate step behind the `lua tools/cli.lua acceptance` entrypoint.
 
-local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
+local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
 local env = bootstrap.install(debug.getinfo(1, "S").source)
 assert(bootstrap.ensure_tool("acceptance4lua", env))
 
@@ -47,7 +47,8 @@ function regenerate.run(options)
   options = options or {}
   local report = options.report or function(_) end
   local generated_dir = options.generated_dir or registry.generated_dir
-  local entries = options.entries or registry.entries
+  local entries = options.entries or registry.select(report)
+  if type(entries) ~= "table" or #entries == 0 then return nil, "no acceptance entries selected" end
   local total = #entries
   for index, entry in ipairs(entries) do
     local generated_path = path_lib.join_path(generated_dir, entry.generated)

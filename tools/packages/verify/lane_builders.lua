@@ -1,11 +1,11 @@
--- verify 的车道表:default(七层 + foundation 全跑,coverage / crap 按需挂载)。
+-- verify 的车道表:default(七层 + foundation 全跑,tooling 按需挂载)。
 -- 选哪张由 lanes.resolve 决定,这里只负责造表。
 local shell_lib = require("foundation.shell")
 
 local builders = {}
 
--- spec-lane 车道默认后端 = LuaUnit 运行器
--- (packages.luaunit_runner.lua54.argv_prefix)。--busted-bin / BUSTED_BIN
+-- spec-lane 车道默认后端 = 真实 busted 运行器
+-- (packages.test_runner.lua54.argv_prefix)。--busted-bin / BUSTED_BIN
 -- 逃生舱已删,verify_full 不注入任何覆写。
 local function _spec_lane_cmd(profile)
   return shell_lib.build_command({
@@ -23,7 +23,7 @@ end
 local LINT_TARGETS = { "src", "test", "tools" }
 
 local function _add_lint_or_skip(lanes, skipped, env)
-  if env.luacheck_available == true and env.lua54_bin then
+  if env.lua54_bin then
     for _, target in ipairs(LINT_TARGETS) do
       lanes[#lanes + 1] = {
         label = "lint-" .. target,
@@ -37,16 +37,13 @@ local function _add_lint_or_skip(lanes, skipped, env)
   end
 end
 
--- behavior 与 crap_collect 并行编排：两者
--- in parallel. behavior keeps test/log_warns_handler.lua's warn-summary
--- diagnostic in verify_full output; crap_collect produces the coverage data
--- the post-parallel analyze step turns into crap_report.json without
--- re-running the 2305 tests sequentially.
-function builders.default(env, include_tooling, include_coverage, include_crap)
+-- 层边界门禁住在 guards 车道(arch_policy_guard 执行 policy.json);旧外部
+-- 架构工具的独立 arch 车道随 #94 退场。CRAP / 变异不进 verify,走显式
+-- `lua tools/cli.lua uml crap|mutate`。
+function builders.default(env, include_tooling, serial)
   local lanes, skipped = {}, {}
   lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract") }
   lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards") }
-  lanes[#lanes + 1] = { label = "arch", cmd = "lua tools/packages/arch_view/runner.lua check" }
   lanes[#lanes + 1] = { label = "behavior", cmd = "lua test/support/behavior_parallel.lua" }
   _add_lint_or_skip(lanes, skipped, env)
   lanes[#lanes + 1] = { label = "encoding", cmd = "lua tools/packages/encoding/encoding.lua check" }
@@ -58,45 +55,11 @@ function builders.default(env, include_tooling, include_coverage, include_crap)
       cmd = "lua test/support/behavior_parallel.lua --profile tooling",
     }
   end
-  -- coverage 与 crap 默认 opt-out（cleaner/architect owns the
-  -- long-running lanes). Default verify stays slim.
-  -- collect 进程内 adapter 顶层 require("cluacov.hook")（5.4 ABI 的
-  -- .so),PATH 上的 lua 可能是 5.5,加载即崩(实测 exit 139)。与 coverage 车道
-  -- 同口径钉 env.lua54_bin;探不到时整条跳过(analyze/gate 步骤随之不跑)。
-  if include_crap then
-    if env.lua54_bin then
-      lanes[#lanes + 1] = {
-        label = "crap_collect",
-        cmd = shell_lib.build_command({
-          env.lua54_bin,
-          "tools/packages/crap/runner.lua",
-          "collect",
-          "--lane", "behavior",
-          "--out", "tmp/crap_collect.json",
-        }),
-      }
-    else
-      skipped[#skipped + 1] = "crap_collect"
-    end
-  end
-  -- Coverage runs alongside the other lanes: it re-runs the spec lanes under
-  -- luacov in a separate lua5.4 process with its own stats files (luacov.<profile>.stats.out),
-  -- so it shares no mutable state with the non-coverage lanes. Wall time is
-  -- bounded by the slower of (parallel lanes, coverage), not their sum.
-  if include_coverage then
-    if env.lua54_bin and env.coverage_available ~= false then
-      lanes[#lanes + 1] = {
-        label = "coverage",
-        cmd = shell_lib.build_command({
-          env.lua54_bin,
-          "tools/packages/coverage/coverage.lua",
-          "--quiet",
-          "--out",
-          "tmp/coverage.md",
-        }),
-      }
-    else
-      skipped[#skipped + 1] = "coverage"
+  if serial then
+    for _, lane in ipairs(lanes) do
+      if lane.label == "behavior" or lane.label == "tooling" or lane.label == "contract" or lane.label == "guards" then
+        lane.cmd = shell_lib.build_command({ env.lua54_bin, "tools/packages/spec_lane/spec_lane.lua", "--profile", lane.label, "--serial" })
+      end
     end
   end
   return lanes, skipped

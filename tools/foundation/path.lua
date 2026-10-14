@@ -47,7 +47,11 @@ function path.simplify_path(value)
   local prefix = ""
   local remainder = normalized
 
-  if normalized:match("^%a:/") then
+  local unc = normalized:match("^(//[^/]+/[^/]+)")
+  if unc then
+    prefix = unc
+    remainder = normalized:sub(#unc + 2)
+  elseif normalized:match("^%a:/") then
     prefix = normalized:sub(1, 2)
     remainder = normalized:sub(4)
   elseif normalized:sub(1, 1) == "/" then

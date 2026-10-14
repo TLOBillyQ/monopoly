@@ -1,0 +1,38 @@
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local proc = require("foundation.proc")
+local lua54 = require("foundation.lua54")
+local root = require("foundation.bootstrap").resolve(debug.getinfo(1, "S").source).repo_root
+
+describe("verified cache modules", function()
+  local function probe(mode)
+    return proc.run_command({ lua54.lua54_bin(), root .. "/test/fixtures/verified_modules/probe.lua", mode })
+  end
+  it("does not trust modules before cache installation", function()
+    local result = probe("uninstalled")
+    luassert.is.equal(0, result.code, result.output)
+  end)
+  it("loads shared scenarios after real busted preloads its dependencies", function()
+    local result = probe("trusted")
+    luassert.is.equal(0, result.code, result.output)
+  end)
+  it("rejects a forged luassert before the shared scenario loader", function()
+    local result = probe("injected")
+    luassert.is.equal(1, result.code, result.output)
+    luassert.matches("unverified preloaded module: luassert", result.output, 1, true)
+  end)
+  it("runs shared cases and reports deliberately false assertions through real busted", function()
+    for _, sample in ipairs({ { "shared", 0, "passed=1 failed=0 errors=0" }, { "failing", 1, "passed=0 failed=1 errors=0" } }) do
+      local result = proc.run_command({ lua54.lua54_bin(), root .. "/tools/packages/test_runner/runner.lua",
+        "--helper=test/helper.lua", "--output=TAP", "--",
+        "test/fixtures/verified_modules/" .. sample[1] .. ".lua" })
+      luassert.is.equal(sample[2], result.code, result.output)
+      luassert.matches(sample[3], result.output, 1, true)
+    end
+  end)
+  it("rejects replacement of any verified dependency", function()
+    local result = probe("replaced")
+    luassert.is.equal(1, result.code, result.output)
+    luassert.matches("verified module identity changed: luassert.spy", result.output, 1, true)
+  end)
+end)

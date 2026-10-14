@@ -1,10 +1,15 @@
 -- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为 Test* 类,after_each →
--- tearDown,断言从裸 assert 切到 lu.assertEvalToTrue,用例数与改写前一一对应
+-- tearDown,断言从裸 assert 切到 luassert.truthy,用例数与改写前一一对应
 -- (settle 7 例 + 迁自 property 车道的 accumulation properties 3 例 = 10 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local runtime_ports = require("src.foundation.ports.runtime_ports")
 local leaderboard = require("src.app.host_integrations.leaderboard")
 
@@ -56,15 +61,13 @@ local function _game(players, winners)
   }
 end
 
-TestLeaderboardSettle = {}
+describe("TestLeaderboardSettle", function()
+  after_each(function()
+    runtime_ports.reset_for_tests()
+    support.restore_runtime_services()
+  end)
 
-function TestLeaderboardSettle:tearDown()
-  runtime_ports.reset_for_tests()
-  -- 上面的 reset 把共享端口基线拆到未配置态,必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
-  support.restore_runtime_services()
-end
-
-function TestLeaderboardSettle:test_increments_win_count_for_each_winner_only()
+local function _test_increments_win_count_for_each_winner_only()
   local winner = _player(1, 0)
   local loser = _player(2, 0)
   local store, _, slot = _install_archives(true, {
@@ -77,7 +80,7 @@ function TestLeaderboardSettle:test_increments_win_count_for_each_winner_only()
   _assert_eq(store[slot(2, WIN)], 5, "non-winner win count should stay unchanged")
 end
 
-function TestLeaderboardSettle:test_accumulates_remaining_assets_for_present_players()
+local function _test_accumulates_remaining_assets_for_present_players()
   local player = _player(1, 30000)
   local store, _, slot = _install_archives(true, {
     [tostring(1) .. "|" .. tostring(ASSETS)] = 50000,
@@ -87,7 +90,7 @@ function TestLeaderboardSettle:test_accumulates_remaining_assets_for_present_pla
   _assert_eq(store[slot(1, ASSETS)], 80000, "present player assets should add to the cumulative total")
 end
 
-function TestLeaderboardSettle:test_excludes_quit_players_from_asset_accumulation()
+local function _test_excludes_quit_players_from_asset_accumulation()
   local player = _player(1, 99999, { quit_reason = "disconnect" })
   local store, _, slot = _install_archives(true, {
     [tostring(1) .. "|" .. tostring(ASSETS)] = 50000,
@@ -97,7 +100,7 @@ function TestLeaderboardSettle:test_excludes_quit_players_from_asset_accumulatio
   _assert_eq(store[slot(1, ASSETS)], 50000, "quit player assets must not be counted")
 end
 
-function TestLeaderboardSettle:test_increments_each_winner_in_a_tie()
+local function _test_increments_each_winner_in_a_tie()
   local one = _player(1, 0)
   local two = _player(2, 0)
   local store, _, slot = _install_archives(true, {
@@ -110,7 +113,7 @@ function TestLeaderboardSettle:test_increments_each_winner_in_a_tie()
   _assert_eq(store[slot(2, WIN)], 3, "second tied winner should gain one win")
 end
 
-function TestLeaderboardSettle:test_does_not_double_count_on_repeat_settlement()
+local function _test_does_not_double_count_on_repeat_settlement()
   local winner = _player(1, 50000)
   local store, _, slot = _install_archives(true, {})
   local game = _game({ winner }, { winner })
@@ -124,7 +127,7 @@ function TestLeaderboardSettle:test_does_not_double_count_on_repeat_settlement()
   _assert_eq(store[slot(1, ASSETS)], assets_after_first, "repeat settlement should not add assets")
 end
 
-function TestLeaderboardSettle:test_writes_nothing_when_archives_are_disabled()
+local function _test_writes_nothing_when_archives_are_disabled()
   local winner = _player(1, 50000)
   local _, writes = _install_archives(false, {})
 
@@ -133,7 +136,7 @@ function TestLeaderboardSettle:test_writes_nothing_when_archives_are_disabled()
   _assert_eq(writes.count, 0, "disabled archives must receive no writes")
 end
 
-function TestLeaderboardSettle:test_recognizes_host_quit_reasons()
+local function _test_recognizes_host_quit_reasons()
   _assert_eq(leaderboard.is_quit_reason("disconnect"), true, "disconnect should be a quit reason")
   _assert_eq(leaderboard.is_quit_reason("manual_exit"), true, "manual exit should be a quit reason")
   _assert_eq(leaderboard.is_quit_reason("crash"), true, "crash should be a quit reason")
@@ -141,8 +144,17 @@ function TestLeaderboardSettle:test_recognizes_host_quit_reasons()
   _assert_eq(leaderboard.is_quit_reason(nil), false, "missing reason is not a quit reason")
 end
 
--- ===== 迁自 test/property/test_leaderboard_settle.lua（#190, 测试极简化决策：property 车道退场，性质并入 behavior）=====
-do
+it("test_increments_win_count_for_each_winner_only", _test_increments_win_count_for_each_winner_only)
+it("test_accumulates_remaining_assets_for_present_players", _test_accumulates_remaining_assets_for_present_players)
+it("test_excludes_quit_players_from_asset_accumulation", _test_excludes_quit_players_from_asset_accumulation)
+it("test_increments_each_winner_in_a_tie", _test_increments_each_winner_in_a_tie)
+it("test_does_not_double_count_on_repeat_settlement", _test_does_not_double_count_on_repeat_settlement)
+it("test_writes_nothing_when_archives_are_disabled", _test_writes_nothing_when_archives_are_disabled)
+it("test_recognizes_host_quit_reasons", _test_recognizes_host_quit_reasons)
+end)
+
+-- ===== 迁自 test/property/test_leaderboard_settle.lua（#190）=====
+describe("TestLeaderboardSettleAccumulationProperties", function()
   local property = require("test.support.property")
   local asset_total = require("src.rules.land.asset_total")
 
@@ -224,21 +236,18 @@ do
     return ids
   end
 
-  TestLeaderboardSettleAccumulationProperties = {}
-
-  function TestLeaderboardSettleAccumulationProperties:tearDown()
+  after_each(function()
     runtime_ports.reset_for_tests()
-    -- 上面的 reset 把共享端口基线拆到未配置态,必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
     support.restore_runtime_services()
-  end
+  end)
 
-  function TestLeaderboardSettleAccumulationProperties:test_adds_one_win_per_winner_and_remaining_assets_per_non_quit_player_leaving_the_rest_untouched()
+  local function _test_adds_one_win_per_winner_and_remaining_assets_per_non_quit_player_leaving_the_rest_untouched()
     property.for_all(_generate, function(case)
       local store = _prop_install_archives(true, case.seed)
       local game = _prop_game(case.players, case.winners)
       local winner_ids = _winner_id_set(case)
 
-      lu.assertEvalToTrue(leaderboard.settle(game) == true, "first settlement on enabled archives must run")
+      luassert.truthy(leaderboard.settle(game) == true, "first settlement on enabled archives must run")
 
       local expected_win_total, expected_asset_total = 0, 0
       for _, player in ipairs(case.players) do
@@ -248,9 +257,9 @@ do
         if not leaderboard.is_quit_reason(player.quit_reason) then
           expected_asset_delta = asset_total.player_total(game, player)
         end
-        lu.assertEvalToTrue(store[_slot(player.id, WIN)] == case.seed[_slot(player.id, WIN)] + expected_win_delta,
+        luassert.truthy(store[_slot(player.id, WIN)] == case.seed[_slot(player.id, WIN)] + expected_win_delta,
           "win archive must change by exactly the winner delta for player " .. player.id)
-        lu.assertEvalToTrue(store[_slot(player.id, ASSETS)] == case.seed[_slot(player.id, ASSETS)] + expected_asset_delta,
+        luassert.truthy(store[_slot(player.id, ASSETS)] == case.seed[_slot(player.id, ASSETS)] + expected_asset_delta,
           "asset archive must change by exactly the non-quit total for player " .. player.id)
         expected_win_total = expected_win_total + expected_win_delta
         expected_asset_total = expected_asset_total + expected_asset_delta
@@ -264,12 +273,12 @@ do
         actual_asset_total = actual_asset_total
           + (store[_slot(player.id, ASSETS)] - case.seed[_slot(player.id, ASSETS)])
       end
-      lu.assertEvalToTrue(actual_win_total == expected_win_total, "total wins added must equal the present winner count")
-      lu.assertEvalToTrue(actual_asset_total == expected_asset_total, "total assets added must equal the non-quit player sum")
+      luassert.truthy(actual_win_total == expected_win_total, "total wins added must equal the present winner count")
+      luassert.truthy(actual_asset_total == expected_asset_total, "total assets added must equal the non-quit player sum")
     end)
   end
 
-  function TestLeaderboardSettleAccumulationProperties:test_is_idempotent_a_second_settlement_reports_skipped_and_changes_no_archive()
+  local function _test_is_idempotent_a_second_settlement_reports_skipped_and_changes_no_archive()
     property.for_all(_generate, function(case)
       local store = _prop_install_archives(true, case.seed)
       local game = _prop_game(case.players, case.winners)
@@ -280,33 +289,26 @@ do
         snapshot[key] = value
       end
 
-      lu.assertEvalToTrue(leaderboard.settle(game) == false, "repeat settlement must report skipped")
+      luassert.truthy(leaderboard.settle(game) == false, "repeat settlement must report skipped")
       for key, value in pairs(store) do
-        lu.assertEvalToTrue(snapshot[key] == value, "repeat settlement must not change archive " .. key)
+        luassert.truthy(snapshot[key] == value, "repeat settlement must not change archive " .. key)
       end
       for key, value in pairs(snapshot) do
-        lu.assertEvalToTrue(store[key] == value, "repeat settlement must not remove archive " .. key)
+        luassert.truthy(store[key] == value, "repeat settlement must not remove archive " .. key)
       end
     end)
   end
 
-  function TestLeaderboardSettleAccumulationProperties:test_writes_nothing_and_reports_skipped_when_host_archives_are_disabled()
+  local function _test_writes_nothing_and_reports_skipped_when_host_archives_are_disabled()
     property.for_all(_generate, function(case)
       local _, writes = _prop_install_archives(false, case.seed)
       local game = _prop_game(case.players, case.winners)
 
-      lu.assertEvalToTrue(leaderboard.settle(game) == false, "disabled archives must report skipped")
-      lu.assertEvalToTrue(writes.count == 0, "disabled archives must receive no writes")
+      luassert.truthy(leaderboard.settle(game) == false, "disabled archives must report skipped")
+      luassert.truthy(writes.count == 0, "disabled archives must receive no writes")
     end)
   end
-end
-
-
--- mutate 车道统一返回全部类（#283 多类文件 return 首类假幸存方向）：
--- 正常车道扫 _G 收全部 Test* 类，但 mutate 内建 runner 只跑 return 的表，
--- 只 return 首个类会让其余类的用例在变异车道完全不执行。合并全部类，
--- 每个 test* 方法跑所属类 setUp/tearDown（见 multi_class_return）。
-return require("test.support.multi_class_return").merge(
-  TestLeaderboardSettle,
-  TestLeaderboardSettleAccumulationProperties
-)
+  it("test_adds_one_win_per_winner_and_remaining_assets_per_non_quit_player_leaving_the_rest_untouched", _test_adds_one_win_per_winner_and_remaining_assets_per_non_quit_player_leaving_the_rest_untouched)
+  it("test_is_idempotent_a_second_settlement_reports_skipped_and_changes_no_archive", _test_is_idempotent_a_second_settlement_reports_skipped_and_changes_no_archive)
+  it("test_writes_nothing_and_reports_skipped_when_host_archives_are_disabled", _test_writes_nothing_and_reports_skipped_when_host_archives_are_disabled)
+end)

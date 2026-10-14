@@ -1,5 +1,10 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local _with_patches = support.with_patches
 
 local policy = require("src.ui.coord.event_actor_policy")
@@ -7,12 +12,10 @@ local local_actor_resolver = require("src.ui.render.support.local_actor_resolver
 local tip_queue = require("src.foundation.tips")
 local logger = require("src.foundation.log")
 
--- 原生 LuaUnit 迁移(busted → LuaUnit):describe 拍平为 TestEventActorPolicy,
--- 断言走 support.assert_eq,用例数与改写前一一对应(4 例)。
 
-TestEventActorPolicy = {}
+describe("TestEventActorPolicy", function()
 
-function TestEventActorPolicy:test_classifies_actor_bound_intents_and_ui_buttons()
+it("test_classifies_actor_bound_intents_and_ui_buttons", function()
   local actor_types = {
     "toggle_action_log", "open_skin_panel", "open_gallery_panel",
     "skin_panel_action", "item_atlas_action", "skin_gallery_action",
@@ -46,9 +49,9 @@ function TestEventActorPolicy:test_classifies_actor_bound_intents_and_ui_buttons
     "auto button should be actor-bound via the wrapper")
   _assert_eq(policy.is_actor_bound_ui_button("bogus_button"), false,
     "unknown button should not be actor-bound via the wrapper")
-end
+end)
 
-function TestEventActorPolicy:test_classifies_local_only_actor_resolution_intents()
+it("test_classifies_local_only_actor_resolution_intents", function()
   local local_types = {
     "toggle_action_log", "open_skin_panel", "open_gallery_panel",
     "skin_panel_action", "item_atlas_action", "skin_gallery_action",
@@ -71,9 +74,9 @@ function TestEventActorPolicy:test_classifies_local_only_actor_resolution_intent
   -- 道具槽点击者是"谁按的"，不是当前回合玩家；是否越权由 turn 侧裁定
   _assert_eq(policy.uses_local_actor({ type = "item_slot_click", slot_index = 1 }), true,
     "item_slot_click should use local actor resolution")
-end
+end)
 
-function TestEventActorPolicy:test_resolves_local_and_turn_bound_actor_ids_through_the_correct_resolver()
+it("test_resolves_local_and_turn_bound_actor_ids_through_the_correct_resolver", function()
   local calls = {}
 
   _with_patches({
@@ -100,9 +103,9 @@ function TestEventActorPolicy:test_resolves_local_and_turn_bound_actor_ids_throu
 
   _assert_eq(table.concat(calls, ","), "local:s:d,local:s:d,turn:s:d,turn:s:d,local:s:d",
     "policy should call the expected resolver for each intent")
-end
+end)
 
-function TestEventActorPolicy:test_attaches_preserves_allows_optional_and_rejects_missing_actors()
+it("test_attaches_preserves_allows_optional_and_rejects_missing_actors", function()
   local tips = {}
   local warns = {}
 
@@ -155,7 +158,7 @@ function TestEventActorPolicy:test_attaches_preserves_allows_optional_and_reject
   -- 精确钉整条 warn(#262,kills warn 第二处 tostring(intent.id) -> nil)。
   _assert_eq(warns[1], "ui intent rejected: missing actor_role_id|ui_button|next",
     "warning should carry the failure label, intent type, and intent id")
-end
+end)
 
 
-return TestEventActorPolicy
+end)

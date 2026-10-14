@@ -1,3 +1,5 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
 -- Re-requires key core_logic modules inside it() bodies so the debug hook
 -- captures function-definition lines that otherwise fire before any hook.
 -- The original package.loaded entry is restored after each re-require so the
@@ -8,7 +10,7 @@ local function _refire(name)
   package.loaded[name] = nil
   local m = require(name)
   package.loaded[name] = saved
-  assert(type(m) == "table", "expected table for " .. name)
+  assert.is_table(m, "expected table for " .. name)
   return m
 end
 
@@ -42,17 +44,27 @@ local function _label(case)
   return rel .. " — " .. _DEFAULT_HOOK_SUBJECT
 end
 
--- 原生 LuaUnit 迁移:describe + 场景循环(逐例注册方法)→ 单 Test*
--- 类 + 循环注册方法(方法名 = "test_" .. label,label 含破折号/括号,字符串键
--- 逐字保留;均以 test 开头,被 registry 按 test 前缀发现)。用例数与改写前
--- 一一对应(16 例)。
-TestCoreLogicModuleSmoke = {}
+describe("TestCoreLogicModuleSmoke", function()
+  local loaded_before_case
+  before_each(function()
+    loaded_before_case = {}
+    for name, object in pairs(package.loaded) do
+      if name:match("^src%.") then loaded_before_case[name] = object end
+    end
+  end)
+  after_each(function()
+    for name in pairs(package.loaded) do
+      if name:match("^src%.") and loaded_before_case[name] == nil then package.loaded[name] = nil end
+    end
+    for name, object in pairs(loaded_before_case) do package.loaded[name] = object end
+  end)
+
 
 for _, case in ipairs(_CASES) do
-  TestCoreLogicModuleSmoke["test_" .. _label(case)] = function(self)
+  it("test_" .. _label(case), function()
     _refire(case[1])
-  end
+  end)
 end
 
 
-return TestCoreLogicModuleSmoke
+end)

@@ -1,0 +1,12 @@
+local luassert = assert
+describe("TestLuassertFixtureNilAndFalse", function()
+  it("test_control_nil_and_false_are_distinguished", function()
+    luassert.is_nil(nil)
+    luassert.is_not_nil(false)
+    luassert.is_false(false)
+    luassert.is.equal(nil, nil)
+  end)
+  it("test_counterexample_nil_assertion_rejects_false", function()
+    luassert.is_nil(false)
+  end)
+end)

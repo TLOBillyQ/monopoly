@@ -37,16 +37,65 @@ local function _luarocks_tree_dir(repo_root)
   return runtime_paths.join_path(repo_root, ".toolcache/luarocks")
 end
 
+-- 解释器解析与全仓同源:LUA54_BIN 覆写 + 候选表 + `<candidate> -v` 版本验证全在
+-- packages.test_runner.lua54 一处表达;这里不再自造第二套规则(旧实现读 arg[-1],
+-- 而 `-e` 形态下 arg[-1] 恒为 nil,等于沉默退回 PATH 猜测)。调用点均已装好
+-- package.path(install / script_bootstrap 在前)。
+local function _selected_interpreter()
+  return require("foundation.lua54").lua54_bin()
+end
+
+-- 裸命令名 → Lua 安装前缀(luarocks `--lua-dir` 的实参)。
+-- where.exe 可能先给出 lua.cmd / lua.bat 这类 wrapper(用户 shell 垫片),它们的
+-- 目录不是 Lua 安装前缀,拿错会让 C 扩展找不到 include/lib;故优先取真实 .exe
+-- 所在的 bin/ 目录,只在没有 .exe 时退回第一个 bin/ 前一节。
+local function _install_prefix(selected)
+  local proc = require("foundation.proc")
+  local candidates = {}
+  local normalized = runtime_paths.normalize_path(selected)
+  if normalized:find("/") ~= nil then
+    candidates[#candidates + 1] = normalized
+  else
+    local found = proc.run_command({ "where.exe", selected })
+    if found.ok == true then
+      for line in tostring(found.output or ""):gmatch("[^\r\n]+") do
+        candidates[#candidates + 1] = runtime_paths.normalize_path(line)
+      end
+    end
+  end
+  local fallback
+  for _, candidate in ipairs(candidates) do
+    local prefix = candidate:match("^(.*)/bin/[^/]+$")
+    if prefix ~= nil then
+      if candidate:lower():match("%.exe$") ~= nil then
+        return prefix
+      end
+      fallback = fallback or prefix
+    end
+  end
+  return fallback
+end
+
+local function _luarocks_command(tree)
+  local selected = _selected_interpreter()
+  local prefix = _install_prefix(selected)
+  assert(prefix ~= nil, "cannot resolve selected Lua install prefix: " .. tostring(selected))
+  local found = require("foundation.proc").run_command({ "where.exe", "luarocks.exe" })
+  local rocks = found.ok and tostring(found.output):match("[^\r\n]+") or nil
+  rocks = rocks or runtime_paths.join_path(os.getenv("LOCALAPPDATA") or "", "Programs/LuaRocks/bin/luarocks.exe")
+  assert(require("foundation.fs").path_exists(rocks), "native LuaRocks executable missing: " .. rocks)
+  return { rocks, "--tree", tree, "--lua-version", "5.4", "--lua-dir", prefix }
+end
+
+local function _rocks_run(tree, args, opts)
+  local command = _luarocks_command(tree)
+  for _, value in ipairs(args) do command[#command + 1] = value end
+  return require("foundation.proc").run_command(command, opts)
+end
+
 local function _luarocks_list(tree, name)
   -- 调用方已确保 foundation 可用(package.path 已装好)。
-  local proc_lib = require("foundation.proc")
-  return proc_lib.run_command({
-    "luarocks",
-    "--tree", tree,
-    "--lua-version", "5.4",
-    "list", name,
-    "--porcelain",
-  })
+  return _rocks_run(tree, { "list", name, "--porcelain" })
 end
 
 local function _installed_version(tree, name)
@@ -98,31 +147,20 @@ local function _fetch_tool_source(repo_url, src_dir)
 end
 
 -- 从克隆的工作树构建安装。仓库根的 rockspec 是构建清单与依赖声明
--- (luacheck/luacov/luaunit 由它带入),luarocks make 自动拾取。
+-- (luacheck/luacov 由它带入),luarocks make 自动拾取。
 -- 先 remove 兜底:同版本号重复 make 会报 already installed。
 local function _luarocks_make(tree, name, src_dir)
-  local proc_lib = require("foundation.proc")
-  proc_lib.run_command({
-    "luarocks",
-    "--tree", tree,
-    "--lua-version", "5.4",
-    "remove", name,
-  })
-  return proc_lib.run_command({
-    "luarocks",
-    "--tree", tree,
-    "--lua-version", "5.4",
-    "make",
-  }, { cwd = src_dir })
+  _rocks_run(tree, { "remove", name })
+  return _rocks_run(tree, { "make", "--deps-mode", "one" }, { cwd = src_dir })
 end
 
 -- 用 luarocks 往 tree 里装一个工具/库,装好(或已装)返回 true。marker 判据
 -- 各不相同,由调用方给出 marker 相对子路径;name/version 是 `luarocks install`
--- 的实参。cluacov 额外依赖 luacov,用 before_install 钩子表达,装前先确保依赖。
+-- 的实参。依赖 luacov 的 rock(如 luacov-reporter-lcov)用 before_install 钩子
+-- 表达,装前先确保依赖。
 local function _ensure_rock_installed(repo_root, name, version, marker_rel, before_install)
   local path_lib = require("foundation.path")
   local fs_lib = require("foundation.fs")
-  local proc_lib = require("foundation.proc")
   local tree = _luarocks_tree_dir(repo_root)
   local marker = path_lib.join_path(tree, marker_rel)
   if fs_lib.path_exists(marker) == true then
@@ -141,12 +179,7 @@ local function _ensure_rock_installed(repo_root, name, version, marker_rel, befo
     end
   end
 
-  local result = proc_lib.run_command({
-    "luarocks",
-    "--tree", tree,
-    "--lua-version", "5.4",
-    "install", name, version,
-  })
+  local result = _rocks_run(tree, { "install", name, version, "--deps-mode", "one" })
   if result.ok ~= true then
     return nil, "luarocks install failed for " .. name .. ": " .. tostring(result.output)
   end
@@ -158,24 +191,34 @@ local function _ensure_rock_installed(repo_root, name, version, marker_rel, befo
   return true
 end
 
-function bootstrap.ensure_luaunit_tree(repo_root)
-  return _ensure_rock_installed(repo_root, "luaunit", "3.5-1", "share/lua/5.4/luaunit.lua")
+function bootstrap.ensure_luacheck_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "luacheck", "1.2.0-1", "share/lua/5.4/luacheck/main.lua")
 end
 
--- 覆盖率引擎 luacov 由上游 rockspec（crap4lua/mutate4lua
--- v0.1.0)以依赖形式带入 tree,这里只做显式确保——runner `-c` 与 coverage.lua
--- 车道在无 crap4lua 前置调用时也能直接落地它。钉 0.17.0-1 与上游一致。
+-- luassert(断言层迁移期,#74):终态 busted 的断言库,迁移期先由
+-- test/support/luassert_loader.lua 从同一 tree 局部加载。marker 取 init.lua;
+-- say 是 luassert 的 rockspec 依赖,由 luarocks 依赖解析一并带进同一 tree,
+-- 不单独 ensure(单独钉 say 版本会与 luassert 的依赖声明漂移)。
+function bootstrap.ensure_luassert_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "luassert", "1.9.0-1", "share/lua/5.4/luassert/init.lua")
+end
+
+function bootstrap.ensure_busted_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "busted", "2.3.0-1", "share/lua/5.4/busted/runner.lua")
+end
+
+-- 覆盖率引擎 luacov:uml crap(crapper)的 Lua 覆盖率路径 require("luacov.runner"),
+-- 只从项目 tree 落地(#93/#94)。钉 0.17.0-1。
 function bootstrap.ensure_luacov_tree(repo_root)
   return _ensure_rock_installed(repo_root, "luacov", "0.17.0-1", "share/lua/5.4/luacov/runner.lua")
 end
 
--- cluacov = luacov 的可选 C hook 加速器(lunarmodules/cluacov 1.0.0-1)。
--- luacov.runner 顶层 pcall(require, "cluacov.version") 成功即改用 C hook;
--- mutate4lua 归因矩阵构建是全套 spec 下的 line-hook 热点,启用后显著降 wall。
--- 钉 1.0.0-1;C 扩展 marker 是 hook.so(仅 version.lua 不够——证明 .so 已编进 tree)。
--- cluacov rockspec 依赖 luacov >= 0.13;先确保 base engine 在 tree。
-function bootstrap.ensure_cluacov_tree(repo_root)
-  return _ensure_rock_installed(repo_root, "cluacov", "1.0.0-1", "lib/lua/5.4/cluacov/hook.so",
+-- luacov-reporter-lcov(#93):crapper 的 Lua 覆盖率路径 require("luacov.reporter.lcov")
+-- 产 lcov.info。钉 0.2-0;rockspec 依赖 luacov,先确保 base engine 在项目 tree,
+-- 不借用户全局 %APPDATA%\luarocks tree(那里同名 rock 会造成假绿)。
+function bootstrap.ensure_luacov_reporter_lcov_tree(repo_root)
+  return _ensure_rock_installed(repo_root, "luacov-reporter-lcov", "0.2-0",
+    "share/lua/5.4/luacov/reporter/lcov.lua",
     function()
       return bootstrap.ensure_luacov_tree(repo_root)
     end)
@@ -224,7 +267,8 @@ function bootstrap.ensure_tool(name, env_or_opts)
   local sha, fetch_err = _fetch_tool_source(entry.url, src_dir)
   if sha == nil then
     if _is_tool_present(tree, name) then
-      return { name = name, root = tree, commit = resolved.installed, version = _installed_version(tree, name), stale = true }
+      return { name = name, root = tree, commit = resolved.installed,
+        version = _installed_version(tree, name), stale = true }
     end
     return nil, fetch_err
   end

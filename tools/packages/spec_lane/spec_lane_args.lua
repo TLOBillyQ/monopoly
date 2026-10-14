@@ -2,7 +2,7 @@ local spec_lane_args = {}
 
 function spec_lane_args.usage()
   return table.concat({
-    "用法: lua tools/cli.lua spec-lane --profile <name> [--verbose]",
+    "用法: lua tools/cli.lua spec-lane --profile <name> [--serial] [--verbose]",
     "",
     "--profile 选车道:behavior(七层 + foundation 全量)/ tooling(工具模块单测,不在 verify 管线内);",
     "--profile 也可直接给存在的目录（如 test/behavior/turn）按需点跑，按 behavior 默认构造临时 profile；其余语义见 `lua tools/cli.lua verify --help`。",
@@ -11,13 +11,16 @@ function spec_lane_args.usage()
 end
 
 function spec_lane_args.parse(args)
-  local options = { verbose = false }
+  local options = { verbose = false, serial = true }
   local i = 1
   while i <= #(args or {}) do
     local token = args[i]
     if token == "--profile" then
       options.profile = args[i + 1]
       i = i + 2
+    elseif token == "--serial" then
+      options.serial = true
+      i = i + 1
     elseif token == "--verbose" then
       options.verbose = true
       i = i + 1

@@ -1,3 +1,6 @@
+-- luacheck: ignore 143
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 -- Pins the real turn-start pre-action item phase against the main turn buttons.
 --
 -- The specifier flagged that the real runtime opens a pre_action item_phase_passive
@@ -6,9 +9,9 @@
 -- acceptance sim cannot catch this (it never builds a real pre_action pending choice), so this
 -- spec drives the real choice data through the same UI slice the runtime uses.
 
-local lu = require("luaunit")
-local support = require("test.support.shared_support")
-local _assert_eq = support.assert_eq
+local function _assert_eq(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local compose_game = require("src.app.compose_game")
 local default_ports = require("src.turn.output.default_ports")
 local item_phase = require("src.rules.items.phase")
@@ -41,23 +44,23 @@ local function _open_pre_action_choice()
     next_state = "roll",
     next_args = { player = player },
   })
-  lu.assertEvalToTrue(type(phase_res) == "table" and phase_res.waiting == true,
+  luassert.truthy(type(phase_res) == "table" and phase_res.waiting == true,
     "pre_action passive should wait on the item choice")
   local pending = assert(g.turn.pending_choice, "pre_action passive should open a pending choice")
   return g, pending
 end
 
-TestMainTurnPreActionButton = {}
+describe("TestMainTurnPreActionButton", function()
 
-function TestMainTurnPreActionButton:test_real_pre_action_pending_choice_tags_the_pre_action_phase()
+it("test_real_pre_action_pending_choice_tags_the_pre_action_phase", function()
   local _, pending = _open_pre_action_choice()
 
   _assert_eq(pending.kind, "item_phase_passive", "pre_action choice should be an item phase passive choice")
-  lu.assertEvalToTrue(type(pending.meta) == "table" and pending.meta.phase == "pre_action",
+  luassert.truthy(type(pending.meta) == "table" and pending.meta.phase == "pre_action",
     "pre_action pending choice should carry meta.phase == pre_action")
-end
+end)
 
-function TestMainTurnPreActionButton:test_real_pre_action_pending_choice_shows_the_action_button_not_the_end_button()
+it("test_real_pre_action_pending_choice_shows_the_action_button_not_the_end_button", function()
   local g, pending = _open_pre_action_choice()
   local view = choice_builder.build_choice_view(pending, { game = g })
 
@@ -79,9 +82,9 @@ function TestMainTurnPreActionButton:test_real_pre_action_pending_choice_shows_t
   _assert_eq(touch[base_nodes.action_button], true, "行动 button should be touchable before the roll")
   _assert_eq(visible[base_nodes.end_button], false, "结束 should stay hidden before the roll")
   _assert_eq(visible[base_nodes.cancel_button], false, "取消 should stay hidden before the roll")
-end
+end)
 
-function TestMainTurnPreActionButton:test_real_pre_action_action_button_routes_through_the_skip_and_roll_intent()
+it("test_real_pre_action_action_button_routes_through_the_skip_and_roll_intent", function()
   local g, pending = _open_pre_action_choice()
   local view = choice_builder.build_choice_view(pending, { game = g })
   local state = { ui_runtime = { ui_model = { choice = view } } }
@@ -94,10 +97,10 @@ function TestMainTurnPreActionButton:test_real_pre_action_action_button_routes_t
     end
   end
 
-  lu.assertEvalToTrue(action_intent ~= nil, "行动 button should build an intent while a pre-action card is held")
+  luassert.truthy(action_intent ~= nil, "行动 button should build an intent while a pre-action card is held")
   _assert_eq(action_intent.type, "complete_optional_action_phase",
     "行动 should skip the pre-action items and advance to the roll")
-end
+end)
 
 
-return TestMainTurnPreActionButton
+end)

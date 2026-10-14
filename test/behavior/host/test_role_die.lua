@@ -3,7 +3,8 @@
 -- unit.is_die_status() 翻 true 判定,随后经 GameAPI.destroy_unit 移除棋子;
 -- 合成 AI 适配器(自竖 is_synthetic_actor 标志、自带 die 返回布尔)走原有 truthy
 -- 判据,分派认标志不认 die 存在性。失败必留痕。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local role_die = require("src.host.role_die")
 local logger = require("src.foundation.log")
@@ -74,125 +75,125 @@ local function _destroy_recorder()
   }
 end
 
-TestRoleDie = {}
+describe("TestRoleDie", function()
 
 -- ── 宿主真人 Role:经控制单位出局 ────────────────────────────────
 
-function TestRoleDie:test_kills_ctrl_unit_when_role_has_no_die()
+local function _test_kills_ctrl_unit_when_role_has_no_die()
   local unit = _host_unit()
   local destroyed, game_api = _destroy_recorder()
   local result, warns = _call(_host_role(unit), game_api)
-  lu.assertEvalToTrue(result == true, "a flipped is_die_status yields true")
-  lu.assertEvalToTrue(#warns == 0, "the happy path must not warn; got " .. tostring(warns[1]))
-  lu.assertEvalToTrue(unit.die_calls == 1, "unit.die must be called exactly once")
-  lu.assertEvalToTrue(unit.die_arg_count ~= nil and unit.die_arg_count <= 1,
+  luassert.truthy(result == true, "a flipped is_die_status yields true")
+  luassert.truthy(#warns == 0, "the happy path must not warn; got " .. tostring(warns[1]))
+  luassert.truthy(unit.die_calls == 1, "unit.die must be called exactly once")
+  luassert.truthy(unit.die_arg_count ~= nil and unit.die_arg_count <= 1,
     "unit.die takes at most one dmg_unit argument; got " .. tostring(unit.die_arg_count))
-  lu.assertEvalToTrue(unit.die_first_arg == nil, "unit.die must not receive self")
-  lu.assertEvalToTrue(destroyed[1] == unit, "the ctrl unit must be removed from the board")
+  luassert.truthy(unit.die_first_arg == nil, "unit.die must not receive self")
+  luassert.truthy(destroyed[1] == unit, "the ctrl unit must be removed from the board")
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_die_status_stays_false()
+local function _test_returns_false_and_warns_when_die_status_stays_false()
   local unit = _host_unit({ stays_alive = true })
   local destroyed, game_api = _destroy_recorder()
   local result, warns = _call(_host_role(unit), game_api)
-  lu.assertEvalToTrue(result == false, "an unflipped is_die_status must yield false")
-  lu.assertEvalToTrue(#warns == 1, "an unflipped status must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("is_die_status", 1, true) ~= nil,
+  luassert.truthy(result == false, "an unflipped is_die_status must yield false")
+  luassert.truthy(#warns == 1, "an unflipped status must leave exactly one warn")
+  luassert.truthy(warns[1]:find("is_die_status", 1, true) ~= nil,
     "warn should name the status probe; got " .. tostring(warns[1]))
-  lu.assertEvalToTrue(#destroyed == 0, "a failed kill must not remove the unit")
+  luassert.truthy(#destroyed == 0, "a failed kill must not remove the unit")
 end
 
-function TestRoleDie:test_treats_an_already_dead_unit_as_success()
+local function _test_treats_an_already_dead_unit_as_success()
   local unit = _host_unit({ dead = true })
   local destroyed, game_api = _destroy_recorder()
   local result = _call(_host_role(unit), game_api)
-  lu.assertEvalToTrue(result == true, "die is idempotent: an already dead unit still yields true")
-  lu.assertEvalToTrue(destroyed[1] == unit, "an already dead unit is still removed")
+  luassert.truthy(result == true, "die is idempotent: an already dead unit still yields true")
+  luassert.truthy(destroyed[1] == unit, "an already dead unit is still removed")
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_die_raises()
+local function _test_returns_false_and_warns_when_die_raises()
   local unit = _host_unit({ die_raises = true })
   local result, warns = _call(_host_role(unit))
-  lu.assertEvalToTrue(result == false, "a throwing unit.die must yield false")
-  lu.assertEvalToTrue(#warns == 1, "a throwing unit.die must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("host unit die failed", 1, true) ~= nil,
+  luassert.truthy(result == false, "a throwing unit.die must yield false")
+  luassert.truthy(#warns == 1, "a throwing unit.die must leave exactly one warn")
+  luassert.truthy(warns[1]:find("host unit die failed", 1, true) ~= nil,
     "warn should carry the raised detail; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_unit_lacks_die()
+local function _test_returns_false_and_warns_when_unit_lacks_die()
   local result, warns = _call(_host_role({ is_die_status = function() return false end }))
-  lu.assertEvalToTrue(result == false, "a unit without die must yield false")
-  lu.assertEvalToTrue(#warns == 1, "a unit without die must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("die", 1, true) ~= nil,
+  luassert.truthy(result == false, "a unit without die must yield false")
+  luassert.truthy(#warns == 1, "a unit without die must leave exactly one warn")
+  luassert.truthy(warns[1]:find("die", 1, true) ~= nil,
     "warn should name the missing method; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_unit_lacks_is_die_status()
+local function _test_returns_false_and_warns_when_unit_lacks_is_die_status()
   local result, warns = _call(_host_role(_host_unit({ without_status = true })))
-  lu.assertEvalToTrue(result == false, "a unit without is_die_status must yield false")
-  lu.assertEvalToTrue(#warns == 1, "a unit without is_die_status must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("is_die_status", 1, true) ~= nil,
+  luassert.truthy(result == false, "a unit without is_die_status must yield false")
+  luassert.truthy(#warns == 1, "a unit without is_die_status must leave exactly one warn")
+  luassert.truthy(warns[1]:find("is_die_status", 1, true) ~= nil,
     "warn should name the missing probe; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_role_has_no_ctrl_unit()
+local function _test_returns_false_and_warns_when_role_has_no_ctrl_unit()
   local result, warns = _call({ get_ctrl_unit = function() return nil end })
-  lu.assertEvalToTrue(result == false, "a role without a ctrl unit must yield false")
-  lu.assertEvalToTrue(#warns == 1, "a missing ctrl unit must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("ctrl unit", 1, true) ~= nil,
+  luassert.truthy(result == false, "a role without a ctrl unit must yield false")
+  luassert.truthy(#warns == 1, "a missing ctrl unit must leave exactly one warn")
+  luassert.truthy(warns[1]:find("ctrl unit", 1, true) ~= nil,
     "warn should name the missing ctrl unit; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_get_ctrl_unit_raises()
+local function _test_returns_false_and_warns_when_get_ctrl_unit_raises()
   local result, warns = _call({ get_ctrl_unit = function() error("no ctrl unit") end })
-  lu.assertEvalToTrue(result == false, "a throwing get_ctrl_unit must yield false")
-  lu.assertEvalToTrue(#warns == 1, "a throwing get_ctrl_unit must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("no ctrl unit", 1, true) ~= nil,
+  luassert.truthy(result == false, "a throwing get_ctrl_unit must yield false")
+  luassert.truthy(#warns == 1, "a throwing get_ctrl_unit must leave exactly one warn")
+  luassert.truthy(warns[1]:find("no ctrl unit", 1, true) ~= nil,
     "warn should carry the raised detail; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_role_exposes_neither_die_nor_ctrl_unit()
+local function _test_returns_false_and_warns_when_role_exposes_neither_die_nor_ctrl_unit()
   local result, warns = _call({})
-  lu.assertEvalToTrue(result == false, "a role without die and get_ctrl_unit must yield false")
-  lu.assertEvalToTrue(#warns == 1, "such a role must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("get_ctrl_unit", 1, true) ~= nil,
+  luassert.truthy(result == false, "a role without die and get_ctrl_unit must yield false")
+  luassert.truthy(#warns == 1, "such a role must leave exactly one warn")
+  luassert.truthy(warns[1]:find("get_ctrl_unit", 1, true) ~= nil,
     "warn should name the missing accessor; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_for_nil_role()
+local function _test_returns_false_and_warns_for_nil_role()
   local result, warns = _call(nil)
-  lu.assertEvalToTrue(result == false, "nil role must yield false")
-  lu.assertEvalToTrue(#warns == 1, "nil role must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("role is nil", 1, true) ~= nil,
+  luassert.truthy(result == false, "nil role must yield false")
+  luassert.truthy(#warns == 1, "nil role must leave exactly one warn")
+  luassert.truthy(warns[1]:find("role is nil", 1, true) ~= nil,
     "nil role warn should carry the skip reason; got " .. tostring(warns[1]))
 end
 
 -- 单位移除失败:出局语义已由 is_die_status 达成,端口仍返回 true,只留一条 warn。
-function TestRoleDie:test_warns_but_still_succeeds_when_unit_removal_is_unavailable()
+local function _test_warns_but_still_succeeds_when_unit_removal_is_unavailable()
   local unit = _host_unit()
   local result, warns = _call(_host_role(unit), {})
-  lu.assertEvalToTrue(result == true, "a failed removal does not undo the elimination")
-  lu.assertEvalToTrue(#warns == 1, "a failed removal must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("destroy", 1, true) ~= nil,
+  luassert.truthy(result == true, "a failed removal does not undo the elimination")
+  luassert.truthy(#warns == 1, "a failed removal must leave exactly one warn")
+  luassert.truthy(warns[1]:find("destroy", 1, true) ~= nil,
     "warn should name the removal step; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_warns_but_still_succeeds_when_destroy_unit_raises()
+local function _test_warns_but_still_succeeds_when_destroy_unit_raises()
   local unit = _host_unit()
   local result, warns = _call(_host_role(unit), {
     destroy_unit = function()
       error("host destroy failed")
     end,
   })
-  lu.assertEvalToTrue(result == true, "a throwing removal does not undo the elimination")
-  lu.assertEvalToTrue(#warns == 1, "a throwing removal must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("host destroy failed", 1, true) ~= nil,
+  luassert.truthy(result == true, "a throwing removal does not undo the elimination")
+  luassert.truthy(#warns == 1, "a throwing removal must leave exactly one warn")
+  luassert.truthy(warns[1]:find("host destroy failed", 1, true) ~= nil,
     "warn should carry the raised detail; got " .. tostring(warns[1]))
 end
 
 -- ── 合成 AI 适配器:自带 die,行为与改前一致 ──────────────────────
 
-function TestRoleDie:test_synthetic_adapter_die_keeps_the_truthy_contract()
+local function _test_synthetic_adapter_die_keeps_the_truthy_contract()
   local calls = 0
   local ctrl_unit_reads = 0
   local destroyed, game_api = _destroy_recorder()
@@ -210,16 +211,16 @@ function TestRoleDie:test_synthetic_adapter_die_keeps_the_truthy_contract()
     end,
   }
   local result, warns = _call(adapter, game_api)
-  lu.assertEvalToTrue(result == true, "a succeeding adapter die yields true")
-  lu.assertEvalToTrue(calls == 1, "the adapter die must be called exactly once")
-  lu.assertEvalToTrue(#warns == 0, "the adapter happy path must not warn")
-  lu.assertEvalToTrue(ctrl_unit_reads == 0, "an adapter with die must not fall through to the unit path")
-  lu.assertEvalToTrue(#destroyed == 0, "the adapter retires its own unit; role_die must not double destroy")
+  luassert.truthy(result == true, "a succeeding adapter die yields true")
+  luassert.truthy(calls == 1, "the adapter die must be called exactly once")
+  luassert.truthy(#warns == 0, "the adapter happy path must not warn")
+  luassert.truthy(ctrl_unit_reads == 0, "an adapter with die must not fall through to the unit path")
+  luassert.truthy(#destroyed == 0, "the adapter retires its own unit; role_die must not double destroy")
 end
 
 -- #263 的误判形状:一个自带 die 的宿主 Role。分派认 is_synthetic_actor 标志,
 -- 有控制单位的对象一律走单位路径,不会退回被证伪的 truthy 判据。
-function TestRoleDie:test_a_host_role_that_grows_a_die_method_still_takes_the_unit_path()
+local function _test_a_host_role_that_grows_a_die_method_still_takes_the_unit_path()
   local unit = _host_unit()
   local role_die_calls = 0
   local role = _host_role(unit)
@@ -229,45 +230,63 @@ function TestRoleDie:test_a_host_role_that_grows_a_die_method_still_takes_the_un
   end
   local destroyed, game_api = _destroy_recorder()
   local result = _call(role, game_api)
-  lu.assertEvalToTrue(result == true, "the unit path still reports success")
-  lu.assertEvalToTrue(role_die_calls == 0, "a role with a ctrl unit must not use its own die")
-  lu.assertEvalToTrue(unit.die_calls == 1, "the ctrl unit must be the one that dies")
-  lu.assertEvalToTrue(destroyed[1] == unit, "the ctrl unit must still be removed")
+  luassert.truthy(result == true, "the unit path still reports success")
+  luassert.truthy(role_die_calls == 0, "a role with a ctrl unit must not use its own die")
+  luassert.truthy(unit.die_calls == 1, "the ctrl unit must be the one that dies")
+  luassert.truthy(destroyed[1] == unit, "the ctrl unit must still be removed")
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_a_flagged_adapter_has_no_die()
+local function _test_returns_false_and_warns_when_a_flagged_adapter_has_no_die()
   local result, warns = _call({ is_synthetic_actor = true })
-  lu.assertEvalToTrue(result == false, "a flagged adapter without die must yield false")
-  lu.assertEvalToTrue(#warns == 1, "such an adapter must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("synthetic adapter", 1, true) ~= nil,
+  luassert.truthy(result == false, "a flagged adapter without die must yield false")
+  luassert.truthy(#warns == 1, "such an adapter must leave exactly one warn")
+  luassert.truthy(warns[1]:find("synthetic adapter", 1, true) ~= nil,
     "warn should name the adapter; got " .. tostring(warns[1]))
 end
 
-function TestRoleDie:test_synthetic_adapter_die_accepts_any_truthy_return()
+local function _test_synthetic_adapter_die_accepts_any_truthy_return()
   local result = _call({ die = function() return 1 end })
-  lu.assertEvalToTrue(result == true, "a truthy non-boolean return still counts as success")
+  luassert.truthy(result == true, "a truthy non-boolean return still counts as success")
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_adapter_die_returns_falsy()
+local function _test_returns_false_and_warns_when_adapter_die_returns_falsy()
   local result_nil, warns_nil = _call({ die = function() return nil end })
-  lu.assertEvalToTrue(result_nil == false, "nil return must yield false")
-  lu.assertEvalToTrue(#warns_nil == 1, "nil return must leave exactly one warn")
-  lu.assertEvalToTrue(warns_nil[1]:find("falsy: nil", 1, true) ~= nil,
+  luassert.truthy(result_nil == false, "nil return must yield false")
+  luassert.truthy(#warns_nil == 1, "nil return must leave exactly one warn")
+  luassert.truthy(warns_nil[1]:find("falsy: nil", 1, true) ~= nil,
     "warn should carry the nil return detail; got " .. tostring(warns_nil[1]))
 
   local result_false, warns_false = _call({ die = function() return false end })
-  lu.assertEvalToTrue(result_false == false, "false return must yield false")
-  lu.assertEvalToTrue(#warns_false == 1, "false return must leave exactly one warn")
-  lu.assertEvalToTrue(warns_false[1]:find("falsy: false", 1, true) ~= nil,
+  luassert.truthy(result_false == false, "false return must yield false")
+  luassert.truthy(#warns_false == 1, "false return must leave exactly one warn")
+  luassert.truthy(warns_false[1]:find("falsy: false", 1, true) ~= nil,
     "warn should carry the falsy value detail; got " .. tostring(warns_false[1]))
 end
 
-function TestRoleDie:test_returns_false_and_warns_when_adapter_die_raises()
+local function _test_returns_false_and_warns_when_adapter_die_raises()
   local result, warns = _call({ die = function() error("adapter die failed") end })
-  lu.assertEvalToTrue(result == false, "a throwing adapter die must yield false")
-  lu.assertEvalToTrue(#warns == 1, "a throwing adapter die must leave exactly one warn")
-  lu.assertEvalToTrue(warns[1]:find("adapter die failed", 1, true) ~= nil,
+  luassert.truthy(result == false, "a throwing adapter die must yield false")
+  luassert.truthy(#warns == 1, "a throwing adapter die must leave exactly one warn")
+  luassert.truthy(warns[1]:find("adapter die failed", 1, true) ~= nil,
     "warn should carry the raised error detail; got " .. tostring(warns[1]))
 end
 
-return TestRoleDie
+it("test_kills_ctrl_unit_when_role_has_no_die", _test_kills_ctrl_unit_when_role_has_no_die)
+it("test_returns_false_and_warns_when_die_status_stays_false", _test_returns_false_and_warns_when_die_status_stays_false)
+it("test_treats_an_already_dead_unit_as_success", _test_treats_an_already_dead_unit_as_success)
+it("test_returns_false_and_warns_when_die_raises", _test_returns_false_and_warns_when_die_raises)
+it("test_returns_false_and_warns_when_unit_lacks_die", _test_returns_false_and_warns_when_unit_lacks_die)
+it("test_returns_false_and_warns_when_unit_lacks_is_die_status", _test_returns_false_and_warns_when_unit_lacks_is_die_status)
+it("test_returns_false_and_warns_when_role_has_no_ctrl_unit", _test_returns_false_and_warns_when_role_has_no_ctrl_unit)
+it("test_returns_false_and_warns_when_get_ctrl_unit_raises", _test_returns_false_and_warns_when_get_ctrl_unit_raises)
+it("test_returns_false_and_warns_when_role_exposes_neither_die_nor_ctrl_unit", _test_returns_false_and_warns_when_role_exposes_neither_die_nor_ctrl_unit)
+it("test_returns_false_and_warns_for_nil_role", _test_returns_false_and_warns_for_nil_role)
+it("test_warns_but_still_succeeds_when_unit_removal_is_unavailable", _test_warns_but_still_succeeds_when_unit_removal_is_unavailable)
+it("test_warns_but_still_succeeds_when_destroy_unit_raises", _test_warns_but_still_succeeds_when_destroy_unit_raises)
+it("test_synthetic_adapter_die_keeps_the_truthy_contract", _test_synthetic_adapter_die_keeps_the_truthy_contract)
+it("test_a_host_role_that_grows_a_die_method_still_takes_the_unit_path", _test_a_host_role_that_grows_a_die_method_still_takes_the_unit_path)
+it("test_returns_false_and_warns_when_a_flagged_adapter_has_no_die", _test_returns_false_and_warns_when_a_flagged_adapter_has_no_die)
+it("test_synthetic_adapter_die_accepts_any_truthy_return", _test_synthetic_adapter_die_accepts_any_truthy_return)
+it("test_returns_false_and_warns_when_adapter_die_returns_falsy", _test_returns_false_and_warns_when_adapter_die_returns_falsy)
+it("test_returns_false_and_warns_when_adapter_die_raises", _test_returns_false_and_warns_when_adapter_die_raises)
+end)

@@ -1,7 +1,18 @@
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
+local function _assert_identity(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
+local function _assert_contains(actual, expected, message)
+  luassert.matches(expected, actual, 1, true, message)
+end
 local action_dispatcher = require("src.turn.actions.action_dispatcher")
 
-TestActionDispatch = {}
+describe("TestActionDispatch", function()
 
 local function _new_dispatcher(opts)
   opts = opts or {}
@@ -36,7 +47,7 @@ local function _state(output_ports, pending_choice)
   }
 end
 
-function TestActionDispatch:test_dispatches_in_gate_invalidation_handler_order()
+it("test_dispatches_in_gate_invalidation_handler_order", function()
   local calls = {}
   local dispatcher = _new_dispatcher({
     gate = {
@@ -63,11 +74,11 @@ function TestActionDispatch:test_dispatches_in_gate_invalidation_handler_order()
 
   local result = dispatcher.dispatch_action({}, state, { type = "ui_button", id = "next" })
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertEquals(calls, { "gate", "invalidate", "handler:next" })
-end
+  _assert_same(result, { status = "applied" })
+  _assert_same(calls, { "gate", "invalidate", "handler:next" })
+end)
 
-function TestActionDispatch:test_gate_block_stops_before_invalidation_and_handler()
+it("test_gate_block_stops_before_invalidation_and_handler", function()
   local invalidated = false
   local handled = false
   local dispatcher = _new_dispatcher({
@@ -93,12 +104,12 @@ function TestActionDispatch:test_gate_block_stops_before_invalidation_and_handle
 
   local result = dispatcher.dispatch_action({}, state, { type = "ui_button", id = "next" })
 
-  lu.assertEquals(result, { status = "blocked" })
-  lu.assertFalse(invalidated)
-  lu.assertFalse(handled)
-end
+  _assert_same(result, { status = "blocked" })
+  luassert.is_false(invalidated)
+  luassert.is_false(handled)
+end)
 
-function TestActionDispatch:test_market_cancel_can_cross_a_blocked_gate()
+it("test_market_cancel_can_cross_a_blocked_gate", function()
   local choice = { id = "market-1", kind = "market_buy" }
   local dispatcher = _new_dispatcher({
     gate = {
@@ -122,10 +133,10 @@ function TestActionDispatch:test_market_cancel_can_cross_a_blocked_gate()
     choice_id = choice.id,
   })
 
-  lu.assertEquals(result, { status = "applied" })
-end
+  _assert_same(result, { status = "applied" })
+end)
 
-function TestActionDispatch:test_invalidates_only_ui_model_changing_actions()
+it("test_invalidates_only_ui_model_changing_actions", function()
   local invalidated = 0
   local handlers = {}
   local action_types = {
@@ -150,10 +161,10 @@ function TestActionDispatch:test_invalidates_only_ui_model_changing_actions()
   end
   dispatcher.dispatch_action({}, state, { type = "choice_force_skip" })
 
-  lu.assertEquals(invalidated, #action_types)
-end
+  _assert_same(invalidated, #action_types)
+end)
 
-function TestActionDispatch:test_preserves_handler_status_and_rejects_unknown_actions()
+it("test_preserves_handler_status_and_rejects_unknown_actions", function()
   local blocked = { status = "blocked", reason = "probe" }
   local dispatcher = _new_dispatcher({
     handlers = {
@@ -164,11 +175,11 @@ function TestActionDispatch:test_preserves_handler_status_and_rejects_unknown_ac
   })
   local state = _state()
 
-  lu.assertIs(dispatcher.dispatch_action({}, state, { type = "probe" }), blocked)
-  lu.assertEquals(dispatcher.dispatch_action({}, state, { type = "unknown" }), { status = "rejected" })
-end
+  _assert_identity(dispatcher.dispatch_action({}, state, { type = "probe" }), blocked)
+  _assert_same(dispatcher.dispatch_action({}, state, { type = "unknown" }), { status = "rejected" })
+end)
 
-function TestActionDispatch:test_defaults_input_source_before_calling_handler()
+it("test_defaults_input_source_before_calling_handler", function()
   local received_source
   local dispatcher = _new_dispatcher({
     handlers = {
@@ -181,10 +192,10 @@ function TestActionDispatch:test_defaults_input_source_before_calling_handler()
 
   dispatcher.dispatch_action({}, _state(), { type = "probe" })
 
-  lu.assertEquals(received_source, "user")
-end
+  _assert_same(received_source, "user")
+end)
 
-function TestActionDispatch:test_reentrant_handler_uses_the_same_dispatcher_instance()
+it("test_reentrant_handler_uses_the_same_dispatcher_instance", function()
   local calls = {}
   local dispatcher = _new_dispatcher({
     handlers = {
@@ -201,17 +212,16 @@ function TestActionDispatch:test_reentrant_handler_uses_the_same_dispatcher_inst
 
   local result = dispatcher.dispatch_action({}, _state(), { type = "ui_button", id = "cancel" })
 
-  lu.assertEquals(result, { status = "applied" })
-  lu.assertEquals(calls, { "ui_button", "choice_select" })
-end
+  _assert_same(result, { status = "applied" })
+  _assert_same(calls, { "ui_button", "choice_select" })
+end)
 
-function TestActionDispatch:test_missing_action_fails_fast()
+it("test_missing_action_fails_fast", function()
   local dispatcher = _new_dispatcher()
 
   local ok, err = pcall(dispatcher.dispatch_action, {}, _state(), nil)
 
-  lu.assertFalse(ok)
-  lu.assertStrContains(tostring(err), "missing action")
-end
-
-return TestActionDispatch
+  luassert.is_false(ok)
+  _assert_contains(tostring(err), "missing action")
+end)
+end)

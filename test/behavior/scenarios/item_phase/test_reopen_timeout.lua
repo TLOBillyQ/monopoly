@@ -1,7 +1,13 @@
 -- 回归:道具窗口倒计时不得跨「用卡续开」累计(修复前 2 查税 + 1 财神后
 -- 累计超过 action_timeout_seconds,最后一张查税的窗口被立即超时关闭)。
 -- 语义:成功用卡后续开刷新倒计时;followup 取消(返回)路径仍保留累计防挂机。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+-- busted injects luassert fields on assert.
+-- luacheck: ignore 143
+local luassert = assert
+local function _assert_equal(actual, expected, message)
+  luassert.is.equal(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local item_phase = require("src.rules.items.phase")
 local item_ids = require("src.config.gameplay.item_ids")
@@ -45,9 +51,8 @@ local function _install_choice_seed_bridge(game, state)
   end
 end
 
-TestGameplayItemPhaseReopenTimeout = {}
-
-function TestGameplayItemPhaseReopenTimeout:test_window_reopened_by_active_card_use_gets_fresh_countdown()
+describe("TestGameplayItemPhaseReopenTimeout", function()
+  it("test_window_reopened_by_active_card_use_gets_fresh_countdown", function()
   local g = _new_game()
   local player = g:current_player()
   player.inventory:add({ id = item_ids.tax })
@@ -78,9 +83,9 @@ function TestGameplayItemPhaseReopenTimeout:test_window_reopened_by_active_card_
   local function _use_tax(think_card, think_target)
     _tick(think_card)
     local pending = assert(g.turn.pending_choice, "passive window should be open")
-    lu.assertEquals(pending.kind, "item_phase_passive",
+    _assert_equal(pending.kind, "item_phase_passive",
       "expected passive window, got " .. tostring(pending.kind))
-    lu.assertEvalToTrue(_choice_has_option(pending, item_ids.tax), "tax should be selectable")
+    luassert.truthy(_choice_has_option(pending, item_ids.tax), "tax should be selectable")
     choice_resolver.resolve(g, pending, { option_id = item_ids.tax })
     local followup = assert(g.turn.pending_choice, "tax should open target choice")
     _tick(think_target)
@@ -92,22 +97,20 @@ function TestGameplayItemPhaseReopenTimeout:test_window_reopened_by_active_card_
   _use_tax(3.0, 2.0)
   _tick(0.5)
   local pending = assert(g.turn.pending_choice, "passive should reopen after two tax uses")
-  lu.assertEquals(pending.kind, "item_phase_passive", "expected passive window after two tax uses")
+  _assert_equal(pending.kind, "item_phase_passive", "expected passive window after two tax uses")
   choice_resolver.resolve(g, pending, { option_id = item_ids.rich })
 
   local reopened = assert(g.turn.pending_choice, "passive should reopen after rich use")
-  lu.assertEquals(reopened.kind, "item_phase_passive", "reopened window should be passive")
-  lu.assertEvalToTrue(_choice_has_option(reopened, item_ids.tax), "last tax should be listed")
+  _assert_equal(reopened.kind, "item_phase_passive", "reopened window should be passive")
+  luassert.truthy(_choice_has_option(reopened, item_ids.tax), "last tax should be listed")
   local reopened_id = reopened.id
 
   -- 该窗口自身只显示了 3s,不得被跨窗口累计的计时超时关闭
   _tick(3.0)
   local still_open = g.turn.pending_choice
-  lu.assertEvalToTrue(still_open ~= nil and still_open.id == reopened_id,
+  luassert.truthy(still_open ~= nil and still_open.id == reopened_id,
     "reopened item window must not time out from cross-window accumulated elapsed; " ..
     "last tax card would be locked out until end of turn")
-  lu.assertEvalToTrue(_choice_has_option(still_open, item_ids.tax), "last tax should remain selectable")
-end
-
-
-return TestGameplayItemPhaseReopenTimeout
+  luassert.truthy(_choice_has_option(still_open, item_ids.tax), "last tax should remain selectable")
+  end)
+end)

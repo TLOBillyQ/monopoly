@@ -1,7 +1,7 @@
 local M = {}
 
 local function _build_list_command(root)
-  return 'find "' .. root .. '" -type f -name "*.lua" 2>/dev/null'
+  return 'chcp 65001 >nul & dir /b /s /a-d "' .. root:gsub("/", "\\") .. '\\*.lua" 2>nul'
 end
 
 local function _is_file_path(path)

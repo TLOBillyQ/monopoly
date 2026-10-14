@@ -5,6 +5,7 @@
 # 扫描/构建产物目录与标记文件。
 /build/
 *.luac
+# 旧 mutate4lua / arch_view 已于 #94 退役;保留忽略以防旧工作树残留被提交。
 *.mutate4lua
 *.arch_view
 # spec_lane junit 车道输出。
@@ -16,31 +17,23 @@
 /luacov.report.out
 /luacov.stats.out
 
-# mutate4lua 外部 store 已退场（#283，manifest 内嵌源码 footer），
+# mutate4lua 外部 store 已退场（#283），工具本身 #94 退役；
 # 保留 cache 忽略以防旧工作树残留。
 .mutate4lua/cache/
 
 # ── 本地工具缓存 ─────────────────────────────────────────────────
 # quality tool cache（本地状态，下载/安装的工具钉）。
-# 不带斜杠：同时匹配目录形态与隔离 worktree 常用的软链形态（symlink 被 git
-# 视为文件，.toolcache/ 规则不会忽略它，会被 root_whitelist_guard 报违规）。
+# 隔离 worktree 用 bootstrap 装出的自有真实目录，不用 junction/软链/镜像主仓缓存。
+# 不带斜杠只是兜底：误建的 symlink 被 git 视为文件，.toolcache/ 规则不会忽略它。
 .toolcache
 
-# ── SwarmForge（本地 forge 管理） ────────────────────────────────
-# swarm 编排的全部协调状态（board/handoffs/sessions/prompts 与 PATH 工具面
-# bin/）只住这里；APS 三件（gherkin-parser / ir-dry-checker / gherkin-mutator）
-# 的 Lua 后端包装器由此处的 bin/ 经 PATH 供给，属本地运行时产物，不提交。
-.swarmforge/
-# forge 注入的共享 scripts 与 roles/constitution 覆盖面：纯运行时产物。
+# ── 外部 overlay 与编辑器缓存 ────────────────────────────────────
+# 已批准保留的外部共享 scripts overlay：本地状态，不版本化。
 /swarmforge/scripts/
-# 各角色独立 git worktree（launcher 硬编码路径）。
-.worktrees/
-# Clojure 侧编辑器/linter 本地缓存（clj-kondo 分析缓存、clojure-lsp 状态）。
-# 项目自身无 Clojure 源码；这些目录只可能由编辑器索引 forge 注入的
-# swarmforge/scripts/*.bb 生成，纯本地可再生状态，兜底防白名单 guard 报违规。
+# Clojure 编辑器/linter 缓存兜底。
 .clj-kondo/
 .lsp/
-# Claude Code 自身的 worktree 本地状态（与上面的 .worktrees/ 不同源）。
+# Claude Code 自身的 worktree 本地状态。
 /.claude/worktrees/
 # Claude Code 本地覆写（可能含 MCP token）。
 .claude/settings.local.json
@@ -65,3 +58,17 @@ Thumbs.db
 .opencode
 .sisyphus/
 .omo/
+
+# ── uml-viewer 质量入口(#93)───────────────────────────────────────
+# crapper/mutator 的度量 .metrics/(crap.edn、mutate/*.edn)按上游 README 入库,
+# 不在此忽略;只忽略覆盖率中间产物 target/coverage/(见 tools/specs/uml_quality.prompt)。
+/target/
+# get-uml-viewer 拷到仓根的 uml / uml.ps1 不钉 LUA_PATH,会从全局 luarocks tree
+# 解析出假绿;受支持的入口是 `lua tools/cli.lua uml`,这两份拷贝不入库。
+/uml
+/uml.ps1
+# 下面这段由 get-uml-viewer 维护(重装时整段删除再追加到文件末尾),保持原样、保持在末尾。
+# BEGIN UML-VIEWER
+.uml-viewer/
+uml-viewer-log.txt
+# END UML-VIEWER

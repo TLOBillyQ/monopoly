@@ -9,25 +9,20 @@ local M = {}
 -- 仅包含项目主动承诺保持在根目录的文件与一级目录。
 -- 生成物（build/、tmp/、.toolcache/、luacov 残留等）由 `lua tools/cli.lua clean` 清理，
 -- 因此不在白名单内；guard 通过 git 跟踪 + 未忽略未跟踪项检查，自然排除它们。
--- swarm 运行时协调状态只允许住 gitignored 的 .swarmforge/（swarm-return 决策），
 -- agent 在根目录新建任何未跟踪条目都会在此报违规。
 local _WHITELIST = {
   ["main.lua"] = true,
   ["Data"] = true,
-  -- 上游 four-pack launcher（swarm / close-swarm）随 2026-08-30 迁入本地
-  -- swarm-forge 退场：启停改走 forge dashboard（open/close project），
-  -- 根部不再有可执行 launcher；重引入即破此退役钉（见本文件 spec）。
-  ["swarmforge"] = true,
   ["features"] = true,
   ["EggyAPI.lua"] = true,
   -- 宿主 API 参考面第二件:编辑器 EUI 节点 API(2f6fb3d),与 EggyAPI.lua 同类,
-  -- 宿主目录里即住根部;不属于 swarm-return 决策 禁止扩张的 swarm 散货类。
+  -- 宿主目录里即住根部。
   ["EggyEditorAPI.lua"] = true,
   ["CLAUDE.md"] = true,
   ["AGENTS.md"] = true,
   ["GLOSSARY.md"] = true,
   ["CODING_STANDARDS.md"] = true,
-  -- 本地 forge 管理面：dashboard/pack_web 读取的项目使命（2026-08-30 迁入本地 swarm-forge）。
+  -- 项目使命。
   ["mission.md"] = true,
   -- 运营方任务书 tasks/<task-name>.md：由 master 角色随该任务首次 git 工作提交
   -- （Tool Startup 约定），是版本化的运营意图真源，不是运行时状态，故白名单而非忽略。
@@ -50,6 +45,12 @@ local _WHITELIST = {
   -- mutate4lua 外部 store 已随 #283 退场(manifest 内嵌源码 footer),
   -- 根级 .mutate4lua 不再需要白名单条目。
   ["skills-lock.json"] = true,
+  -- 邻接 uml-viewer 的质量配置(#93):uml-command.ps1 只在项目根读 uml-quality.json,
+  -- 位置由上游契约决定。.uml-viewer/、target/ 等本地产物走 .gitignore,不进白名单。
+  ["uml-quality.json"] = true,
+  -- 真实 uml crap|mutate 跑出的度量(.metrics/crap.edn、mutate/*.edn)按上游 README
+  -- 入库(#69 维护者决定),是已跟踪的根级目录。
+  [".metrics"] = true,
   -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md
   -- 条目随 squad 范式退役，guard 恢复报违规，spec 有退役钉。
 }

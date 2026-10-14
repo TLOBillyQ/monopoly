@@ -24,7 +24,15 @@ function tap_summary.compress(output)
     end
   end
   if failed == 0 then
-    return string.format("%d passed\n", passed), passed, failed
+    local diagnostics = {}
+    for _, line in ipairs(kept) do
+      if line:match("^# BASELINE LEAK:") or line:match("^# EXCLUDED:")
+          or line:match("^# COUNTS:") and not line:match("errors=0%s*$") then
+        diagnostics[#diagnostics + 1] = line
+      end
+    end
+    diagnostics[#diagnostics + 1] = string.format("%d passed", passed)
+    return table.concat(diagnostics, "\n") .. "\n", passed, failed
   end
   kept[#kept + 1] = string.format("%d passed, %d failed", passed, failed)
   return table.concat(kept, "\n") .. "\n", passed, failed

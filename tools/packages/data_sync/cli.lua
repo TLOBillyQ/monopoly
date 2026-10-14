@@ -18,7 +18,7 @@ function M.usage()
     "  Data/Prefab.lua    字节原样拷贝;",
     "  Data/UINodes.lua   转换为 Data/UIManagerNodes.lua(按 id 聚合排序,无 length 行);",
     "  EggyAPI.lua / EggyEditorAPI.lua  字节原样拷贝到仓库根(宿主 API 存根,第三方边界)。",
-    "零参数、零开关;平台与部署目录解析复用 deploy(win/wsl,#128 / #127 平台约束)。",
+    "零参数、零开关;平台与部署目录解析复用 deploy(仅原生 Windows,ADR 0066)。",
     "行为真源见 packages/data_sync/sync_data.lua。",
     "",
   }, "\n") .. "\n"

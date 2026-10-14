@@ -38,7 +38,13 @@ read_globals = {
   "traceback",
   "newproxy",
   "unpack",
+  "describe", "it", "before_each", "after_each", "setup", "teardown", "finally",
 }
+
+-- Genuine busted supplies its luassert object inside spec environments.
+files["test/behavior/foundation/test_class.lua"] = { read_globals = { "assert" }, std = "+busted" }
+files["test/behavior/foundation/test_scope.lua"] = { read_globals = { "assert" }, std = "+busted" }
+files["test/fixtures/busted_backend/**/*.lua"] = { std = "+busted" }
 
 globals = {
   "UIManager",
@@ -71,12 +77,12 @@ files["src/host/context.lua"] = {
   },
 }
 
--- tooling 单测(tools/**/test/)同样迁 LuaUnit 原生风格,TestXxx 类全局同上人肉
--- 白名单不可枚举,放开 W111/W112。
+-- tooling 单测(tools/**/test/)会 stub 宿主/运行时全局并改写 `arg`,名字随文件
+-- 增长无法枚举白名单,放开 W111/W112。
 files["tools/**/test/**/*.lua"] = {
   allow_defined = true,
-  -- LuaUnit 方法带 self 参数,内嵌 mock 方法 function(self) 遮蔽外层 self
-  -- 是测试夹具惯例(busted 时代 it 回调无 self,不存在该告警),放开 W412/W432。
+  -- 测试夹具里内嵌 mock 方法 function(self) 遮蔽外层 self 是惯例
+  -- (busted 的 it 回调无 self,不存在该告警),放开 W412/W432。
   ignore = { "412", "432" },
 }
 
@@ -84,12 +90,11 @@ files["tools/**/test/**/*.lua"] = {
 -- (LuaAPI/GameAPI/Enums/SetFrameOut/TriggerCustomEvent/...)并在转调 vendor CLI 前
 -- 改写 `arg`。这里按可写全局放行,避免上方 read_globals 默认值误报正常的测试搭建。
 files["test/**/*.lua"] = {
-  -- LuaUnit 原生测试以 TestXxx 全局表注册测试类(迁移后约 400+ 个),名字
-  -- 随文件无限增长,无法枚举白名单;测试文件的全局定义本就由 runner 注册
-  -- 语义兜底,放开 W111/W112。
+  -- 测试会往 _G 上装 stub(宿主注入面与临时替换),名字随文件增长无法枚举
+  -- 白名单;测试文件的全局定义由用例自身的 teardown 兜底,放开 W111/W112。
   allow_defined = true,
-  -- LuaUnit 方法带 self 参数,内嵌 mock 方法 function(self) 遮蔽外层 self
-  -- 是测试夹具惯例(busted 时代 it 回调无 self,不存在该告警),放开 W412/W432。
+  -- 测试夹具里内嵌 mock 方法 function(self) 遮蔽外层 self 是惯例
+  -- (busted 的 it 回调无 self,不存在该告警),放开 W412/W432。
   ignore = { "412", "432" },
   globals = {
     "arg",

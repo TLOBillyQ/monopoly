@@ -12,8 +12,24 @@
 -- 这里大声失败,而不是让 mutator 静静地跳过一切然后报成功。全跳过本身是合法的
 -- (没动 feature 就没有差分变异体),所以按「跳过数」判失败会天天误报;
 -- 该判的是「runner 到底能不能跑」。
-local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", "")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
+local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
 local env = bootstrap.install(debug.getinfo(1, "S").source)
+
+-- 平台保证边界(#96):与 packages.acceptance_mutate.cli 同一份声明,判定必须
+-- 发生在 ensure_tool 之前 —— 否则会先装一遍工具,再让探针链给出「runner_worker
+-- 没吐出可解析的 job 响应」这条假诊断,把原生 Windows 的边界故障报成变异结论。
+local platform_boundary = require("foundation.platform_boundary")
+for _, value in ipairs(arg or {}) do
+  if value == "--help" or value == "-h" then
+    io.write(require("packages.acceptance_mutate.cli").usage())
+    os.exit(0)
+  end
+end
+local verdict = platform_boundary.evaluate("acceptance-mutate", arg or {})
+if verdict.status ~= nil then
+  os.exit(platform_boundary.emit(verdict))
+end
+
 assert(bootstrap.ensure_tool("acceptance4lua", env))
 
 local fs_lib = require("foundation.fs")
@@ -22,12 +38,10 @@ local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
 local text_lib = require("foundation.text")
 local json = require("acceptance4lua.json")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 
--- APS 面统一口径(工单 #606 运营方补充事实):转发器钉了探测到的解释器,车道这几个
--- 子进程就不能再各写各的字面量 "lua"——PATH 上的 lua 本机是 5.5.1,而 rock tree 与
--- 全部质量车道都按 5.4 走;探针存在的理由正是「worker 退回 5.5」这类坏味道,口径不一致
--- 时它自己就先成了那个坏味道。缺 lua5.4 时 lua54_bin() 照既有约定退回 "lua"。
+-- 子进程统一使用探测到的 Lua 5.4，与 rock tree 保持一致。
+-- 缺 lua5.4 时 lua54_bin() 照既有约定退回 "lua"。
 local APS_LUA = lua54.lua54_bin()
 
 -- mutator 的 --feature 默认值,保持与 APS 参考实现一致。
@@ -145,7 +159,9 @@ local function _probe_runner(feature_path)
   io.flush()
 end
 
-local args = arg or {}
+-- 平台边界(#96)已消费掉 --skip-if-unavailable,这里用剥完开关的 argv:
+-- 漏给上游会被当成未知选项退 2,把平台边界伪装成用法错误。
+local args = verdict.args
 _probe_runner(_feature_from_args(args))
 
 -- 等价变异过滤器(issue #204):角色ID 族列经 Background 身份线程绑定,步骤对标识值

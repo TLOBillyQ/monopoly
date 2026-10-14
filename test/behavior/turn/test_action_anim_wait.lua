@@ -1,3 +1,6 @@
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local action_anim_wait = require("src.turn.waits.await_action_anim")
 local runtime_ports = require("src.foundation.ports.runtime_ports")
@@ -5,7 +8,7 @@ local runtime_ports = require("src.foundation.ports.runtime_ports")
 local _M = action_anim_wait
 
 local function _assert_eq(a, b, msg)
-  assert(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
+  luassert.is.equal(b, a, msg)
 end
 
 local function _make_session(game, opts)
@@ -35,35 +38,32 @@ local function _make_game(opts)
   return g
 end
 
--- 原生 LuaUnit 迁移:describe 拍平为单个 Test* 类,describe 级 before_each /
--- after_each 翻成 setUp / tearDown,用例数与改写前一一对应(17 例)。
+describe("TestActionAnimWait", function()
 
-TestActionAnimWait = {}
-
-function TestActionAnimWait:setUp()
+before_each(function()
   require("test.support.config_reset").reset_all()
-end
+end)
 
-function TestActionAnimWait:tearDown()
+after_each(function()
   -- 各用例结尾的 runtime_ports.reset_for_tests() 把共享端口基线拆到未配置态,
   -- 必须装回,否则 mutate 车道窄 suite 子集会撞空端口(#217)。
   support.restore_runtime_services()
-end
+end)
 
-function TestActionAnimWait:test_coalesce_head_single_element_no_change()
+it("test_coalesce_head_single_element_no_change", function()
   local q = { { kind = "cash_receive", amount = 10 } }
   _M._coalesce_head(q)
   _assert_eq(#q, 1, "single element queue should not be modified")
   _assert_eq(q[1].amount, 10, "amount should be unchanged")
-end
+end)
 
-function TestActionAnimWait:test_coalesce_head_two_non_cash_no_merge()
+it("test_coalesce_head_two_non_cash_no_merge", function()
   local q = { { kind = "other_kind", amount = 5 }, { kind = "cash_receive", amount = 3 } }
   _M._coalesce_head(q)
   _assert_eq(#q, 2, "non-cash head should not merge")
-end
+end)
 
-function TestActionAnimWait:test_coalesce_head_two_cash_receive_merged()
+it("test_coalesce_head_two_cash_receive_merged", function()
   local q = {
     { kind = "cash_receive", amount = 10 },
     { kind = "cash_receive", amount = 20 },
@@ -72,9 +72,9 @@ function TestActionAnimWait:test_coalesce_head_two_cash_receive_merged()
   _assert_eq(#q, 1, "two cash_receive should merge into one")
   _assert_eq(q[1].amount, 30, "merged amount should be 10+20=30")
   _assert_eq(q[1].coalesced_count, 2, "coalesced_count should be 2")
-end
+end)
 
-function TestActionAnimWait:test_coalesce_head_three_cash_then_other_merges_first_two()
+it("test_coalesce_head_three_cash_then_other_merges_first_two", function()
   local q = {
     { kind = "cash_receive", amount = 5 },
     { kind = "cash_receive", amount = 7 },
@@ -84,9 +84,9 @@ function TestActionAnimWait:test_coalesce_head_three_cash_then_other_merges_firs
   _assert_eq(#q, 2, "two cash_receive merged, other remains")
   _assert_eq(q[1].amount, 12, "merged amount should be 5+7=12")
   _assert_eq(q[2].kind, "other_kind", "second element should be the other kind")
-end
+end)
 
-function TestActionAnimWait:test_coalesce_head_all_cash_merged()
+it("test_coalesce_head_all_cash_merged", function()
   local q = {
     { kind = "cash_receive", amount = 1 },
     { kind = "cash_receive", amount = 2 },
@@ -95,9 +95,9 @@ function TestActionAnimWait:test_coalesce_head_all_cash_merged()
   _M._coalesce_head(q)
   _assert_eq(#q, 1, "all cash_receive should merge into one")
   _assert_eq(q[1].amount, 6, "merged amount should be 1+2+3=6")
-end
+end)
 
-function TestActionAnimWait:test_coalesce_head_nil_amounts_treated_as_zero()
+it("test_coalesce_head_nil_amounts_treated_as_zero", function()
   local q = {
     { kind = "cash_receive" },
     { kind = "cash_receive" },
@@ -105,9 +105,9 @@ function TestActionAnimWait:test_coalesce_head_nil_amounts_treated_as_zero()
   _M._coalesce_head(q)
   _assert_eq(#q, 1, "nil amounts should merge")
   _assert_eq(q[1].amount, 0, "nil amounts should sum to 0")
-end
+end)
 
-function TestActionAnimWait:test_action_anim_idle_no_anim_clears_and_returns_next()
+it("test_action_anim_idle_no_anim_clears_and_returns_next", function()
   local game = _make_game({ turn = { action_anim = nil, action_anim_queue = {} } })
   local session = _make_session(game, { pending_action = nil })
   local res = action_anim_wait.action_anim(session, { next_state = "done", next_args = { x = 1 } })
@@ -115,16 +115,16 @@ function TestActionAnimWait:test_action_anim_idle_no_anim_clears_and_returns_nex
   _assert_eq(session._cleared, true, "should clear pending action")
   _assert_eq(res.next_state, "done", "should return provided next_state")
   _assert_eq(res.next_args.x, 1, "should return provided next_args")
-end
+end)
 
-function TestActionAnimWait:test_action_anim_idle_no_args_returns_nil_next_state()
+it("test_action_anim_idle_no_args_returns_nil_next_state", function()
   local game = _make_game({ turn = { action_anim = nil, action_anim_queue = {} } })
   local session = _make_session(game)
   local res = action_anim_wait.action_anim(session, nil)
   _assert_eq(res.next_state, nil, "nil args should give nil next_state")
-end
+end)
 
-function TestActionAnimWait:test_action_anim_queued_next_returns_wait()
+it("test_action_anim_queued_next_returns_wait", function()
   runtime_ports.configure({ wall_now_seconds = function() return 100.0 end })
   local game = _make_game({
     turn = {
@@ -141,9 +141,9 @@ function TestActionAnimWait:test_action_anim_queued_next_returns_wait()
   -- Then we reach the action check path
   _assert_eq(res.wait, true, "anim present should return wait=true when action does not match")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_with_anim_no_matching_action_returns_wait()
+it("test_action_anim_with_anim_no_matching_action_returns_wait", function()
   runtime_ports.configure({ wall_now_seconds = function() return 0.0 end })
   local game = _make_game({
     turn = {
@@ -155,9 +155,9 @@ function TestActionAnimWait:test_action_anim_with_anim_no_matching_action_return
   local res = action_anim_wait.action_anim(session, {})
   _assert_eq(res.wait, true, "no matching action should return wait=true")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_timed_out_completes_anim()
+it("test_action_anim_timed_out_completes_anim", function()
   local now_t = 100.0
   runtime_ports.configure({
     wall_now_seconds = function() return now_t end,
@@ -175,9 +175,9 @@ function TestActionAnimWait:test_action_anim_timed_out_completes_anim()
   _assert_eq(res.next_state, "after_anim", "should return next_state on timeout completion")
   _assert_eq(game.turn.action_anim, nil, "action_anim should be cleared after completion")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_done_action_matches_completes()
+it("test_action_anim_done_action_matches_completes", function()
   runtime_ports.configure({
     wall_now_seconds = function() return 0.0 end,
     wall_diff_seconds = function(t1, t2) return t1 - t2 end,
@@ -195,9 +195,9 @@ function TestActionAnimWait:test_action_anim_done_action_matches_completes()
   _assert_eq(game.turn.action_anim, nil, "action_anim should be cleared on done")
   _assert_eq(res.next_state, "move", "should return next_state after done")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_done_with_continuation_uses_callback()
+it("test_action_anim_done_with_continuation_uses_callback", function()
   runtime_ports.configure({
     wall_now_seconds = function() return 0.0 end,
     wall_diff_seconds = function(t1, t2) return t1 - t2 end,
@@ -218,9 +218,9 @@ function TestActionAnimWait:test_action_anim_done_with_continuation_uses_callbac
   _assert_eq(res.next_state, "cont_state", "continuation callback should override next_state")
   _assert_eq(res.next_args.cont, true, "continuation next_args should be returned")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_timed_out_with_queued_next_returns_wait()
+it("test_action_anim_timed_out_with_queued_next_returns_wait", function()
   local now_t = 200.0
   runtime_ports.configure({
     wall_now_seconds = function() return now_t end,
@@ -236,9 +236,9 @@ function TestActionAnimWait:test_action_anim_timed_out_with_queued_next_returns_
   local res = action_anim_wait.action_anim(session, {})
   _assert_eq(res.wait, true, "timeout with queued next should return wait=true for next anim")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_marks_game_dirty_when_anim_set()
+it("test_action_anim_marks_game_dirty_when_anim_set", function()
   runtime_ports.configure({
     wall_now_seconds = function() return 0.0 end,
     wall_diff_seconds = function(t1, t2) return t1 - t2 end,
@@ -254,9 +254,9 @@ function TestActionAnimWait:test_action_anim_marks_game_dirty_when_anim_set()
   _assert_eq(game.dirty.any, true, "game.dirty.any should be set when anim dequeued")
   _assert_eq(game.dirty.turn, true, "game.dirty.turn should be set when anim dequeued")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_no_started_at_does_not_time_out()
+it("test_action_anim_no_started_at_does_not_time_out", function()
   runtime_ports.configure({
     wall_now_seconds = function() return 1000.0 end,
     wall_diff_seconds = function(t1, t2) return t1 - t2 end,
@@ -271,9 +271,9 @@ function TestActionAnimWait:test_action_anim_no_started_at_does_not_time_out()
   local res = action_anim_wait.action_anim(session, { next_state = "after" })
   _assert_eq(res.next_state, "after", "anim without started_at should not time out")
   runtime_ports.reset_for_tests()
-end
+end)
 
-function TestActionAnimWait:test_action_anim_done_seq_mismatch_returns_wait()
+it("test_action_anim_done_seq_mismatch_returns_wait", function()
   runtime_ports.configure({
     wall_now_seconds = function() return 0.0 end,
     wall_diff_seconds = function(t1, t2) return t1 - t2 end,
@@ -287,7 +287,5 @@ function TestActionAnimWait:test_action_anim_done_seq_mismatch_returns_wait()
   local res = action_anim_wait.action_anim(session, {})
   _assert_eq(res.wait, true, "seq mismatch should return wait=true")
   runtime_ports.reset_for_tests()
-end
-
-
-return TestActionAnimWait
+end)
+end)

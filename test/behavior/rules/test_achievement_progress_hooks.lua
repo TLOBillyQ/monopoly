@@ -1,8 +1,8 @@
--- 原生 LuaUnit(自研 busted → LuaUnit 迁移):describe 拍平为
 -- TestAchievementProgressHooks,before_each/after_each 按原顺序拼进
--- setUp/tearDown,裸 assert(语句位)切 lu.assertEvalToTrue,用例数与改写前
+-- setUp/tearDown,裸 assert(语句位)切 luassert.truthy,用例数与改写前
 -- 一一对应(9 例)。
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local support = require("test.support.shared_support")
 local _assert_eq = support.assert_eq
 local achievement_progress_port = require("src.rules.ports.achievement_progress")
@@ -109,18 +109,17 @@ local function _find_land_cluster(board, count)
   error("no connected land cluster with " .. tostring(count) .. " tiles")
 end
 
-TestAchievementProgressHooks = {}
-
-function TestAchievementProgressHooks:setUp()
+describe("TestAchievementProgressHooks", function()
+before_each(function()
   _config_reset.reset_all()
   achievement_progress_port.reset_for_tests()
-end
+end)
 
-function TestAchievementProgressHooks:tearDown()
+after_each(function()
   achievement_progress_port.reset_for_tests()
-end
+end)
 
-function TestAchievementProgressHooks:test_uses_game_local_port_before_configured_default()
+it("test_uses_game_local_port_before_configured_default", function()
   local player = { id = 1 }
   local local_calls = 0
   local global_calls = 0
@@ -144,16 +143,16 @@ function TestAchievementProgressHooks:test_uses_game_local_port_before_configure
     "game-local port should handle achievement progress")
   _assert_eq(local_calls, 1, "local port call count")
   _assert_eq(global_calls, 0, "configured port should not be called")
-end
+end)
 
-function TestAchievementProgressHooks:test_fails_closed_when_resolved_port_lacks_handler()
+it("test_fails_closed_when_resolved_port_lacks_handler", function()
   achievement_progress_port.configure({})
 
   _assert_eq(achievement_progress_port.game_won({}, { id = 1 }), false,
     "missing achievement handler should not report success")
-end
+end)
 
-function TestAchievementProgressHooks:test_fails_closed_when_handler_raises()
+it("test_fails_closed_when_handler_raises", function()
   achievement_progress_port.configure({
     game_won = function()
       error("host progress unavailable")
@@ -162,9 +161,9 @@ function TestAchievementProgressHooks:test_fails_closed_when_handler_raises()
 
   _assert_eq(achievement_progress_port.game_won({}, { id = 1 }), false,
     "raising achievement handler should not report success")
-end
+end)
 
-function TestAchievementProgressHooks:test_emits_land_purchase_rent_tax_and_upgrade_facts()
+it("test_emits_land_purchase_rent_tax_and_upgrade_facts", function()
   local game = support.new_game()
   local player = game.players[1]
   local owner = game.players[2]
@@ -173,11 +172,11 @@ function TestAchievementProgressHooks:test_emits_land_purchase_rent_tax_and_upgr
 
   game:set_player_cash(player, 999999)
   effect_base.executors.buy_land.apply({ game = game, player = player, tile = tile })
-  lu.assertEvalToTrue(_find_event(events, "land_purchased", player),
+  luassert.truthy(_find_event(events, "land_purchased", player),
     "land purchase should emit an achievement fact")
 
   effect_base.executors.upgrade_land.apply({ game = game, player = player, tile = tile })
-  lu.assertEvalToTrue(_find_event(events, "building_upgraded", player, "amount", 1),
+  luassert.truthy(_find_event(events, "building_upgraded", player, "amount", 1),
     "first upgrade should emit level-1 achievement fact")
 
   game:set_tile_owner(tile, owner.id)
@@ -186,17 +185,17 @@ function TestAchievementProgressHooks:test_emits_land_purchase_rent_tax_and_upgr
   game:set_player_cash(owner, 0)
   local rent_result = land_rules.execute_pay_rent(game, player.id, tile.id)
   _assert_eq(rent_result.ok, true, "rent payment should succeed")
-  lu.assertEvalToTrue(_find_event(events, "cash_received", owner),
+  luassert.truthy(_find_event(events, "cash_received", owner),
     "rent owner should receive cash achievement fact")
 
   game:set_player_cash(player, 10000)
   local tax_result = land_rules.execute_pay_tax(game, player.id)
   _assert_eq(tax_result.ok, true, "tax payment should succeed")
-  lu.assertEvalToTrue(_find_event(events, "tax_paid", player, "amount", tax_result.payload.amount),
+  luassert.truthy(_find_event(events, "tax_paid", player, "amount", tax_result.payload.amount),
     "tax payment should emit paid amount")
-end
+end)
 
-function TestAchievementProgressHooks:test_emits_contiguous_land_fact_on_third_connected_land()
+it("test_emits_contiguous_land_fact_on_third_connected_land", function()
   local game = support.new_game()
   local player = game.players[1]
   local events = _capture_events()
@@ -206,11 +205,11 @@ function TestAchievementProgressHooks:test_emits_contiguous_land_fact_on_third_c
     effect_base.executors.buy_land.apply({ game = game, player = player, tile = tile })
   end
 
-  lu.assertEvalToTrue(_find_event(events, "contiguous_lands", player),
+  luassert.truthy(_find_event(events, "contiguous_lands", player),
     "third connected land purchase should emit contiguous achievement fact")
-end
+end)
 
-function TestAchievementProgressHooks:test_ignores_contiguous_hook_calls_with_incomplete_context()
+it("test_ignores_contiguous_hook_calls_with_incomplete_context", function()
   local calls = 0
   achievement_progress_port.configure({
     contiguous_lands = function()
@@ -228,12 +227,12 @@ function TestAchievementProgressHooks:test_ignores_contiguous_hook_calls_with_in
 
   for _, case in ipairs(cases) do
     local ok, err = pcall(achievement_hooks.record_contiguous_if_reached, case[1], case[2], case[3])
-    lu.assertEvalToTrue(ok, "incomplete contiguous hook context should not throw: " .. tostring(err))
+    luassert.truthy(ok, "incomplete contiguous hook context should not throw: " .. tostring(err))
   end
   _assert_eq(calls, 0, "incomplete contiguous hook context should not emit progress")
-end
+end)
 
-function TestAchievementProgressHooks:test_emits_chance_cash_and_typhoon_demolition_facts()
+it("test_emits_chance_cash_and_typhoon_demolition_facts", function()
   local game = support.new_game()
   local player = game.players[1]
   local owner = game.players[2]
@@ -248,9 +247,9 @@ function TestAchievementProgressHooks:test_emits_chance_cash_and_typhoon_demolit
     tile = chance_tile,
     move_result = {},
   })
-  lu.assertEvalToTrue(_find_event(events, "chance_card_drawn", player),
+  luassert.truthy(_find_event(events, "chance_card_drawn", player),
     "chance draw should emit achievement fact")
-  lu.assertEvalToTrue(_find_event(events, "cash_received", player, "amount", 10000),
+  luassert.truthy(_find_event(events, "cash_received", player, "amount", 10000),
     "positive chance cash should emit received amount")
 
   local land_index, land_tile = support.first_land_tile(game.board)
@@ -258,11 +257,11 @@ function TestAchievementProgressHooks:test_emits_chance_cash_and_typhoon_demolit
   game:set_player_property(owner, land_tile.id, true)
   game:set_tile_level(land_tile, 1)
   chance_handlers.build().destroy_buildings_on_path(game, nil, nil, { visited = { land_index } })
-  lu.assertEvalToTrue(_find_event(events, "typhoon_demolished_building", owner),
+  luassert.truthy(_find_event(events, "typhoon_demolished_building", owner),
     "typhoon building destruction should emit owner achievement fact")
-end
+end)
 
-function TestAchievementProgressHooks:test_emits_item_deity_location_demolish_and_market_facts()
+it("test_emits_item_deity_location_demolish_and_market_facts", function()
   local game = support.new_game()
   local player = game.players[1]
   local target = game.players[2]
@@ -272,28 +271,28 @@ function TestAchievementProgressHooks:test_emits_item_deity_location_demolish_an
   local item_result = item_executor.use_item(game, player, item_ids.dice_multiplier, { is_computer_controlled = true })
   _assert_eq(type(item_result) == "table" and item_result.ok or item_result, true,
     "dice multiplier item should succeed")
-  lu.assertEvalToTrue(_find_event(events, "item_used", player),
+  luassert.truthy(_find_event(events, "item_used", player),
     "successful item use should emit achievement fact")
 
   game:set_player_deity(player, "rich", 3)
-  lu.assertEvalToTrue(_find_event(events, "deity_attached", player, "deity_type", "rich"),
+  luassert.truthy(_find_event(events, "deity_attached", player, "deity_type", "rich"),
     "deity attachment should emit achievement fact")
 
   game:set_player_cash(player, 999999)
   game:player_apply_hospital_effects(player)
-  lu.assertEvalToTrue(_find_event(events, "location_effect", player, "effect", "hospital"),
+  luassert.truthy(_find_event(events, "location_effect", player, "effect", "hospital"),
     "hospital effect should emit achievement fact")
   game:player_apply_mountain_effects(target)
-  lu.assertEvalToTrue(_find_event(events, "location_effect", target, "effect", "mountain"),
+  luassert.truthy(_find_event(events, "location_effect", target, "effect", "mountain"),
     "mountain effect should emit achievement fact")
 
   game:set_player_cash(player, 0)
   game:set_player_cash(target, 10000)
   post_effects.apply_target(game, player, item_ids.share_wealth, target, {})
-  lu.assertEvalToTrue(_find_event(events, "cash_received", player, "amount", 5000),
+  luassert.truthy(_find_event(events, "cash_received", player, "amount", 5000),
     "share wealth positive delta should emit received cash")
   post_effects.apply_target(game, player, item_ids.tax, target, {})
-  lu.assertEvalToTrue(_find_event(events, "tax_paid", target, "amount", 2500),
+  luassert.truthy(_find_event(events, "tax_paid", target, "amount", 2500),
     "tax card should emit target tax payment")
 
   local land_index, land_tile = support.first_land_tile(game.board)
@@ -301,18 +300,18 @@ function TestAchievementProgressHooks:test_emits_item_deity_location_demolish_an
   game:set_player_property(target, land_tile.id, true)
   game:set_tile_level(land_tile, 1)
   demolish.apply(game, player, land_index, { item_id = item_ids.monster })
-  lu.assertEvalToTrue(_find_event(events, "monster_demolished_building", target),
+  luassert.truthy(_find_event(events, "monster_demolished_building", target),
     "monster demolition should emit owner achievement fact")
 
   game:set_player_cash(player, 999999)
   local purchase_result = market.purchase.execute(game, player, item_ids.dice_multiplier)
   _assert_eq(type(purchase_result) == "table" and purchase_result.ok or purchase_result, true,
     "coin market purchase should succeed")
-  lu.assertEvalToTrue(_find_event(events, "market_item_bought", player),
+  luassert.truthy(_find_event(events, "market_item_bought", player),
     "successful market item purchase should emit achievement fact")
-end
+end)
 
-function TestAchievementProgressHooks:test_emits_game_win_fact_when_victory_resolved()
+it("test_emits_game_win_fact_when_victory_resolved", function()
   local game = support.new_game()
   local winner = game.players[1]
   local loser = game.players[2]
@@ -320,8 +319,8 @@ function TestAchievementProgressHooks:test_emits_game_win_fact_when_victory_reso
 
   game:set_player_eliminated(loser, true)
   _assert_eq(game:check_victory(), true, "one surviving player should win")
-  lu.assertEvalToTrue(_find_event(events, "game_won", winner), "victory should emit achievement fact")
-end
+  luassert.truthy(_find_event(events, "game_won", winner), "victory should emit achievement fact")
+end)
 
 
-return TestAchievementProgressHooks
+end)

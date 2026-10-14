@@ -12,30 +12,24 @@ local M = {}
 local REGENERATE_ENTRY = "tools/packages/acceptance/regenerate.lua"
 local RUN_ALL_ENTRY = "tools/packages/acceptance/run_all.lua"
 
-local function _shell_quote(value)
-  local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
-
--- 子进程转发:spawn 现状入口,退出码透传(入口自带 os.exit,语义即本包语义)。
 local function _forward(entry, args)
-  local parts = { "lua", entry }
-  for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = _shell_quote(value)
-  end
-  local ok, how, code = os.execute(table.concat(parts, " "))
-  if how == "exit" then
-    return code or (ok and 0 or 1)
-  end
-  return 1
+  require("test.bootstrap").install_package_paths()
+  local parts = { require("foundation.lua54").lua54_bin(), entry }
+  for _, value in ipairs(args or {}) do parts[#parts + 1] = value end
+  local result = require("foundation.proc").run_command(parts)
+  io.write(result.output or "")
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua acceptance [args...]",
+    "用法: lua tools/cli.lua acceptance [--serial|--parallel|--capabilities]",
+    "默认串行；--parallel 使用原生 cmd 并行并按注册顺序汇总，空结果失败。",
+    "start /b启动Windows PowerShell；内置.NET Add-Type/PInvoke Job Object收容自有子树。",
+    "--capabilities: 列出注册/执行/排除集合;Windows 默认排除 capability=acceptance-mutate 的真实 feature,不计为通过。",
     "",
     "验收套件（按需车道）：先从 features/ 中文源重生成 gitignored 的 generated specs，",
-    "再由 run_all 逐个 spawn 聚合。引擎核心由自研 acceptance4lua",
+    "再由真实 busted 执行场景/例子并以 JSON 汇总；生成物没有独立 harness。解析器来自 acceptance4lua",
     "rock 由 tools/tools.lock 跟随上游主干并从 .toolcache/luarocks 装载，本包是数据面 + 驱动层 + 车道胶水。",
     "详细语义见 tools/packages/acceptance/ 与 `lua tools/cli.lua verify --help`。",
     "",
@@ -49,11 +43,36 @@ function M.main(args, env)
       return 0
     end
   end
+  for index, value in ipairs(args or {}) do
+    if value == "--feature" then
+      require("test.bootstrap").install_package_paths()
+      local registry = require("packages.acceptance.acceptance_features")
+      for _, entry in ipairs(registry.entries) do
+        if entry.feature == args[index + 1] and entry.capability then
+          local boundary = require("foundation.platform_boundary")
+          local verdict = boundary.evaluate(entry.capability, {})
+          if verdict.status then
+            io.stderr:write("[acceptance] requested feature=" .. entry.feature .. " generated=" .. entry.generated .. "\n")
+            return boundary.emit(verdict)
+          end
+        end
+      end
+      io.stderr:write("use explicit parser/generator entrypoints for single-feature requests\n")
+      return 2
+    elseif value == "--capabilities" then
+      require("test.bootstrap").install_package_paths()
+      require("packages.acceptance.acceptance_features").select(function(line) io.write(line .. "\n") end)
+      return 0
+    elseif value ~= "--serial" and value ~= "--parallel" then
+      io.stderr:write("unknown option: " .. value .. "\n")
+      return 2
+    end
+  end
   local regenerated = _forward(REGENERATE_ENTRY, {})
   if regenerated ~= 0 then
     return regenerated
   end
-  return _forward(RUN_ALL_ENTRY, {})
+  return _forward(RUN_ALL_ENTRY, args)
 end
 
 return M

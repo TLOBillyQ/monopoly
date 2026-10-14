@@ -10,43 +10,39 @@ local M = {}
 
 local ENTRY = "tools/packages/verify/main.lua"
 
-local function _shell_quote(value)
-  local text = tostring(value or "")
-  return "'" .. text:gsub("'", "'\\''") .. "'"
-end
-
--- 子进程转发:spawn 包内入口,退出码透传(入口自带 os.exit,语义即本包语义)。
+-- 原生 argv 转发，与 foundation 的 cmd quoting 保持单一真源。
 local function _forward(args)
-  local parts = { "lua", ENTRY }
+  require("test.bootstrap").install_package_paths()
+  local proc = require("foundation.proc")
+  local lua54 = require("foundation.lua54")
+  local command = { lua54.lua54_bin(), ENTRY }
   for _, value in ipairs(args or {}) do
-    parts[#parts + 1] = _shell_quote(value)
+    command[#command + 1] = value
   end
-  local ok, how, code = os.execute(table.concat(parts, " "))
-  if how == "exit" then
-    return code or (ok and 0 or 1)
-  end
-  return 1
+  local result = proc.run_command(command)
+  io.write(result.output or "")
+  return result.code or (result.ok and 0 or 1)
 end
 
 function M.usage()
   return table.concat({
-    "用法: lua tools/cli.lua verify [--full|--coverage|--crap|--tooling|--verbose|--no-coverage]",
+    "用法: lua tools/cli.lua verify [--serial|--parallel|--tooling|--verbose]",
     "",
-    "质量门禁编排器:默认 slim 车道(contract + guards + arch + behavior 七层 + foundation",
-    "+ lint-src/lint-test/lint-tools + encoding),是迭代默认与 push 前唯一硬地板。",
+    "质量门禁编排器:默认 slim 车道(contract + guards(含 arch_policy 层边界门禁)",
+    "+ behavior 七层 + foundation + lint-src/lint-test/lint-tools + encoding),",
+    "是迭代默认与 push 前唯一硬地板。",
     "",
     "flag 映射:",
+    "  --serial       所有车道及其测试子进程按序执行(原生 Windows 默认)",
+    "  --parallel     原生 start /b 后台并行；Job Object超时停止自有进程树",
+    "                 Windows PowerShell内置.NET Add-Type/PInvoke；空输出按失败计",
     "  (默认)         slim:七层 + foundation 行为 spec 全跑",
-    "  --full         slim + coverage + crap(完整报告,按需)",
-    "  --coverage     显式加 coverage 并行 lane(只看覆盖率)",
-    "  --crap         显式补 crap_collect → crap → crap_gate 两步(只看 CRAP)",
     "  --tooling      正交叠加 tooling 并行 lane(改 tools/** 时)",
-    "  --no-coverage  silent no-op(向后兼容;coverage 默认 opt-out)",
     "  --verbose      展开各 lane 明细",
     "",
     "挑选提示:",
-    "  - 默认 verify 已剥离 coverage + crap;需要完整报告时显式 --full,",
-    "    或分别 --coverage / --crap。",
+    "  - CRAP / 变异测试不进 verify,是显式 uml 质量步骤:",
+    "    `lua tools/cli.lua uml crap` / `lua tools/cli.lua uml mutate`(ADR 0068)。",
     "  - property 独立车道已退场(#190):两个道具时机 fuzz 探针",
     "    (test/behavior/rules/items/test_item_timing_fuzz.lua、",
     "    test/behavior/turn/test_item_timing_loop_fuzz.lua)随默认 verify 跑",
@@ -54,8 +50,10 @@ function M.usage()
     "  - 红车道 → 看 `[verify] FAIL <lane>` 行,按 lane 名下钻",
     "    (spec-lane --profile <目录> 或单文件)。",
     "",
-    "pipeline 不包含(按需走单工具):mutate / dry / arch-view / crap report / acceptance;",
-    "acceptance 需单独 `lua tools/cli.lua acceptance`,acceptance-mutate 是软车道。",
+    "pipeline 不包含(按需走单工具):uml crap / uml mutate / dry / acceptance;",
+    "acceptance 需单独 `lua tools/cli.lua acceptance`,dry 与 acceptance-mutate 是软车道,",
+    "且当前按 POSIX 专用能力声明:原生 Windows 上请求退 3(status=unavailable),",
+    "不在 slim / --tooling / acceptance 这些最低保证面内(#96 / ADR 0066)。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
   }, "\n") .. "\n"

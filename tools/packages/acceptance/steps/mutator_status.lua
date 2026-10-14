@@ -4,7 +4,7 @@ local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
 local proc_lib = require("foundation.proc")
 local shell_lib = require("foundation.shell")
-local lua54 = require("packages.luaunit_runner.lua54")
+local lua54 = require("foundation.lua54")
 
 local mutator_status_steps = {}
 
@@ -55,7 +55,7 @@ end
 local function _run_gherkin_mutator(world, options)
   local root = _root(world)
   local args = {
-    -- 与 .swarmforge/bin 转发器、mutate_lane 同一解释器口径(工单 #606)。
+    -- 与 mutate_lane 同用 Lua 5.4 解释器。
     lua54.lua54_bin(),
     shell_lib.shell_quote(path_lib.join_path(root, "tools/packages/acceptance_mutate/mutator.lua")),
     "--feature", shell_lib.shell_quote(world.mutator_status_feature),
@@ -74,7 +74,7 @@ local function _run_gherkin_mutator(world, options)
   local command = table.concat(args, " ")
     .. " > " .. shell_lib.shell_quote(world.mutator_status_stdout)
     .. " 2> " .. shell_lib.shell_quote(world.mutator_status_stderr)
-  local result = proc_lib.run_command(command, { cwd = root })
+  local result = proc_lib.run_command("(" .. command .. ")", { cwd = root })
   world.mutator_status_result = result
   world.mutator_status_stdout_text = fs_lib.read_file(world.mutator_status_stdout) or ""
   world.mutator_status_stderr_text = fs_lib.read_file(world.mutator_status_stderr) or ""
@@ -98,7 +98,11 @@ end
 local function _assert_status_tokens(line, tokens)
   for _, token in ipairs(tokens) do
     local expected = token[1] .. "=" .. tostring(token[2])
-    if not line:find(expected, 1, true) then
+    local actual
+    for key, value in tostring(line):gmatch("([%w_]+)=([^%s]+)") do
+      if key == token[1] then actual = value end
+    end
+    if actual ~= tostring(token[2]) then
       return nil, "status line missing " .. expected .. ": " .. line
     end
   end

@@ -12,17 +12,16 @@ local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S"
 
 local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
-local shell_lib = require("foundation.shell")
 local tap_summary = require("foundation.tap_summary")
 local parallel_lanes = require("foundation.parallel_lanes")
-local sharding = require("packages.luaunit_runner.spec_sharding")
+local sharding = require("foundation.spec_sharding")
 local lane_args = require("packages.spec_lane.spec_lane_args")
 local lane_tools = require("packages.spec_lane.spec_lane_tools")
-local runner_bin = require("packages.luaunit_runner.lua54")
+local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
 
--- 内置文件分片（与 behavior_parallel / coverage 共用 tools/packages/luaunit_runner）：
+-- 内置文件分片（与 behavior_parallel 共用 packages/test_runner）：
 -- 命名 profile 的文件数超过阈值时,按文件边界拆成 N 条 runner 子进程 lane
 -- 并行（不拆文件内顺序）；窄目录点跑（--profile <目录>）、文件数少、
 -- worker=1、--verbose 一律走原单进程路径,命令形态逐字节不变。
@@ -70,7 +69,11 @@ local function _discover_files(roots, pattern)
     for _, path in ipairs(discovered or {}) do
       local base = path:match("([^/\\]+)%.lua$")
       if base ~= nil and base:find(pattern) ~= nil and not seen[path] then
-        files[#files + 1] = path
+        local verdict = require("foundation.platform_boundary").test_verdict(path)
+        if verdict then
+          io.write("[tooling] excluded status=unavailable file=" .. verdict.identity
+            .. " cases=" .. verdict.cases .. " capability=acceptance-mutate reason=" .. verdict.entry.reason .. "\n")
+        else files[#files + 1] = path end
         seen[path] = true
       end
     end
@@ -106,7 +109,7 @@ local function _build_shard_cmd(profile, files)
   for _, f in ipairs(files) do
     args[#args + 1] = f
   end
-  return shell_lib.build_command(args)
+  return args
 end
 
 -- 分片路径:每 lane 一条 runner 子进程(run_lanes 注入替身,默认 parallel_lanes,
@@ -162,8 +165,8 @@ function M.run(options)
     return { stdout = tostring(tool_err) .. "\n", code = 1, passed = 0, failed = 1 }
   end
 
-  -- 默认后端 = LuaUnit 运行器(argv_prefix 返回 { lua5.4, runner.lua },
-  -- tools/packages/luaunit_runner）。--busted-bin / BUSTED_BIN 已删除，
+  -- 默认后端 = 真实 busted 运行器(argv_prefix 返回 { lua5.4,
+  -- tools/packages/test_runner/runner.lua }）。--busted-bin / BUSTED_BIN 已删除，
   -- PATH 无 busted,迁移已完成)。
   local prefix = runner_bin.argv_prefix()
   local run_command = options.run_command or proc_lib.run_command
@@ -180,6 +183,7 @@ function M.run(options)
     and #files > _SHARD_THRESHOLD
     and _resolve_workers(#files, options) > 1
     and options.verbose ~= true
+    and options.serial ~= true
 
   if not shardable then
     local command = {}
@@ -192,16 +196,12 @@ function M.run(options)
     local result = run_command(command)
     local raw = tostring(result.output or "")
 
-    if options.verbose then
-      return { stdout = raw, code = result.code or (result.ok and 0 or 1), passed = 0, failed = 0 }
-    end
-
     local compressed, passed, failed = M.compress_tap(raw)
     local code = result.code or (result.ok and 0 or 1)
-    if failed > 0 and code == 0 then
-      code = 1
-    end
-    return { stdout = compressed, code = code, passed = passed, failed = failed }
+    if (failed > 0 or passed == 0) and code == 0 then code = 1 end
+    local counts = raw:match("# COUNTS: [^\r\n]+")
+    return { stdout = options.verbose and raw or (compressed .. (counts and counts .. "\n" or "")),
+      code = code, passed = passed, failed = failed, discovered = #files }
   end
 
   return _run_sharded(options, options.profile, files)

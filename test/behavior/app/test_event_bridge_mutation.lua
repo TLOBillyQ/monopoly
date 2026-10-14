@@ -3,14 +3,20 @@
 -- callback, invoke it, and observe that state.game is set from get_current_game.
 --
 -- 原生 LuaUnit 改写:无钩子 describe → 文件级 TestEventBridgeMutation 单类
--- (不拆类),语句位裸 assert → lu.assertEvalToTrue。用例数与改写前一一对应(1 例)。
+-- (不拆类),语句位裸 assert → luassert.truthy。用例数与改写前一一对应(1 例)。
 
-local lu = require("luaunit")
+require("test.bootstrap").install_package_paths()
+local luassert = assert
 local runtime_context = require("src.host.context")
 local visual_hold = require("src.ui.visual_hold")
 local event_bridge = require("src.app.event_bridge")
 
-TestEventBridgeMutation = {}
+describe("TestEventBridgeMutation", function()
+  local saved_context, lifecycle_run_or_defer
+  before_each(function()
+    saved_context = runtime_context.current()
+    lifecycle_run_or_defer = visual_hold.run_or_defer
+  end)
 
 local function build_event_host()
   local active_callbacks = {}
@@ -33,13 +39,15 @@ local function build_event_host()
   return lua_api, active_callbacks, triggers_by_name, unregistered
 end
 
-function TestEventBridgeMutation:tearDown()
-  if event_bridge.uninstall then
-    event_bridge.uninstall()
-  end
-end
+  after_each(function()
+    if event_bridge.uninstall then
+      event_bridge.uninstall()
+    end
+    visual_hold.run_or_defer = lifecycle_run_or_defer
+    runtime_context.set_current(saved_context)
+  end)
 
-function TestEventBridgeMutation:test_uninstall_removes_both_registered_event_callbacks()
+local function _test_uninstall_removes_both_registered_event_callbacks()
   local lua_api, active_callbacks, triggers_by_name = build_event_host()
   local saved_ctx = runtime_context.current()
   runtime_context.set_current({ env = { LuaAPI = lua_api } })
@@ -50,11 +58,11 @@ function TestEventBridgeMutation:test_uninstall_removes_both_registered_event_ca
   runtime_context.set_current(saved_ctx)
 
   local events = require("src.foundation.events")
-  lu.assertNil(active_callbacks[triggers_by_name[events.land.tile_upgraded]])
-  lu.assertNil(active_callbacks[triggers_by_name[events.intent.need_choice]])
+  luassert.is_nil(active_callbacks[triggers_by_name[events.land.tile_upgraded]])
+  luassert.is_nil(active_callbacks[triggers_by_name[events.intent.need_choice]])
 end
 
-function TestEventBridgeMutation:test_uninstall_is_idempotent()
+local function _test_uninstall_is_idempotent()
   local lua_api, _, _, unregistered = build_event_host()
   local saved_ctx = runtime_context.current()
   runtime_context.set_current({ env = { LuaAPI = lua_api } })
@@ -65,10 +73,10 @@ function TestEventBridgeMutation:test_uninstall_is_idempotent()
 
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEquals(#unregistered, 2)
+  luassert.is.equal(2, #unregistered)
 end
 
-function TestEventBridgeMutation:test_repeated_install_does_not_register_duplicate_events()
+local function _test_repeated_install_does_not_register_duplicate_events()
   local register_count = 0
   local lua_api = {
     global_register_custom_event = function(_, callback)
@@ -85,10 +93,10 @@ function TestEventBridgeMutation:test_repeated_install_does_not_register_duplica
 
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEquals(register_count, 2)
+  luassert.is.equal(2, register_count)
 end
 
-function TestEventBridgeMutation:test_stores_the_get_current_game_result_on_state_game_when_an_event_fires_L16_nil()
+local function _test_stores_the_get_current_game_result_on_state_game_when_an_event_fires_L16_nil()
   local registered = {}
   local fake_ctx = {
     env = {
@@ -121,28 +129,28 @@ function TestEventBridgeMutation:test_stores_the_get_current_game_result_on_stat
   visual_hold.run_or_defer = saved_run_or_defer
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEvalToTrue(fired, "at least one event must have been registered to invoke")
+  luassert.truthy(fired, "at least one event must have been registered to invoke")
   -- L16 `get_current_game()` -> nil would leave state.game = nil.
-  lu.assertEvalToTrue(state.game == sentinel_game,
+  luassert.truthy(state.game == sentinel_game,
     "state.game must be the get_current_game() result; got " .. tostring(state.game))
 end
 
 -- #293 复核:install 的 3 处守卫断言 + run_or_defer 的 source 标签未测,4 个
 -- survivor 全属此族;补钉后逐条击杀。
 
-function TestEventBridgeMutation:test_install_asserts_missing_state_L9_nil()
-  lu.assertErrorMsgContains("missing state", function()
+local function _test_install_asserts_missing_state_L9_nil()
+  luassert.has_error.match(function()
     event_bridge.install(nil, function() end)
-  end)
+  end, "missing state", 1, true)
 end
 
-function TestEventBridgeMutation:test_install_asserts_missing_get_current_game_L10_nil()
-  lu.assertErrorMsgContains("missing get_current_game", function()
+local function _test_install_asserts_missing_get_current_game_L10_nil()
+  luassert.has_error.match(function()
     event_bridge.install({}, nil)
-  end)
+  end, "missing get_current_game", 1, true)
 end
 
-function TestEventBridgeMutation:test_install_asserts_when_event_registration_fails_L26_nil()
+local function _test_install_asserts_when_event_registration_fails_L26_nil()
   -- host.register_custom_event 在 LuaAPI 缺函数时返回 false(函数存在则恒
   -- 返回 true,真实调用结果在第二返回值)——空 LuaAPI 才触发 event_bridge
   -- 的断言。
@@ -157,12 +165,12 @@ function TestEventBridgeMutation:test_install_asserts_when_event_registration_fa
     event_bridge.install({}, function() end)
   end)
   runtime_context.set_current(saved_ctx)
-  lu.assertEvalToTrue(ok == false, "failed registration should assert")
-  lu.assertEvalToTrue(tostring(err):find("global_register_custom_event", 1, true) ~= nil,
+  luassert.truthy(ok == false, "failed registration should assert")
+  luassert.truthy(tostring(err):find("global_register_custom_event", 1, true) ~= nil,
     "assert should name the missing LuaAPI function: " .. tostring(err))
 end
 
-function TestEventBridgeMutation:test_run_or_defer_carries_the_runtime_event_source_L15_nil()
+local function _test_run_or_defer_carries_the_runtime_event_source_L15_nil()
   local registered = {}
   local fake_ctx = {
     env = {
@@ -191,11 +199,19 @@ function TestEventBridgeMutation:test_run_or_defer_carries_the_runtime_event_sou
   visual_hold.run_or_defer = saved_run_or_defer
   runtime_context.set_current(saved_ctx)
 
-  lu.assertEvalToTrue(fired, "at least one event must have been registered to invoke")
+  luassert.truthy(fired, "at least one event must have been registered to invoke")
   -- L15 `"runtime_event"` -> nil would leave the source label nil.
-  lu.assertEvalToTrue(seen_source == "runtime_event",
+  luassert.truthy(seen_source == "runtime_event",
     "run_or_defer must carry the runtime_event source; got " .. tostring(seen_source))
 end
 
 
-return TestEventBridgeMutation
+it("test_uninstall_removes_both_registered_event_callbacks", _test_uninstall_removes_both_registered_event_callbacks)
+it("test_uninstall_is_idempotent", _test_uninstall_is_idempotent)
+it("test_repeated_install_does_not_register_duplicate_events", _test_repeated_install_does_not_register_duplicate_events)
+it("test_stores_the_get_current_game_result_on_state_game_when_an_event_fires_L16_nil", _test_stores_the_get_current_game_result_on_state_game_when_an_event_fires_L16_nil)
+it("test_install_asserts_missing_state_L9_nil", _test_install_asserts_missing_state_L9_nil)
+it("test_install_asserts_missing_get_current_game_L10_nil", _test_install_asserts_missing_get_current_game_L10_nil)
+it("test_install_asserts_when_event_registration_fails_L26_nil", _test_install_asserts_when_event_registration_fails_L26_nil)
+it("test_run_or_defer_carries_the_runtime_event_source_L15_nil", _test_run_or_defer_carries_the_runtime_event_source_L15_nil)
+end)

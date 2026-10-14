@@ -1,4 +1,12 @@
-local lu = require("luaunit")
+-- luacheck: std +busted
+require("test.bootstrap").install_package_paths()
+local luassert = assert
+local function _assert_same(actual, expected, message)
+  luassert.is.same(expected, actual, message)
+end
+local function _assert_not_equal(actual, expected, message)
+  luassert.is_not(expected, actual, message)
+end
 local support = require("test.support.shared_support")
 local afk_signal = require("src.turn.policies.afk_signal")
 local action_button_timer = require("src.turn.policies.action_button_timer")
@@ -65,9 +73,9 @@ local function _choice_output(choice, elapsed)
   return output
 end
 
-TestAfkWiring = {}
+describe("TestAfkWiring", function()
 
-function TestAfkWiring:test_action_button_timeout_emits_the_action_button_signal()
+it("test_action_button_timeout_emits_the_action_button_signal", function()
   local player = _player()
   local game = _game(player)
   local state = { action_button_player_id = player.id, action_button_elapsed = 15 }
@@ -91,13 +99,13 @@ function TestAfkWiring:test_action_button_timeout_emits_the_action_button_signal
     })
   end)
 
-  lu.assertEquals(#calls, 1)
-  lu.assertEquals(calls[1].state, state)
-  lu.assertEquals(calls[1].role_id, player.id)
-  lu.assertEquals(calls[1].window_kind, "action_button")
-end
+  _assert_same(#calls, 1)
+  _assert_same(calls[1].state, state)
+  _assert_same(calls[1].role_id, player.id)
+  _assert_same(calls[1].window_kind, "action_button")
+end)
 
-function TestAfkWiring:test_choice_timeout_emits_owner_signal_and_marks_timeout_input()
+it("test_choice_timeout_emits_owner_signal_and_marks_timeout_input", function()
   local choice = { id = 1, kind = "market_buy", route_key = "market", owner_role_id = 7 }
   local player = _player()
   local game = _game(player, choice)
@@ -127,15 +135,15 @@ function TestAfkWiring:test_choice_timeout_emits_owner_signal_and_marks_timeout_
     }).step(game, state, 0)
   end)
 
-  lu.assertEquals(#calls, 1)
-  lu.assertEquals(calls[1].state, state)
-  lu.assertEquals(calls[1].role_id, player.id)
-  lu.assertEquals(calls[1].window_kind, "market_buy")
-  lu.assertEquals(#dispatched, 1)
-  lu.assertEquals(dispatched[1].input_source, "timeout")
-end
+  _assert_same(#calls, 1)
+  _assert_same(calls[1].state, state)
+  _assert_same(calls[1].role_id, player.id)
+  _assert_same(calls[1].window_kind, "market_buy")
+  _assert_same(#dispatched, 1)
+  _assert_same(dispatched[1].input_source, "timeout")
+end)
 
-function TestAfkWiring:test_choice_timeout_does_not_emit_a_signal_for_an_auto_owner()
+it("test_choice_timeout_does_not_emit_a_signal_for_an_auto_owner", function()
   local choice = { id = 3, kind = "choice", route_key = "r", owner_role_id = 7 }
   local player = _player()
   control.toggle_manual_delegation(player)
@@ -161,10 +169,10 @@ function TestAfkWiring:test_choice_timeout_does_not_emit_a_signal_for_an_auto_ow
     }).step(game, state, 0)
   end)
 
-  lu.assertEquals(calls, 0)
-end
+  _assert_same(calls, 0)
+end)
 
-function TestAfkWiring:test_choice_timeout_uses_the_choice_owner_not_the_current_turn_player()
+it("test_choice_timeout_uses_the_choice_owner_not_the_current_turn_player", function()
   local owner = _player(7)
   local current = _player(8)
   local choice = { id = 6, kind = "choice", route_key = "r", owner_role_id = owner.id }
@@ -216,13 +224,13 @@ function TestAfkWiring:test_choice_timeout_uses_the_choice_owner_not_the_current
     }).step(game, state, 0)
   end)
 
-  lu.assertEquals(#calls, 1)
-  lu.assertEquals(calls[1].state, state)
-  lu.assertEquals(calls[1].role_id, owner.id)
-  lu.assertEquals(calls[1].window_kind, "choice")
-end
+  _assert_same(#calls, 1)
+  _assert_same(calls[1].state, state)
+  _assert_same(calls[1].role_id, owner.id)
+  _assert_same(calls[1].window_kind, "choice")
+end)
 
-function TestAfkWiring:test_target_select_timeout_emits_the_target_owner_signal()
+it("test_target_select_timeout_emits_the_target_owner_signal", function()
   local choice = { id = 2, kind = "item_target_tile", owner_role_id = 7 }
   local player = _player()
   local game = _game(player, choice)
@@ -250,14 +258,14 @@ function TestAfkWiring:test_target_select_timeout_emits_the_target_owner_signal(
     deadlines.tick(state, 16)
   end)
 
-  lu.assertTrue(resolved)
-  lu.assertEquals(#calls, 1)
-  lu.assertEquals(calls[1].state, state)
-  lu.assertEquals(calls[1].role_id, player.id)
-  lu.assertEquals(calls[1].window_kind, "target_select")
-end
+  luassert.is_true(resolved)
+  _assert_same(#calls, 1)
+  _assert_same(calls[1].state, state)
+  _assert_same(calls[1].role_id, player.id)
+  _assert_same(calls[1].window_kind, "target_select")
+end)
 
-function TestAfkWiring:test_target_select_timeout_does_not_signal_a_dangling_owner()
+it("test_target_select_timeout_does_not_signal_a_dangling_owner", function()
   local choice = { id = 4, kind = "item_target_tile", owner_role_id = 99 }
   local player = _player()
   local game = _game(player, choice)
@@ -283,11 +291,11 @@ function TestAfkWiring:test_target_select_timeout_does_not_signal_a_dangling_own
     deadlines.tick(state, 16)
   end)
 
-  lu.assertTrue(resolved)
-  lu.assertEquals(calls, 0)
-end
+  luassert.is_true(resolved)
+  _assert_same(calls, 0)
+end)
 
-function TestAfkWiring:test_target_select_timeout_ignores_a_choice_cleared_before_deadline()
+it("test_target_select_timeout_ignores_a_choice_cleared_before_deadline", function()
   local choice = { id = 5, kind = "item_target_tile", owner_role_id = 7 }
   local player = _player()
   local game = _game(player, choice)
@@ -314,11 +322,11 @@ function TestAfkWiring:test_target_select_timeout_ignores_a_choice_cleared_befor
     deadlines.tick(state, 16)
   end)
 
-  lu.assertEquals(calls, 0)
-  lu.assertFalse(resolved)
-end
+  _assert_same(calls, 0)
+  luassert.is_false(resolved)
+end)
 
-function TestAfkWiring:test_target_select_does_not_arm_when_a_turn_exists_without_a_choice()
+it("test_target_select_does_not_arm_when_a_turn_exists_without_a_choice", function()
   local player = _player()
   local game = _game(player, nil)
   local state = {}
@@ -340,15 +348,15 @@ function TestAfkWiring:test_target_select_does_not_arm_when_a_turn_exists_withou
     },
   }, function()
     target_select_timer.step(game, state, 0)
-    lu.assertFalse(deadlines.is_active(state, "target_select"))
+    luassert.is_false(deadlines.is_active(state, "target_select"))
     deadlines.tick(state, 16)
   end)
 
-  lu.assertEquals(calls, 0)
-  lu.assertFalse(resolved)
-end
+  _assert_same(calls, 0)
+  luassert.is_false(resolved)
+end)
 
-function TestAfkWiring:test_target_select_replaces_a_deadline_armed_for_a_previous_choice()
+it("test_target_select_replaces_a_deadline_armed_for_a_previous_choice", function()
   local player = _player()
   local first_choice = { id = 8, kind = "item_target_tile", owner_role_id = 7 }
   local second_choice = { id = 9, kind = "item_target_tile", owner_role_id = 7 }
@@ -366,17 +374,17 @@ function TestAfkWiring:test_target_select_replaces_a_deadline_armed_for_a_previo
     },
   }, function()
     target_select_timer.step(game, state, 0)
-    lu.assertTrue(deadlines.is_active(state, "target_select"))
+    luassert.is_true(deadlines.is_active(state, "target_select"))
     game.turn.pending_choice = second_choice
     target_select_timer.step(game, state, 0)
-    lu.assertTrue(deadlines.is_active(state, "target_select"))
+    luassert.is_true(deadlines.is_active(state, "target_select"))
     deadlines.tick(state, 16)
   end)
 
-  lu.assertEquals(calls, 1)
-end
+  _assert_same(calls, 1)
+end)
 
-function TestAfkWiring:test_target_select_timeout_ignores_a_pending_choice_that_changed_before_deadline()
+it("test_target_select_timeout_ignores_a_pending_choice_that_changed_before_deadline", function()
   local player = _player()
   local armed_choice = { id = 10, kind = "item_target_tile", owner_role_id = 7 }
   local other_choice = { id = 11, kind = "item_target_tile", owner_role_id = 7 }
@@ -404,11 +412,11 @@ function TestAfkWiring:test_target_select_timeout_ignores_a_pending_choice_that_
     deadlines.tick(state, 16)
   end)
 
-  lu.assertEquals(calls, 0)
-  lu.assertFalse(resolved)
-end
+  _assert_same(calls, 0)
+  luassert.is_false(resolved)
+end)
 
-function TestAfkWiring:test_target_select_and_choice_timeout_same_frame_signal_once_and_advance_once()
+it("test_target_select_and_choice_timeout_same_frame_signal_once_and_advance_once", function()
   local choice = { id = 7, kind = "item_target_tile", owner_role_id = 7 }
   local player = _player()
   local game = _game(player, choice)
@@ -441,12 +449,12 @@ function TestAfkWiring:test_target_select_and_choice_timeout_same_frame_signal_o
     }).step(game, state, 16)
   end)
 
-  lu.assertEquals(calls, 1)
-  lu.assertEquals(advances, 1)
-  lu.assertNil(game.turn.pending_choice)
-end
+  _assert_same(calls, 1)
+  _assert_same(advances, 1)
+  luassert.is_nil(game.turn.pending_choice)
+end)
 
-function TestAfkWiring:test_auto_runner_shows_the_recovery_hint_only_for_afk_source()
+it("test_auto_runner_shows_the_recovery_hint_only_for_afk_source", function()
   local player = _player()
   control.enable_afk_delegation(player)
   local game = _game(player)
@@ -481,11 +489,11 @@ function TestAfkWiring:test_auto_runner_shows_the_recovery_hint_only_for_afk_sou
     })
   end)
 
-  lu.assertEquals(#tips, 1)
-  lu.assertEquals(tips[1].role_id, player.id)
-  lu.assertEquals(tips[1].text, "你正在托管中，点击托管按钮恢复")
-  lu.assertEquals(tips[1].source, "afk.auto_runner")
-  lu.assertEquals(#dispatched, 1)
+  _assert_same(#tips, 1)
+  _assert_same(tips[1].role_id, player.id)
+  _assert_same(tips[1].text, "你正在托管中，点击托管按钮恢复")
+  _assert_same(tips[1].source, "afk.auto_runner")
+  _assert_same(#dispatched, 1)
 
   control.toggle_manual_delegation(player)
   control.toggle_manual_delegation(player)
@@ -502,10 +510,10 @@ function TestAfkWiring:test_auto_runner_shows_the_recovery_hint_only_for_afk_sou
       current_player_computer_controlled = true,
     })
   end)
-  lu.assertEquals(#tips, 0)
-end
+  _assert_same(#tips, 0)
+end)
 
-function TestAfkWiring:test_auto_runner_emits_a_recovery_hint_for_each_actual_auto_action()
+it("test_auto_runner_emits_a_recovery_hint_for_each_actual_auto_action", function()
   local player = _player()
   control.enable_afk_delegation(player)
   local game = _game(player)
@@ -544,15 +552,15 @@ function TestAfkWiring:test_auto_runner_emits_a_recovery_hint_for_each_actual_au
     })
   end)
 
-  lu.assertEquals(#dispatched, 2)
-  lu.assertEquals(#tips, 2)
-  lu.assertEquals(tips[1].role_id, player.id)
-  lu.assertEquals(tips[2].role_id, player.id)
-  lu.assertEquals(tips[1].text, "你正在托管中，点击托管按钮恢复")
-  lu.assertEquals(tips[2].text, "你正在托管中，点击托管按钮恢复")
-end
+  _assert_same(#dispatched, 2)
+  _assert_same(#tips, 2)
+  _assert_same(tips[1].role_id, player.id)
+  _assert_same(tips[2].role_id, player.id)
+  _assert_same(tips[1].text, "你正在托管中，点击托管按钮恢复")
+  _assert_same(tips[2].text, "你正在托管中，点击托管按钮恢复")
+end)
 
-function TestAfkWiring:test_auto_runner_hint_goes_only_to_the_afk_seat()
+it("test_auto_runner_hint_goes_only_to_the_afk_seat", function()
   local afk_player = _player(7)
   control.enable_afk_delegation(afk_player)
   local other_player = _player(8)
@@ -594,12 +602,12 @@ function TestAfkWiring:test_auto_runner_hint_goes_only_to_the_afk_seat()
     })
   end)
 
-  lu.assertEquals(#tips, 1)
-  lu.assertEquals(tips[1].role_id, afk_player.id)
-  lu.assertNotEquals(tips[1].role_id, other_player.id)
-end
+  _assert_same(#tips, 1)
+  _assert_same(tips[1].role_id, afk_player.id)
+  _assert_not_equal(tips[1].role_id, other_player.id)
+end)
 
-function TestAfkWiring:test_auto_runner_does_not_hint_ai_or_unknown_source_auto_actions()
+it("test_auto_runner_does_not_hint_ai_or_unknown_source_auto_actions", function()
   local cases = {
     { name = "ai", mutate = function(player)
       player.is_ai = true
@@ -642,11 +650,11 @@ function TestAfkWiring:test_auto_runner_does_not_hint_ai_or_unknown_source_auto_
       })
     end)
 
-    lu.assertEquals(#tips, 0, case.name .. " auto action must not receive the AFK hint")
+    _assert_same(#tips, 0, case.name .. " auto action must not receive the AFK hint")
   end
-end
+end)
 
-function TestAfkWiring:test_auto_runner_does_not_hint_when_no_auto_action_is_generated()
+it("test_auto_runner_does_not_hint_when_no_auto_action_is_generated", function()
   local player = _player()
   control.enable_afk_delegation(player)
   local game = _game(player)
@@ -674,10 +682,9 @@ function TestAfkWiring:test_auto_runner_does_not_hint_when_no_auto_action_is_gen
       current_player_id = player.id,
       current_player_computer_controlled = true,
     })
-    lu.assertNil(action)
+    luassert.is_nil(action)
   end)
 
-  lu.assertEquals(#tips, 0)
-end
-
-return TestAfkWiring
+  _assert_same(#tips, 0)
+end)
+end)

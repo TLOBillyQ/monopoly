@@ -30,7 +30,7 @@ local _bootstrap = dofile(_module_dir() .. "/bootstrap.lua")
 local sb = {}
 
 -- install(fallback_dir, self_source) -> env, bootstrap
---   fallback_dir: 定位不到自身文件目录时的兜底(如 "tools/packages/crap");
+--   fallback_dir: 定位不到自身文件目录时的兜底(如 "tools/packages/dry");
 --   self_source:  调用方 chunk 的 source(debug.getinfo(1,"S").source)。
 function sb.install(fallback_dir, self_source)
   local script_source = (arg and arg[0]) or self_source
