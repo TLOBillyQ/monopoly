@@ -162,46 +162,42 @@ it("ir writes nothing and starts nothing when the preflight fails", function()
   check.equal(0, #calls.launch)
 end)
 
--- view 在启动上游前钉死 LUA_PATH/LUA_CPATH(项目缓存)并把 herdr 0.9.3 放在 PATH 首位;
--- 钉环境只发生在子进程里,父进程环境不变。
-it("view pins the launcher environment and leaves the parent environment unchanged", function()
+-- view 用预检钉死的 LUA_PATH/LUA_CPATH(项目缓存)启动上游;PATH 原序下传,
+-- herdr 由上游从中选(不钉版本、不置前)。钉环境只发生在子进程里,父进程环境不变。
+it("view launches with the preflight's pinned environment and leaves the parent environment unchanged", function()
   local before = { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") }
-  local calls, hooks = _stubs({ ok = true, scripts = "/up/scripts", lua_dir = "C:/lua/bin",
-    herdr_dir = "C:/herdr/0.9.3" }, 0)
+  local pinned = require("packages.uml_quality.runtime").pinned_env("C:/repo", "C:/lua/bin", "C:/sys;C:/herdr/0.9.4")
+  local calls, hooks = _stubs({ ok = true, scripts = "/up/scripts", env_list = pinned }, 0)
   hooks.repo_root = "."
   local code = _quiet(function() return cli.main({ "view", "--restart" }, hooks) end)
   check.equal(0, code)
   check.equal("view", calls.op)
   check.equal(1, #calls.launch)
   local launched = calls.launch[1]
+  check.equal(pinned, launched.env_list)
   local env = {}
   for _, entry in ipairs(launched.env_list) do env[entry[1]] = entry[2] end
-  local cache = launched.root:gsub("\\", "/") .. "/.toolcache/luarocks"
-  check.truthy(env.LUA_PATH:find(cache .. "/share/lua/5.4/?.lua", 1, true))
-  check.equal(env.LUA_PATH, env.LUA_PATH_5_4)
-  check.equal(cache .. "/lib/lua/5.4/?.dll", env.LUA_CPATH)
-  check.equal(env.LUA_CPATH, env.LUA_CPATH_5_4)
-  check.equal(1, env.PATH:find("C:/herdr/0.9.3;C:/lua/bin", 1, true))
+  check.equal("C:/lua/bin;C:/sys;C:/herdr/0.9.4", env.PATH)
   check.same({ "pwsh", "-NoProfile", "-File", "/up/scripts/uml-command.ps1", launched.root, "--restart" },
     launched.argv)
   check.same(before, { os.getenv("PATH"), os.getenv("LUA_PATH"), os.getenv("LUA_CPATH") })
 end)
 
-it("view fails before launching when herdr 0.9.3 or the upstream checkout is missing", function()
+it("view fails before launching when no herdr >= 0.9.3 is on PATH or the upstream checkout is missing", function()
   local root = env_lib.make_temp_path("uml_quality_view", "")
   fs.ensure_dir(root)
   local launched = 0
   local code, output
   _with_offline_rocks(function()
     code, output = _quiet(function()
-      return cli.main({ "view" }, { repo_root = root, herdr_home = root,
+      return cli.main({ "view" }, { repo_root = root, path = root,
         launch = function() launched = launched + 1 return 0 end })
     end)
   end)
   fs.remove_path(root)
   check.equal(1, code)
   check.equal(0, launched)
-  check.truthy(output:find("FAIL herdr 0.9.3", 1, true))
+  check.truthy(output:find("FAIL herdr >= 0.9.3: none on PATH", 1, true))
   check.truthy(output:find("uml-command.ps1 missing", 1, true))
   check.truthy(output:find("view was not started", 1, true))
 end)

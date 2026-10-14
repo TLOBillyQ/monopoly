@@ -17,8 +17,8 @@
 -- ir / view(#99 / ADR 0070):
 --   ir   从 arch_policy 投影 + docs/architecture.proposals.edn 生成仓根 policy.edn
 --        (gitignore),再经 uml-command.ps1 ir 调上游 ir-generator 写 tmp/uml/monopoly.edn。
---   view 在钉死 LUA_PATH/LUA_CPATH 且 herdr 0.9.3 居 PATH 首位的批处理里调上游启动器;
---        环境沿启动链下传到 companion,父进程与全局环境不变。
+--   view 在钉死 LUA_PATH/LUA_CPATH 的批处理里调上游启动器,herdr 由上游从 PATH 选
+--        (>= 0.9.3 最高版);环境沿启动链下传到 companion,父进程与全局环境不变。
 -- env.preflight / env.launch 可注入替身(测试用);缺省走真实预检与 cmd 批处理。
 local M = {}
 
@@ -64,8 +64,8 @@ function M.usage()
     "        生成仓根 policy.edn(不入库),再经 uml-command.ps1 ir 写 " .. _IR_OUT .. "。",
     "        覆盖文件缺失/为空视为无推演;非法或含多余键退 1,不写 policy.edn。",
     "        退出码原样回传。不接受额外参数。",
-    "view    预检(含 herdr 0.9.3)后,在钉死 LUA_PATH/LUA_CPATH、herdr 0.9.3 居 PATH 首位的",
-    "        环境里经 uml-command.ps1 启动图窗;args 原样转发(如 --restart)。退出码原样回传。",
+    "view    预检(含 PATH 上 herdr >= 0.9.3)后,在钉死 LUA_PATH/LUA_CPATH 的环境里经",
+    "        uml-command.ps1 启动图窗;args 原样转发(如 --restart)。退出码原样回传。",
     "",
     "预检失败退 1;check/crap/mutate 另删除陈旧的 .uml-viewer/quality-result.json。",
     "Python venv 搭建见 tools/specs/uml_quality.prompt。",
@@ -171,27 +171,29 @@ local function _check_python(state, root, tool)
   end
 end
 
--- 上游精确匹配 herdr 0.9.3;只认官方 standalone 安装布局里的 0.9.3 发行目录,
--- 不扫 PATH(PATH 上常是别的版本),也不下载或升级。
-local function _find_herdr(state, home)
-  local releases = path_lib.normalize_path(tostring(home or "")) .. "/.herdr/packages/standalone/releases"
-  local probed = false
-  for _, arch in ipairs({ "x86_64", "aarch64" }) do
-    local dir = releases .. "/" .. runtime.HERDR_VERSION .. "-" .. arch .. "-pc-windows-msvc"
-    if fs.path_exists(dir .. "/herdr.exe") then
-      probed = true
-      local result = proc.run_command({ dir .. "/herdr.exe", "--version" })
+-- 上游按 PATH 序扫 herdr.exe,选 >= 0.9.3 的最高版;这里同样只看 PATH,至少一个达标才放行。
+-- 不钉版本、不改 PATH 次序,也不下载或升级。
+local function _check_herdr(state, path)
+  local seen, rejected, found = {}, {}, false
+  for dir in tostring(path or ""):gmatch("[^;]+") do
+    local exe = path_lib.normalize_path((dir:gsub('"', ""))) .. "/herdr.exe"
+    if not seen[exe:lower()] and fs.path_exists(exe) then
+      seen[exe:lower()] = true
+      local result = proc.run_command({ exe, "--version" })
       local verdict = runtime.herdr_verdict(result.ok == true and result.output or nil)
-      _report(state, verdict.ok, verdict.message .. ": " .. dir)
-      if verdict.ok then return dir end
+      if verdict.ok then
+        found = true
+        _report(state, true, verdict.message .. ": " .. exe)
+      else
+        rejected[#rejected + 1] = exe .. " (" .. verdict.message .. ")"
+      end
     end
   end
-  if not probed then
-    _report(state, false, "herdr " .. runtime.HERDR_VERSION .. ": not found under " .. releases .. "/"
-      .. runtime.HERDR_VERSION .. "-<arch>-pc-windows-msvc/herdr.exe"
-      .. " (install https://github.com/herdrdev/herdr/releases/tag/v" .. runtime.HERDR_VERSION .. ")")
+  if not found then
+    _report(state, false, "herdr >= " .. table.concat(runtime.HERDR_MIN_VERSION, ".") .. ": none on PATH"
+      .. (#rejected > 0 and ("; rejected " .. table.concat(rejected, "; ")) or "")
+      .. " (install https://github.com/herdrdev/herdr/releases)")
   end
-  return nil
 end
 
 -- uml-command.ps1 ir 先选 examples/*.policy.edn,其次才是仓根 policy.edn;仓根有
@@ -208,10 +210,7 @@ local function _preflight(root, op, env)
   if op ~= "ir" then
     local lua_exe = _lua_exe(state)
     _ensure_rocks(state, root)
-    if lua_exe ~= nil then
-      state.lua_dir = path_lib.parent_dir(lua_exe)
-      state.env_list = _probe_lua_modules(state, root, lua_exe)
-    end
+    if lua_exe ~= nil then state.env_list = _probe_lua_modules(state, root, lua_exe) end
   end
   _check_pwsh(state)
   state.scripts = _check_viewer(state, root, op ~= "ir")
@@ -220,7 +219,7 @@ local function _preflight(root, op, env)
     state.env_list = {}
     _check_policy_unshadowed(state, root)
   end
-  if op == "view" then state.herdr_dir = _find_herdr(state, env.herdr_home or os.getenv("USERPROFILE")) end
+  if op == "view" then _check_herdr(state, env.path or os.getenv("PATH")) end
   return state
 end
 
@@ -289,9 +288,7 @@ function M.main(args, env)
     fs.ensure_parent_dir(root .. "/" .. _IR_OUT)
     return launch(root, state.env_list, argv)
   end
-  if op == "view" then
-    return launch(root, runtime.view_env(root, state.lua_dir, state.herdr_dir, os.getenv("PATH")), argv)
-  end
+  if op == "view" then return launch(root, state.env_list, argv) end
   local code = launch(root, state.env_list, argv)
   _echo_result(root)
   return code

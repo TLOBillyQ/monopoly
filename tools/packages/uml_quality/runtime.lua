@@ -43,25 +43,26 @@ function M.pinned_env(repo_root, lua_dir, inherited_path)
   }
 end
 
--- uml view 的启动环境(#99 / ADR 0070):Lua 装载面与 pinned_env 同源,herdr 0.9.3 所在
--- 目录排 PATH 首位。环境沿上游启动链下传到 companion 及其子 shell,仓根 ./uml 在其中才可用。
-function M.view_env(repo_root, lua_dir, herdr_dir, inherited_path)
-  local env_list = M.pinned_env(repo_root, lua_dir, inherited_path)
-  for _, entry in ipairs(env_list) do
-    if entry[1] == "PATH" then entry[2] = _normalize(herdr_dir) .. ";" .. entry[2] end
-  end
-  return env_list
-end
-
--- 上游 companion 预检精确匹配 `herdr --version` 输出 "herdr 0.9.3";这里同口径。
-M.HERDR_VERSION = "0.9.3"
+-- 上游 companion 在 PATH 上的 herdr 里选 `herdr X.Y.Z` >= 0.9.3(且 protocol 22)的最高版;
+-- 这里只判版本,同口径(X.Y.Z 逐段数值比较);protocol 由上游判。
+M.HERDR_MIN_VERSION = { 0, 9, 3 }
 
 function M.herdr_verdict(version_output)
   local line = tostring(version_output or ""):match("^%s*(.-)%s*$")
-  if line == "herdr " .. M.HERDR_VERSION then
-    return { ok = true, message = "herdr " .. M.HERDR_VERSION }
+  local minimum = table.concat(M.HERDR_MIN_VERSION, ".")
+  local parts = { line:match("^herdr (%d+)%.(%d+)%.(%d+)$") }
+  local supported = #parts == 3
+  if supported then
+    for index = 1, 3 do
+      local value, floor = tonumber(parts[index]), M.HERDR_MIN_VERSION[index]
+      if value ~= floor then
+        supported = value > floor
+        break
+      end
+    end
   end
-  return { ok = false, message = "herdr " .. M.HERDR_VERSION .. " required, got " .. (line ~= "" and line or "nothing") }
+  if supported then return { ok = true, message = line } end
+  return { ok = false, message = "herdr >= " .. minimum .. " required, got " .. (line ~= "" and line or "nothing") }
 end
 
 function M.module_verdict(name, resolved, repo_root)
