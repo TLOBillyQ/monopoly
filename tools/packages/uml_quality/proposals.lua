@@ -7,9 +7,9 @@
 -- 纯函数:不读写文件;落盘与起上游在 cli.lua。
 local M = {}
 
-M.PATH = "docs/architecture.proposals.edn"
+M.OVERRIDE_PATH = "docs/architecture.proposals.edn"
 
-local _KEYS = { ":proposals", ":omit" }
+local _ALLOWED_KEYS = { [":proposals"] = true, [":omit"] = true }
 local _CLOSE = { ["["] = "]", ["{"] = "}", ["("] = ")" }
 
 local function _is_delimiter(c)
@@ -18,7 +18,7 @@ end
 
 local function _fail(text, index, message)
   local _, newlines = text:sub(1, index - 1):gsub("\n", "")
-  return nil, M.PATH .. " (line " .. (newlines + 1) .. "): " .. message
+  return nil, M.OVERRIDE_PATH .. " (line " .. (newlines + 1) .. "): " .. message
 end
 
 -- 跳过空白、逗号与 ; 注释。
@@ -100,7 +100,7 @@ function M.parse(text)
     local key_end, err = _form_end(text, cursor)
     if key_end == nil then return nil, err end
     local key = text:sub(cursor, key_end)
-    if key ~= _KEYS[1] and key ~= _KEYS[2] then
+    if not _ALLOWED_KEYS[key] then
       return _fail(text, cursor, "unexpected key " .. key .. "; only :proposals and :omit are allowed")
     end
     if values[key] ~= nil then return _fail(text, cursor, "duplicate key " .. key) end

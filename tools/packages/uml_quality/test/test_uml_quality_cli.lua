@@ -148,6 +148,7 @@ it("ir rejects an invalid or over-wide override file without writing policy.edn"
     local code, policy, calls, output = _run_ir(_temp_root(override))
     check.equal(1, code, override)
     check.is_nil(policy, override)
+    check.equal(0, calls.preflight, override)
     check.equal(0, #calls.launch, override)
     check.truthy(output:find(OVERRIDE, 1, true), override)
     check.truthy(output:find("policy.edn was not written", 1, true), override)

@@ -60,7 +60,7 @@ function M.usage()
     "        退出码原样回传:0/2 有效结果,其余失败。",
     "mutate  预检后经 uml-command.ps1 跑 mutator;args 原样转发(目标文件或 --changed)。",
     "        退出码原样回传:0/3 有效结果,其余失败。",
-    "ir      arch_policy 投影 + " .. proposals.PATH .. " 的 :proposals/:omit",
+    "ir      arch_policy 投影 + " .. proposals.OVERRIDE_PATH .. " 的 :proposals/:omit",
     "        生成仓根 policy.edn(不入库),再经 uml-command.ps1 ir 写 " .. _IR_OUT .. "。",
     "        覆盖文件缺失/为空视为无推演;非法或含多余键退 1,不写 policy.edn。",
     "        退出码原样回传。不接受额外参数。",
@@ -242,7 +242,7 @@ end
 local function _ir_policy(root)
   local policy, err = arch_policy.load(root .. "/" .. arch_policy.DEFAULT_POLICY_PATH)
   if policy == nil then return nil, err end
-  return proposals.merge(arch_policy.project_uml_policy(policy), fs.read_raw(root .. "/" .. proposals.PATH), _IR_OUT)
+  return proposals.merge(arch_policy.project_uml_policy(policy), fs.read_raw(root .. "/" .. proposals.OVERRIDE_PATH), _IR_OUT)
 end
 
 function M.main(args, env)
@@ -278,21 +278,20 @@ function M.main(args, env)
   end
   if op == "check" then return 0 end
 
+  -- view 直接走上游启动器(无子命令名);ir 不接受额外参数,输出路径由本包钉死。
   local argv = { "pwsh", "-NoProfile", "-File", state.scripts .. "/uml-command.ps1", root }
+  if op ~= "view" then argv[#argv + 1] = op end
+  if op == "ir" then argv[#argv + 1] = _IR_OUT end
+  for index = 2, #args do argv[#argv + 1] = args[index] end
+
   if op == "ir" then
     fs.write_file(root .. "/policy.edn", policy_text)
     fs.ensure_parent_dir(root .. "/" .. _IR_OUT)
-    argv[#argv + 1] = "ir"
-    argv[#argv + 1] = _IR_OUT
     return launch(root, state.env_list, argv)
   end
   if op == "view" then
-    for index = 2, #args do argv[#argv + 1] = args[index] end
     return launch(root, runtime.view_env(root, state.lua_dir, state.herdr_dir, os.getenv("PATH")), argv)
   end
-
-  argv[#argv + 1] = op
-  for index = 2, #args do argv[#argv + 1] = args[index] end
   local code = launch(root, state.env_list, argv)
   _echo_result(root)
   return code
