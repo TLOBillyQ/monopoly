@@ -10,7 +10,7 @@
 
 ## 分层与依赖
 
-- 模块职责和放置规则见 [`docs/architecture.md`](docs/architecture.md)。依赖约束以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 的可执行规则为准；旧 `tools/packages/arch_view/config.json` 仅为同一 policy 的兼容投影。
+- 模块职责和放置规则见 [`docs/architecture.md`](docs/architecture.md)。依赖约束以 `tools/packages/arch_policy/policy.json` 与 `test/guards/` 的可执行规则为准（slim 的 guards 车道即层门禁）。
 - `foundation` 是唯一 substrate，只含无玩法语义的通用能力，不依赖七层；`host` 是 L2 宿主适配层。
 - `state` 与 `config` 不依赖上层；装配、mixin 安装和跨边界接线放在 `src/app`。
 - 业务规则不接触 UI 节点或 Eggy API；宿主能力经 port 进入内层。
@@ -82,8 +82,8 @@
 
 Lua 编译期 `LUA_IDSIZE` 是 60,长 chunk 名在错误消息里被截成 `...<尾部>`,所以 TAP 的 `# <src> @ <line>` **不保证是完整路径**——对账与归因按文件名(basename),不要拿它当绝对路径去拼。
 
-## mutate4lua manifest
+## 旧 mutate4lua manifest（已退役）
 
-- `src` 文件尾部的 mutate4lua manifest 与源码同属一个提交。
-- 删除或改名函数后运行 `lua tools/cli.lua mutate <file> --update-manifest` 重生成；首次纳入差分基线先跑 `--mutate-all`。
+- mutate4lua 与 `lua tools/cli.lua mutate` 已于 #94 退役；变异测试改走显式步骤 `lua tools/cli.lua uml mutate`（契约见 `tools/specs/uml_quality.prompt`）。
+- `src` 文件尾部残留的 `--[[ mutate4lua-manifest` 块注释是惰性历史产物：不再被任何工具读取，新文件不要添加，改动函数时也无需更新。
 - survived、timeout 或仅差分通过都不能证明全量基线。
