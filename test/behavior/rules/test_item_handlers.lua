@@ -20,6 +20,7 @@ local luassert = assert
 --
 local support = require("test.support.shared_support")
 local default_map = require("src.config.content.default_map")
+local event_kinds = require("src.config.gameplay.event_kinds")
 local item_ids = require("src.config.gameplay.item_ids")
 local timing = require("src.config.gameplay.timing")
 local config_reset = require("test.support.config_reset")
@@ -305,7 +306,8 @@ describe("TestItemHandlersRemoteDice", function()
     local g = _game()
     local published = _run_ai(g, 4, { name = "财神庙" }, { ok = true })
     _assert_eq(#published, 1, "a successful targeted ai dice publishes one feed entry")
-    luassert.is_not_nil(published[1].kind, "the published entry carries a kind")
+    _assert_eq(published[1].kind, event_kinds.remote_dice_target,
+      "the target-tile entry uses the log-only kind so it never pops a second tip (#109)")
     luassert.truthy(published[1].text:find("财神庙", 1, true), "the feed text names the target tile")
   end)
 

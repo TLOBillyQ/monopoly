@@ -68,6 +68,11 @@ function decision_engine.build(agent_ref)
     local option_id = choice.kind == "roadblock_target"
       and resolver(game, actor)
       or resolver(game, actor, 3)
+    -- #105:pick 非 nil 但不在 choice 选项内会被结算拒绝、choice 卡 pending
+    -- 死锁,与 pick 为 nil 一样回退到第一个 UI 选项。
+    if option_id ~= nil and _find_preferred(choice.options, option_id) == nil then
+      option_id = nil
+    end
     return _build_choice_action(choice, actor, option_id or _first_option_id(choice.options))
   end
 

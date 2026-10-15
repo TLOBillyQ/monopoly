@@ -159,7 +159,7 @@ describe("TestLandAiPriority", function()
     }
     local board = {
       step_forward_by_facing = function(_, current, facing)
-        return current + 1, nil, facing, false
+        return current + 1, 0, facing, false
       end,
       has_roadblock = function()
         return false
@@ -173,6 +173,7 @@ describe("TestLandAiPriority", function()
     }
     local value, tile = agent.pick_remote_dice_value({
       board = board,
+      occupants = {},
     }, {
       id = 1,
       position = 0,
@@ -194,7 +195,7 @@ describe("TestLandAiPriority", function()
     }
     local board = {
       step_forward_by_facing = function(_, current, facing)
-        return current + 1, nil, facing, false
+        return current + 1, 0, facing, false
       end,
       has_roadblock = function()
         return false
@@ -208,6 +209,7 @@ describe("TestLandAiPriority", function()
     }
     local value, tile = agent.pick_remote_dice_value({
       board = board,
+      occupants = {},
     }, {
       id = 1,
       position = 0,

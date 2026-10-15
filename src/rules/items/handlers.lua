@@ -193,8 +193,10 @@ function handlers.handle_remote_dice(game, player, item_id, context)
         return remote_dice.apply(inner_game, inner_player, dice_count, value)
       end, { consume = "before_apply" })
       if settled.ok and target_tile then
+        -- #109:用卡提示只此一条(remote_dice.apply 已发);目标格走
+        -- remote_dice_target(tip=false),只进行动日志,不再弹第二条提示。
         event_feed.publish(inner_game, {
-          kind = event_kinds.remote_dice,
+          kind = event_kinds.remote_dice_target,
           text = inner_player.name .. " AI 设定遥控骰子前往 " .. target_tile.name .. " 点数 " .. number_utils.format_integer_part(value),
         })
       end

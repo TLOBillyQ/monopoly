@@ -119,7 +119,8 @@ local function test_roadblock_target_uses_agent()
     pick_roadblock_target = function() return 42 end,
   }))
   local game = _make_game(_make_ai_player())
-  local choice = { id = 20, kind = "roadblock_target", options = {}, meta = {} }
+  -- #105 之后 agent pick 须在 choice 选项内才会被采用。
+  local choice = { id = 20, kind = "roadblock_target", options = { { id = 42 } }, meta = {} }
   local result = fn(game, choice)
   luassert.truthy(result ~= nil, "should have result for roadblock_target")
   _assert_eq(result.option_id, 42, "roadblock_target should use agent pick")
@@ -136,12 +137,37 @@ local function test_roadblock_target_falls_back()
   _assert_eq(result.option_id, 7, "should fall back to first option for roadblock")
 end
 
+-- #105:pick 非 nil 但不在 choice 选项内会被结算拒绝、choice 卡 pending 死锁,
+-- 与 pick 为 nil 一样回退到第一个 UI 选项。
+local function test_roadblock_target_falls_back_when_pick_not_in_options()
+  local fn = decision_engine.build(_make_agent_ref({
+    pick_roadblock_target = function() return 42 end,
+  }))
+  local game = _make_game(_make_ai_player())
+  local choice = { id = 23, kind = "roadblock_target", options = { { id = 7 }, { id = 8 } }, meta = {} }
+  local result = fn(game, choice)
+  luassert.truthy(result ~= nil, "should have result for out-of-options roadblock pick")
+  _assert_eq(result.option_id, 7, "pick outside choice options should fall back to first option")
+end
+
+local function test_demolish_target_falls_back_when_pick_not_in_options()
+  local fn = decision_engine.build(_make_agent_ref({
+    pick_demolish_target = function() return 99 end,
+  }))
+  local game = _make_game(_make_ai_player())
+  local choice = { id = 24, kind = "demolish_target", options = { { id = 5 }, { id = 6 } }, meta = {} }
+  local result = fn(game, choice)
+  luassert.truthy(result ~= nil, "should have result for out-of-options demolish pick")
+  _assert_eq(result.option_id, 5, "demolish pick outside choice options should fall back to first option")
+end
+
 local function test_demolish_target_uses_demolish_agent()
   local fn = decision_engine.build(_make_agent_ref({
     pick_demolish_target = function() return 99 end,
   }))
   local game = _make_game(_make_ai_player())
-  local choice = { id = 22, kind = "demolish_target", options = {}, meta = {} }
+  -- #105 之后 agent pick 须在 choice 选项内才会被采用。
+  local choice = { id = 22, kind = "demolish_target", options = { { id = 99 } }, meta = {} }
   local result = fn(game, choice)
   luassert.truthy(result ~= nil, "should have result for demolish_target")
   _assert_eq(result.option_id, 99, "demolish_target should use pick_demolish_target")
@@ -245,6 +271,8 @@ describe("TestDecisionEngine", function()
   it("test_remote_dice_falls_back_to_first_option", test_remote_dice_falls_back_to_first_option)
   it("test_roadblock_target_uses_agent", test_roadblock_target_uses_agent)
   it("test_roadblock_target_falls_back", test_roadblock_target_falls_back)
+  it("test_roadblock_target_falls_back_when_pick_not_in_options", test_roadblock_target_falls_back_when_pick_not_in_options)
+  it("test_demolish_target_falls_back_when_pick_not_in_options", test_demolish_target_falls_back_when_pick_not_in_options)
   it("test_demolish_target_uses_demolish_agent", test_demolish_target_uses_demolish_agent)
   it("test_item_target_player_returns_target_id", test_item_target_player_returns_target_id)
   it("test_item_target_player_cancels_when_no_target", test_item_target_player_cancels_when_no_target)

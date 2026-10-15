@@ -6,16 +6,19 @@ local movement = {}
 
 -- interrupt handler
 
-local function _check_roadblock(game, board, current, player)
-  if not board:has_roadblock(current) then
+local function _check_roadblock(ctx)
+  if not ctx.board:has_roadblock(ctx.current) then
     return false
   end
-  local tile = board:get_tile(current)
+  if ctx.opts.dry == true then
+    return true
+  end
+  local tile = ctx.board:get_tile(ctx.current)
   -- #550:先入队 roadblock_trigger、再清 board 状态,堵死 state sync 窗口——
   -- sync_many 同拍到达时 pending 守卫(visual_sync_overlay)仍能查到 trigger,
   -- overlay 活到 trigger handler 接管,不再提前销毁。
-  movement_events.emit_roadblock_hit(game, player, current, tile)
-  game:clear_roadblock(current)
+  movement_events.emit_roadblock_hit(ctx.game, ctx.player, ctx.current, tile)
+  ctx.game:clear_roadblock(ctx.current)
   return true
 end
 
@@ -29,7 +32,9 @@ local function _check_market(ctx, step)
     return nil
   end
   local remaining = ctx.abs_steps - step
-  movement_events.emit_market_interrupt(ctx, remaining)
+  if ctx.opts.dry ~= true then
+    movement_events.emit_market_interrupt(ctx, remaining)
+  end
   return {
     position = nil,
     remaining_steps = remaining,
@@ -41,7 +46,7 @@ end
 
 -- 出发格与到达格共用的障碍判定:路障先于地雷。
 local function _check_obstacles(ctx)
-  if _check_roadblock(ctx.game, ctx.board, ctx.current, ctx.player) then
+  if _check_roadblock(ctx) then
     ctx.stopped_on_roadblock = true
     return true
   end
@@ -194,6 +199,45 @@ function movement.move(game, player, steps, opts)
     and ctx.board.map.entry_points[landing_tile.id] ~= nil
   ctx.game:set_player_status(ctx.player, "skip_next_inner_entry", should_skip_next_inner_entry)
   return _build_move_result(ctx, landing_tile)
+end
+
+-- #102:纯预测走与 move 完全相同的步进/障碍/黑市判定（dry 模式只跳过事件与落账），
+-- 黑市中断按 move 阶段 continue_from_market 的同一映射恢复剩余步数。
+local function _predict_walk(game, player, steps, opts)
+  -- 不改调用方传入的 opts:复制一份再钉 dry。
+  local dry_opts = { dry = true }
+  for key, value in pairs(opts or {}) do
+    dry_opts[key] = value
+  end
+  local ctx = movement_context.build(game, player, steps, dry_opts)
+  if not _check_obstacles(ctx) then
+    _run_move_steps(ctx)
+  end
+  return ctx
+end
+
+local function _predict_market_resume(game, player, interrupt)
+  -- 真实恢复流用同一玩家（位置已被 move 更新到黑市格）；预测不改状态,
+  -- 用同 id/状态的影子玩家从黑市格继续。影子拷全表再覆盖落点,
+  -- movement_context.build 今后新增字段读取不会在预测与真实路径间静默分叉。
+  local shadow = {}
+  for key, value in pairs(player) do
+    shadow[key] = value
+  end
+  shadow.position = interrupt.position
+  return _predict_walk(game, shadow, interrupt.remaining_steps, {
+    direction = interrupt.facing,
+    branch_parity = interrupt.branch_parity,
+    entered_inner = interrupt.entered_inner,
+  })
+end
+
+function movement.predict_landing(game, player, steps)
+  local ctx = _predict_walk(game, player, steps, {})
+  while ctx.market_interrupt and ctx.market_interrupt.remaining_steps > 0 do
+    ctx = _predict_market_resume(game, player, ctx.market_interrupt)
+  end
+  return ctx.current
 end
 
 return movement
