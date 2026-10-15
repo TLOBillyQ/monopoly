@@ -11,6 +11,13 @@ return function(busted, _, helper_options)
   package.loaded["packages.test_runner.cache_loader"] = cache_loader
   local root = require("lfs").currentdir():gsub("\\", "/"):gsub("/+$", "") .. "/"
   cache_loader.adopt_preloaded(root)
+  -- Resolve bootstrap from worker source before it adds tools/test templates.
+  -- install revalidates the worker/source binding and removes bootstrap's empty
+  -- worker-local rocks templates; the original project cache stays read-only.
+  if os.getenv("MUTATOR_WORKER_ROOT") ~= nil or os.getenv("MUTATOR_SOURCE_ROOT") ~= nil then
+    require("test.bootstrap").install_package_paths()
+    cache_loader.install(root)
+  end
 
   -- crapper's luacov config drops absolute chunk names (^%a:), but test.bootstrap
   -- puts the repo root on package.path as an absolute path. Every repo-local Lua

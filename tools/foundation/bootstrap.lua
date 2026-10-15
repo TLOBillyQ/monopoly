@@ -207,6 +207,13 @@ function bootstrap.ensure_luassert_tree(repo_root)
 end
 
 function bootstrap.ensure_busted_tree(repo_root)
+  if os.getenv("MUTATOR_WORKER_ROOT") ~= nil or os.getenv("MUTATOR_SOURCE_ROOT") ~= nil then
+    local cache = require("packages.test_runner.cache_loader").prepare_cache(repo_root, true)
+    local marker = assert(io.open(cache .. "/share/lua/5.4/busted/runner.lua", "rb"),
+      "busted missing from read-only mutation source cache")
+    marker:close()
+    return true
+  end
   return _ensure_rock_installed(repo_root, "busted", "2.3.0-1", "share/lua/5.4/busted/runner.lua")
 end
 
