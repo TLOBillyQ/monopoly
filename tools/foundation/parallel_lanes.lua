@@ -41,9 +41,12 @@ end
 -- cmd 先走 CreateProcess(无扩展名时自动补 .exe 全 PATH 查找),找不到才退回
 -- PATHEXT 批处理搜索——所以先挑 where.exe 命中里的第一个 .exe,没有再取首个命中
 -- (实测:PATH 前段有 lua.cmd shim 时 cmd 仍执行后段目录的 lua.exe)。
+-- 按名缓存 where.exe 结果:一批 lane 共用同一解释器,只解析一次。
+local _resolved = {}
 local function resolve_exe(name)
   name = tostring(name or "")
   if name == "" or name:find("[/\\]") or name:match("^%a:") then return name end
+  if _resolved[name] then return _resolved[name] end
   local result = proc.run_command({ "where.exe", name })
   if not result.ok then return name end
   local first, first_exe
@@ -54,7 +57,8 @@ local function resolve_exe(name)
       if first_exe == nil and line:lower():match("%.exe$") then first_exe = line end
     end
   end
-  return first_exe or first or name
+  _resolved[name] = first_exe or first or name
+  return _resolved[name]
 end
 local function launch(entry, executable, timeout)
   local command = entry.cmd
