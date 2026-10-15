@@ -140,6 +140,7 @@ sharded_profile_runs_one_runner_lane_per_worker()
     check.matches("--output=TAP", argv, 1, true)
     check.matches("--pattern=test_", argv, 1, true)
     check.matches("test/behavior/", argv, 1, true)
+    check.matches("--durations-out=", argv, 1, true)
   end
   -- 3 条 lane × 3 条 ok 行 → 聚合压缩摘要
   check.equal(0, result.code)
@@ -175,6 +176,38 @@ sharded_failure_aggregates_into_failed_summary()
     "failure line must survive aggregation: " .. result.stdout)
   check.truthy(result.stdout:find("7 passed, 1 failed", 1, true),
     "summary must count the shard failure: " .. result.stdout)
+end
+
+-- #107:时长缓存让每次 lane 分配可能不同;失败时打印 lane → 文件清单(执行
+-- 顺序),复现走 --serial 或按清单点跑。
+local function
+sharded_failure_prints_lane_file_list_in_execution_order()
+  local captured_lanes
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      captured_lanes = lanes
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = { label = lane.label, ok = i ~= 2, exit_code = i == 2 and 1 or 0,
+          output = i == 2 and "not ok 1 - broke\n1..1\n" or _all_pass_tap() }
+      end
+      return false, results
+    end,
+  })
+
+  check.truthy(result.stdout:find("--serial", 1, true), "repro hint: " .. result.stdout)
+  for _, lane in ipairs(captured_lanes) do
+    local files = {}
+    local after_separator = false
+    for _, token in ipairs(lane.cmd) do
+      if after_separator then files[#files + 1] = token end
+      if token == "--" then after_separator = true end
+    end
+    local listing = lane.label .. ":\n  " .. table.concat(files, "\n  ") .. "\n"
+    check.truthy(result.stdout:find(listing, 1, true), "lane list for " .. lane.label .. ": " .. result.stdout)
+  end
 end
 
 -- #298 的发现式包结构：tooling 车道 33 行手维护 ROOT 清单
@@ -233,6 +266,8 @@ describe("spec lane public contracts", function()
   it("small_profile_below_threshold_stays_serial", small_profile_below_threshold_stays_serial)
   it("sharded_profile_runs_one_runner_lane_per_worker", sharded_profile_runs_one_runner_lane_per_worker)
   it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)
+  it("sharded_failure_prints_lane_file_list_in_execution_order",
+    sharded_failure_prints_lane_file_list_in_execution_order)
   it("discover_test_roots_covers_both_scopes", discover_test_roots_covers_both_scopes)
   it("discover_test_roots_returns_sorted_unique_test_dirs", discover_test_roots_returns_sorted_unique_test_dirs)
   it("discover_test_roots_adopts_both_layout_shapes", discover_test_roots_adopts_both_layout_shapes)

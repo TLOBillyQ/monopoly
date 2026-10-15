@@ -6,6 +6,7 @@ function spec_lane_args.usage()
     "",
     "--profile 选车道:behavior(七层 + foundation 全量)/ tooling(工具模块单测,不在 verify 管线内);",
     "--profile 也可直接给存在的目录（如 test/behavior/turn）按需点跑，按 behavior 默认构造临时 profile；其余语义见 `lua tools/cli.lua verify --help`。",
+    "文件数超过 30 的具名 profile 默认按实测时长分片并行,lane 分配随时长缓存变化;失败时打印 lane → 文件清单,复现请用 --serial 或按清单点跑。",
     "--busted-bin / BUSTED_BIN 已删除，PATH 无 busted。",
   }, "\n") .. "\n"
 end

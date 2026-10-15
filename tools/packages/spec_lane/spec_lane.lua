@@ -10,6 +10,7 @@ end
 local bootstrap = dofile(_module_dir() .. "/../../foundation/bootstrap.lua")
 local bootstrap_env = bootstrap.install((arg and arg[0]) or debug.getinfo(1, "S").source)
 
+local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
 local tap_summary = require("foundation.tap_summary")
@@ -93,8 +94,9 @@ local function _resolve_workers(file_count, options)
 end
 
 -- 分片 lane 命令(behavior_parallel 同款形态):--output=TAP 是 spec_lane 的
--- 固定契约,helper/pattern 从 profile config 取值,`--` 后是显式文件清单。
-local function _build_shard_cmd(profile, files)
+-- 固定契约,helper/pattern 从 profile config 取值,durations_out 是本 lane
+-- 实测时长落点,`--` 后是显式文件清单。
+local function _build_shard_cmd(profile, files, durations_out)
   local cfg = _profile_config(profile)
   local args = {}
   for _, token in ipairs(runner_bin.argv_prefix()) do
@@ -105,6 +107,7 @@ local function _build_shard_cmd(profile, files)
     args[#args + 1] = "--helper=" .. cfg.helper
   end
   args[#args + 1] = "--pattern=" .. (cfg.pattern or "test_")
+  args[#args + 1] = "--durations-out=" .. durations_out
   args[#args + 1] = "--"
   for _, f in ipairs(files) do
     args[#args + 1] = f
@@ -129,8 +132,8 @@ end
 
 local function _read_durations(path)
   local durations = {}
-  for seconds, file in (fs_lib.read_raw(path) or ""):gmatch("([%d%.]+)\t([^\r\n]+)") do
-    durations[_repo_relative(file)] = tonumber(seconds)
+  for file, seconds in pairs(sharding.parse_durations(fs_lib.read_raw(path))) do
+    durations[_repo_relative(file)] = seconds
   end
   return durations
 end
@@ -146,19 +149,36 @@ local function _load_durations(profile, files)
   return hit and durations or nil
 end
 
-local function _merge_durations(profile, measured_paths)
+-- 合并只保留本次发现清单内的文件(已删/改名文件的旧条目随之淘汰);缓存
+-- 写失败只告警,不改退出码——缓存只影响下次分配的均衡度,不影响正确性。
+local function _merge_durations(profile, files, measured_paths)
   local cache = _cache_path(profile)
-  local merged, updated = _read_durations(cache), false
+  local cached, current, merged, updated = _read_durations(cache), {}, {}, false
+  for _, file in ipairs(files) do
+    local key = _repo_relative(file)
+    current[key], merged[key] = true, cached[key]
+  end
   for _, out in ipairs(measured_paths) do
-    for file, seconds in pairs(_read_durations(out)) do merged[file], updated = seconds, true end
+    for file, seconds in pairs(_read_durations(out)) do
+      if current[file] then merged[file], updated = seconds, true end
+    end
     fs_lib.remove_path(out)
   end
   if not updated then return end
-  local keys, lines = {}, {}
-  for file in pairs(merged) do keys[#keys + 1] = file end
-  table.sort(keys)
-  for _, file in ipairs(keys) do lines[#lines + 1] = string.format("%.2f\t%s", merged[file], file) end
-  fs_lib.write_file(cache, table.concat(lines, "\n") .. "\n")
+  local ok, err = fs_lib.write_file(cache, sharding.format_durations(merged))
+  if not ok then
+    io.stderr:write("[spec-lane] warning: duration cache write failed: " .. tostring(err) .. "\n")
+  end
+end
+
+-- 时长缓存让 lane 分配随运行变化;失败时打印本次 lane → 文件清单(执行顺序)。
+local function _lane_listing(lane_specs)
+  local lines = { "# lane 分配(执行顺序);复现请用 --serial 或按清单点跑:" }
+  for _, spec in ipairs(lane_specs) do
+    lines[#lines + 1] = spec.label .. ":"
+    for _, file in ipairs(spec.files) do lines[#lines + 1] = "  " .. file end
+  end
+  return table.concat(lines, "\n") .. "\n"
 end
 
 -- 分片路径:每 lane 一条 runner 子进程(run_lanes 注入替身,默认 parallel_lanes,
@@ -172,19 +192,18 @@ local function _run_sharded(options, profile, files)
   local lane_specs, measured_paths = {}, {}
   for _, lane in ipairs(sharding.build_lpt_lanes(files, worker_count, _load_durations(profile, files))) do
     if #lane.files > 0 then
-      local out = require("foundation.env").make_temp_path("spec_durations", ".tsv")
+      local out = env_lib.make_temp_path("spec_durations", ".tsv")
       measured_paths[#measured_paths + 1] = out
-      local cmd = _build_shard_cmd(profile, lane.files)
-      table.insert(cmd, #cmd - #lane.files, "--durations-out=" .. out)
       lane_specs[#lane_specs + 1] = {
         label = profile .. "_w" .. tostring(lane.index),
-        cmd = cmd,
+        cmd = _build_shard_cmd(profile, lane.files, out),
+        files = lane.files,
       }
     end
   end
 
   local _, results = run_lanes(lane_specs, { stream = false })
-  _merge_durations(profile, measured_paths)
+  _merge_durations(profile, files, measured_paths)
 
   local raw_parts = {}
   local code = 0
@@ -200,6 +219,9 @@ local function _run_sharded(options, profile, files)
   local compressed, passed, failed = M.compress_tap(table.concat(raw_parts, "\n"))
   if failed > 0 and code == 0 then
     code = 1
+  end
+  if code ~= 0 then
+    compressed = compressed .. _lane_listing(lane_specs)
   end
   return { stdout = compressed, code = code, passed = passed, failed = failed }
 end
