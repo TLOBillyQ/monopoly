@@ -24,12 +24,12 @@ local M = {}
 -- 内置文件分片（与 behavior_parallel 共用 packages/test_runner）：
 -- 命名 profile 的文件数超过阈值时,按文件边界拆成 N 条 runner 子进程 lane
 -- 并行（不拆文件内顺序）；窄目录点跑（--profile <目录>）、文件数少、
--- worker=1、--verbose 一律走原单进程路径,命令形态逐字节不变。
--- 阈值 20:tooling(42+ 文件)与 contract(22 文件)分片受益;guards(11 文件)
--- 保持串行——其耗时 93% 集中在 test_guard_runner / test_dep_rules 两个动态
--- 生成套件文件,静态 file_cost 失真使 LPT 拆不动、分片反而付轮询税(实测
--- 3.74s -> 4.10s 微回归,见 test_spec_lane 注释)。
-local _SHARD_THRESHOLD = 20
+-- worker=1、--verbose、--serial 一律走原单进程路径,命令形态逐字节不变。
+-- CLI 默认分片并行(#107 恢复;#73 迁移期安全网曾默认 --serial):实测
+-- behavior 45.8s → 18.5s、tooling 230.1s → 85.5s(w=3,热时长缓存)。阈值 30:
+-- 每 lane 收容进程固定开销约 3s,contract(22 文件)串行 4.0s / 分片 7.0s,
+-- 保持串行;guards(17 文件)耗时集中在两个动态生成套件文件,分片拆不动。
+local _SHARD_THRESHOLD = 30
 local _DEFAULT_WORKERS = 3
 
 -- profile -> 发现根:命名 profile 取 spec_profiles.lua 的 ROOT;目录点跑就是
@@ -112,6 +112,55 @@ local function _build_shard_cmd(profile, files)
   return args
 end
 
+-- 实测时长缓存(#107):基线实测 tooling 按 it 计数分 3 lane 为 112.8/83.6/72.6s
+-- 失衡(单文件 it 数与墙钟无关),改按上次实测秒数做 LPT。缓存落 .toolcache
+-- (gitignored),键为仓库相对路径以跨 worktree 复用;首次运行无缓存仍按 it 计数。
+-- 每 lane 经 runner --durations-out 落本次每文件秒数,跑完合并回缓存。
+local function _cache_path(profile)
+  return bootstrap_env.repo_root .. "/.toolcache/spec_durations/" .. profile .. ".tsv"
+end
+
+local function _repo_relative(file)
+  local normalized = _normalize_path(file)
+  local prefix = _normalize_path(bootstrap_env.repo_root) .. "/"
+  if normalized:sub(1, #prefix):lower() == prefix:lower() then return normalized:sub(#prefix + 1) end
+  return normalized
+end
+
+local function _read_durations(path)
+  local durations = {}
+  for seconds, file in (fs_lib.read_raw(path) or ""):gmatch("([%d%.]+)\t([^\r\n]+)") do
+    durations[_repo_relative(file)] = tonumber(seconds)
+  end
+  return durations
+end
+
+-- 缓存秒数映射到本次发现的文件路径;一个都没命中返回 nil(退回 it 计数)。
+local function _load_durations(profile, files)
+  local cached = _read_durations(_cache_path(profile))
+  local durations, hit = {}, false
+  for _, file in ipairs(files) do
+    local seconds = cached[_repo_relative(file)]
+    if seconds then durations[file], hit = seconds, true end
+  end
+  return hit and durations or nil
+end
+
+local function _merge_durations(profile, measured_paths)
+  local cache = _cache_path(profile)
+  local merged, updated = _read_durations(cache), false
+  for _, out in ipairs(measured_paths) do
+    for file, seconds in pairs(_read_durations(out)) do merged[file], updated = seconds, true end
+    fs_lib.remove_path(out)
+  end
+  if not updated then return end
+  local keys, lines = {}, {}
+  for file in pairs(merged) do keys[#keys + 1] = file end
+  table.sort(keys)
+  for _, file in ipairs(keys) do lines[#lines + 1] = string.format("%.2f\t%s", merged[file], file) end
+  fs_lib.write_file(cache, table.concat(lines, "\n") .. "\n")
+end
+
 -- 分片路径:每 lane 一条 runner 子进程(run_lanes 注入替身,默认 parallel_lanes,
 -- stream=false 收集),按 lane 顺序聚合各 worker 的 TAP 后整段交给
 -- tap_summary.compress —— 计数(ok N / not ok N)与失败明细口径和串行路径
@@ -120,17 +169,22 @@ end
 local function _run_sharded(options, profile, files)
   local run_lanes = options.run_lanes or parallel_lanes.run
   local worker_count = _resolve_workers(#files, options)
-  local lane_specs = {}
-  for _, lane in ipairs(sharding.build_lpt_lanes(files, worker_count)) do
+  local lane_specs, measured_paths = {}, {}
+  for _, lane in ipairs(sharding.build_lpt_lanes(files, worker_count, _load_durations(profile, files))) do
     if #lane.files > 0 then
+      local out = require("foundation.env").make_temp_path("spec_durations", ".tsv")
+      measured_paths[#measured_paths + 1] = out
+      local cmd = _build_shard_cmd(profile, lane.files)
+      table.insert(cmd, #cmd - #lane.files, "--durations-out=" .. out)
       lane_specs[#lane_specs + 1] = {
         label = profile .. "_w" .. tostring(lane.index),
-        cmd = _build_shard_cmd(profile, lane.files),
+        cmd = cmd,
       }
     end
   end
 
   local _, results = run_lanes(lane_specs, { stream = false })
+  _merge_durations(profile, measured_paths)
 
   local raw_parts = {}
   local code = 0

@@ -11,7 +11,9 @@ function spec_lane_args.usage()
 end
 
 function spec_lane_args.parse(args)
-  local options = { verbose = false, serial = true }
+  -- #107:默认恢复分片并行(#73 迁移期安全网曾默认 serial;基线实测
+  -- behavior 45.8s 串行 → 20.2s 分片)。--serial 是显式逃生舱。
+  local options = { verbose = false, serial = false }
   local i = 1
   while i <= #(args or {}) do
     local token = args[i]
