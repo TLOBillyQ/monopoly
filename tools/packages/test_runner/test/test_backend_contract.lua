@@ -4,6 +4,9 @@ require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local proc = require("foundation.proc")
 local lua54 = require("foundation.lua54")
+local env = require("foundation.env")
+local fs = require("foundation.fs")
+local spec_sharding = require("foundation.spec_sharding")
 local root = require("foundation.bootstrap").resolve(debug.getinfo(1, "S").source).repo_root
 local fixtures = "test/fixtures/busted_backend/"
 local function run(files, helper)
@@ -21,6 +24,20 @@ describe("real busted execution", function()
     check.matches("# COUNTS: files=1 cases=2 passed=2 failed=0 errors=0", result.output, 1, true)
     local _, count = result.output:gsub("# COUNTS:", "")
     check.equal(1, count, result.output)
+  end)
+  -- #107:--durations-out 落每文件实测秒数(spec_lane 实测时长缓存的数据源),
+  -- 一行一个文件(格式归 spec_sharding.parse_durations);TAP 与计数不受影响。
+  it("durations out records one measured line per spec file", function()
+    local out = env.make_temp_path("spec_durations", ".tsv")
+    local command = { lua54.lua54_bin(), root .. "/tools/packages/test_runner/runner.lua", "--output=TAP",
+      "--durations-out=" .. out, "--", fixtures .. "passing.lua", fixtures .. "failing.lua" }
+    local result = proc.run_command(command)
+    local text = fs.read_raw(out) or ""
+    fs.remove_path(out)
+    check.matches("cases=3 passed=2 failed=1 errors=0", result.output, 1, true)
+    local seen = spec_sharding.parse_durations(text)
+    check.is_not_nil(seen[fixtures .. "passing.lua"], text)
+    check.is_not_nil(seen[fixtures .. "failing.lua"], text)
   end)
   it("nested hooks replay rng and restore ports after teardown", function()
     local result = run({ "test/behavior/lifecycle" }, true)
@@ -90,8 +107,7 @@ describe("real busted execution", function()
     check.matches("files=2 cases=2 passed=2 failed=0 errors=0", result.output, 1, true)
   end)
   it("pure text file list rejects empty missing and executable data", function()
-    local fs = require("foundation.fs")
-    local list = require("foundation.env").make_temp_path("busted_file_list", ".txt")
+    local list = env.make_temp_path("busted_file_list", ".txt")
     for _, sample in ipairs({ { "", "empty spec file list" }, { "\n", "invalid file identity" },
       { "missing.lua\n", "missing file identity" }, { "bad\0.lua\n", "invalid file identity" },
       { "notes.txt\n", "invalid file identity" },

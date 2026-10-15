@@ -31,6 +31,14 @@ parse_args_parses_profile()
   check.is_false(opts.verbose)
 end
 
+-- #107:CLI 默认恢复分片并行(#73 迁移期安全网曾默认 --serial 关闭分片;
+-- 基线实测 behavior 45.8s 串行 → 20.2s 分片)。--serial 仍是显式逃生舱。
+local function
+parse_args_defaults_to_sharding_eligible()
+  local opts = spec_lane.parse_args({ "--profile", "contract" })
+  check.is_false(opts.serial)
+end
+
 local function
 parse_args_parses_verbose_alongside_profile()
   local opts = spec_lane.parse_args({ "--profile", "guards", "--verbose" })
@@ -79,15 +87,35 @@ run_defaults_to_explicit_real_busted_runner()
   check.equal("3 passed\n", result.stdout)
 end
 
--- LPT 分片路径契约:文件数超过阈值(20)的具名 profile 且 worker > 1 时,每
+-- #107:分片固定开销(每 lane 一个 PowerShell 收容进程)实测约 3s,contract
+-- (22 文件)串行 4.0s / 分片 7.0s——小 profile 低于阈值(30)保持单进程。
+local function
+small_profile_below_threshold_stays_serial()
+  local ran_serial = false
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 3,
+    run_command = function()
+      ran_serial = true
+      return { ok = true, code = 0, output = _all_pass_tap() }
+    end,
+    run_lanes = function()
+      error("contract must not shard")
+    end,
+  })
+  check.is_true(ran_serial)
+  check.equal(0, result.code)
+end
+
+-- LPT 分片路径契约:文件数超过阈值(30)的具名 profile 且 worker > 1 时,每
 -- worker 一条 runner 进程(helper/output/pattern 取自 profile config,
 -- `--` 后显式文件列表),各 lane 输出按 lane 顺序聚合后统一压缩。依赖真实
--- test/contract 文件数 > 20(22 个)触发分片;run_lanes 注入替身避免真 spawn。
+-- test/behavior 文件数远超阈值触发分片;run_lanes 注入替身避免真 spawn。
 local function
 sharded_profile_runs_one_runner_lane_per_worker()
   local captured_lanes
   local result = spec_lane.run({
-    profile = "contract",
+    profile = "behavior",
     workers = 3,
     run_command = function()
       error("serial path must not run when sharded")
@@ -103,15 +131,16 @@ sharded_profile_runs_one_runner_lane_per_worker()
   })
 
   check.is_true(#captured_lanes >= 2,
-    "contract should shard into >= 2 lanes, got " .. #captured_lanes)
+    "behavior should shard into >= 2 lanes, got " .. #captured_lanes)
   for _, lane in ipairs(captured_lanes) do
-    check.truthy(lane.label:match("^contract_w%d+$"), "lane label: " .. lane.label)
+    check.truthy(lane.label:match("^behavior_w%d+$"), "lane label: " .. lane.label)
     local argv = table.concat(lane.cmd, "\n")
     check.truthy(argv:find("test_runner/runner%.lua"))
     check.matches("--helper=test/helper.lua", argv, 1, true)
     check.matches("--output=TAP", argv, 1, true)
     check.matches("--pattern=test_", argv, 1, true)
-    check.matches("test/contract/", argv, 1, true)
+    check.matches("test/behavior/", argv, 1, true)
+    check.matches("--durations-out=", argv, 1, true)
   end
   -- 3 条 lane × 3 条 ok 行 → 聚合压缩摘要
   check.equal(0, result.code)
@@ -124,7 +153,7 @@ end
 local function
 sharded_failure_aggregates_into_failed_summary()
   local result = spec_lane.run({
-    profile = "contract",
+    profile = "behavior",
     workers = 3,
     run_lanes = function(lanes)
       local results = {}
@@ -147,6 +176,38 @@ sharded_failure_aggregates_into_failed_summary()
     "failure line must survive aggregation: " .. result.stdout)
   check.truthy(result.stdout:find("7 passed, 1 failed", 1, true),
     "summary must count the shard failure: " .. result.stdout)
+end
+
+-- #107:时长缓存让每次 lane 分配可能不同;失败时打印 lane → 文件清单(执行
+-- 顺序),复现走 --serial 或按清单点跑。
+local function
+sharded_failure_prints_lane_file_list_in_execution_order()
+  local captured_lanes
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      captured_lanes = lanes
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = { label = lane.label, ok = i ~= 2, exit_code = i == 2 and 1 or 0,
+          output = i == 2 and "not ok 1 - broke\n1..1\n" or _all_pass_tap() }
+      end
+      return false, results
+    end,
+  })
+
+  check.truthy(result.stdout:find("--serial", 1, true), "repro hint: " .. result.stdout)
+  for _, lane in ipairs(captured_lanes) do
+    local files = {}
+    local after_separator = false
+    for _, token in ipairs(lane.cmd) do
+      if after_separator then files[#files + 1] = token end
+      if token == "--" then after_separator = true end
+    end
+    local listing = lane.label .. ":\n  " .. table.concat(files, "\n  ") .. "\n"
+    check.truthy(result.stdout:find(listing, 1, true), "lane list for " .. lane.label .. ": " .. result.stdout)
+  end
 end
 
 -- #298 的发现式包结构：tooling 车道 33 行手维护 ROOT 清单
@@ -197,12 +258,16 @@ end
 describe("spec lane public contracts", function()
   it("parse_args_requires_profile", parse_args_requires_profile)
   it("parse_args_parses_profile", parse_args_parses_profile)
+  it("parse_args_defaults_to_sharding_eligible", parse_args_defaults_to_sharding_eligible)
   it("parse_args_parses_verbose_alongside_profile", parse_args_parses_verbose_alongside_profile)
   it("parse_args_rejects_removed_busted_bin_escape_hatch", parse_args_rejects_removed_busted_bin_escape_hatch)
   it("compress_tap_collapses_all_pass_tap_to_single_passed_line", compress_tap_collapses_all_pass_tap_to_single_passed_line)
   it("run_defaults_to_explicit_real_busted_runner", run_defaults_to_explicit_real_busted_runner)
+  it("small_profile_below_threshold_stays_serial", small_profile_below_threshold_stays_serial)
   it("sharded_profile_runs_one_runner_lane_per_worker", sharded_profile_runs_one_runner_lane_per_worker)
   it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)
+  it("sharded_failure_prints_lane_file_list_in_execution_order",
+    sharded_failure_prints_lane_file_list_in_execution_order)
   it("discover_test_roots_covers_both_scopes", discover_test_roots_covers_both_scopes)
   it("discover_test_roots_returns_sorted_unique_test_dirs", discover_test_roots_returns_sorted_unique_test_dirs)
   it("discover_test_roots_adopts_both_layout_shapes", discover_test_roots_adopts_both_layout_shapes)
