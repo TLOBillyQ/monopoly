@@ -2,6 +2,7 @@
 -- _build_output 是纯函数(results -> stdout/exit_code),verify_full_spec 直接拿它断言。
 local number_utils = require("src.foundation.number")
 local parallel_lanes = require("foundation.parallel_lanes")
+local availability = require("foundation.tool_availability")
 
 local runner = {}
 
@@ -19,7 +20,7 @@ function runner.run_step(label, cmd)
   if not success and number_utils.is_numeric(code) then
     success = code == 0
   end
-  return { label = label, ok = success, elapsed = elapsed, output = result.output or "" }
+  return { label = label, ok = success, exit_code = code, elapsed = elapsed, output = result.output or "" }
 end
 
 -- 启动 + 调度 + 输出聚合委托给 foundation.parallel_lanes（曾经在这里复制粘贴一份）。
@@ -38,6 +39,7 @@ function runner.run_parallel(lanes)
     results[index] = {
       label = lane.label,
       ok = lane.ok,
+      exit_code = lane.exit_code,
       elapsed = nil,
       output = lane.output or "",
     }
@@ -45,7 +47,18 @@ function runner.run_parallel(lanes)
   return all_ok, results, elapsed
 end
 
--- 成功车道默认压缩成一行;失败或 verbose 才把车道输出全量摊开。
+-- 退 3 的车道是「不可用」(#112 工具自举网络失败 / #96 平台边界):不算通过,
+-- 也不混进 failed。三态整体退出码:有真实失败 1 / 只有不可用 3 / 全通过 0。
+local function _is_unavailable(r)
+  return not r.ok and r.exit_code == availability.EXIT_CODE
+end
+
+local function _verdict(r)
+  if r.ok then return "PASS" end
+  return _is_unavailable(r) and "UNAVAILABLE" or "FAIL"
+end
+
+-- 成功车道默认压缩成一行;失败、不可用或 verbose 才把车道输出全量摊开。
 function runner.build_output(input)
   input = input or {}
   local results = input.results or {}
@@ -53,15 +66,22 @@ function runner.build_output(input)
   local total_elapsed = input.total_elapsed or 0
   local verbose = input.verbose == true
 
-  local passed, failed = {}, {}
+  local passed, failed, unavailable = {}, {}, {}
   for _, r in ipairs(results) do
     if r.ok then
       passed[#passed + 1] = r.label
+    elseif _is_unavailable(r) then
+      unavailable[#unavailable + 1] = r.label
     else
       failed[#failed + 1] = r.label
     end
   end
-  local all_ok = #results > 0 and #failed == 0
+  local overall, exit_code = "PASS", 0
+  if #failed > 0 or #results == 0 then
+    overall, exit_code = "FAIL", 1
+  elseif #unavailable > 0 then
+    overall, exit_code = "UNAVAILABLE", availability.EXIT_CODE
+  end
 
   local buf = {}
   for _, r in ipairs(results) do
@@ -73,7 +93,7 @@ function runner.build_output(input)
     if show_this then
       buf[#buf + 1] = string.format(
         "[verify] %s %s  %ds\n",
-        r.ok and "PASS" or "FAIL", r.label, r.elapsed or 0
+        _verdict(r), r.label, r.elapsed or 0
       )
       if r.output and r.output ~= "" then
         buf[#buf + 1] = r.output
@@ -85,19 +105,25 @@ function runner.build_output(input)
   end
 
   buf[#buf + 1] = string.format(
-    "\n[verify] %s  passed=%d failed=%d skipped=%d  %ds\n",
-    all_ok and "PASS" or "FAIL",
-    #passed, #failed, #skipped, total_elapsed
+    "\n[verify] %s  passed=%d failed=%d%s skipped=%d  %ds\n",
+    overall, #passed, #failed,
+    #unavailable > 0 and (" unavailable=" .. #unavailable) or "",
+    #skipped, total_elapsed
   )
+  if #unavailable > 0 then
+    buf[#buf + 1] = "[verify] unavailable(未运行,不是检查结论;先查网络再重跑): "
+      .. table.concat(unavailable, ", ") .. "\n"
+  end
   if #skipped > 0 then
     buf[#buf + 1] = "[verify] skipped: " .. table.concat(skipped, ", ") .. "\n"
   end
 
   return {
     stdout = table.concat(buf),
-    exit_code = all_ok and 0 or 1,
+    exit_code = exit_code,
     passed = passed,
     failed = failed,
+    unavailable = unavailable,
     skipped = skipped,
   }
 end

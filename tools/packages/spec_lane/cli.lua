@@ -1,7 +1,7 @@
 -- packages/spec_lane/cli.lua —— spec-lane 子命令(wayfinder #306 包迁落地)
 --
 -- 统一接口形态(#300 决议):本文件 return 纯接口模块:
---   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误)
+--   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误 / 3 工具自举不可用,#112)
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
 -- 实现:同一进程内直调本包 spec_lane.lua 的 main(它被 require 时返回纯接口

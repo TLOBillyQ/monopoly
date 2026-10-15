@@ -30,8 +30,8 @@ local function _help_text(command_name)
     "",
     "默认检查 src、test、tools。",
     "Default targets are src, test, and tools.",
-    "按需安装 luacheck 1.2.0-1 到项目 LuaRocks 5.4 tree；安装失败明确报错。",
-    "Installs luacheck into the project LuaRocks tree; installation failure is an error.",
+    "按需安装 luacheck 1.2.0-1 到项目 LuaRocks 5.4 tree；安装失败（网络）报 status=unavailable 退 3，不是检查结论。",
+    "Installs luacheck into the project LuaRocks tree; an install failure exits 3 (status=unavailable), not a lint verdict.",
   }, "\n") .. "\n"
 end
 
@@ -93,7 +93,12 @@ function M.run(args)
   end
 
   local bootstrap = require("foundation.bootstrap")
-  local ensured, ensure_err = bootstrap.ensure_luacheck_tree(REPO_ROOT)
+  local ensured, ensure_err, unavailable = bootstrap.ensure_luacheck_tree(REPO_ROOT)
+  -- luacheck 装不上(网络,#112)是环境不可用:退 3,不冒充 lint 失败。
+  if unavailable ~= nil then
+    io.stderr:write(require("foundation.tool_availability").message(unavailable, "lint"))
+    return unavailable.exit_code
+  end
   if not ensured then
     io.stderr:write(tostring(ensure_err), "\n")
     return 1
