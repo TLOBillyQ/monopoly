@@ -71,37 +71,36 @@ local function _validate_targets(targets)
   return true
 end
 
-function M.run(args)
-  local options = _parse_args(args or arg or {})
-  if options.help then
-    io.stdout:write(_help_text((arg and arg[0]) or "tools/packages/lint/runner.lua"))
-    return 0
-  end
+local function _failure(message)
+  return { code = 1, stdout = "", stderr = tostring(message) .. "\n" }
+end
 
+-- 跑一次 lint,不写终端:返回 { code, stdout, stderr },由 run 统一写出。
+-- options.targets 已归一;options.ensure_luacheck_tree / options.run_command 是
+-- 注入缝(默认取 foundation.bootstrap / foundation.proc),测试不必替换模块字段。
+function M.execute(options)
+  options = options or {}
   if not fs_lib.path_exists(CONFIG_PATH) then
-    io.stderr:write(_text(
+    return _failure(_text(
       "缺少 luacheck 配置: " .. CONFIG_PATH,
       "Missing luacheck config: " .. CONFIG_PATH
-    ), "\n")
-    return 1
+    ))
   end
 
   local ok, err = _validate_targets(options.targets)
   if not ok then
-    io.stderr:write(tostring(err), "\n")
-    return 1
+    return _failure(err)
   end
 
-  local bootstrap = require("foundation.bootstrap")
-  local ensured, ensure_err, unavailable = bootstrap.ensure_luacheck_tree(REPO_ROOT)
+  local ensure_luacheck_tree = options.ensure_luacheck_tree or require("foundation.bootstrap").ensure_luacheck_tree
+  local ensured, ensure_err, unavailable = ensure_luacheck_tree(REPO_ROOT)
   -- luacheck 装不上(网络,#112)是环境不可用:退 3,不冒充 lint 失败。
   if unavailable ~= nil then
-    io.stderr:write(require("foundation.tool_availability").message(unavailable, "lint"))
-    return unavailable.exit_code
+    local verdict = require("foundation.tool_availability").verdict(unavailable, "lint")
+    return { code = verdict.exit_code, stdout = "", stderr = verdict.message, status = verdict.status }
   end
   if not ensured then
-    io.stderr:write(tostring(ensure_err), "\n")
-    return 1
+    return _failure(ensure_err)
   end
   local command = {
     require("foundation.lua54").lua54_bin(),
@@ -116,18 +115,26 @@ function M.run(args)
     command[#command + 1] = target
   end
 
-  local result = proc_lib.run_command(command, { cwd = REPO_ROOT })
-  if result.output and result.output ~= "" then
-    io.stdout:write(result.output)
-    if result.output:sub(-1) ~= "\n" then
-      io.stdout:write("\n")
-    end
+  local run_command = options.run_command or proc_lib.run_command
+  local result = run_command(command, { cwd = REPO_ROOT })
+  local stdout = result.output or ""
+  if stdout ~= "" and stdout:sub(-1) ~= "\n" then
+    stdout = stdout .. "\n"
   end
+  return { code = result.ok and 0 or (result.code or 1), stdout = stdout, stderr = "" }
+end
 
-  if result.ok then
+function M.run(args)
+  local options = _parse_args(args or arg or {})
+  if options.help then
+    io.stdout:write(_help_text((arg and arg[0]) or "tools/packages/lint/runner.lua"))
     return 0
   end
-  return result.code or 1
+
+  local result = M.execute(options)
+  io.stdout:write(result.stdout)
+  io.stderr:write(result.stderr)
+  return result.code
 end
 
 function M.main()

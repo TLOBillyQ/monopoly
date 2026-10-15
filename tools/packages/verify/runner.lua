@@ -48,14 +48,17 @@ function runner.run_parallel(lanes)
 end
 
 -- 退 3 的车道是「不可用」(#112 工具自举网络失败 / #96 平台边界):不算通过,
--- 也不混进 failed。三态整体退出码:有真实失败 1 / 只有不可用 3 / 全通过 0。
-local function _is_unavailable(r)
-  return not r.ok and r.exit_code == availability.EXIT_CODE
-end
+-- 也不混进 failed。三态判定只在这张表里:车道判定与整体判定同源,整体取
+-- rank 最高者(有真实失败 1 > 有不可用 3 > 全通过 0);一条车道都没有按失败。
+local _STATES = {
+  PASS = { rank = 0, exit_code = 0 },
+  UNAVAILABLE = { rank = 1, exit_code = availability.EXIT_CODE },
+  FAIL = { rank = 2, exit_code = 1 },
+}
 
 local function _verdict(r)
   if r.ok then return "PASS" end
-  return _is_unavailable(r) and "UNAVAILABLE" or "FAIL"
+  return r.exit_code == availability.EXIT_CODE and "UNAVAILABLE" or "FAIL"
 end
 
 -- 成功车道默认压缩成一行;失败、不可用或 verbose 才把车道输出全量摊开。
@@ -66,22 +69,18 @@ function runner.build_output(input)
   local total_elapsed = input.total_elapsed or 0
   local verbose = input.verbose == true
 
-  local passed, failed, unavailable = {}, {}, {}
+  local buckets = { PASS = {}, FAIL = {}, UNAVAILABLE = {} }
+  local overall = #results == 0 and "FAIL" or "PASS"
   for _, r in ipairs(results) do
-    if r.ok then
-      passed[#passed + 1] = r.label
-    elseif _is_unavailable(r) then
-      unavailable[#unavailable + 1] = r.label
-    else
-      failed[#failed + 1] = r.label
+    local verdict = _verdict(r)
+    local bucket = buckets[verdict]
+    bucket[#bucket + 1] = r.label
+    if _STATES[verdict].rank > _STATES[overall].rank then
+      overall = verdict
     end
   end
-  local overall, exit_code = "PASS", 0
-  if #failed > 0 or #results == 0 then
-    overall, exit_code = "FAIL", 1
-  elseif #unavailable > 0 then
-    overall, exit_code = "UNAVAILABLE", availability.EXIT_CODE
-  end
+  local passed, failed, unavailable = buckets.PASS, buckets.FAIL, buckets.UNAVAILABLE
+  local exit_code = _STATES[overall].exit_code
 
   local buf = {}
   for _, r in ipairs(results) do

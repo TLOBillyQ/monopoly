@@ -432,6 +432,54 @@ it("ensure tool keeps a build error as a real failure", function()
   check.is_nil(_ensure_with_make_output("Error: Build error: Failed compiling object src/lfs.o"))
 end)
 
+-- 宁红勿假:编译报错里出现 ssl/tls/proxy/timed out 字样不等于网络失败。
+it("ensure tool keeps an openssl header compile error as a real failure", function()
+  check.is_nil(_ensure_with_make_output(
+    "src/tls_proxy.c:3:10: fatal error: openssl/ssl.h: No such file or directory\n"
+      .. "Error: Build error: Failed compiling object src/tls_proxy.o"))
+end)
+
+it("ensure tool keeps a timed out build step as a real failure", function()
+  check.is_nil(_ensure_with_make_output("Error: Build error: command timed out after 600s"))
+end)
+
+-- ssh 形态的「仓库不存在」也带 Could not read from remote repository,不是网络问题。
+it("ensure tool keeps an ssh repository not found as a real failure", function()
+  local env = _temp_tool_repo()
+  local stubs = _offline_stubs()
+  local offline_run = stubs[2].value
+  stubs[2].value = function(command)
+    if command[1] == "git" then
+      return { ok = false, output = "ERROR: Repository not found.\nfatal: Could not read from remote repository." }
+    end
+    return offline_run(command)
+  end
+  local unavailable
+  _with_stubs(stubs, function()
+    unavailable = select(3, bootstrap.ensure_tool("acceptance4lua", env))
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(unavailable)
+end)
+
+it("ensure tool reports a git tls handshake failure as unavailable", function()
+  local env = _temp_tool_repo()
+  local stubs = _offline_stubs()
+  local offline_run = stubs[2].value
+  stubs[2].value = function(command)
+    if command[1] == "git" then
+      return { ok = false, output = "fatal: unable to access: schannel: failed to receive handshake, SSL/TLS connection failed" }
+    end
+    return offline_run(command)
+  end
+  local unavailable
+  _with_stubs(stubs, function()
+    unavailable = select(3, bootstrap.ensure_tool("acceptance4lua", env))
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.equal("resolve", unavailable.step)
+end)
+
 -- 锁文件缺项是仓内缺陷,照旧是真实失败,不能被降级成「不可用」。
 it("ensure tool keeps lockfile defects as real failures", function()
   local env = _temp_tool_repo()
