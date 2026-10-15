@@ -365,6 +365,10 @@ Decoration = {}
 
 ---@alias EProgressbar ENode UI进度条节点
 
+---@alias ETextHAlignment integer 文本水平对齐
+
+---@alias ETextVAlignment integer 文本垂直对齐
+
 ---@alias EmojiKey integer 气泡表情编号
 
 ---@alias EquipmentID UnitID 物品ID
@@ -372,6 +376,8 @@ Decoration = {}
 ---@alias EquipmentKey integer 物品编号
 
 ---@alias EquipmentSlot integer 物品槽位
+
+---@alias FaceExpressionKey integer 面部表情编号
 
 ---@alias FontKey integer 字体key
 
@@ -419,6 +425,8 @@ JointAssistant = {}
 ---@alias SheetID integer 表格
 
 ---@alias Skeleton string 骨骼
+
+---@alias SkinId string 皮肤 ID
 
 ---@alias SkyBoxBackground integer 天空盒背景
 
@@ -1011,6 +1019,8 @@ Enums.ValueType = {
 	ENode = 'ENode',  ---UI节点
 	ENodeTouchEventType = 'ENodeTouchEventType',  ---界面交互事件类型
 	EProgressbar = 'EProgressbar',  ---UI进度条节点
+	ETextHAlignment = 'ETextHAlignment',  ---文本水平对齐
+	ETextVAlignment = 'ETextVAlignment',  ---文本垂直对齐
 	EmojiKey = 'EmojiKey',  ---气泡表情编号
 	Equipment = 'Equipment',  ---物品
 	EquipmentID = 'EquipmentID',  ---物品ID
@@ -1100,6 +1110,8 @@ Enums.ValueType = {
 	ListENode = 'ListENode',  ---UI节点列表
 	ListENodeTouchEventType = 'ListENodeTouchEventType',  ---界面交互事件类型列表
 	ListEProgressbar = 'ListEProgressbar',  ---UI进度条节点列表
+	ListETextHAlignment = 'ListETextHAlignment',  ---文本水平对齐列表
+	ListETextVAlignment = 'ListETextVAlignment',  ---文本垂直对齐列表
 	ListEmojiKey = 'ListEmojiKey',  ---气泡表情编号列表
 	ListEquipment = 'ListEquipment',  ---物品列表
 	ListEquipmentID = 'ListEquipmentID',  ---物品ID列表
@@ -1152,6 +1164,7 @@ Enums.ValueType = {
 	ListSfxKey = 'ListSfxKey',  ---特效编号列表
 	ListSheetID = 'ListSheetID',  ---表格列表
 	ListSkeleton = 'ListSkeleton',  ---骨骼列表
+	ListSkinId = 'ListSkinId',  ---皮肤 ID列表
 	ListSkyBoxBackground = 'ListSkyBoxBackground',  ---天空盒背景列表
 	ListSkyBoxGradualType = 'ListSkyBoxGradualType',  ---天空盒渐变类型列表
 	ListSound3DKey = 'ListSound3DKey',  ---3D音效编号列表
@@ -1204,6 +1217,7 @@ Enums.ValueType = {
 	SfxKey = 'SfxKey',  ---特效编号
 	SheetID = 'SheetID',  ---表格
 	Skeleton = 'Skeleton',  ---骨骼
+	SkinId = 'SkinId',  ---皮肤 ID
 	SkyBoxBackground = 'SkyBoxBackground',  ---天空盒背景
 	SkyBoxGradualType = 'SkyBoxGradualType',  ---天空盒渐变类型
 	Sound3DKey = 'Sound3DKey',  ---3D音效编号
@@ -1289,6 +1303,12 @@ function GlobalAPI.error(_content) end
 ---@param _plane_type Enums.PlaneType 平面
 ---@return Vector3 交点坐标
 function GlobalAPI.get_lines_intersection_point_on_plane(_point_1, _point_2, _point_3, _point_4, _value, _plane_type) end
+
+---获取拼音相似率
+---@param _original_text string 原始字符串
+---@param _target_text string 目标字符串
+---@return Fixed 拼音相似率
+function GlobalAPI.get_pinyin_match_rate(_original_text, _target_text) end
 
 ---获取点到直线的垂线交点
 ---@param _point_1 Vector3 点1
@@ -3285,6 +3305,18 @@ function GameAPI.create_obstacle_from_geometry(_u_key, _pos, _rotation, _scale, 
 ---@return Obstacle 创建出的组件
 function GameAPI.create_obstacle_with_anim(_anim_type, _u_key, _pos, _duration, _intensity, _role, _rotation, _scale) end
 
+---带动效创建组件V2（默认使用组件预设缩放）
+---@param _anim_type integer 动效类型
+---@param _u_key ObstacleKey 组件编号
+---@param _pos Vector3 创建坐标
+---@param _duration Fixed 动画时长
+---@param _intensity Fixed 效果系数
+---@param _role Role? 所属玩家
+---@param _rotation Quaternion? 旋转
+---@param _scale Vector3? 缩放
+---@return Obstacle 创建出的组件
+function GameAPI.create_obstacle_with_anim_v2(_anim_type, _u_key, _pos, _duration, _intensity, _role, _rotation, _scale) end
+
 ---创建场景界面到坐标点
 ---@param _layer_key E3DLayerKey 场景界面预设编号
 ---@param _pos Vector3 坐标点
@@ -4246,6 +4278,22 @@ function GameAPI.obstacle_prefab_get_kv_by_type(_value_type, _key, _prop) end
 ---@return any 属性值
 function GameAPI.obstacle_prefab_get_prop_by_type(_value_type, _key, _prop) end
 
+---获取组件预设的皮肤ID
+---@param _key ObstacleKey 组件编号
+---@return SkinId 皮肤ID
+function GameAPI.obstacle_prefab_get_skin_id(_key) end
+
+---获取组件预设的皮肤ID列表
+---@param _key ObstacleKey 组件编号
+---@return SkinId[] 皮肤ID列表
+function GameAPI.obstacle_prefab_get_skin_id_list(_key) end
+
+---获取组件预设槽位的皮肤ID
+---@param _key ObstacleKey 组件编号
+---@param _index integer 槽位索引
+---@return SkinId 皮肤ID
+function GameAPI.obstacle_prefab_get_slot_skin_id(_key, _index) end
+
 ---组件预设是否存在自定义值
 ---@param _key ObstacleKey 组件编号
 ---@param _prop string 名称
@@ -4980,6 +5028,10 @@ LifeEntity = {}
 ---@param _acceptor_type Enums.UnitType 接收方类型
 function LifeEntity.activate_multi_animation(_anim_id, _acceptor_type) end
 
+---添加子模型
+---@param _model_id integer 模型编号
+function LifeEntity.add_mesh_model(_model_id) end
+
 ---控制AI执行警戒命令
 ---@param _tagert_pos Vector3 目标
 ---@param _target_dir Vector3 朝向
@@ -5219,10 +5271,19 @@ function LifeEntity.play_face_emoji(_emoji_key, _show_time) end
 ---@param _show_time Fixed 持续时间
 function LifeEntity.play_face_expression(_emoji_key, _show_time) end
 
+---播放新人形面部表情
+---@param _face_expression_key FaceExpressionKey 表情
+---@param _duration Fixed 持续时间
+function LifeEntity.play_human_face_expression(_face_expression_key, _duration) end
+
 ---还原模型变化
 ---@deprecated
 ---@see LifeEntity.reset_model
 function LifeEntity.recover_model() end
+
+---移除子模型
+---@param _model_id integer 模型编号
+function LifeEntity.remove_mesh_model(_model_id) end
 
 ---还原模型变化
 function LifeEntity.reset_model() end
@@ -5264,6 +5325,19 @@ function LifeEntity.set_mass_bar_visible(_visible) end
 ---@param _limit_yaw_speed Fixed? yaw值改变速度
 function LifeEntity.set_max_yaw_speed(_limit_yaw_speed) end
 
+---设置子模型染色
+---@param _model_id integer 模型编号
+---@param _paint_area PaintArea 染色区域
+---@param _color Color 颜色
+---@param _material_index integer? 子材质索引
+function LifeEntity.set_mesh_paint_color(_model_id, _paint_area, _color, _material_index) end
+
+---设置子模型贴图
+---@param _model_id integer 模型编号
+---@param _texture_key ImageKey 贴图编号
+---@param _material_index integer? 子材质索引
+function LifeEntity.set_mesh_texture(_model_id, _texture_key, _material_index) end
+
 ---根据角色设置模型
 ---@param _character Character 角色
 ---@param _include_ugc_model boolean? 是否包含自定义形象
@@ -5292,6 +5366,12 @@ function LifeEntity.set_multi_animation_acceptor_enabled(_enable) end
 ---设置可接受的双人动作类型
 ---@param _acceptor_type Enums.UnitType 可接受类型
 function LifeEntity.set_multi_animation_acceptor_type(_acceptor_type) end
+
+---设置模型染色
+---@param _paint_area PaintArea 染色区域
+---@param _color Color 颜色
+---@param _material_index integer? 子材质索引
+function LifeEntity.set_paint_color(_paint_area, _color, _material_index) end
 
 ---设置生命体击倒阈值
 ---@param _punch_threshold Fixed 击倒阈值
@@ -5330,6 +5410,11 @@ function LifeEntity.set_skeleton_offset(_skeleton, _offset) end
 ---@param _skeleton Skeleton 骨骼
 ---@param _scale Vector3 缩放比例
 function LifeEntity.set_skeleton_scale(_skeleton, _scale) end
+
+---设置模型贴图
+---@param _texture_key ImageKey 贴图编号
+---@param _material_index integer? 子材质索引
+function LifeEntity.set_texture(_texture_key, _material_index) end
 
 ---发送气泡信息
 ---@param _show_msg string 气泡信息
@@ -5861,6 +5946,19 @@ function Obstacle.get_chess_rank() end
 ---@return ChessType 牌名
 function Obstacle.get_chess_type() end
 
+---获取组件皮肤ID
+---@return SkinId 皮肤ID
+function Obstacle.get_skin_id() end
+
+---获取组件皮肤ID列表
+---@return SkinId[] 皮肤ID列表
+function Obstacle.get_skin_id_list() end
+
+---获取组件槽位皮肤ID
+---@param _index integer 槽位索引
+---@return SkinId 皮肤ID
+function Obstacle.get_slot_skin_id(_index) end
+
 ---获取组件是否可拖动
 ---@return boolean 是否可拖动
 ---@deprecated
@@ -5944,6 +6042,11 @@ function Obstacle.set_drag_enable(_enabled) end
 ---@param _enabled boolean 是否可拖动
 function Obstacle.set_draggable(_enabled) end
 
+---设置组件染色区域颜色
+---@param _paint_area PaintArea 染色区域
+---@param _color Color 颜色
+function Obstacle.set_paint_area_color(_paint_area, _color) end
+
 ---设置场景排行榜分数
 ---@param _role Role 玩家
 ---@param _score integer 分数
@@ -5955,6 +6058,25 @@ function Obstacle.set_ranklist_score(_role, _score) end
 ---@deprecated
 ---@see Obstacle.set_ranklist_score
 function Obstacle.set_ranklist_score_by_role(_role, _score) end
+
+---设置组件皮肤
+---@param _skin_id SkinId 皮肤ID
+function Obstacle.set_skin_id(_skin_id) end
+
+---设置组件皮肤槽位模式开关
+---@param _enable boolean 是否开启槽位模式
+function Obstacle.set_skin_slot_mode_enabled(_enable) end
+
+---设置组件指定槽位染色区域颜色
+---@param _index integer 槽位索引
+---@param _paint_area PaintArea 染色区域
+---@param _color Color 颜色
+function Obstacle.set_slot_paint_area_color(_index, _paint_area, _color) end
+
+---设置组件指定槽位皮肤id
+---@param _index integer 槽位索引
+---@param _skin_id SkinId 皮肤ID
+function Obstacle.set_slot_skin_id(_index, _skin_id) end
 
 ---@class OwnerComp
 OwnerComp = {}
@@ -6207,6 +6329,10 @@ function Role.is_role_win() end
 ---@return boolean 是否订阅
 function Role.is_subscribed_map_author() end
 
+---当前是否处于录音状态
+---@return boolean 是否处于录音状态
+function Role.is_voice_listening() end
+
 ---玩家进入观战
 ---@return boolean 是否处于观战模式
 function Role.is_watch_mode() end
@@ -6457,6 +6583,13 @@ function Role.set_camera_rotation_by_direction(_target_dir, _duration) end
 ---@param _enabled boolean 是否同步
 function Role.set_camera_rotation_sync_enabled(_enabled) end
 
+---设置玩家屏幕震动
+---@param _shake_type Enums.CameraShakeType 震动类型
+---@param _shake_max_amplitude Fixed 震动最大幅度
+---@param _shake_time Fixed 震动时间
+---@param _shake_curve Enums.CameraShakeCurve 震动曲线
+function Role.set_camera_shake(_shake_type, _shake_max_amplitude, _shake_time, _shake_curve) end
+
 ---设置付费道具商店可见性
 ---@param _visible boolean 可见性
 function Role.set_goods_panel_visible(_visible) end
@@ -6505,6 +6638,12 @@ function Role.set_image_texture_with_size(_image, _image_key, _reset_size) end
 ---@param _input_field EInputField UI输入节点
 ---@param _text string 文本
 function Role.set_input_field_text(_input_field, _text) end
+
+---设置UI文本节点对齐方式
+---@param _label ELabel UI文本节点
+---@param _h_alignment ETextHAlignment 水平对齐
+---@param _v_alignment ETextVAlignment 垂直对齐
+function Role.set_label_alignment(_label, _h_alignment, _v_alignment) end
 
 ---设置UI文本节点背景颜色
 ---@param _label ELabel UI文本节点
@@ -8666,6 +8805,20 @@ LuaAPI.global_register_trigger_event({EVENT.ANY_ROLE_SCORE_UPDATE, }, function(e
 end)
 --]]
 EVENT.ANY_ROLE_SCORE_UPDATE = "ANY_ROLE_SCORE_UPDATE"
+
+---任意玩家录音按钮被松开
+---事件主体 Global 全局触发器
+---事件回调参数 role Role 目标玩家
+---事件回调参数 voice_text string 录音转文本
+---事件回调参数 max_decibel Fixed 录音平均分贝
+--[[
+LuaAPI.global_register_trigger_event({EVENT.ANY_ROLE_VOICE_LISTEN_END, }, function(event_name, actor, data)
+	print(data.role)
+	print(data.voice_text)
+	print(data.max_decibel)
+end)
+--]]
+EVENT.ANY_ROLE_VOICE_LISTEN_END = "ANY_ROLE_VOICE_LISTEN_END"
 
 ---任意逻辑体创建
 ---事件主体 Global 全局触发器
