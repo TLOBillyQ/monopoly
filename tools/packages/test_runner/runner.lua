@@ -33,6 +33,7 @@ while index <= #arg do
     end
     list:close()
     assert(#opts.files > count, "empty spec file list")
+  elseif value:match("^%-%-durations%-out=") then opts.durations_out = value:match("=(.*)$")
   elseif value:match("^%-%-backend%-manifest=") then error("backend manifests are no longer supported")
   elseif value == "--run" or value == "--output" or value == "--helper" or value == "--pattern" then
     index = index + 1
@@ -91,7 +92,27 @@ local ok, err = pcall(function()
   assert(#files > 0, "no available spec files selected")
   assert(bootstrap.ensure_busted_tree(root))
   require("packages.test_runner.cache_loader").install(root)
-  local total = require("packages.test_runner.busted_backend").run(files, opts.helper, opts.output, opts.arguments)
+  -- --durations-out:busted file start/end 事件之间的墙钟秒数(Windows os.clock
+  -- 即墙钟),一行「秒数<TAB>文件」,供 spec_lane 实测时长缓存分片(#107)。
+  local configure, durations
+  if opts.durations_out then
+    durations = {}
+    configure = function(busted)
+      local started = {}
+      busted.subscribe({ "file", "start" }, function(file)
+        started[file.name] = os.clock()
+        return nil, true
+      end)
+      busted.subscribe({ "file", "end" }, function(file)
+        if started[file.name] then
+          durations[#durations + 1] = string.format("%.2f\t%s", os.clock() - started[file.name], file.name)
+        end
+        return nil, true
+      end)
+    end
+  end
+  local total = require("packages.test_runner.busted_backend").run(files, opts.helper, opts.output, opts.arguments, configure)
+  if durations then assert(require("foundation.fs").write_file(opts.durations_out, table.concat(durations, "\n") .. "\n")) end
   io.write(string.format("# COUNTS: files=%d cases=%d passed=%d failed=%d errors=%d\n", total.files, total.cases, total.passed, total.failed, total.errors))
   if total.cases == 0 then io.stderr:write("test_runner: busted backend empty result\n") end
   if total.cases == 0 or total.failed + total.errors > 0 then os.exit(1) end

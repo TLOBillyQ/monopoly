@@ -22,6 +22,21 @@ describe("real busted execution", function()
     local _, count = result.output:gsub("# COUNTS:", "")
     check.equal(1, count, result.output)
   end)
+  -- #107:--durations-out 落每文件实测秒数(spec_lane 实测时长缓存的数据源),
+  -- 一行一个文件「秒数<TAB>文件」;TAP 与计数不受影响。
+  it("durations out records one measured line per spec file", function()
+    local out = require("foundation.env").make_temp_path("spec_durations", ".tsv")
+    local command = { lua54.lua54_bin(), root .. "/tools/packages/test_runner/runner.lua", "--output=TAP",
+      "--durations-out=" .. out, "--", fixtures .. "passing.lua", fixtures .. "failing.lua" }
+    local result = proc.run_command(command)
+    local text = require("foundation.fs").read_raw(out) or ""
+    require("foundation.fs").remove_path(out)
+    check.matches("cases=3 passed=2 failed=1 errors=0", result.output, 1, true)
+    local seen = {}
+    for seconds, file in text:gmatch("([%d%.]+)\t([^\r\n]+)") do seen[file] = tonumber(seconds) end
+    check.is_not_nil(seen[fixtures .. "passing.lua"], text)
+    check.is_not_nil(seen[fixtures .. "failing.lua"], text)
+  end)
   it("nested hooks replay rng and restore ports after teardown", function()
     local result = run({ "test/behavior/lifecycle" }, true)
     check.equal(0, result.code, result.output)

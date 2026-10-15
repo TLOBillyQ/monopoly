@@ -113,6 +113,21 @@ describe("spec sharding build lpt lanes", function()
     check.equal(3, lanes[1].total_cost)
     _rm_rf(_TMP_ROOT)
   end)
+  -- #107:实测时长缓存命中时按秒数而非 it 计数分配(tooling 实测 it 计数分配
+  -- 失衡 112.8/83.6/72.6s);同一清单 + 同一时长表的分配确定性可复现。
+  it("packs by measured durations when a duration map is given", function()
+    local durations = { ["heavy.lua"] = 70, ["mid.lua"] = 30, ["a.lua"] = 20, ["b.lua"] = 20 }
+    local files = { "a.lua", "b.lua", "heavy.lua", "mid.lua" }
+    local lanes = sharding.build_lpt_lanes(files, 2, durations)
+    check.same({ "heavy.lua" }, lanes[1].files)
+    check.same({ "mid.lua", "a.lua", "b.lua" }, lanes[2].files)
+    check.same(lanes, sharding.build_lpt_lanes(files, 2, durations))
+  end)
+  it("files missing from the duration map cost the median measured duration", function()
+    local durations = { ["a.lua"] = 10, ["b.lua"] = 30, ["c.lua"] = 50 }
+    local lanes = sharding.build_lpt_lanes({ "a.lua", "b.lua", "c.lua", "new.lua" }, 1, durations)
+    check.equal(120, lanes[1].total_cost)
+  end)
 end)
 
 local TEST_ENV = "__EGGY_SHARDING_TEST_ENV_DOES_NOT_EXIST"
