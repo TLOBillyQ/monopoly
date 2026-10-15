@@ -1,9 +1,6 @@
 require("test.bootstrap").install_package_paths()
 local luassert = require("luassert")
 
--- 原生 LuaUnit 转换(busted → LuaUnit):describe 拍平为文件级 Test 类,
--- 断言词汇切到 lu.assertXxx,用例数与改写前一一对应(11 例)。
-
 local function _reload_module(module_name, overrides, fn)
   local original = {}
   for key, value in pairs(overrides or {}) do

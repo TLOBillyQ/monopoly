@@ -5,10 +5,6 @@ local luassert = require("luassert")
 -- 入口门控 flag、fresh_forward 与 facing 的互斥。全部走公开面 + 合成地图。
 local direction = require("src.rules.board.direction")
 
--- 原生 LuaUnit 迁移:describe/it 拍平为文件级 TestBoardDirectionSurvivor 类
--- (无钩子,不拆子类),中文 it 名按原名逐字保留为 test_ 前缀方法,断言切到
--- lu.assertXxx,用例数与改写前一一对应(17 例)。
-
 local function _assert_eq(a, b, msg)
   luassert.is.same(b, a, msg)
 end

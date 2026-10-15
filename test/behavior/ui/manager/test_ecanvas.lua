@@ -4,9 +4,6 @@ local context = require("src.ui.manager.context")
 local ECanvas = require("src.ui.manager.ecanvas")
 require("test.support.ui_manager_nodes_support")
 
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,before_each/after_each 收成
--- setUp/tearDown(original_get_eui_children 收成 self 字段),用例数与改写前一致(4 例)。
-
 local function _clear_nodes()
   for k in pairs(context.nodes_list) do
     context.nodes_list[k] = nil

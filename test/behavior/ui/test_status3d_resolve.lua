@@ -7,8 +7,6 @@ local luassert = assert
 -- current frozen turn the displayed remaining adds the current turn back, so the
 -- status3d overlay shows the same count as the detention tip and never 0.
 --
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,断言从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(12 例)。
 local function _assert_eq(actual, expected, message) luassert.is.equal(expected, actual, message) end
 local status_resolve = require("src.ui.render.status3d.status_resolve")
 

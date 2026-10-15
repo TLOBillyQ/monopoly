@@ -5,8 +5,6 @@ local luassert = assert
 -- 集成 spec(item_completions_closure 等)覆盖成功路径;本 spec 补 helper 桩直驱的
 -- 参数形状与描述表默认值(变异清扫 #259 survivor 真缺口闭合)。
 --
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
--- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 local item_phase = require("src.rules.items.phase")

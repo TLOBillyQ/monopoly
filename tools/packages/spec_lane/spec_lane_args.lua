@@ -6,12 +6,15 @@ function spec_lane_args.usage()
     "",
     "--profile 选车道:behavior(七层 + foundation 全量)/ tooling(工具模块单测,不在 verify 管线内);",
     "--profile 也可直接给存在的目录（如 test/behavior/turn）按需点跑，按 behavior 默认构造临时 profile；其余语义见 `lua tools/cli.lua verify --help`。",
+    "文件数超过 30 的具名 profile 默认按实测时长分片并行,lane 分配随时长缓存变化;失败时打印 lane → 文件清单,复现请用 --serial 或按清单点跑。",
     "--busted-bin / BUSTED_BIN 已删除，PATH 无 busted。",
   }, "\n") .. "\n"
 end
 
 function spec_lane_args.parse(args)
-  local options = { verbose = false, serial = true }
+  -- #107:默认恢复分片并行(#73 迁移期安全网曾默认 serial;基线实测
+  -- behavior 45.8s 串行 → 20.2s 分片)。--serial 是显式逃生舱。
+  local options = { verbose = false, serial = false }
   local i = 1
   while i <= #(args or {}) do
     local token = args[i]

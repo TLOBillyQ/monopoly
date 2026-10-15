@@ -8,7 +8,6 @@ end
 
 local owner = require("src.turn.choice.owner")
 
--- owner 三组行为均无钩子;用例数与改写前一一对应(2+2+3 = 7 例)。
 describe("TestOwner", function()
 
 it("test_resolves_via_find_player_by_id_not_the_current_player_fallback", function()

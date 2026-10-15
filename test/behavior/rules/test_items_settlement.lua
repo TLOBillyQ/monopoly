@@ -7,8 +7,6 @@ local luassert = assert
 -- 集成 spec 覆盖主流程(变异清扫 #259 survivor 真缺口闭合);inventory /
 -- 遥测 / 动画口全桩,canonicalize 与被测模块本体走真实现。
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):无钩子 describe 拍平为 TestItemsSettlement
--- 类,describe 级 local 提升到文件级,用例数与改写前一一对应(14 例)。
 local support = require("test.support.shared_support")
 local with_patches = support.with_patches
 local item_ids = require("src.config.gameplay.item_ids")

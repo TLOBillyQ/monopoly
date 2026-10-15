@@ -1,10 +1,6 @@
 -- Mutation-pinning specs for src/app/host_integrations/achievement.lua.
 -- Catalog ids are 1..43 contiguous; progress events include "游戏胜利" -> {1,2,3,4}.
 --
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):三个平级 describe 拍平成三个 Test* 类,
--- after_each → tearDown,断言从裸 assert 切到 luassert.truthy,
--- 用例数与改写前一一对应(5 例)。
-
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local achievement = require("src.app.host_integrations.achievement")

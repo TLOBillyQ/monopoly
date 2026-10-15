@@ -1,10 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe 嵌套按钩子边界拍平——外层
--- describe(含无钩子的「clear toggles」「_notify_full」嵌套)合并进 TestInventory;
--- 带 before_each 的「draw_random」嵌套拆出 TestInventoryDrawRandom 子类,
--- setUp 首行调父 setUp。用例数与改写前一一对应(17 + 3 + 2 + 1 = 23 例)。
 local inventory = require("src.rules.items.inventory")
 local inventory_class = require("src.player.actions.inventory")
 local control = require("src.player.control")

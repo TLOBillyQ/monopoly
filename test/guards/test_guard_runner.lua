@@ -100,10 +100,6 @@ local guards = {
     name = "cli_shape_guard",
     module = "test.guards.lib.cli_shape_guard",
   },
-  {
-    name = "luassert_migration_pilot_guard",
-    module = "test.guards.lib.luassert_migration_pilot_guard",
-  },
 }
 
 describe("TestGuardRunner", function()

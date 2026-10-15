@@ -10,6 +10,8 @@ local bootstrap = dofile(root .. "/tools/foundation/bootstrap.lua")
 local env = bootstrap.install(source)
 root = env.repo_root
 local proc = require("foundation.proc")
+local fs = require("foundation.fs")
+local spec_sharding = require("foundation.spec_sharding")
 for _, value in ipairs(arg) do
   if value == "--help" or value == "-h" then
     io.write(require("packages.test_runner.cli").usage())
@@ -33,6 +35,7 @@ while index <= #arg do
     end
     list:close()
     assert(#opts.files > count, "empty spec file list")
+  elseif value:match("^%-%-durations%-out=") then opts.durations_out = value:match("=(.*)$")
   elseif value:match("^%-%-backend%-manifest=") then error("backend manifests are no longer supported")
   elseif value == "--run" or value == "--output" or value == "--helper" or value == "--pattern" then
     index = index + 1
@@ -49,7 +52,7 @@ end
 local profiles = assert(loadfile(root .. "/tools/packages/spec_lane/spec_profiles.lua"))()
 local profile = profiles[opts.run or "default"]
 if not profile then
-  assert(require("foundation.fs").is_dir(opts.run), "unknown profile: " .. tostring(opts.run))
+  assert(fs.is_dir(opts.run), "unknown profile: " .. tostring(opts.run))
   profile = { ROOT = { opts.run }, helper = profiles.behavior.helper, output = profiles.behavior.output, pattern = profiles.behavior.pattern }
 end
 opts.helper = opts.helper or profile.helper
@@ -91,7 +94,25 @@ local ok, err = pcall(function()
   assert(#files > 0, "no available spec files selected")
   assert(bootstrap.ensure_busted_tree(root))
   require("packages.test_runner.cache_loader").install(root)
-  local total = require("packages.test_runner.busted_backend").run(files, opts.helper, opts.output, opts.arguments)
+  -- --durations-out:busted file start/end 事件之间的墙钟秒数(Windows os.clock
+  -- 即墙钟),格式见 spec_sharding.format_durations,供 spec_lane 实测时长缓存分片(#107)。
+  local configure, durations
+  if opts.durations_out then
+    durations = {}
+    configure = function(busted)
+      local started = {}
+      busted.subscribe({ "file", "start" }, function(file)
+        started[file.name] = os.clock()
+        return nil, true
+      end)
+      busted.subscribe({ "file", "end" }, function(file)
+        if started[file.name] then durations[file.name] = os.clock() - started[file.name] end
+        return nil, true
+      end)
+    end
+  end
+  local total = require("packages.test_runner.busted_backend").run(files, opts.helper, opts.output, opts.arguments, configure)
+  if durations then assert(fs.write_file(opts.durations_out, spec_sharding.format_durations(durations))) end
   io.write(string.format("# COUNTS: files=%d cases=%d passed=%d failed=%d errors=%d\n", total.files, total.cases, total.passed, total.failed, total.errors))
   if total.cases == 0 then io.stderr:write("test_runner: busted backend empty result\n") end
   if total.cases == 0 or total.failed + total.errors > 0 then os.exit(1) end

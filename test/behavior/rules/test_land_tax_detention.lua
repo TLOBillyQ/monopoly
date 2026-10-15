@@ -10,9 +10,6 @@ local function _new_game()
   return support.new_game({ map = default_map })
 end
 
--- 原生 LuaUnit 转换(busted → LuaUnit):describe 拍平为文件级 Test 类,
--- before_each → setUp,断言词汇切到 lu.assertXxx,用例数与改写前一一对应(4 例)。
-
 local _config_reset = require("test.support.config_reset")
 
 

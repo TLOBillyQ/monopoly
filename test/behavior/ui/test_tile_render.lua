@@ -1,8 +1,6 @@
 -- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):describe/it 拍平为文件级 Test*
--- 类,断言从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(24 例)。
 local tile_renderer = require("src.ui.render.board.tile")
 local tiles_cfg = require("src.config.content.tiles")
 

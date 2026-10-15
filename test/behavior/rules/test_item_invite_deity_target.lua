@@ -4,8 +4,6 @@ local luassert = assert
 -- 请神卡候选面规约(deities_008/009/010):请神卡只请正面神灵。
 -- 走真实 registry:target_candidates —— availability / 无目标提示 / 托管选靶都读这条候选面。
 --
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,断言词汇从 luassert
--- 兼容层切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
 local item_ids = require("src.config.gameplay.item_ids")
 local support = require("test.support.shared_support")
 

@@ -35,11 +35,13 @@ function spec_lane_tools.discover_test_roots()
   return roots
 end
 
-function spec_lane_tools.ensure_for_profile(profile, bootstrap, bootstrap_env)
+-- 失败返回 nil, err, unavailable:第三值透传 bootstrap 的不可用记录(#112,
+-- 网络类自举失败),为 nil 时是真实失败(锁文件缺项等仓内缺陷)。
+function spec_lane_tools.ensure_for_profile(profile, ensure_tool, bootstrap_env)
   for _, tool_name in ipairs(_PROFILE_TOOLS[profile] or {}) do
-    local _, err = bootstrap.ensure_tool(tool_name, bootstrap_env)
+    local _, err, unavailable = ensure_tool(tool_name, bootstrap_env)
     if err ~= nil then
-      return nil, "tool bootstrap failed: " .. tostring(err)
+      return nil, "tool bootstrap failed: " .. tostring(err), unavailable
     end
   end
   return true

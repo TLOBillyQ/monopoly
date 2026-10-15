@@ -7,10 +7,6 @@ local context = require("src.ui.manager.context")
 local ELabel = require("src.ui.manager.elabel")
 local support = require("test.support.ui_manager_nodes_support")
 
--- 原生 LuaUnit 迁移:describe 拍平为文件级 Test* 类,before_each/after_each 收成
--- setUp/tearDown,共享 local calls 留在文件级(setUp 重置,闭包共享),cases 驱动的
--- 动态用例转成 TestELabel["test_<name>"] 方法,用例数与改写前一致(14 + 5 = 19 例)。
-
 local calls
 
 -- 录制型 role:除 get_roleid 外任何 set_label_* 调用都记账。

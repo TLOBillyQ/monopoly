@@ -3,9 +3,6 @@ require("test.bootstrap").install_package_paths()
 local luassert = assert
 -- presentation.board_feedback 与 board_feedback.catalog 的行为规约。
 --
--- 原生 LuaUnit(busted → LuaUnit 迁移):两个 describe 均无钩子,合并拍平为
--- TestBoardFeedback 单类,裸 assert(cond, msg) 机械映射为 lu.assertEvalToTrue,
--- 用例数与改写前一一对应(21 + 1 = 22 例)。
 local host_sfx = require("src.ui.seams.host_sfx")
 local ui_host_runtime = require("src.ui.seams.host_runtime")
 

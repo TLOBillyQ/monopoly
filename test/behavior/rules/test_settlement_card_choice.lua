@@ -2,7 +2,6 @@
 -- 集成 spec 只覆盖少数路径(变异清扫 #259 survivor 真缺口闭合);执行器桩打在
 -- landing_rules 上(land_actions 在 load 期把规则函数捕获进转发闭包,打它拦不住),
 -- inventory 持卡判定同桩,shared 助手(settlement_shared)走真实现。
--- 裸 assert 转 luassert.truthy,用例数与改写前一一对应(9 例)。
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local support = require("test.support.shared_support")

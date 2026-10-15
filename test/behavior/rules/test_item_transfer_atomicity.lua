@@ -1,9 +1,6 @@
 require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (busted injects the verified luassert object)
 local luassert = assert
--- 原生 LuaUnit(busted → LuaUnit 迁移):两个无钩子 describe 各拍平成一个 Test*
--- 类(invite_deity 4 例 + send_poor 4 例),describe 级 local _send_poor_apply 留在
--- 对应 do 块内,用例数与改写前一一对应。
 local post_effects = require("src.rules.items.post_effects")
 local item_ids = require("src.config.gameplay.item_ids")
 local support = require("test.support.shared_support")

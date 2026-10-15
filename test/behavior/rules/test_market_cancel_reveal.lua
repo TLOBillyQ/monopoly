@@ -8,9 +8,6 @@ local luassert = require("luassert")
 local market_handlers = require("src.rules.choice_handlers.market")
 local event_kinds = require("src.config.gameplay.event_kinds")
 
--- 原生 LuaUnit 转换(busted → LuaUnit):describe 拍平为文件级 Test 类,
--- before_each → setUp,断言词汇切到 lu.assertXxx,用例数与改写前一一对应(5 例)。
-
 local function _assert_eq(a, b, msg)
   luassert.truthy(a == b, tostring(msg) .. ": expected " .. tostring(b) .. " got " .. tostring(a))
 end

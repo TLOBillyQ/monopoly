@@ -31,7 +31,7 @@
 
 push 前唯一硬地板是 slim：`lua tools/cli.lua verify`。
 
-按改动风险另选（都是显式步骤，不是硬地板）：`lua tools/cli.lua uml crap`、`lua tools/cli.lua uml mutate`、`lua tools/cli.lua acceptance`、`lua tools/cli.lua acceptance-mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 与 `lua tools/cli.lua uml --help` 为准。旧 crap4lua / mutate4lua / arch_view 及 `verify --coverage|--crap|--full` 已于 #94 退役。
+按改动风险另选（都是显式步骤，不是硬地板）：`lua tools/cli.lua uml crap`、`lua tools/cli.lua uml mutate`、`lua tools/cli.lua acceptance`、`lua tools/cli.lua acceptance-mutate`；完整 flag 以 `lua tools/cli.lua verify --help` 与 `lua tools/cli.lua uml --help` 为准。
 
 uml-viewer 质量入口（ADR 0068 / #93）：`lua tools/cli.lua uml check` 只做预检，`uml crap` / `uml mutate` 经邻接 `.uml-viewer/` 派发。不要直接跑安装器拷到仓根的 `./uml`：它不钉 `LUA_PATH`，会从全局 luarocks tree 解析出假绿。契约见 `tools/specs/uml_quality.prompt`。
 
@@ -54,6 +54,7 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 - 声明真源是 `tools/foundation/platform_boundary.lua`；契约细节见 `tools/specs/dry4lua.prompt` 与 `tools/specs/acceptance4lua.prompt`。
 - 默认硬门禁（slim `verify`、`verify --tooling`、`lua tools/cli.lua acceptance`）**不依赖**这两条能力，也不允许用诊断替代本应实际执行的 lint 或架构 guard。
 - 仍在保证面内：显式验收解析/IR 入口 `tools/packages/acceptance/cli/{parser,generator,ir_dry}.lua` 与 `lua tools/cli.lua acceptance`。
+- 工具自举的网络/下载类失败（#112：解析上游 HEAD、拉源码、luarocks 构建/安装时下载失败）沿用同一「不可用」：`spec-lane`（acceptance/tooling）、`lint` 与 acceptance 面入口（`lua tools/cli.lua acceptance` 的 regenerate 步骤、显式 parser/generator/ir_dry 入口，#114）退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查网络再重跑，不要当测试回归排查；锁文件缺项、上游仓库不存在、编译/构建错误与认不出的报错仍退 1。分类真源是 `tools/foundation/tool_availability.lua`。
 
 ## 操作边界
 

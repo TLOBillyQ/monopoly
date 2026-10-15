@@ -1,10 +1,6 @@
 -- luacheck: ignore 143
 require("test.bootstrap").install_package_paths()
 local luassert = assert
---- 原生 LuaUnit 迁移(busted → luaunit):两个顶层 describe 拍平为两个文件级
---- Test* 类(无钩子,不拆子类),断言词汇切到 lu.assertXxx,用例数与改写前
---- 一一对应(5 + 4 = 9 例)。
-
 local seq_builder = require("src.ui.render.move_anim.sequence_builder")
 local shared_support = require("test.support.shared_support")
 local vec3 = require("test.fixtures.vec3")

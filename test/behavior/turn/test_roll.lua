@@ -1,9 +1,5 @@
 ---@diagnostic disable: need-check-nil, different-requires, undefined-field
 
--- 原生 LuaUnit 迁移(自研 busted → LuaUnit):两个 describe(钩子同为
--- before_each reset_all)拍平为单一 TestRoll 类,setUp 统一 reset;用例数与
--- 改写前一一对应(19 + 4 = 23 例)。
-
 local check = require("luassert")
 local roll = require("src.turn.phases.roll")
 local status_ops = require("src.player.actions.status")

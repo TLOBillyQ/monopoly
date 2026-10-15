@@ -77,6 +77,37 @@ it("parallel and serial preserve order results and Chinese arguments", function(
   end)
 end)
 
+-- argv.lua 转发必须保住 arg[-1](解释器身份):test_parallel_lanes 自身等 spec 以
+-- assert(arg[-1]) 取 native Lua 身份;缺了它,分片 lane 内该文件加载即 error
+-- (busted hook/load error + empty spec file,#107 实测)。与串行路径输出逐字节一致。
+it("table command lanes preserve interpreter identity arg minus one", function()
+  fixture(function(root)
+    local file = script(root, "interp", 'print("ARGV_MINUS1=" .. tostring(arg[-1]))')
+    local ok, results = parallel.run({ { label = "interp", cmd = { native_lua, file } } },
+      { stream = false, timeout = 20 })
+    check.is_true(ok)
+    local serial = proc.run_command({ native_lua, file })
+    check.same(serial.output, results[1].output)
+    check.is_nil(results[1].output:find("ARGV_MINUS1=nil", 1, true),
+      "interpreter identity lost: " .. results[1].output)
+  end)
+end)
+
+-- 裸命令名分支:argv 首项是 "lua" 时,lane 内 arg[-1] 也须与串行 cmd.exe 的
+-- PATH 解析结果逐字节一致(同一 lane 批内多条 lane 共用同一解析)。
+it("bare command name lanes resolve interpreter identity like serial", function()
+  fixture(function(root)
+    local file = script(root, "bare", 'print("ARGV_MINUS1=" .. tostring(arg[-1]))')
+    local ok, results = parallel.run({
+      { label = "a", cmd = { "lua", file } }, { label = "b", cmd = { "lua", file } },
+    }, { stream = false, timeout = 20 })
+    check.is_true(ok)
+    local serial = proc.run_command({ "lua", file })
+    check.same(serial.output, results[1].output)
+    check.same(serial.output, results[2].output)
+  end)
+end)
+
 it("Lua argv exceeds cmd limit and lanes overlap", function()
   fixture(function(root)
     local file = script(root, "wait", [[

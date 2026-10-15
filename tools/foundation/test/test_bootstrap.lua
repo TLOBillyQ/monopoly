@@ -49,6 +49,40 @@ end
 
 local _LUAROCKS_PREFIX = os.getenv("LOCALAPPDATA"):gsub("\\", "/") .. "/Programs/Lua"
 
+-- #112:临时仓库根 + 锁文件,让 ensure_tool 走真实解析/拉取路径而不碰本仓 .toolcache。
+-- cache_line 给出时预置一条新鲜的解析缓存(跳过 ls-remote,直达拉源码一步)。
+local function _temp_tool_repo(cache_line)
+  local root = env_lib.make_temp_path("bootstrap_unavailable_spec", "")
+  fs_lib.remove_path(root)
+  check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "tools")))
+  check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"),
+    "acceptance4lua https://example.invalid/eggy/acceptance4lua\n"))
+  if cache_line ~= nil then
+    check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, ".toolcache")))
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/resolved-tools.tsv"), cache_line .. "\n"))
+  end
+  return { repo_root = root, tool_cache_dir = path_lib.join_path(root, ".toolcache") }
+end
+
+-- 断网替身:工具未装(luarocks list 失败),git 远端一律解析不到主机。
+local function _offline_stubs()
+  local real_exists = fs_lib.path_exists
+  return {
+    { target = fs_lib, key = "path_exists", value = function(path)
+      if tostring(path):match("luarocks%.exe$") then return true end
+      return real_exists(path)
+    end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      local probe = _native_probe(command)
+      if probe then return probe end
+      if command[1] == "git" then
+        return { ok = false, output = "fatal: unable to access: Could not resolve host: example.invalid" }
+      end
+      return { ok = false, output = "" }
+    end },
+  }
+end
+
 describe("bootstrap", function()
 
 it("parses the repo url lockfile format", function()
@@ -312,6 +346,178 @@ it("ensure luacov lcov reporter tree installs the pinned rock", function()
     local ok, err = bootstrap.ensure_luacov_reporter_lcov_tree("/repo")
     check.is_nil(ok)
     check.equal("luarocks install failed for luacov-reporter-lcov: offline", err)
+  end)
+end)
+
+-- #112:自举的网络类失败是「不可用」,不是「失败」——第三返回值标出工具与步骤,
+-- 调用方据此退 3,而不是把断网说成测试回归。
+it("ensure tool reports unresolvable upstream head as unavailable", function()
+  local env = _temp_tool_repo()
+  local ok, err, unavailable
+  _with_stubs(_offline_stubs(), function()
+    ok, err, unavailable = bootstrap.ensure_tool("acceptance4lua", env)
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(ok)
+  check.truthy(tostring(err):find("git ls-remote failed", 1, true), tostring(err))
+  check.equal("unavailable", unavailable.status)
+  check.equal("acceptance4lua", unavailable.tool)
+  check.equal("resolve", unavailable.step)
+  check.equal(3, unavailable.exit_code)
+end)
+
+it("ensure tool reports failed source clone as unavailable", function()
+  local env = _temp_tool_repo("acceptance4lua\t" .. string.rep("a", 40) .. "\t-\t" .. tostring(os.time()))
+  local ok, err, unavailable
+  _with_stubs(_offline_stubs(), function()
+    ok, err, unavailable = bootstrap.ensure_tool("acceptance4lua", env)
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(ok)
+  check.truthy(tostring(err):find("git clone failed", 1, true), tostring(err))
+  check.equal("acceptance4lua", unavailable.tool)
+  check.equal("fetch", unavailable.step)
+end)
+
+-- 上游仓库不存在不是网络问题:按失败原因分类,照旧是真实失败。
+it("ensure tool keeps a missing upstream repository as a real failure", function()
+  local env = _temp_tool_repo()
+  local stubs = _offline_stubs()
+  local offline_run = stubs[2].value
+  stubs[2].value = function(command)
+    if command[1] == "git" then return { ok = false, output = "remote: Repository not found." } end
+    return offline_run(command)
+  end
+  local ok, err, unavailable
+  _with_stubs(stubs, function()
+    ok, err, unavailable = bootstrap.ensure_tool("acceptance4lua", env)
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(ok)
+  check.truthy(tostring(err):find("Repository not found", 1, true), tostring(err))
+  check.is_nil(unavailable)
+end)
+
+-- 构建失败要看原因:下载依赖失败是不可用,编译/构建错误是锁定版本或源码坏了,真实失败。
+local function _ensure_with_make_output(make_output)
+  local env = _temp_tool_repo("acceptance4lua\t" .. string.rep("a", 40) .. "\t-\t" .. tostring(os.time()))
+  local stubs = _offline_stubs()
+  stubs[2].value = function(command)
+    local probe = _native_probe(command)
+    if probe then return probe end
+    if command[1] == "git" and command[2] == "clone" then return { ok = true, output = "" } end
+    if command[1] == "git" then return { ok = true, output = string.rep("b", 40) .. "\n" } end
+    for _, token in ipairs(command) do
+      if token == "make" then return { ok = false, output = make_output } end
+    end
+    return { ok = false, output = "" }
+  end
+  local ok, err, unavailable
+  _with_stubs(stubs, function()
+    ok, err, unavailable = bootstrap.ensure_tool("acceptance4lua", env)
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(ok)
+  check.truthy(tostring(err):find("luarocks make failed for acceptance4lua", 1, true), tostring(err))
+  return unavailable
+end
+
+it("ensure tool reports dependency download failure during build as unavailable", function()
+  local unavailable = _ensure_with_make_output("Error: Failed downloading https://luarocks.org/manifest - timed out")
+  check.equal("build", unavailable.step)
+  check.equal("acceptance4lua", unavailable.tool)
+end)
+
+it("ensure tool keeps a build error as a real failure", function()
+  check.is_nil(_ensure_with_make_output("Error: Build error: Failed compiling object src/lfs.o"))
+end)
+
+-- 宁红勿假:编译报错里出现 ssl/tls/proxy/timed out 字样不等于网络失败。
+it("ensure tool keeps an openssl header compile error as a real failure", function()
+  check.is_nil(_ensure_with_make_output(
+    "src/tls_proxy.c:3:10: fatal error: openssl/ssl.h: No such file or directory\n"
+      .. "Error: Build error: Failed compiling object src/tls_proxy.o"))
+end)
+
+it("ensure tool keeps a timed out build step as a real failure", function()
+  check.is_nil(_ensure_with_make_output("Error: Build error: command timed out after 600s"))
+end)
+
+-- ssh 形态的「仓库不存在」也带 Could not read from remote repository,不是网络问题。
+it("ensure tool keeps an ssh repository not found as a real failure", function()
+  local env = _temp_tool_repo()
+  local stubs = _offline_stubs()
+  local offline_run = stubs[2].value
+  stubs[2].value = function(command)
+    if command[1] == "git" then
+      return { ok = false, output = "ERROR: Repository not found.\nfatal: Could not read from remote repository." }
+    end
+    return offline_run(command)
+  end
+  local unavailable
+  _with_stubs(stubs, function()
+    unavailable = select(3, bootstrap.ensure_tool("acceptance4lua", env))
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(unavailable)
+end)
+
+it("ensure tool reports a git tls handshake failure as unavailable", function()
+  local env = _temp_tool_repo()
+  local stubs = _offline_stubs()
+  local offline_run = stubs[2].value
+  stubs[2].value = function(command)
+    if command[1] == "git" then
+      return { ok = false, output = "fatal: unable to access: schannel: failed to receive handshake, SSL/TLS connection failed" }
+    end
+    return offline_run(command)
+  end
+  local unavailable
+  _with_stubs(stubs, function()
+    unavailable = select(3, bootstrap.ensure_tool("acceptance4lua", env))
+  end)
+  fs_lib.remove_path(env.repo_root)
+  check.equal("resolve", unavailable.step)
+end)
+
+-- 锁文件缺项是仓内缺陷,照旧是真实失败,不能被降级成「不可用」。
+it("ensure tool keeps lockfile defects as real failures", function()
+  local env = _temp_tool_repo()
+  local ok, err, unavailable = bootstrap.ensure_tool("dry4lua", env)
+  fs_lib.remove_path(env.repo_root)
+  check.is_nil(ok)
+  check.equal("tool missing from lockfile: dry4lua", err)
+  check.is_nil(unavailable)
+end)
+
+it("ensure luacheck tree reports install failure as unavailable", function()
+  _with_stubs({
+    { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      return _native_probe(command) or { ok = false, output = "Error: Failed downloading luacheck" }
+    end },
+  }, function()
+    local ok, err, unavailable = bootstrap.ensure_luacheck_tree("/repo")
+    check.is_nil(ok)
+    check.truthy(tostring(err):find("luarocks install failed for luacheck", 1, true), tostring(err))
+    check.equal("luacheck", unavailable.tool)
+    check.equal("install", unavailable.step)
+  end)
+end)
+
+it("ensure luacheck tree keeps a compile failure as a real failure", function()
+  _with_stubs({
+    { target = fs_lib, key = "path_exists", value = function(path) return path:match("luarocks.exe$") ~= nil end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      return _native_probe(command) or { ok = false, output = "Error: Build error: Failed compiling object lfs.o" }
+    end },
+  }, function()
+    local ok, err, unavailable = bootstrap.ensure_luacheck_tree("/repo")
+    check.is_nil(ok)
+    check.truthy(tostring(err):find("Failed compiling", 1, true), tostring(err))
+    check.is_nil(unavailable)
   end)
 end)
 

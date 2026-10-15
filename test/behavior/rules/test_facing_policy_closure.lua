@@ -8,8 +8,6 @@ local luassert = require("luassert")
 --     (roadblock_spec stubs the function rather than exercising it),
 --   * sync_move_dir_after_position_change's preserve branch, the
 --     _set_move_dir changed/unchanged return value, and the invalid-mode guard.
--- 原生 LuaUnit(推翻自研 busted 兼容运行器决策的迁移):describe/it 拍平为文件级 Test* 类,断言词汇
--- 从 luassert 兼容层切到 lu.assertXxx,用例数与改写前一一对应(35 例)。
 local facing_policy = require("src.rules.board.facing_policy")
 
 local function _assert_eq(a, b, msg)

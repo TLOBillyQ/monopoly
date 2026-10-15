@@ -2,15 +2,17 @@
 local env = require("foundation.env")
 local fs = require("foundation.fs")
 local path = require("foundation.path")
+local proc = require("foundation.proc")
 local shell = require("foundation.shell")
 local M = {}
 local function native(value) return (value:gsub("/", "\\")) end
-local function helper()
+local _POWERSHELL = (os.getenv("SystemRoot") or "C:/Windows") .. "/System32/WindowsPowerShell/v1.0/powershell.exe"
+local function helper(name)
   local source = debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")
   local root = assert(source:match("^(.*)/tools/foundation/parallel_lanes.lua$"))
   if not path.is_absolute_path(root) then root = path.join_path(env.current_dir(), root) end
-  local target = root .. "/tools/foundation/lane_process.ps1"
-  if not fs.path_exists(target) then return nil, "Windows lane owner script missing: " .. target end
+  local target = root .. "/tools/foundation/" .. name
+  if not fs.path_exists(target) then return nil, "Windows lane script missing: " .. target end
   return target
 end
 local function status(entry)
@@ -19,14 +21,55 @@ local function status(entry)
   local code, reason = text:match("^(%d+) ([%w_]+)")
   return tonumber(code), reason
 end
-local function pause(seconds)
-  local deadline = os.clock() + seconds
-  while os.clock() < deadline do end
+-- 父进程一次性阻塞等待全部 lane 发布完成(#107):lane_wait.ps1 用 .NET
+-- FileSystemWatcher 带超时等待,不轮询自旋、不用 sleep 命令、不依赖网络。
+-- 等待器自身失败时不重试(避免热循环),未发布的 lane 照常报 output_incomplete。
+local function wait_all(pending, seconds)
+  local waiter, err = helper("lane_wait.ps1")
+  if not waiter then return nil, err end
+  local list = env.make_temp_path("parallel_wait", ".txt")
+  local ok, write_err = fs.write_file(list, table.concat(pending, "\n") .. "\n")
+  if not ok then return nil, write_err end
+  local result = proc.run_command({
+    native(_POWERSHELL), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File",
+    native(waiter), native(list), tostring(math.max(0, seconds)),
+  })
+  fs.remove_path(list)
+  return result.ok
+end
+-- 裸命令名解析成 cmd.exe 语义的完整路径;已是路径形态(含 / \ 或盘符)的原样返回。
+-- cmd 先走 CreateProcess(无扩展名时自动补 .exe 全 PATH 查找),找不到才退回
+-- PATHEXT 批处理搜索——所以先挑 where.exe 命中里的第一个 .exe,没有再取首个命中
+-- (实测:PATH 前段有 lua.cmd shim 时 cmd 仍执行后段目录的 lua.exe)。
+-- 按名缓存 where.exe 结果:一批 lane 共用同一解释器,只解析一次。
+local _resolved = {}
+local function resolve_exe(name)
+  name = tostring(name or "")
+  if name == "" or name:find("[/\\]") or name:match("^%a:") then return name end
+  if _resolved[name] then return _resolved[name] end
+  local result = proc.run_command({ "where.exe", name })
+  if not result.ok then return name end
+  local first, first_exe
+  for line in (tostring(result.output or "") .. "\n"):gmatch("(.-)\n") do
+    line = line:gsub("%s+$", "")
+    if line ~= "" then
+      if first == nil then first = line end
+      if first_exe == nil and line:lower():match("%.exe$") then first_exe = line end
+    end
+  end
+  _resolved[name] = first_exe or first or name
+  return _resolved[name]
 end
 local function launch(entry, executable, timeout)
   local command = entry.cmd
   if type(command) == "table" then
-    local args = {}
+    -- argv 表必须保住 arg[-1](解释器身份),且与串行路径逐字节一致(#107):
+    -- 串行 proc.run_command 经 cmd.exe 执行,裸命令名会被按 PATH 解析成完整路径
+    -- 作为 argv[0] 传给子进程(实测 serial arg[-1] 是全路径);lane_process.ps1 的
+    -- CreateProcess 不做这层解析,原样转发得到裸名。spec 以 arg[-1] 取解释器身份
+    -- 并在剥离 PATH 的环境复用(test_parallel_lanes @144),裸名即断。解析失败时
+    -- 保持原值(进程本来也起不来,语义不变)。
+    local args = { string.format("[-1]=%q", resolve_exe(command[1])) }
     for index = 2, #command do args[#args + 1] = string.format("[%d]=%q", index - 2, command[index]) end
     local argv = entry.dir .. "/argv.lua"
     local ok, err = fs.write_file(argv, "arg={" .. table.concat(args, ",") .. "}; dofile(arg[0])\n")
@@ -38,7 +81,7 @@ local function launch(entry, executable, timeout)
   if not ok then return nil, err end
   local launcher = entry.dir .. "/launcher.cmd"
   ok, err = fs.write_file(launcher, "@echo off\r\nchcp 65001 >nul\r\n" .. shell.build_command({
-    (os.getenv("SystemRoot") or "C:/Windows") .. "/System32/WindowsPowerShell/v1.0/powershell.exe",
+    _POWERSHELL,
     "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", native(executable),
     native(command_path), native(entry.output), native(entry.status), tostring(timeout),
   }) .. ' >"' .. native(entry.dir .. '/owner.log') .. '" 2>&1\r\nexit /b %errorlevel%\r\n')
@@ -51,7 +94,7 @@ end
 function M.run(lanes, opts)
   opts = opts or {}
   local timeout = opts.timeout or 600
-  local executable, helper_err = helper()
+  local executable, helper_err = helper("lane_process.ps1")
   local entries = {}
   local started = os.time()
   for _, lane in ipairs(lanes or {}) do
@@ -67,15 +110,11 @@ function M.run(lanes, opts)
       if not launched then entry.launch_error = tostring(launch_err) end
     else entry.launch_error = tostring(prepare_err) end
   end
-  while true do
-    local pending = false
-    for _, entry in ipairs(entries) do
-      if not entry.launch_error and status(entry) == nil then pending = true end
-    end
-    if not pending then break end
-    if os.time() > started + timeout + 30 then break end
-    pause(opts.poll_interval or 0.1)
+  local pending = {}
+  for _, entry in ipairs(entries) do
+    if not entry.launch_error and status(entry) == nil then pending[#pending + 1] = native(entry.status) end
   end
+  if #pending > 0 then wait_all(pending, started + timeout + 30 - os.time()) end
   local all_ok, results = #entries > 0, {}
   for _, entry in ipairs(entries) do
     local code, reason = status(entry)

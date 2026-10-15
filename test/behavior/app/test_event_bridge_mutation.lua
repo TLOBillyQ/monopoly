@@ -2,9 +2,6 @@
 -- Drives M.install with a fake LuaAPI so we can capture a registered event
 -- callback, invoke it, and observe that state.game is set from get_current_game.
 --
--- 原生 LuaUnit 改写:无钩子 describe → 文件级 TestEventBridgeMutation 单类
--- (不拆类),语句位裸 assert → luassert.truthy。用例数与改写前一一对应(1 例)。
-
 require("test.bootstrap").install_package_paths()
 local luassert = assert
 local runtime_context = require("src.host.context")

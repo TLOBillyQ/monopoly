@@ -1,5 +1,3 @@
--- 原生 LuaUnit 改写：describe 拍平为 Test* 类，before_each → setUp（25 例），
--- assert.has_error → luassert.has_error，语句位裸 assert(cond, msg) → luassert.truthy。
 local check = require("luassert")
 local gameplay_loop_ports = require("src.turn.loop.ports")
 local _config_reset = require("test.support.config_reset")
