@@ -2,6 +2,7 @@
 local env = require("foundation.env")
 local fs = require("foundation.fs")
 local path = require("foundation.path")
+local proc = require("foundation.proc")
 local shell = require("foundation.shell")
 local M = {}
 local function native(value) return (value:gsub("/", "\\")) end
@@ -19,14 +20,49 @@ local function status(entry)
   local code, reason = text:match("^(%d+) ([%w_]+)")
   return tonumber(code), reason
 end
+-- 轮询间隔用真睡眠,不再忙等自旋烧 CPU(#107):ping 打 RFC5737 保留地址
+-- (TEST-NET-1,永不应答),-w 毫秒即阻塞下限。ICMP 定时器粒度粗,实测会量化到
+-- ~0.5s,对秒级 lane 的完成检测只加一次 ≤0.5s 的收尾延迟,可忽略;ping 缺失时
+-- 退回原自旋兜底(原生 Windows System32 必有 ping,兜底只是防御)。
+local _PING = native((os.getenv("SystemRoot") or "C:/Windows") .. "/System32/ping.exe")
 local function pause(seconds)
+  if fs.path_exists(_PING) then
+    local ms = math.max(1, math.floor(seconds * 1000))
+    os.execute('"' .. _PING .. '" -n 1 -w ' .. tostring(ms) .. ' 192.0.2.1 >nul 2>&1')
+    return
+  end
   local deadline = os.clock() + seconds
   while os.clock() < deadline do end
+end
+-- 裸命令名解析成 cmd.exe 语义的完整路径;已是路径形态(含 / \ 或盘符)的原样返回。
+-- cmd 先走 CreateProcess(无扩展名时自动补 .exe 全 PATH 查找),找不到才退回
+-- PATHEXT 批处理搜索——所以先挑 where.exe 命中里的第一个 .exe,没有再取首个命中
+-- (实测:PATH 前段有 lua.cmd shim 时 cmd 仍执行后段目录的 lua.exe)。
+local function resolve_exe(name)
+  name = tostring(name or "")
+  if name == "" or name:find("[/\\]") or name:match("^%a:") then return name end
+  local result = proc.run_command({ "where.exe", name })
+  if not result.ok then return name end
+  local first, first_exe
+  for line in (tostring(result.output or "") .. "\n"):gmatch("(.-)\n") do
+    line = line:gsub("%s+$", "")
+    if line ~= "" then
+      if first == nil then first = line end
+      if first_exe == nil and line:lower():match("%.exe$") then first_exe = line end
+    end
+  end
+  return first_exe or first or name
 end
 local function launch(entry, executable, timeout)
   local command = entry.cmd
   if type(command) == "table" then
-    local args = {}
+    -- argv 表必须保住 arg[-1](解释器身份),且与串行路径逐字节一致(#107):
+    -- 串行 proc.run_command 经 cmd.exe 执行,裸命令名会被按 PATH 解析成完整路径
+    -- 作为 argv[0] 传给子进程(实测 serial arg[-1] 是全路径);lane_process.ps1 的
+    -- CreateProcess 不做这层解析,原样转发得到裸名。spec 以 arg[-1] 取解释器身份
+    -- 并在剥离 PATH 的环境复用(test_parallel_lanes @144),裸名即断。解析失败时
+    -- 保持原值(进程本来也起不来,语义不变)。
+    local args = { string.format("[-1]=%q", resolve_exe(command[1])) }
     for index = 2, #command do args[#args + 1] = string.format("[%d]=%q", index - 2, command[index]) end
     local argv = entry.dir .. "/argv.lua"
     local ok, err = fs.write_file(argv, "arg={" .. table.concat(args, ",") .. "}; dofile(arg[0])\n")
