@@ -59,6 +59,22 @@ function M.build_lpt_lanes(files, worker_count, durations)
   end
   return lanes
 end
+-- 实测时长表的唯一文本格式(#107):每行「秒数<TAB>文件」,按文件名排序。
+-- runner --durations-out 写、spec_lane 时长缓存读写共用这一处。
+function M.format_durations(durations)
+  local files, lines = {}, {}
+  for file in pairs(durations) do files[#files + 1] = file end
+  table.sort(files)
+  for _, file in ipairs(files) do lines[#lines + 1] = string.format("%.2f\t%s", durations[file], file) end
+  return table.concat(lines, "\n") .. "\n"
+end
+function M.parse_durations(text)
+  local durations = {}
+  for seconds, file in tostring(text or ""):gmatch("([%d%.]+)\t([^\r\n]+)") do
+    durations[file] = tonumber(seconds)
+  end
+  return durations
+end
 function M.resolve_workers(env_var_name, file_count, default_workers)
   local capacity = math.max(1, file_count or 0)
   local resolved = default_workers or 1
