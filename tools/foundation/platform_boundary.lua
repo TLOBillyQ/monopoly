@@ -93,18 +93,37 @@ local function _strip_skip_flag(args)
   return argv, skip
 end
 
-local function _unavailable_text(entry)
-  local tag = "[" .. entry.id .. "] "
-  return table.concat({
-    tag .. "status=" .. boundary.UNAVAILABLE,
-    tag .. "「" .. entry.title
-      .. "」当前按 POSIX 专用能力声明,原生 Windows 不在保证面内(#96 / ADR 0066)。",
-    tag .. "原因: " .. entry.reason,
-    tag .. "本次未安装工具、未运行、未报通过;这个退出码不是检测结论。",
-    tag .. "确认边界后要显式跳过,加 " .. boundary.SKIP_FLAG
+-- 不可用诊断的唯一渲染:首行 `[tag] status=unavailable<fields>`,其余每行带同一前缀。
+-- 平台声明与工具自举(#112)共用,两处不再各写一份格式。
+local function _unavailable_text(tag, fields, lines)
+  local prefix = "[" .. tostring(tag) .. "] "
+  local out = { prefix .. "status=" .. boundary.UNAVAILABLE .. (fields or "") }
+  for _, line in ipairs(lines) do
+    out[#out + 1] = prefix .. line
+  end
+  out[#out + 1] = ""
+  return table.concat(out, "\n")
+end
+
+-- 不可用判定(stderr + 退 3),交 emit 写出。fields 是首行状态词后的可机读字段
+-- (如 " tool=luacheck step=install"),lines 是不带前缀的诊断正文。
+function boundary.unavailable_verdict(tag, fields, lines)
+  return {
+    status = boundary.UNAVAILABLE,
+    exit_code = boundary.UNAVAILABLE_EXIT_CODE,
+    stream = "stderr",
+    message = _unavailable_text(tag, fields, lines),
+  }
+end
+
+local function _declared_unavailable_lines(entry)
+  return {
+    "「" .. entry.title .. "」当前按 POSIX 专用能力声明,原生 Windows 不在保证面内(#96 / ADR 0066)。",
+    "原因: " .. entry.reason,
+    "本次未安装工具、未运行、未报通过;这个退出码不是检测结论。",
+    "确认边界后要显式跳过,加 " .. boundary.SKIP_FLAG
       .. "(退出码 " .. boundary.SKIPPED_EXIT_CODE .. ",状态 status=" .. boundary.SKIPPED .. ")。",
-    "",
-  }, "\n")
+  }
 end
 
 local function _skipped_text(entry)
@@ -147,14 +166,10 @@ function boundary.evaluate(id, args, platform)
     }
   end
 
-  return {
-    args = argv,
-    entry = entry,
-    status = boundary.UNAVAILABLE,
-    exit_code = boundary.UNAVAILABLE_EXIT_CODE,
-    stream = "stderr",
-    message = _unavailable_text(entry),
-  }
+  local verdict = boundary.unavailable_verdict(entry.id, nil, _declared_unavailable_lines(entry))
+  verdict.args = argv
+  verdict.entry = entry
+  return verdict
 end
 
 -- Retained actual engine regressions are explicit capability tests, not native gates.

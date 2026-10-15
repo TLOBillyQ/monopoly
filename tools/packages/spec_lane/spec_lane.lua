@@ -14,6 +14,7 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local proc_lib = require("foundation.proc")
 local tap_summary = require("foundation.tap_summary")
+local tool_availability = require("foundation.tool_availability")
 local parallel_lanes = require("foundation.parallel_lanes")
 local sharding = require("foundation.spec_sharding")
 local lane_args = require("packages.spec_lane.spec_lane_args")
@@ -236,7 +237,14 @@ end
 
 function M.run(options)
   options = options or {}
-  local ok_tools, tool_err = lane_tools.ensure_for_profile(options.profile, bootstrap, bootstrap_env)
+  -- 自举的网络类失败(#112)= 环境不可用:退 3、诊断写 stderr,不报 failed——
+  -- 一个测试都没跑,不能被读成测试回归。ensure_tool 可注入以便测试。
+  local ok_tools, tool_err, unavailable = lane_tools.ensure_for_profile(options.profile,
+    options.ensure_tool or bootstrap.ensure_tool, bootstrap_env)
+  if unavailable ~= nil then
+    return { stdout = "", stderr = tool_availability.message(unavailable, "spec-lane"),
+      code = unavailable.exit_code, status = unavailable.status, passed = 0, failed = 0 }
+  end
   if ok_tools == nil then
     return { stdout = tostring(tool_err) .. "\n", code = 1, passed = 0, failed = 1 }
   end
@@ -296,6 +304,9 @@ function M.main(args)
   end
   local result = M.run(options)
   io.write(result.stdout)
+  if result.stderr ~= nil then
+    io.stderr:write(result.stderr)
+  end
   return result.code
 end
 

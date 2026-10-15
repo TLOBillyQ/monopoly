@@ -98,6 +98,63 @@ skipped_lanes_appear_in_summary()
   check.truthy(out.stdout:find("skipped: lint-src, lint-test", 1, true))
 end
 
+-- #112:退 3 的车道是「不可用」(工具自举网络失败),既不算通过也不混进 failed;
+-- 摘要单列 unavailable,整体退出码非 0。
+local function _unavailable_lane()
+  return { label = "lint-src", ok = false, exit_code = 3, elapsed = 2,
+    output = "[lint] status=unavailable tool=luacheck step=install\n" }
+end
+
+local function
+unavailable_lane_is_reported_and_never_passes()
+  local input = _all_pass_results()
+  input.results[#input.results + 1] = _unavailable_lane()
+  local out = verify_full.build_output(input)
+  check.equal(3, out.exit_code)
+  check.truthy(out.stdout:find("[verify] UNAVAILABLE lint-src", 1, true), out.stdout)
+  check.truthy(out.stdout:find("status=unavailable tool=luacheck", 1, true), out.stdout)
+  check.truthy(out.stdout:find("[verify] UNAVAILABLE  passed=3 failed=0 unavailable=1", 1, true), out.stdout)
+  check.is_nil(out.stdout:find("[verify] PASS", 1, true), out.stdout)
+end
+
+local function
+real_failure_outranks_unavailable_lane()
+  local input = _one_fail_results()
+  input.results[#input.results + 1] = _unavailable_lane()
+  local out = verify_full.build_output(input)
+  check.equal(1, out.exit_code)
+  check.truthy(out.stdout:find("[verify] FAIL  passed=1 failed=1 unavailable=1", 1, true), out.stdout)
+end
+
+-- 串行 verify 的 run_step 必须保住子进程退出码 3,否则不可用会被折成普通失败。
+local function
+serial_step_exit_3_surfaces_as_unavailable()
+  local lua54 = require("foundation.lua54").lua54_bin()
+  local step = require("packages.verify.runner").run_step("lint-src", { lua54, "-e", "os.exit(3)" })
+  local out = verify_full.build_output({ results = { step }, skipped = {}, total_elapsed = 1 })
+  check.is_false(step.ok)
+  check.equal(3, out.exit_code)
+  check.truthy(out.stdout:find("unavailable=1", 1, true), out.stdout)
+end
+
+-- 并行 verify(默认路径)经 parallel_lanes 起子进程:真实退 3 的车道同样
+-- 是 UNAVAILABLE,整体退出码绝不能是 0。
+local function
+parallel_lane_exit_3_surfaces_as_unavailable()
+  local lua54 = require("foundation.lua54").lua54_bin()
+  local shell_lib = require("foundation.shell")
+  local all_ok, results = require("packages.verify.runner").run_parallel({
+    { label = "lint-src", cmd = shell_lib.build_command({ lua54, "-e", "os.exit(3)" }) },
+    -- 退 0 但空输出在 parallel_lanes 里算 output_incomplete,通过车道须有输出。
+    { label = "encoding", cmd = shell_lib.build_command({ lua54, "-e", "print('encoding ok')" }) },
+  })
+  local out = verify_full.build_output({ results = results, skipped = {}, total_elapsed = 1 })
+  check.is_false(all_ok)
+  check.equal(3, out.exit_code)
+  check.truthy(out.stdout:find("[verify] UNAVAILABLE lint-src", 1, true), out.stdout)
+  check.truthy(out.stdout:find("[verify] UNAVAILABLE  passed=1 failed=0 unavailable=1", 1, true), out.stdout)
+end
+
 -- Verbose output contracts.
 
 local function
@@ -189,6 +246,10 @@ describe("verify public output and lane plan", function()
   it("failure_path_emits_failing_lane_stdout_verbatim", failure_path_emits_failing_lane_stdout_verbatim)
   it("failure_path_does_not_include_passing_lane_stdout", failure_path_does_not_include_passing_lane_stdout)
   it("skipped_lanes_appear_in_summary", skipped_lanes_appear_in_summary)
+  it("unavailable_lane_is_reported_and_never_passes", unavailable_lane_is_reported_and_never_passes)
+  it("real_failure_outranks_unavailable_lane", real_failure_outranks_unavailable_lane)
+  it("serial_step_exit_3_surfaces_as_unavailable", serial_step_exit_3_surfaces_as_unavailable)
+  it("parallel_lane_exit_3_surfaces_as_unavailable", parallel_lane_exit_3_surfaces_as_unavailable)
   it("verbose_preserves_all_lane_stdout_on_success", verbose_preserves_all_lane_stdout_on_success)
   it("verbose_preserves_all_lane_stdout_on_failure", verbose_preserves_all_lane_stdout_on_failure)
   it("verbose_includes_per_step_pass_fail_trace_lines", verbose_includes_per_step_pass_fail_trace_lines)

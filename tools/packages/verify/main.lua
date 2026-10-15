@@ -67,6 +67,7 @@ local function _main(opts)
 
   return {
     ok = output.exit_code == 0,
+    exit_code = output.exit_code,
     passed = output.passed,
     failed = output.failed,
     skipped = plan.skipped,
@@ -99,4 +100,4 @@ for i = 1, #(arg or {}) do
   end
 end
 local result = _main(opts)
-os.exit(result.ok and 0 or 1)
+os.exit(result.exit_code)

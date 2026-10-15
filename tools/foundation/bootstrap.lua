@@ -9,6 +9,8 @@ local function _module_dir()
 end
 
 local runtime_paths = dofile(_module_dir() .. "/runtime_paths.lua")
+-- 与 runtime_paths 同样按相对路径 dofile:本文件在 install 装好 package.path 之前就被加载。
+local availability = dofile(_module_dir() .. "/tool_availability.lua")
 
 local bootstrap = {}
 
@@ -173,15 +175,16 @@ local function _ensure_rock_installed(repo_root, name, version, marker_rel, befo
   end
 
   if before_install ~= nil then
-    local dep_ok, dep_err = before_install()
+    local dep_ok, dep_err, dep_unavailable = before_install()
     if dep_ok ~= true then
-      return nil, dep_err
+      return nil, dep_err, dep_unavailable
     end
   end
 
   local result = _rocks_run(tree, { "install", name, version, "--deps-mode", "one" })
   if result.ok ~= true then
-    return nil, "luarocks install failed for " .. name .. ": " .. tostring(result.output)
+    local install_err = "luarocks install failed for " .. name .. ": " .. tostring(result.output)
+    return nil, install_err, availability.classify(name, "install", install_err)
   end
 
   if fs_lib.path_exists(marker) ~= true then
@@ -250,13 +253,15 @@ function bootstrap.ensure_tool(name, env_or_opts)
   end
 
   -- 新鲜度 = 上游 HEAD commit。解析失败(网络不通且无缓存)时,
-  -- tree 里已装任意版本则降级继续用,否则报错。
+  -- tree 里已装任意版本则降级继续用,否则报错。#112:网络/下载类失败带第三
+  -- 返回值(不可用记录,标出工具与步骤),调用方退 3 而不是把断网报成失败;
+  -- 其余原因(仓库不存在、编译错误)无第三值,照旧是真实失败。
   local resolved, resolve_err = resolver.resolve(name, entry.url, env)
   if resolved == nil then
     if _is_tool_present(tree, name) then
       return { name = name, root = tree, version = _installed_version(tree, name), stale = true }
     end
-    return nil, resolve_err
+    return nil, resolve_err, availability.classify(name, "resolve", resolve_err)
   end
 
   if resolved.installed == resolved.commit and _is_tool_present(tree, name) then
@@ -270,12 +275,13 @@ function bootstrap.ensure_tool(name, env_or_opts)
       return { name = name, root = tree, commit = resolved.installed,
         version = _installed_version(tree, name), stale = true }
     end
-    return nil, fetch_err
+    return nil, fetch_err, availability.classify(name, "fetch", fetch_err)
   end
 
   local result = _luarocks_make(tree, name, src_dir)
   if result.ok ~= true then
-    return nil, "luarocks make failed for " .. tostring(name) .. ": " .. tostring(result.output)
+    local make_err = "luarocks make failed for " .. tostring(name) .. ": " .. tostring(result.output)
+    return nil, make_err, availability.classify(name, "build", make_err)
   end
   local installed_version = _installed_version(tree, name)
   if installed_version == nil then

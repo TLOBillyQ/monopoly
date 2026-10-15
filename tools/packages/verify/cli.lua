@@ -1,7 +1,7 @@
 -- packages/verify/cli.lua —— verify 子命令(wayfinder #307 包内实现)
 --
 -- 统一接口形态(#300 决议):本文件 return 纯接口模块:
---   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误)
+--   M.main(args, env) -> 退出码(0 成功 / 1 业务失败 / 2 用法错误 / 3 有车道不可用且无真实失败,#112)
 --   M.usage()         -> 完整 usage 文本(包内单一真源,顶层 <cmd> --help 转发)
 --
 -- 实现:子进程转发包内编排入口 main.lua(原 tools/quality/verify_full.lua,
