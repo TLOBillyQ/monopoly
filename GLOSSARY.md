@@ -159,3 +159,15 @@ _Avoid_: 场景排行榜分数, Lua 渲染排行榜, Lua 排序榜单数据
 **礼物**:
 皮肤的一种解锁路径（cosmetics 体系皮肤面板行为），不是独立的宿主礼物系统。仓库内只此一套表述；曾有的 host_integrations gift 存根（礼物计数解锁）已拆除，重提时先确认指哪套。
 _Avoid_: 宿主礼物计数系统, host_integrations gift 模块
+
+**lane**:
+测试工具链中一条独立执行的测试通道：`spec_lane` / `behavior_parallel` 把一组 spec 文件交给一条 lane 作为一个子进程整体运行，车道结果是各 lane 结果的聚合。lane 是执行与聚合的单位，不是线程或协程。
+_Avoid_: worker 线程, 协程通道, 测试套件
+
+**profile**:
+`spec-lane --profile` 选择的命名测试配置（`spec_profiles` 中的表项，给出测试发现根、helper 与文件名匹配模式），如 behavior / contract / guards / tooling；`--profile` 也可直接给存在的目录做窄点跑。profile 决定「跑哪些测试、用什么 harness」，不决定串并行。
+_Avoid_: 构建变体, 运行环境配置
+
+**分片**:
+`spec_sharding` 把一个 profile 发现的 spec 文件清单按文件边界分配到多条 lane 的机制：只拆文件边界、不拆文件内顺序，同一输入清单的分配结果确定性可复现。
+_Avoid_: 拆单文件内用例, 随机分配, 并行度调参
