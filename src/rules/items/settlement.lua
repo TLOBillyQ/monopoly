@@ -19,9 +19,10 @@ local action_anim_duration = timing.action_anim_default_seconds
 
 -- 消耗时机:kind 级默认由调用方描述符经 opts.consume 声明
 -- (before_apply | after_success | applier_owned | already_applied),
--- 道具级例外只登记在这张表——偷窃卡在 apply 中途经 commit() 自耗。
+-- 道具级例外只登记在这张表——偷窃卡与导弹卡经 commit() 自耗。
 local _item_consume_overrides = {
   [item_ids.steal] = "applier_owned",
+  [item_ids.missile] = "applier_owned",
 }
 
 local ESCROW_META_KEY = "item_use_escrow"

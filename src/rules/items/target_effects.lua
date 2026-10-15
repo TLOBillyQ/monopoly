@@ -48,7 +48,11 @@ local specs = {
     end,
   },
   [item_ids.missile] = {
-    apply = function(game, user, target)
+    apply = function(game, user, target, context)
+      -- 目标已验证，轰炸必定结算；先入消耗台账，避免同格使用者送医破产清包。
+      if context and context.commit_item_use then
+        context.commit_item_use()
+      end
       return demolish.apply(game, user, target.position, {
         item_id = item_ids.missile,
         injure = true,
