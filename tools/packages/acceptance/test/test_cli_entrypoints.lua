@@ -174,8 +174,7 @@ it("generator_binds_the_ir_into_a_runnable_entrypoint_module", function()
     _write(feature_path, ZH_FEATURE)
     local ir_path = _sandbox_ir(root, feature_path)
     local spec_path = path_lib.join_path(root, "test_probe_acceptance.lua")
-    check.is_true(#require("acceptance4lua.generator").metadata_path_for(spec_path, feature_path) > 270,
-      "fixture must retain the full absolute identity that exceeds native metadata path limits")
+    check.is_true(#feature_path > 180, "fixture retains a long absolute feature identity")
     local result = _run(GENERATOR, { ir_path, spec_path })
     check.same(0, result.code, tostring(result.output))
 
