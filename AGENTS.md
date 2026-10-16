@@ -43,16 +43,15 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 
 ## 平台保证边界（#96 / ADR 0066）
 
-原生 Windows 是唯一受支持的开发平台，但两件保留能力当前仍按 POSIX 专用能力声明，**不在 Windows 保证面内**：
+原生 Windows 是唯一受支持的开发平台。`dry` 已支持真实扫描（#122）；以下保留能力当前仍按 POSIX 专用能力声明，**不在 Windows 保证面内**：
 
 | 子命令 | Windows 上的行为 | 显式跳过 |
 |---|---|---|
-| `lua tools/cli.lua dry`（结构重复检测） | 打印 `status=unavailable` 并退 3；不安装工具、不运行、不报通过 | `--skip-if-unavailable` → `status=skipped` 退 0 |
-| `lua tools/cli.lua acceptance-mutate`（中文验收变异） | 同上 | 同上 |
+| `lua tools/cli.lua acceptance-mutate`（中文验收变异） | 打印 `status=unavailable` 并退 3；不安装工具、不运行、不报通过 | `--skip-if-unavailable` → `status=skipped` 退 0 |
 
 - 三态可区分：不可用（退 3）/ 显式跳过（退 0，`status=skipped`）/ 真实失败（退 1 或用法错误退 2）。跳过不等于通过——它只记录「这条平台上没有结果」。
 - 声明真源是 `tools/foundation/platform_boundary.lua`；契约细节见 `tools/specs/dry4lua.prompt` 与 `tools/specs/acceptance4lua.prompt`。
-- 默认硬门禁（slim `verify`、`verify --tooling`、`lua tools/cli.lua acceptance`）**不依赖**这两条能力，也不允许用诊断替代本应实际执行的 lint 或架构 guard。
+- 默认硬门禁（slim `verify`、`verify --tooling`、`lua tools/cli.lua acceptance`）**不依赖**这些软车道能力，也不允许用诊断替代本应实际执行的 lint 或架构 guard。
 - 仍在保证面内：显式验收解析/IR 入口 `tools/packages/acceptance/cli/{parser,generator,ir_dry}.lua` 与 `lua tools/cli.lua acceptance`。
 - 工具自举的网络/下载类失败（#112：解析上游 HEAD、拉源码、luarocks 构建/安装时下载失败）沿用同一「不可用」：`spec-lane`（acceptance/tooling）、`lint` 与 acceptance 面入口（`lua tools/cli.lua acceptance` 的 regenerate 步骤、显式 parser/generator/ir_dry 入口，#114）退 3，stderr 打印 `status=unavailable tool=<名> step=<步>`，不跑测试、不计 failed；`verify` 把退 3 的车道标 `UNAVAILABLE`、计 `unavailable=K`，整体退 3（有真实失败则退 1），绝不退 0。看到退 3 先查网络再重跑，不要当测试回归排查；锁文件缺项、上游仓库不存在、编译/构建错误与认不出的报错仍退 1。分类真源是 `tools/foundation/tool_availability.lua`。
 

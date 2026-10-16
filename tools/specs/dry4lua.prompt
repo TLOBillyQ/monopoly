@@ -10,11 +10,12 @@ CLI contract:
 - Supports `--threshold N`, `--min-lines N`, `--min-nodes N`, `--limit N`, `--json`, `--text`, and `--help`.
 - Exit codes follow `tools/cli.lua`: 0 ok / 1 business failure / 2 usage error / 3 unavailable.
 
-Windows guarantee boundary (#96, ADR 0066):
-- Dry is currently declared a POSIX-only capability, and native Windows is the only supported dev platform. On Windows a request is reported as unavailable *before* any tool install or spawn: exit code 3, `status=unavailable` on stderr, no scan, no result. It must never be reported as a pass — upstream's file discovery (`find ... -name '*.lua'` plus `2>/dev/null` in `dry4lua/analysis.lua collect_files`) yields zero candidates under cmd.exe and upstream still exits 0, which reads as "no duplication found" when in fact nothing was scanned.
-- `--skip-if-unavailable` is the explicit opt-in that records the skip: exit code 0, `status=skipped` on stdout. A skip is not a pass; it means the capability produced no result on this platform. The flag is consumed by `foundation.platform_boundary` and is never forwarded upstream.
-- Dry is a soft lane, never part of a hard gate: slim `verify`, `verify --tooling` and `lua tools/cli.lua acceptance` do not depend on it.
-- Supported subset on native Windows: `--help` (exit 0) and the boundary diagnostic above. Everything else (real duplicate scanning, `--json`/`--text`/`--limit` output) is outside the guarantee surface.
+Native Windows contract (#122, ADR 0066):
+- Dry scans on native Windows (PowerShell 7 and cmd.exe); it is no longer in the platform boundary capability table. Upstream `dry4lua.analysis.collect_files(paths)` uses luafilesystem for recursive discovery: sorted `.lua` regular files only, no symlink traversal, no external `find`, shell or `/dev/null`. Discovery failures are explicit errors. Fixes live upstream at `qinyuanj/dry4lua`; this project does not patch or fork the tool.
+- The runner reports `[dry] candidate_files=N` on stderr before scanning, preserving upstream text/JSON stdout. An effective result requires N > 0 and a completed scan. Missing paths and targets with zero Lua files exit 1; they never produce a successful no-duplicates report. Duplicate findings remain advisory and exit 0.
+- Tool bootstrap network/download failures use `foundation.tool_availability` (#112): exit 3, stderr `status=unavailable tool=dry4lua step=<resolve|fetch|build>`, no scan. Other bootstrap failures exit 1. The platform boundary module and its skip mechanism remain available to other capabilities; dry has no platform skip.
+- `tools/tools.lock` follows upstream HEAD. Ensure resolves the GitHub URL and reclones when the installed commit differs; `.toolcache/resolved-tools.tsv` caches HEAD for 24 hours. Invalidate the dry4lua row to force a refresh after an upstream fix. Stale source checkouts pointing at the old Gitea are replaced on reinstall.
+- Dry is a soft lane, never part of a hard gate: slim `verify`, `verify --tooling` and `lua tools/cli.lua acceptance` do not depend on its findings. Tooling tests exercise real scans, including a fixed duplicate pair under `tools/packages/dry/test/fixtures/duplicate_pair` and a non-empty `src/` candidate set.
 
 Algorithm requirements:
 - Parse Lua source into an AST.

@@ -1,7 +1,7 @@
 -- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0066)。
 --
--- 背景:ADR 0066 把开发平台收窄为原生 Windows,但 dry(结构重复检测)与
--- acceptance-mutate(中文验收变异)这两件保留能力当前仍按 POSIX 专用能力声明。
+-- 背景:ADR 0066 把开发平台收窄为原生 Windows,但 acceptance-mutate(中文验收变异)
+-- 这件保留能力当前仍按 POSIX 专用能力声明(dry 已于 #122 移植,撤出本表)。
 -- 收窄之后它们的失败形态从「红」变成「假绿」——上游链路在 cmd.exe 上扫不到候选、
 -- 读不到 job,却照旧退 0 报「没有重复」/退 1 报一条不相干的探针误诊。把它留给
 -- 各 CLI 自己判断「平台行不行」,就会分叉出四份口径(两个包 × CLI 形态/脚本形态),
@@ -41,17 +41,7 @@ boundary.UNAVAILABLE_EXIT_CODE = 3
 boundary.SKIPPED_EXIT_CODE = 0
 
 -- 声明的 POSIX 专用能力表。reason 是取证过的机制,不是泛泛的「不支持」。
-local _DECLARED = {
-  ["dry"] = {
-    id = "dry",
-    title = "结构重复检测(dry4lua)",
-    reason = table.concat({
-      "上游 dry4lua 用 POSIX `find ... -name '*.lua'` 与 `2>/dev/null` 发现候选文件",
-      "(dry4lua/analysis.lua collect_files);cmd.exe 把 dev\\null 当路径而失败,",
-      "于是候选为空、上游照旧静默退回 0 —— 一次扫描都没跑却报通过。",
-    }),
-  },
-}
+local _DECLARED = {}
 
 -- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/"),
 -- 只用 Lua 标准库判定,不依赖 sh / uname / 环境变量。
