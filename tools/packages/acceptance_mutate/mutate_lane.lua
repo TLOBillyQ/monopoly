@@ -62,10 +62,10 @@ local function _die(headline, detail)
 end
 
 -- 探针跑的就是本次真要变异的 feature:不额外钉死某个样例文件。
-local function _feature_from_args(args)
-  for index, value in ipairs(args) do
+local function _feature_from_args(values)
+  for index, value in ipairs(values) do
     if value == "--feature" then
-      return args[index + 1] or DEFAULT_FEATURE
+      return values[index + 1] or DEFAULT_FEATURE
     end
     local inline = tostring(value):match("^%-%-feature=(.+)$")
     if inline ~= nil then
