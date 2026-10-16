@@ -37,11 +37,11 @@ local function _run_mutator(tmp_dir, options)
   local stdout_path = path_lib.join_path(tmp_dir, options.name .. "_stdout.txt")
   local stderr_path = path_lib.join_path(tmp_dir, options.name .. "_stderr.txt")
   local args = {
-    lua54.lua54_bin(), shell_lib.shell_quote("tools/packages/acceptance_mutate/mutator.lua"),
-    "--feature", shell_lib.shell_quote(options.feature_path),
-    "--work-dir", shell_lib.shell_quote(path_lib.join_path(tmp_dir, options.name .. "_work")),
-    "--runner-worker", shell_lib.shell_quote(
-      lua54.lua54_bin() .. " tools/packages/acceptance/runner_worker.lua"),
+    lua54.lua54_bin(), "tools/packages/acceptance_mutate/mutator.lua",
+    "--feature", options.feature_path,
+    "--work-dir", path_lib.join_path(tmp_dir, options.name .. "_work"),
+    "--runner-worker",
+    shell_lib.shell_quote(lua54.lua54_bin()) .. " tools/packages/acceptance/runner_worker.lua",
     "--json",
   }
   if options.workers ~= nil then
@@ -50,9 +50,9 @@ local function _run_mutator(tmp_dir, options)
   end
   if options.status_interval ~= nil then
     args[#args + 1] = "--status-interval"
-    args[#args + 1] = shell_lib.shell_quote(options.status_interval)
+    args[#args + 1] = options.status_interval
   end
-  local command = table.concat(args, " ")
+  local command = shell_lib.build_command(args)
     .. " > " .. shell_lib.shell_quote(stdout_path)
     .. " 2> " .. shell_lib.shell_quote(stderr_path)
   local result = proc_lib.run_command("(" .. command .. ")", { cwd = "." })
