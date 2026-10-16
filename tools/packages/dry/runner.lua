@@ -5,35 +5,62 @@ local bootstrap_env, bootstrap = _sb.install("tools/packages/dry", _self)
 
 local is_module = ... == "packages.dry.runner"
 
--- 平台保证边界(#96):脚本形态与 packages.dry.cli 走同一份声明,且判定必须
--- 发生在 ensure_tool 之前 —— 否则会先装一遍 POSIX 专用工具,再让上游的
--- `find` + `2>/dev/null` 静默零候选退 0,把边界故障报成「没有重复」。
--- 模块形态不必在此判定:唯一装载方 packages.dry.cli 已经先判过了。
-local platform_boundary = require("foundation.platform_boundary")
-local verdict = nil
-if not is_module then
-  for _, value in ipairs(arg or {}) do
-    if value == "--help" or value == "-h" then
-      io.write(require("packages.dry.cli").usage())
-      os.exit(0)
+-- #122:上游 dry4lua 的文件发现已改为纯 Lua,dry 在原生 Windows 上真实扫描,
+-- 不再经平台边界。三种结局互相可辨:
+--   * 有效结果:候选文件数 > 0,上游扫描并报告(退 0);
+--   * 不可用:自举的网络/下载类失败(#112 口径),stderr status=unavailable 退 3;
+--   * 真实失败:自举的其余失败、路径不存在、目标下零个 .lua 候选文件(退 1)。
+-- 候选文件数写 stderr(candidate_files=N),不污染 --json 的 stdout;零候选不许
+-- 退 0 —— 那正是旧形态的「空扫描假绿」。
+
+local function _ensure_dry4lua()
+  local ok, err, unavailable = bootstrap.ensure_tool("dry4lua", bootstrap_env)
+  if unavailable ~= nil then
+    local availability = require("foundation.tool_availability")
+    return require("foundation.platform_boundary").emit(availability.verdict(unavailable, "dry"))
+  end
+  if not ok then
+    io.stderr:write("[dry] " .. tostring(err) .. "\n")
+    return 1
+  end
+  return nil
+end
+
+local function run(args)
+  local failed = _ensure_dry4lua()
+  if failed ~= nil then
+    return failed
+  end
+  local cli = require("dry4lua.cli")
+  local analysis = require("dry4lua.analysis")
+
+  local options = cli.parse_args(args)
+  if not options.help then
+    local files, err = analysis.collect_files(options.paths)
+    if files == nil then
+      io.stderr:write("[dry] " .. tostring(err) .. "\n")
+      return 1
+    end
+    io.stderr:write("[dry] candidate_files=" .. #files .. "\n")
+    io.stderr:flush()
+    if #files == 0 then
+      io.stderr:write("[dry] 目标下没有 .lua 候选文件,本次未扫描任何函数;这不是「没有重复」。\n")
+      return 1
     end
   end
-  verdict = platform_boundary.evaluate("dry", arg or {})
-  if verdict.status ~= nil then
-    os.exit(platform_boundary.emit(verdict))
+  return cli.run(args)
+end
+
+-- 模块形态(#322):供 packages.dry.cli 经 foundation.tool_cli 进程内直调;
+-- dry4lua.cli.run(args) 返回数字退出码,无 env 契约,env 形参接收后忽略。
+if is_module then
+  return { run = function(args) return run(args or {}) end }
+end
+
+for _, value in ipairs(arg or {}) do
+  if value == "--help" or value == "-h" then
+    io.write(require("packages.dry.cli").usage())
+    os.exit(0)
   end
 end
-
-assert(bootstrap.ensure_tool("dry4lua", bootstrap_env))
-
-local cli = require("dry4lua.cli")
-
--- 模块形态(#322):供 packages.dry.cli 经 foundation.tool_cli 进程内直调,
--- bootstrap + ensure_tool 只在本文件顶部做一次(原 cli 侧 _bootstrap_dry_tool
--- 重做一遍的双重 bootstrap 形态已消亡)。dry4lua.cli.run(args) 返回数字退出码,
--- 无 env 契约,env 形参接收后忽略。
-if is_module then
-  return { run = function(args) return cli.run(args or {}) end }
-end
-
-os.exit(cli.run(verdict.args))
+os.exit(run(arg or {}))

@@ -10,15 +10,11 @@
 -- (原 cli 侧重做的双重 bootstrap 形态已随 #322 消亡),runner 同时保留
 -- CLI 脚本形态,供 verify/lint 类直接以入口引用。
 --
--- 平台保证边界(#96):dry 当前按 POSIX 专用能力声明,原生 Windows 上不可用。
--- 判定与诊断收在 foundation.platform_boundary 一处,且必须发生在 tool_cli.run
--- 之前 —— runner 顶部的 ensure_tool 会先从 tools.lock 的上游仓库装工具,再让上游的
--- `find` + `2>/dev/null` 扫描静默零候选退 0;把边界挡在装工具之前,才不会
--- 出现「一次扫描都没跑却报通过」。
+-- #122:上游文件发现已改为纯 Lua,dry 撤出平台边界(#96),原生 Windows 上真实
+-- 扫描;有效结果 / 不可用 / 真实失败三态由 runner 判定。
 local M = {}
 
 local tool_cli = require("foundation.tool_cli")
-local platform_boundary = require("foundation.platform_boundary")
 
 local RUN_OPTS = {
   runner_module = "packages.dry.runner",
@@ -32,11 +28,10 @@ function M.usage()
     "结构重复检测(软车道,dry4lua):抽函数 / 重构前扫候选;选项经 args 直通。",
     "详细语义见 dry skill 与 tools/packages/dry/runner.lua。",
     "",
-    "平台保证边界(#96 / ADR 0066):本能力当前按 POSIX 专用能力声明,",
-    "原生 Windows 不在保证面内 —— 请求时打印 status=unavailable 并退 3,",
-    "不安装工具、不运行、不报通过(退出码约定:0 成功 / 1 业务失败 / 2 用法错误 / 3 不可用)。",
-    "确认边界后要显式跳过,加 --skip-if-unavailable:打印 status=skipped 并退 0;",
-    "它记录的是「不在这条平台上跑」,不代表检测通过。",
+    "原生 Windows 上真实扫描(#122)。stderr 先报 [dry] candidate_files=N(实际扫描的",
+    ".lua 文件数);N=0 或路径不存在是真实失败、退 1,不会报成「没有重复」。",
+    "退出码:0 有效结果 / 1 真实失败 / 2 用法错误 / 3 不可用(工具自举的网络/下载",
+    "类失败,stderr 打 status=unavailable tool=dry4lua step=<步>,未扫描)。",
     "",
   }, "\n") .. "\n"
 end
@@ -48,11 +43,7 @@ function M.main(args, env)
       return 0
     end
   end
-  local verdict = platform_boundary.evaluate("dry", args)
-  if verdict.status ~= nil then
-    return platform_boundary.emit(verdict)
-  end
-  return tool_cli.run(RUN_OPTS, verdict.args, env)
+  return tool_cli.run(RUN_OPTS, args, env)
 end
 
 return M
