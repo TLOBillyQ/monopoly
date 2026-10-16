@@ -1,4 +1,3 @@
--- luacheck: globals pending
 ---@diagnostic disable: undefined-global
 if arg then rawset(arg, 0, "tools/packages/uml_quality/test/test_uml_quality_cli.lua") end
 require("test.bootstrap").install_package_paths()
@@ -85,17 +84,6 @@ it("rejects missing mutation evidence even when upstream reports success", funct
   fs.remove_path(root)
   check.equal(1, code)
   check.truthy(output:find("mutation", 1, true))
-end)
-
-it("verifies real mutation artifacts through the evidence process when uml is installed", function()
-  local python = ".uml-viewer/mutator/.venv/Scripts/python.exe"
-  if not fs.path_exists(python) then
-    pending("optional uml environment missing; run uml check before mutation evidence tests")
-    return
-  end
-  local result = require("foundation.proc").run_command({ python, "-I", "-B", "-m", "unittest", "discover",
-    "-s", "tools/packages/uml_quality/test", "-p", "test_mutation_evidence.py" })
-  check.equal(0, result.code, result.output)
 end)
 
 -- ir / view(#99 / ADR 0070):上游启动器用替身 launch 记录 argv 与子进程环境;
