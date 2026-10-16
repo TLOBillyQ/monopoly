@@ -56,6 +56,18 @@ it("distinguishes success failure missing command and empty output", function()
   end)
 end)
 
+it("exports opts.env to lane command trees", function()
+  fixture(function(root)
+    local reader = script(root, "env reader",
+      'io.write(tostring(os.getenv("MONOPOLY_TEST_ENV_124") or "missing"))')
+    local ok, results = parallel.run({
+      { label = "env", cmd = shell.build_command({ "lua", reader }) },
+    }, { stream = false, timeout = 20, env = { MONOPOLY_TEST_ENV_124 = "value with space 100%" } })
+    check.is_true(ok)
+    check.same("value with space 100%", results[1].output)
+  end)
+end)
+
 it("parallel and serial preserve order results and Chinese arguments", function()
   fixture(function(root)
     local file = script(root, "echo args", 'for i=1,#arg do print(arg[i]) end; os.exit(tonumber(arg[1]))')

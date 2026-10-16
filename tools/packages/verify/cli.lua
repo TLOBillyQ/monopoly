@@ -11,6 +11,8 @@ local M = {}
 local ENTRY = "tools/packages/verify/main.lua"
 
 -- 原生 argv 转发，与 foundation 的 cmd quoting 保持单一真源。
+-- #124:工具发现(解释器全路径 + luarocks.exe)在这里解析一次,经 options.env
+-- 导出给编排子进程;车道与测试子进程树继承后不再各自重复 where 探测。
 local function _forward(args)
   require("test.bootstrap").install_package_paths()
   local proc = require("foundation.proc")
@@ -19,7 +21,8 @@ local function _forward(args)
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
   end
-  local result = proc.run_command(command)
+  local discovery = require("foundation.bootstrap").tool_discovery_env()
+  local result = proc.run_command(command, discovery ~= nil and { env = discovery } or nil)
   io.write(result.output or "")
   return result.code or (result.ok and 0 or 1)
 end

@@ -187,7 +187,7 @@ end
 -- tap_summary.compress —— 计数(ok N / not ok N)与失败明细口径和串行路径
 -- 一致,ok 编号跨 worker 重排不影响计数。任何 lane 非零退出都算失败
 -- (与串行 result.code 语义对齐)。
-local function _run_sharded(options, profile, files)
+local function _run_sharded(options, profile, files, spawn_env)
   local run_lanes = options.run_lanes or parallel_lanes.run
   local worker_count = _resolve_workers(#files, options)
   local lane_specs, measured_paths = {}, {}
@@ -203,7 +203,7 @@ local function _run_sharded(options, profile, files)
     end
   end
 
-  local _, results = run_lanes(lane_specs, { stream = false })
+  local _, results = run_lanes(lane_specs, { stream = false, env = spawn_env })
   _merge_durations(profile, files, measured_paths)
 
   local raw_parts = {}
@@ -255,6 +255,10 @@ function M.run(options)
   local prefix = runner_bin.argv_prefix()
   local run_command = options.run_command or proc_lib.run_command
 
+  -- #124:工具发现一次解析后随 spawn 导出;作为 verify 车道运行时进程环境已带
+  -- 导出值,这里的解析只是复核。子进程树继承后不再各自重复 where/luarocks 探测。
+  local spawn_env = bootstrap.tool_discovery_env()
+
   -- 分片判定:命名 profile(非目录窄点跑)、文件数超阈值、worker > 1、非
   -- --verbose 才走并行;否则原单进程路径。
   local roots = _profile_roots(options.profile)
@@ -277,7 +281,7 @@ function M.run(options)
     command[#command + 1] = "--output=TAP"
     command[#command + 1] = "--run"
     command[#command + 1] = options.profile
-    local result = run_command(command)
+    local result = run_command(command, spawn_env ~= nil and { env = spawn_env } or nil)
     local raw = tostring(result.output or "")
 
     local compressed, passed, failed = M.compress_tap(raw)
@@ -288,7 +292,7 @@ function M.run(options)
       code = code, passed = passed, failed = failed, discovered = #files }
   end
 
-  return _run_sharded(options, options.profile, files)
+  return _run_sharded(options, options.profile, files, spawn_env)
 end
 
 function M.main(args)

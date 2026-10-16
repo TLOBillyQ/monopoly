@@ -41,6 +41,14 @@ function proc.run_command(command, options)
   local stdin_path = options and options.stdin_path and path_lib.normalize_path(options.stdin_path) or nil
 
   local setup = ""
+  -- options.env(#124):调用方解析一次的工具发现结果(如钉定的 Lua 5.4 路径)
+  -- 以环境变量导出给子进程,子进程树自动继承,免去每个子进程重复探测。
+  if options and type(options.env) == "table" then
+    local env_lines = shell_lib.build_env_lines(options.env)
+    if env_lines ~= "" then
+      setup = env_lines .. "\r\n"
+    end
+  end
   local command_text = command
   if type(command) == "table" then
     local variables = {}

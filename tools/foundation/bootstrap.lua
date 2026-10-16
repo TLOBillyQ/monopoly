@@ -78,15 +78,72 @@ local function _install_prefix(selected)
   return fallback
 end
 
+-- 裸命令名解析成完整解释器路径(where.exe 首个 .exe 命中);已是路径形态原样返回。
+-- 只供 tool_discovery_env 导出使用,不改变 detect_lua54 自身的候选语义。
+local function _interpreter_path(selected)
+  local normalized = runtime_paths.normalize_path(selected)
+  if normalized:find("/") ~= nil then
+    return normalized
+  end
+  local found = require("foundation.proc").run_command({ "where.exe", selected })
+  if found.ok == true then
+    for line in tostring(found.output or ""):gmatch("[^\r\n]+") do
+      line = runtime_paths.normalize_path(line)
+      if line:lower():match("%.exe$") then
+        return line
+      end
+    end
+  end
+  return selected
+end
+
+-- #124:MONOPOLY_LUAROCKS_EXE 由入口进程解析一次后导出(见 tool_discovery_env),
+-- 子进程直接复用,跳过 `where.exe luarocks.exe` 探测;覆写路径不存在时退回原探测,
+-- 报错语义不变。
+local function _luarocks_exe()
+  local fs_lib = require("foundation.fs")
+  local override = os.getenv("MONOPOLY_LUAROCKS_EXE")
+  if override ~= nil and override ~= "" then
+    override = runtime_paths.normalize_path(override)
+    if fs_lib.path_exists(override) then
+      return override
+    end
+  end
+  local found = require("foundation.proc").run_command({ "where.exe", "luarocks.exe" })
+  local rocks = found.ok and runtime_paths.normalize_path(tostring(found.output):match("[^\r\n]+") or "") or nil
+  if rocks == "" then rocks = nil end
+  rocks = rocks or runtime_paths.join_path(os.getenv("LOCALAPPDATA") or "", "Programs/LuaRocks/bin/luarocks.exe")
+  assert(fs_lib.path_exists(rocks), "native LuaRocks executable missing: " .. rocks)
+  return rocks
+end
+
 local function _luarocks_command(tree)
   local selected = _selected_interpreter()
   local prefix = _install_prefix(selected)
   assert(prefix ~= nil, "cannot resolve selected Lua install prefix: " .. tostring(selected))
-  local found = require("foundation.proc").run_command({ "where.exe", "luarocks.exe" })
-  local rocks = found.ok and tostring(found.output):match("[^\r\n]+") or nil
-  rocks = rocks or runtime_paths.join_path(os.getenv("LOCALAPPDATA") or "", "Programs/LuaRocks/bin/luarocks.exe")
-  assert(require("foundation.fs").path_exists(rocks), "native LuaRocks executable missing: " .. rocks)
-  return { rocks, "--tree", tree, "--lua-version", "5.4", "--lua-dir", prefix }
+  return { _luarocks_exe(), "--tree", tree, "--lua-version", "5.4", "--lua-dir", prefix }
+end
+
+-- #124:工具发现结果一次解析、按环境变量导出。入口(verify / spec-lane)在 spawn
+-- 子进程前调用,经 proc.run_command 的 options.env 与 parallel_lanes 的 opts.env
+-- 传入,整棵子进程树继承:子进程 foundation.lua54 走 LUA54_BIN 路径覆写
+-- (path_exists 检查 + 一次 -v 验证),不再逐个 `where.exe` 探测;bootstrap 的
+-- luarocks 命令直接读 MONOPOLY_LUAROCKS_EXE。解析失败返回 nil,调用方不导出,
+-- 子进程退回原有的逐进程探测(行为与旧版一致)。
+function bootstrap.tool_discovery_env()
+  local selected = _selected_interpreter()
+  local exe = _interpreter_path(selected)
+  if _install_prefix(exe) == nil then
+    return nil
+  end
+  local ok, rocks = pcall(_luarocks_exe)
+  if not ok then
+    return nil
+  end
+  return {
+    LUA54_BIN = exe,
+    MONOPOLY_LUAROCKS_EXE = rocks,
+  }
 end
 
 local function _rocks_run(tree, args, opts)

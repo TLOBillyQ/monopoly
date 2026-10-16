@@ -40,6 +40,27 @@ function shell.build_command(args)
   return table.concat(parts, " ")
 end
 
+-- `set "NAME=value"` 赋值行(#124):引用形态下 cmd 特殊字符是字面量,只有 %
+-- 在批处理里要写成 %%;值不允许换行,键限定为合法环境变量名。proc 与
+-- parallel_lanes 共用这一处,保证导出语义单一。
+function shell.build_env_assignment(name, value)
+  local key = tostring(name or "")
+  assert(key:match("^[A-Za-z_][A-Za-z0-9_]*$") ~= nil, "Invalid environment variable name: " .. key)
+  local text = tostring(value or "")
+  assert(not text:find("[\r\n%z]"), "Environment values cannot contain NUL or newlines")
+  return 'set "' .. key .. "=" .. text:gsub("%%", "%%%%") .. '"'
+end
+
+-- 环境变量表 → 批处理赋值行序列(无尾随换行);nil/空表返回 ""。
+function shell.build_env_lines(env)
+  local lines = {}
+  for key, value in pairs(env or {}) do
+    lines[#lines + 1] = shell.build_env_assignment(key, value)
+  end
+  table.sort(lines)
+  return table.concat(lines, "\r\n")
+end
+
 function shell.wrap_command_with_cwd(command, cwd)
   local cwd_path = cwd and path_lib.normalize_path(cwd) or nil
   if cwd_path == nil or cwd_path == "" then
