@@ -4,15 +4,14 @@
 --   M.main(args, env) -> 退出码
 --   M.usage()         -> 完整 usage 文本
 --
--- 质量算法、派发优先级(operations > standardTools > Clojure alias)与 validResult
--- 判定全在 .uml-viewer/uml-viewer/scripts/uml-command.ps1;本包只做两件事:
+-- 质量算法与派发优先级在邻接 uml-viewer;本包钉环境、预检并独立核验变异结果:
 --   1. 预检:Lua 模块只从项目 .toolcache/luarocks 解析(不借全局 %APPDATA%\luarocks
 --      tree)、PowerShell 7、uml-viewer 检出、uml-quality.json(用 uml-viewer 自己的
 --      读取器校验)、crapper/mutator 的 Python 3.11+ venv。任一不过退 1,先删陈旧的
 --      .uml-viewer/quality-result.json,不起工具。
 --   2. 派发:在钉死 LUA_PATH/LUA_CPATH/PATH 的 cmd 批处理里跑 uml-command.ps1,
---      退出码原样回传(crap 0/2、mutate 0/3 是有效结果,不改写成 0/1)。
--- 预检失败退 1 而不是 3:3 是 mutate 的有效结果码(存活突变),不能复用为「不可用」。
+--      crap 退出码原样回传;mutate 独立按目标核验,有效结果/no-sites 退 0,未执行退 1。
+-- 预检失败退 1;上游 mutate 的 3(存活突变)只在独立核验通过后归一为 0。
 --
 -- ir / view(#99 / ADR 0070):
 --   ir   从 arch_policy 投影 + docs/architecture.proposals.edn 生成仓根 policy.edn
@@ -59,7 +58,9 @@ function M.usage()
     "crap    预检后经 uml-command.ps1 跑 crapper(standardTools,--full-tree)。",
     "        退出码原样回传:0/2 有效结果,其余失败。",
     "mutate  预检后经 uml-command.ps1 跑 mutator;args 原样转发(目标文件或 --changed)。",
-    "        退出码原样回传:0/3 有效结果,其余失败。",
+    "        独立核验每个目标:本轮 .edn 含变异统计 -> 0,输出变异/杀死/存活数;",
+    "        成功扫描证明无站点 -> 0,status=no-sites;缺失/旧产物/无统计 -> 1。",
+    "        上游 validResult 仅作诊断;扫描、解析或上游执行失败 -> 1。",
     "ir      arch_policy 投影 + " .. proposals.OVERRIDE_PATH .. " 的 :proposals/:omit",
     "        生成仓根 policy.edn(不入库),再经 uml-command.ps1 ir 写 " .. _IR_OUT .. "。",
     "        覆盖文件缺失/为空视为无推演;非法或含多余键退 1,不写 policy.edn。",
@@ -244,6 +245,36 @@ local function _ir_policy(root)
   return proposals.merge(arch_policy.project_uml_policy(policy), fs.read_raw(root .. "/" .. proposals.OVERRIDE_PATH), _IR_OUT)
 end
 
+local function _mutation_probe(root, state, args)
+  local args_file = env_lib.make_temp_path("uml_mutation_args", ".json")
+  local targets_file = env_lib.make_temp_path("uml_mutation_targets", ".json")
+  local manifest = env_lib.make_temp_path("uml_mutation_manifest", ".json")
+  local forward = {}
+  for index = 2, #args do forward[#forward + 1] = args[index] end
+  fs.write_file(args_file, require("foundation.json_writer").encode(forward))
+  local result = proc.run_command({ "pwsh", "-NoProfile", "-File",
+    root .. "/tools/packages/uml_quality/mutation_targets.ps1", "-Root", root,
+    "-Scripts", state.scripts, "-ArgsFile", args_file, "-OutFile", targets_file })
+  fs.remove_path(args_file)
+  if result.output and result.output ~= "" then io.write(result.output) end
+  if not result.ok then
+    fs.remove_path(targets_file)
+    io.stderr:write("uml: mutation target selection failed\n")
+    return nil
+  end
+  local argv = { root .. "/.uml-viewer/mutator/.venv/Scripts/python.exe", "-I",
+    root .. "/tools/packages/uml_quality/mutation_evidence.py", "prepare", root, targets_file, manifest }
+  local prepared = proc.run_command(argv, { cwd = root })
+  fs.remove_path(targets_file)
+  if not prepared.ok then
+    fs.remove_path(manifest)
+    io.stderr:write("uml: mutation preparation failed: " .. tostring(prepared.output) .. "\n")
+    return nil
+  end
+  argv[4] = "verify"
+  return { argv = argv, manifest = manifest }
+end
+
 function M.main(args, env)
   args = args or {}
   env = env or {}
@@ -289,8 +320,20 @@ function M.main(args, env)
     return launch(root, state.env_list, argv)
   end
   if op == "view" then return launch(root, state.env_list, argv) end
+  local mutation
+  if op == "mutate" then
+    mutation = _mutation_probe(root, state, args)
+    if mutation == nil then return 1 end
+  end
   local code = launch(root, state.env_list, argv)
   _echo_result(root)
+  if mutation then
+    local result = proc.run_command(mutation.argv, { cwd = root })
+    fs.remove_path(mutation.manifest)
+    io.write(result.output or "")
+    if not result.ok or (code ~= 0 and code ~= 3) then return 1 end
+    return 0
+  end
   return code
 end
 
