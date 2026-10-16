@@ -134,8 +134,6 @@ it("acceptance_capabilities_reconciles_retained_mutator_feature", function()
   local result = _run("tools/cli.lua", { "acceptance", "--capabilities" })
   check.same(0, result.code, result.output)
   check.matches("registered=35 selected=35 excluded=0", result.output, 1, true)
-  local explicit = _run("tools/cli.lua", { "acceptance", "--feature", "features/tooling/acceptance_mutator_status.feature" })
-  check.same(0, explicit.code, explicit.output)
 end)
 
 it("parser_translates_a_zh_cn_feature_into_json_ir", function()

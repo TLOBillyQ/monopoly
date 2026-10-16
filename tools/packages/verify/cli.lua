@@ -52,8 +52,7 @@ function M.usage()
     "",
     "pipeline 不包含(按需走单工具):uml crap / uml mutate / dry / acceptance;",
     "acceptance 需单独 `lua tools/cli.lua acceptance`,dry 与 acceptance-mutate 是软车道,",
-    "且当前按 POSIX 专用能力声明:原生 Windows 上请求退 3(status=unavailable),",
-    "不在 slim / --tooling / acceptance 这些最低保证面内(#96 / ADR 0066)。",
+    "两条软车道均支持原生 Windows;tooling/acceptance 中相关探针实际执行。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
   }, "\n") .. "\n"

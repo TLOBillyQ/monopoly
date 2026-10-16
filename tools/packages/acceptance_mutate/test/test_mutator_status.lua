@@ -76,7 +76,7 @@ end
 -- #361 P4:原差分跳过汇报 e2e 已删——与 test_mutator_level 集成层重复;
 -- e2e 层独有价值仅「stderr 不污染 stdout JSON」与「jsonl 按 workers 拆分」,
 -- 即下方两例。
--- POSIX-only examples are excluded, never counted as passed on Windows.
+-- serial 与双 worker 均实际执行。
 
 local function
 writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
@@ -90,7 +90,7 @@ writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
     status_interval = "30s",
   })
 
-  check.is_true(run.result.ok, run.stderr)
+  check.is_true(run.result.ok, run.stderr .. run.stdout)
   check.is_table(json.decode(run.stdout))
   check.is_nil(run.stdout:find("^status%s+"))
   check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json")))
@@ -127,7 +127,7 @@ splits_runner_worker_jobs_across_requested_workers(_self)
     workers = 2,
   })
 
-  check.is_true(run.result.ok, run.stderr)
+  check.is_true(run.result.ok, run.stderr .. run.stdout)
   check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-1.jsonl")))
   check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-2.jsonl")))
 end

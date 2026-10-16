@@ -15,9 +15,7 @@
 local bootstrap = dofile((debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/")):match("^(.*)/[^/]+$") .. "/../../foundation/bootstrap.lua")
 local env = bootstrap.install(debug.getinfo(1, "S").source)
 
--- 平台保证边界(#96):与 packages.acceptance_mutate.cli 同一份声明,判定必须
--- 发生在 ensure_tool 之前 —— 否则会先装一遍工具,再让探针链给出「runner_worker
--- 没吐出可解析的 job 响应」这条假诊断,把原生 Windows 的边界故障报成变异结论。
+-- 兼容消费旧平台跳过开关;自举网络失败仍保留退 3。
 local platform_boundary = require("foundation.platform_boundary")
 for _, value in ipairs(arg or {}) do
   if value == "--help" or value == "-h" then
@@ -188,11 +186,11 @@ local parts = {
   APS_LUA,
   "tools/packages/acceptance_mutate/mutator.lua",
   "--runner-worker",
-  shell_lib.shell_quote(APS_LUA .. " tools/packages/acceptance/runner_worker.lua"),
+  shell_lib.shell_quote(APS_LUA) .. " tools/packages/acceptance/runner_worker.lua",
 }
 if not _has_skip_columns(args) then
   parts[#parts + 1] = "--skip-columns"
-  parts[#parts + 1] = shell_lib.shell_quote(DEFAULT_SKIP_COLUMNS)
+  parts[#parts + 1] = DEFAULT_SKIP_COLUMNS
 end
 -- acceptance4lua 的 mutator 现在把 --feature 定为必填;车道保留原来的默认
 -- feature 行为,调用方没传就由这里补上。
@@ -205,11 +203,12 @@ for _, value in ipairs(args) do
 end
 if not has_feature then
   parts[#parts + 1] = "--feature"
-  parts[#parts + 1] = shell_lib.shell_quote(DEFAULT_FEATURE)
+  parts[#parts + 1] = DEFAULT_FEATURE
 end
 for _, value in ipairs(args) do
-  parts[#parts + 1] = shell_lib.shell_quote(value)
+  parts[#parts + 1] = value
 end
 
-local ok, _, code = os.execute(table.concat(parts, " "))
-os.exit((ok == true or code == 0) and 0 or 1)
+local ok, how, code = os.execute('cmd.exe /d /s /c "' .. shell_lib.build_command(parts) .. '"')
+local _, exit_code = shell_lib.exit_status(ok, how, code)
+os.exit(exit_code)

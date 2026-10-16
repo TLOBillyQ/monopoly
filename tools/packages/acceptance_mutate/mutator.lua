@@ -43,8 +43,5 @@ end
 
 -- 经正式适配接口复用项目的原生 Windows Job 车道。
 os.exit(require("acceptance4lua.cli.mutator").main(args, {
-  parallel_run = function(lanes, options)
-    local ok, results = require("foundation.parallel_lanes").run(lanes, options)
-    return ok, nil, results
-  end,
+  parallel_run = require("foundation.parallel_lanes").run,
 }))
