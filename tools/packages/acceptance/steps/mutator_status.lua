@@ -57,21 +57,21 @@ local function _run_gherkin_mutator(world, options)
   local args = {
     -- 与 mutate_lane 同用 Lua 5.4 解释器。
     lua54.lua54_bin(),
-    shell_lib.shell_quote(path_lib.join_path(root, "tools/packages/acceptance_mutate/mutator.lua")),
-    "--feature", shell_lib.shell_quote(world.mutator_status_feature),
-    "--work-dir", shell_lib.shell_quote(world.mutator_status_work_dir),
-    "--runner-worker", shell_lib.shell_quote(
-      lua54.lua54_bin() .. " " .. path_lib.join_path(root, "tools/packages/acceptance/runner_worker.lua")),
+    path_lib.join_path(root, "tools/packages/acceptance_mutate/mutator.lua"),
+    "--feature", world.mutator_status_feature,
+    "--work-dir", world.mutator_status_work_dir,
+    "--runner-worker", shell_lib.shell_quote(lua54.lua54_bin()) .. " "
+      .. shell_lib.shell_quote(path_lib.join_path(root, "tools/packages/acceptance/runner_worker.lua")),
   }
   if options and options.status_interval ~= nil then
     args[#args + 1] = "--status-interval"
-    args[#args + 1] = shell_lib.shell_quote(options.status_interval)
+    args[#args + 1] = options.status_interval
   end
   if options and options.report_format == "JSON" then
     args[#args + 1] = "--json"
   end
 
-  local command = table.concat(args, " ")
+  local command = shell_lib.build_command(args)
     .. " > " .. shell_lib.shell_quote(world.mutator_status_stdout)
     .. " 2> " .. shell_lib.shell_quote(world.mutator_status_stderr)
   local result = proc_lib.run_command("(" .. command .. ")", { cwd = root })

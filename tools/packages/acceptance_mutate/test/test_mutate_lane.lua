@@ -48,8 +48,8 @@ end
 -- (skipped/total 计数)承接。此处只留探针失败大声退非零的回归钉。
 describe("mutate lane boundary", function()
 
--- Windows 上即使 runner 配置损坏,也先报告平台不可用(#96),不给变异结论。
-it("reports unavailable before probing a broken runner", function()
+-- runner 配置损坏必须报真实基础设施失败,不能伪装成平台不可用。
+it("reports a broken runner as infrastructure failure", function()
   local tmp_dir = _tmp_dir("mutate_lane_broken")
   local feature_path = path_lib.join_path(tmp_dir, "sample.feature")
   _write_sample_feature(feature_path)
@@ -61,10 +61,9 @@ it("reports unavailable before probing a broken runner", function()
     level = "soft",
   })
 
-  check.same(3, result.code, result.output)
-  check.truthy(tostring(result.output):find("status=unavailable", 1, true))
-  check.is_nil(tostring(result.output):find("infrastructure_error", 1, true),
-    "平台不可用要在 runner 探针之前诊断")
+  check.same(1, result.code, result.output)
+  check.is_nil(tostring(result.output):find("status=unavailable", 1, true))
+  check.truthy(tostring(result.output):find("infrastructure_error", 1, true))
 
   fs_lib.remove_path(tmp_dir)
 end)

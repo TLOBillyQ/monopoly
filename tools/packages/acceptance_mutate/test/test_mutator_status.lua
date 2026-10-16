@@ -37,11 +37,11 @@ local function _run_mutator(tmp_dir, options)
   local stdout_path = path_lib.join_path(tmp_dir, options.name .. "_stdout.txt")
   local stderr_path = path_lib.join_path(tmp_dir, options.name .. "_stderr.txt")
   local args = {
-    lua54.lua54_bin(), shell_lib.shell_quote("tools/packages/acceptance_mutate/mutator.lua"),
-    "--feature", shell_lib.shell_quote(options.feature_path),
-    "--work-dir", shell_lib.shell_quote(path_lib.join_path(tmp_dir, options.name .. "_work")),
-    "--runner-worker", shell_lib.shell_quote(
-      lua54.lua54_bin() .. " tools/packages/acceptance/runner_worker.lua"),
+    lua54.lua54_bin(), "tools/packages/acceptance_mutate/mutator.lua",
+    "--feature", options.feature_path,
+    "--work-dir", path_lib.join_path(tmp_dir, options.name .. "_work"),
+    "--runner-worker",
+    shell_lib.shell_quote(lua54.lua54_bin()) .. " tools/packages/acceptance/runner_worker.lua",
     "--json",
   }
   if options.workers ~= nil then
@@ -50,12 +50,12 @@ local function _run_mutator(tmp_dir, options)
   end
   if options.status_interval ~= nil then
     args[#args + 1] = "--status-interval"
-    args[#args + 1] = shell_lib.shell_quote(options.status_interval)
+    args[#args + 1] = options.status_interval
   end
-  local command = table.concat(args, " ")
+  local command = shell_lib.build_command(args)
     .. " > " .. shell_lib.shell_quote(stdout_path)
     .. " 2> " .. shell_lib.shell_quote(stderr_path)
-  local result = proc_lib.run_command(command, { cwd = "." })
+  local result = proc_lib.run_command("(" .. command .. ")", { cwd = "." })
   return {
     result = result,
     stdout = fs_lib.read_file(stdout_path) or "",
@@ -76,7 +76,7 @@ end
 -- #361 P4:原差分跳过汇报 e2e 已删——与 test_mutator_level 集成层重复;
 -- e2e 层独有价值仅「stderr 不污染 stdout JSON」与「jsonl 按 workers 拆分」,
 -- 即下方两例。
--- POSIX-only examples are excluded, never counted as passed on Windows.
+-- serial 与双 worker 均实际执行。
 
 local function
 writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
@@ -90,7 +90,7 @@ writes_status_lines_to_stderr_without_polluting_the_json_report(_self)
     status_interval = "30s",
   })
 
-  check.is_true(run.result.ok, run.stderr)
+  check.is_true(run.result.ok, run.stderr .. run.stdout)
   check.is_table(json.decode(run.stdout))
   check.is_nil(run.stdout:find("^status%s+"))
   check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "status_work/mutations/m1/feature.json")))
@@ -127,7 +127,7 @@ splits_runner_worker_jobs_across_requested_workers(_self)
     workers = 2,
   })
 
-  check.is_true(run.result.ok, run.stderr)
+  check.is_true(run.result.ok, run.stderr .. run.stdout)
   check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-1.jsonl")))
   check.is_true(fs_lib.path_exists(path_lib.join_path(tmp_dir, "workers_work/runner-worker-input-2.jsonl")))
 end

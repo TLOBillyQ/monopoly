@@ -1,5 +1,5 @@
 # language: zh-CN
-# mutation-stamp: sha256=c471d65c02f94245a49fbca9e124c8b3d5c790ad7386f0f32b267fe4ed12593b
+# mutation-stamp: sha256=45d3742e74835eaf3933a21ce7af28270b190d8cf074ab941b6d82af83e1dec6
 # acceptance-mutation-manifest-begin
 # {
 #   "background_hash": "553774f141cd98b72cfeffac54c6cb0bf7ef2134541fa07dbe7a5fba958f6a02",
@@ -18,10 +18,10 @@
 #         "Total": 4
 #       },
 #       "scenario_hash": "7162af13a3eeee134d85ebbc3c78419a94afbbaa8e707dfb04081ca74cc324eb",
-#       "tested_at": "2026-08-26T11:20:35Z"
+#       "tested_at": "2026-10-16T06:17:46Z"
 #     }
 #   ],
-#   "tested_at": "2026-08-26T11:20:35Z",
+#   "tested_at": "2026-10-16T06:17:46Z",
 #   "version": 1
 # }
 # acceptance-mutation-manifest-end

@@ -1,11 +1,7 @@
 -- platform_boundary.lua —— 平台保证边界的唯一真源(#96 / 母规格 #69 / ADR 0066)。
 --
--- 背景:ADR 0066 把开发平台收窄为原生 Windows,但 acceptance-mutate(中文验收变异)
--- 这件保留能力当前仍按 POSIX 专用能力声明(dry 已于 #122 移植,撤出本表)。
--- 收窄之后它们的失败形态从「红」变成「假绿」——上游链路在 cmd.exe 上扫不到候选、
--- 读不到 job,却照旧退 0 报「没有重复」/退 1 报一条不相干的探针误诊。把它留给
--- 各 CLI 自己判断「平台行不行」,就会分叉出四份口径(两个包 × CLI 形态/脚本形态),
--- 于是本模块是这份声明的唯一出处。
+-- dry / acceptance-mutate 已在 #122/#123 恢复原生 Windows,当前声明表为空。
+-- 保留不可用/显式跳过的通用演算,工具网络不可用诊断也复用渲染器。
 --
 -- 三态必须互相可辨(工单验收):不可用 / 显式跳过 / 真实失败。
 --   * 不可用:本平台不在能力的保证面内 → stderr 诊断 + 退出码 3,不安装、不 spawn、
@@ -41,17 +37,7 @@ boundary.UNAVAILABLE_EXIT_CODE = 3
 boundary.SKIPPED_EXIT_CODE = 0
 
 -- 声明的 POSIX 专用能力表。reason 是取证过的机制,不是泛泛的「不支持」。
-local _DECLARED = {
-  ["acceptance-mutate"] = {
-    id = "acceptance-mutate",
-    title = "中文验收变异(acceptance4lua mutator)",
-    reason = table.concat({
-      "车道健康探针链(parser → generator → runner_worker)在原生 Windows 上,",
-      "自举期的子进程会把进程 stdin 抽干,runner_worker 的 io.lines() 读不到任何 job,",
-      "车道只会回报一条「探针读不到 job」的假诊断 —— 把基础设施故障说成变异结论。",
-    }),
-  },
-}
+local _DECLARED = {}
 
 -- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/"),
 -- 只用 Lua 标准库判定,不依赖 sh / uname / 环境变量。
@@ -134,8 +120,8 @@ end
 --   不可用         → { status, exit_code, stream, message, entry };
 --   显式跳过       → { status, exit_code, stream, message, entry }。
 -- platform 显式注入只为单测(纯函数可喂合成平台);生产调用不传,取 host_platform()。
-function boundary.evaluate(id, args, platform)
-  local entry = _DECLARED[id]
+function boundary.evaluate(id, args, platform, declarations)
+  local entry = (declarations or _DECLARED)[id]
   assert(entry ~= nil,
     "platform_boundary: 未登记的能力 id " .. tostring(id)
       .. "(已登记: " .. table.concat(boundary.declared_ids(), ", ") .. ")")
@@ -164,10 +150,7 @@ function boundary.evaluate(id, args, platform)
 end
 
 -- Retained actual engine regressions are explicit capability tests, not native gates.
-boundary.test_capabilities = {
-  ["tools/packages/acceptance_mutate/test/test_mutator_level.lua"] = "acceptance-mutate",
-  ["tools/packages/acceptance_mutate/test/test_mutator_status.lua"] = "acceptance-mutate",
-}
+boundary.test_capabilities = {}
 
 function boundary.test_verdict(path)
   local normalized = tostring(path):gsub("\\", "/")
