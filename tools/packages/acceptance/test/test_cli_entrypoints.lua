@@ -88,13 +88,11 @@ end
 
 describe("acceptance public CLI entrypoints", function()
 
-it("direct_mutator_actual_request_is_unavailable_before_work_is_created", function()
-  _with_sandbox("mutator_unavailable", function(root)
-    local work = path_lib.join_path(root, "must_not_exist")
-    local result = _run(MUTATOR, { "--feature", _sandbox_feature(root), "--work-dir", work })
-    check.same(3, result.code, result.output)
-    check.matches("status=unavailable", result.output, 1, true)
-    check.is_false(fs_lib.path_exists(work))
+it("direct_mutator_missing_feature_is_a_real_failure", function()
+  _with_sandbox("mutator_failure", function(root)
+    local result = _run(MUTATOR, { "--feature", path_lib.join_path(root, "missing.feature"), "--runner-worker", "unused" })
+    check.same(1, result.code, result.output)
+    check.is_nil(result.output:find("status=unavailable", 1, true))
   end)
 end)
 
@@ -135,14 +133,9 @@ end)
 it("acceptance_capabilities_reconciles_retained_mutator_feature", function()
   local result = _run("tools/cli.lua", { "acceptance", "--capabilities" })
   check.same(0, result.code, result.output)
-  check.matches("features/tooling/acceptance_mutator_status.feature", result.output, 1, true)
-  check.matches("test_acceptance_mutator_status_acceptance.lua", result.output, 1, true)
-  check.matches("status=unavailable", result.output, 1, true)
-  check.matches("capability=acceptance-mutate", result.output, 1, true)
-  check.matches("registered=35 selected=34 excluded=1", result.output, 1, true)
+  check.matches("registered=35 selected=35 excluded=0", result.output, 1, true)
   local explicit = _run("tools/cli.lua", { "acceptance", "--feature", "features/tooling/acceptance_mutator_status.feature" })
-  check.same(3, explicit.code, explicit.output)
-  check.matches("status=unavailable", explicit.output, 1, true)
+  check.same(0, explicit.code, explicit.output)
 end)
 
 it("parser_translates_a_zh_cn_feature_into_json_ir", function()
@@ -287,6 +280,41 @@ it("generated_chinese_examples_execute_in_genuine_busted", function()
     local missing = _run("tools/packages/acceptance/execute.lua", { incomplete, ir })
     check.same(1, missing.code, missing.output)
     check.same("infrastructure_error", json.decode(missing.output).outcome)
+  end)
+end)
+
+-- #123:worker 进程先起过自举子进程(Lua 5.4 探测走 run_command),每个 job 又再起执行子进程;
+-- 任何一个子进程抽干继承来的 stdin,后面的 job 就静默丢失。padding 把后续 job 推出
+-- 首个 4 KiB stdin 缓冲区,丢一条就少一条响应。
+it("runner_worker_reads_every_job_after_spawning_bootstrap_children", function()
+  _with_sandbox("worker_stdin", function(root)
+    local feature = path_lib.join_path(root, "probe.feature")
+    _write(feature, ZH_FEATURE:gsub("场景大纲:", "背景:\n  假如 项目验收步骤已加载\n\n场景大纲:", 1))
+    local ir = _sandbox_ir(root, feature)
+    local generated = path_lib.join_path(root, "generated")
+    local function job(id, result_value)
+      local doc = _decoded(ir)
+      if result_value then doc.scenarios[1].examples[1]["整数结果"] = result_value end
+      local feature_json = path_lib.join_path(root, "mutations/" .. id .. "/feature.json")
+      _write(feature_json, json.encode(doc))
+      return json.encode_compact({ id = id, generated_dir = generated, feature_json = feature_json,
+        padding = string.rep("x", 6000) })
+    end
+    local jobs = path_lib.join_path(root, "jobs.jsonl")
+    _write(jobs, table.concat({ job("m1", "999"), job("m2"), job("m3", "998") }, "\n") .. "\n")
+    local repo = require("foundation.bootstrap").resolve(PARSER).repo_root
+    local prelude = string.format('local r = %q; package.path = r .. "/tools/?.lua;" .. r .. "/?.lua;" .. package.path; '
+      .. 'dofile(r .. "/tools/foundation/bootstrap.lua").install(r .. "/tools/packages/acceptance/runner_worker.lua"); '
+      .. 'require("foundation.lua54").lua54_bin(); arg[-1] = %q', repo, APS_LUA)
+    local worker = proc_lib.run_command({ APS_LUA, "-e", prelude, "tools/packages/acceptance/runner_worker.lua" },
+      { stdin_path = jobs })
+    check.same(0, worker.code, worker.output)
+    local outcomes = {}
+    for line in worker.output:gmatch("[^\r\n]+") do
+      local response = json.decode(line)
+      outcomes[#outcomes + 1] = response.id .. "=" .. response.outcome
+    end
+    check.same({ "m1=test_failure", "m2=test_success", "m3=test_failure" }, outcomes)
   end)
 end)
 

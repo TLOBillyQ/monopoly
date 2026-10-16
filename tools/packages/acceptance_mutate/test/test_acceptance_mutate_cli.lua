@@ -1,97 +1,30 @@
 ---@diagnostic disable: undefined-global
 if arg then rawset(arg, 0, "tools/packages/acceptance_mutate/test/test_acceptance_mutate_cli.lua") end
-
 require("test.bootstrap").install_package_paths()
-
--- acceptance-mutate 的真实 CLI 窄反馈(#96 / 母规格 #69 / ADR 0066)。
--- 中文验收变异当前是规格声明的 POSIX 专用能力:原生 Windows 上请求时必须给出
--- 可辨认的不可用诊断,不安装、不 spawn、不把基础设施故障伪装成变异结果。
---
--- 被这条边界挡住的旧行为是:车道健康探针把 job 经 stdin 喂给 runner_worker,
--- 而探针在此之前已经跑过 ensure_tool 装工具;在原生 Windows 上那一串子进程会把
--- 进程 stdin 抽干,于是 runner_worker 读不到任何 job、什么都不吐,车道报
--- 「runner_worker 没吐出可解析的 job 响应」——一条把基础设施故障说成变异失败的
--- 假诊断。本票不去修那条链(移交范围外),只保证它不再被当作变异结论。
 local check = require("luassert")
-local proc_lib = require("foundation.proc")
+local proc = require("foundation.proc")
+local lua = require("foundation.lua54").lua54_bin()
 
-local CLI = "tools/cli.lua"
-local LANE = "tools/packages/acceptance_mutate/mutate_lane.lua"
+describe("acceptance mutate native cli", function()
+  it("help describes native execution and availability", function()
+    local result = proc.run_command({ lua, "tools/cli.lua", "acceptance-mutate", "--help" })
+    check.same(0, result.code, result.output)
+    check.matches("原生 Windows 支持", result.output, 1, true)
+    check.matches("--skip-if-unavailable", result.output, 1, true)
+  end)
 
--- 探针误诊文案:它出现即说明车道真的跑进了 POSIX 专用链。
-local PROBE_MISDIAGNOSIS = "runner_worker 没吐出可解析的 job 响应"
-
-local function _run(tail)
-  local command = { "lua", CLI, "acceptance-mutate" }
-  for _, value in ipairs(tail) do
-    command[#command + 1] = value
-  end
-  return proc_lib.run_command(command)
-end
-
-describe("acceptance mutate cli boundary", function()
-
--- 正例:--help 仍然有用(退出码 0),并说清能力边界与逃生开关。
-it("help stays useful and states the windows boundary", function()
-  local result = _run({ "--help" })
-
-  check.same(0, result.code, result.output)
-  check.truthy(result.output:find("acceptance-mutate", 1, true) ~= nil, result.output)
-  check.truthy(result.output:find("--skip-if-unavailable", 1, true) ~= nil,
-    "帮助要写出显式跳过开关: " .. result.output)
-  check.truthy(result.output:find("status=skipped", 1, true) ~= nil,
-    "帮助要写出跳过状态词: " .. result.output)
-end)
-
--- 反例(本票核心):显式请求判「不可用」,而不是让探针把假诊断当结论。
-it("an explicit request is unavailable not a mutation verdict", function()
-  local result = _run({ "--level", "soft" })
-
-  check.same(3, result.code, result.output)
-  check.truthy(result.output:find("status=unavailable", 1, true) ~= nil,
-    "诊断要带可机读状态词: " .. result.output)
-  check.truthy(result.output:find("POSIX", 1, true) ~= nil,
-    "诊断要点明 POSIX 专用: " .. result.output)
-  check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true),
-    "不可用路径不得给出探针误诊: " .. result.output)
-end)
-
--- 显式跳过:调用方确认边界后跳过,状态与退出码都与不可用不同。
-it("an explicit skip exits zero with a skipped status", function()
-  local result = _run({ "--skip-if-unavailable", "--level", "soft" })
-
-  check.same(0, result.code, result.output)
-  check.truthy(result.output:find("status=skipped", 1, true) ~= nil,
-    "跳过要带可机读状态词: " .. result.output)
-  check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
-end)
-
--- 脚本形态入口(cli 以子进程转发的真实入口)与 CLI 同口径:旁门不许假绿。
-it("native absolute lane help and actual request", function()
-  local root = require("foundation.bootstrap").resolve("tools/packages/acceptance_mutate/mutate_lane.lua").repo_root
-  local entry = (root .. "/" .. LANE):gsub("/", "\\")
-  local help = proc_lib.run_command({ "lua", entry, "--help" })
-  check.same(0, help.code, help.output)
-  local actual = proc_lib.run_command({ "lua", entry, "--feature", "ignored.feature" })
-  check.same(3, actual.code, actual.output)
-  check.matches("status=unavailable", actual.output, 1, true)
-end)
-
-it("explicit retained engine test request is unavailable", function()
-  for _, identity in ipairs({ "test_mutator_level.lua", "test_mutator_status.lua" }) do
-    local result = proc_lib.run_command({ "lua", "tools/packages/test_runner/runner.lua", "--",
-      "tools/packages/acceptance_mutate/test/" .. identity })
-    check.same(3, result.code, result.output)
-    check.matches("status=unavailable", result.output, 1, true)
-  end
-end)
-
-it("the lane script form reports the same boundary", function()
-  local result = proc_lib.run_command({ "lua", LANE, "--level", "soft" })
-
-  check.same(3, result.code, result.output)
-  check.truthy(result.output:find("status=unavailable", 1, true) ~= nil, result.output)
-  check.is_nil(result.output:find(PROBE_MISDIAGNOSIS, 1, true), result.output)
-end)
-
+  it("cli and absolute lane report a missing feature as a real failure", function()
+    local root = require("foundation.bootstrap").resolve("tools/packages/acceptance_mutate/mutate_lane.lua").repo_root
+    for _, command in ipairs({
+      { lua, "tools/cli.lua", "acceptance-mutate", "--feature", "missing.feature" },
+      { lua, root .. "/tools/packages/acceptance_mutate/mutate_lane.lua", "--feature", "missing.feature" },
+      { lua, "tools/cli.lua", "acceptance-mutate", "--skip-if-unavailable", "--feature", "missing.feature" },
+    }) do
+      local result = proc.run_command(command)
+      check.same(1, result.code, result.output)
+      check.matches("feature", result.output, 1, true)
+      check.is_nil(result.output:find("status=unavailable", 1, true))
+      check.is_nil(result.output:find("status=skipped", 1, true))
+    end
+  end)
 end)

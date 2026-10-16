@@ -55,7 +55,7 @@ local function _run_mutator(tmp_dir, options)
   local command = table.concat(args, " ")
     .. " > " .. shell_lib.shell_quote(stdout_path)
     .. " 2> " .. shell_lib.shell_quote(stderr_path)
-  local result = proc_lib.run_command(command, { cwd = "." })
+  local result = proc_lib.run_command("(" .. command .. ")", { cwd = "." })
   return {
     result = result,
     stdout = fs_lib.read_file(stdout_path) or "",

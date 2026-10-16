@@ -20,7 +20,7 @@ local entries = {
   { feature = "features/game/paid_currency.feature",               generated = "test_paid_currency_acceptance.lua" },
   { feature = "features/game/setup.feature",                       generated = "test_setup_acceptance.lua" },
   { feature = "features/game/turn_flow.feature",                   generated = "test_turn_flow_acceptance.lua" },
-  { feature = "features/tooling/acceptance_mutator_status.feature", generated = "test_acceptance_mutator_status_acceptance.lua", capability = "acceptance-mutate" },
+  { feature = "features/tooling/acceptance_mutator_status.feature", generated = "test_acceptance_mutator_status_acceptance.lua" },
   { feature = "features/tooling/chinese_gherkin_acceptance.feature", generated = "test_chinese_gherkin_acceptance.lua" },
   { feature = "features/v102/achievement_progress.feature",        generated = "test_achievement_progress_acceptance.lua" },
   { feature = "features/v102/action_log_toggle.feature",           generated = "test_action_log_toggle_acceptance.lua" },

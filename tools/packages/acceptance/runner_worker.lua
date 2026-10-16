@@ -17,8 +17,14 @@ for line in io.lines() do
     id = job.id or ""
     assert(type(job.generated_dir) == "string" and job.generated_dir ~= "", "missing generated_dir")
     assert(type(job.feature_json) == "string" and job.feature_json ~= "", "missing feature_json")
+    -- 上游 mutator 只提供目录和 IR,它自己的 feature_acceptance_spec.lua 绑定的是
+    -- 上游私有 harness。每个 job 在自身 IR 目录生成项目 busted 入口,也避免多 worker
+    -- 共用 generated_dir 时覆盖彼此的 spec。
+    local generated = path.join_path(path.parent_dir(job.feature_json), "test_feature_acceptance.lua")
+    local generated_ok, generated_err = require("packages.acceptance.entrypoint").generate_file(job.feature_json, generated)
+    assert(generated_ok, generated_err)
     local result = require("foundation.proc").run_command(run_all.command(
-      path.join_path(job.generated_dir, "test_feature_acceptance.lua"), job.feature_json, interpreter), { cwd = env.repo_root, stdin_path = "NUL" })
+      generated, job.feature_json, interpreter), { cwd = env.repo_root, stdin_path = "NUL" })
     return run_all.decode_result(result)
   end, debug.traceback)
   if not ok then response = { outcome = "infrastructure_error", error = tostring(response), output = "" } end

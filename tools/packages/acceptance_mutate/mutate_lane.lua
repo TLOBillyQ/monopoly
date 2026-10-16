@@ -25,12 +25,15 @@ for _, value in ipairs(arg or {}) do
     os.exit(0)
   end
 end
-local verdict = platform_boundary.evaluate("acceptance-mutate", arg or {})
-if verdict.status ~= nil then
-  os.exit(platform_boundary.emit(verdict))
+local args = {}
+for _, value in ipairs(arg or {}) do
+  if value ~= platform_boundary.SKIP_FLAG then args[#args + 1] = value end
 end
-
-assert(bootstrap.ensure_tool("acceptance4lua", env))
+local ensured = require("packages.acceptance.cli.ensure").acceptance4lua(env, { tag = "acceptance-mutate" })
+if ensured ~= true then
+  io.stderr:write(ensured.stderr or "")
+  os.exit(ensured.code)
+end
 
 local fs_lib = require("foundation.fs")
 local path_lib = require("foundation.path")
@@ -161,7 +164,6 @@ end
 
 -- 平台边界(#96)已消费掉 --skip-if-unavailable,这里用剥完开关的 argv:
 -- 漏给上游会被当成未知选项退 2,把平台边界伪装成用法错误。
-local args = verdict.args
 _probe_runner(_feature_from_args(args))
 
 -- 等价变异过滤器(issue #204):角色ID 族列经 Background 身份线程绑定,步骤对标识值

@@ -62,7 +62,8 @@ function proc.run_command(command, options)
   end
   redirected = redirected .. " > " .. shell_lib.shell_quote(output_path) .. " 2>&1"
   local batch_path = env_lib.make_temp_path("command", ".cmd")
-  fs_lib.write_file(batch_path, "@echo off\r\nchcp 65001 >nul\r\n" .. setup .. redirected .. "\r\nexit /b %errorlevel%\r\n")
+  -- chcp.com 会读取继承来的 stdin;worker 的 JSONL job 输入必须留给父进程。
+  fs_lib.write_file(batch_path, "@echo off\r\nchcp 65001 <nul >nul\r\n" .. setup .. redirected .. "\r\nexit /b %errorlevel%\r\n")
   local ok, kind, code = os.execute('cmd.exe /d /v:off /c ""' .. batch_path:gsub("/", "\\") .. '""')
   fs_lib.remove_path(batch_path)
   local success, exit_code = shell_lib.exit_status(ok, kind, code)

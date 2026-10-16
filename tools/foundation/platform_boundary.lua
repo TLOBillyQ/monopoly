@@ -51,15 +51,6 @@ local _DECLARED = {
       "于是候选为空、上游照旧静默退回 0 —— 一次扫描都没跑却报通过。",
     }),
   },
-  ["acceptance-mutate"] = {
-    id = "acceptance-mutate",
-    title = "中文验收变异(acceptance4lua mutator)",
-    reason = table.concat({
-      "车道健康探针链(parser → generator → runner_worker)在原生 Windows 上,",
-      "自举期的子进程会把进程 stdin 抽干,runner_worker 的 io.lines() 读不到任何 job,",
-      "车道只会回报一条「探针读不到 job」的假诊断 —— 把基础设施故障说成变异结论。",
-    }),
-  },
 }
 
 -- 宿主平台。package.config 首字符是路径分隔符(Windows "\\" / POSIX "/"),
@@ -143,8 +134,8 @@ end
 --   不可用         → { status, exit_code, stream, message, entry };
 --   显式跳过       → { status, exit_code, stream, message, entry }。
 -- platform 显式注入只为单测(纯函数可喂合成平台);生产调用不传,取 host_platform()。
-function boundary.evaluate(id, args, platform)
-  local entry = _DECLARED[id]
+function boundary.evaluate(id, args, platform, declarations)
+  local entry = (declarations or _DECLARED)[id]
   assert(entry ~= nil,
     "platform_boundary: 未登记的能力 id " .. tostring(id)
       .. "(已登记: " .. table.concat(boundary.declared_ids(), ", ") .. ")")
@@ -173,10 +164,7 @@ function boundary.evaluate(id, args, platform)
 end
 
 -- Retained actual engine regressions are explicit capability tests, not native gates.
-boundary.test_capabilities = {
-  ["tools/packages/acceptance_mutate/test/test_mutator_level.lua"] = "acceptance-mutate",
-  ["tools/packages/acceptance_mutate/test/test_mutator_status.lua"] = "acceptance-mutate",
-}
+boundary.test_capabilities = {}
 
 function boundary.test_verdict(path)
   local normalized = tostring(path):gsub("\\", "/")

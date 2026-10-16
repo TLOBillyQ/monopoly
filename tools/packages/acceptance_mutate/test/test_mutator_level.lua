@@ -273,7 +273,7 @@ preserves_a_leading_language_zh_cn_line_across_stamp_and_manifest_writes()
     check.is_not_nil(first)
 
     local content = assert(fs_lib.read_file(feature_path))
-    check.truthy(content:find("^# language: zh%-CN\n"))
+    check.truthy(content:find("^# language: zh%-CN\r?\n"))
     check.truthy(content:find("# mutation%-stamp: sha256="))
     check.truthy(content:find("# acceptance%-mutation%-manifest%-begin"))
 
