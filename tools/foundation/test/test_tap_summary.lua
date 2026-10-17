@@ -63,6 +63,32 @@ it("treats nil input as zero passes", function()
   check.equal(0, failed)
   check.equal("0 passed\n", text)
 end)
+-- #130:权威计数(runner 进程内 COUNTS)优先于 ok 行数。TAP 行被 stdout/stderr
+-- 合流切开时,摘要仍要报真实通过数;返回的 TAP 计数保持不变,供调用方交叉核对。
+it("prefers authoritative counts for the summary while returning the tap tally", function()
+  local text, passed, failed = tap_summary.compress("ok 1 - a\nk 2 - b\n1..2\n",
+    { passed = 2, failed = 0 })
+  check.equal("2 passed\n", text)
+  check.equal(1, passed, "tap tally still reports the corrupted line as missing")
+  check.equal(0, failed)
+end)
+
+it("keeps the verbose shape when authoritative counts carry a failure", function()
+  local text, passed = tap_summary.compress("ok 1 - a\n1..2\n", { passed = 1, failed = 1 })
+  check.equal(1, passed)
+  check.truthy(text:find("1 passed, 1 failed", 1, true) ~= nil)
+  check.falsy(text == "1 passed\n")
+end)
+
+-- 失败判定是两侧并集:即便 COUNTS 全绿,TAP 的 not ok 也不能被过滤成假绿。
+it("keeps a tap failure when authoritative counts claim all green", function()
+  local text, passed, failed = tap_summary.compress("ok 1 - a\nnot ok 2 - b\n1..2\n",
+    { passed = 2, failed = 0 })
+  check.equal(1, passed)
+  check.equal(1, failed)
+  check.truthy(text:find("not ok 2 - b", 1, true) ~= nil)
+  check.truthy(text:find("2 passed, 1 failed", 1, true) ~= nil)
+end)
 
 
 end)

@@ -29,6 +29,7 @@ local function _main(opts)
     tooling = opts.tooling,
     serial = opts.serial,
     env = env,
+    evidence_dir = opts.evidence_dir,
   })
 
   for _, w in ipairs(plan.warnings) do
@@ -71,6 +72,15 @@ local function _main(opts)
   io.write(output.stdout)
   io.flush()
 
+  -- #130:证据落盘只记录,不改变门禁结论;写失败告警即可。
+  if opts.evidence_dir ~= nil then
+    local written, evidence_err = require("packages.verify.evidence").write(
+      opts.evidence_dir, all_results, output.stdout)
+    if not written then
+      io.stderr:write("[verify] warning: evidence write failed: " .. tostring(evidence_err) .. "\n")
+    end
+  end
+
   return {
     ok = output.exit_code == 0,
     exit_code = output.exit_code,
@@ -91,19 +101,35 @@ if ... == "packages.verify.main" then
 end
 
 local opts = { serial = true }
-for i = 1, #(arg or {}) do
-  if arg[i] == "--serial" then
+-- while 而非数值 for:--evidence-dir 的空格形式要多吃一个 argv,数值 for 的循环
+-- 变量在循环体内改了也不影响迭代(#130 曾被 luacheck W311 点出这个写法)。
+local i = 1
+while i <= #(arg or {}) do
+  local token = arg[i]
+  if token == "--serial" then
     opts.serial = true
-  elseif arg[i] == "--parallel" then
+  elseif token == "--parallel" then
     opts.serial = false
-  elseif arg[i] == "--tooling" then
+  elseif token == "--tooling" then
     opts.tooling = true
-  elseif arg[i] == "--verbose" then
+  elseif token == "--verbose" then
     opts.verbose = true
+  elseif token == "--evidence-dir" or token:match("^%-%-evidence%-dir=") then
+    local value = token:match("^%-%-evidence%-dir=(.*)$")
+    if value == nil then
+      value = arg[i + 1]
+      i = i + 1
+    end
+    if value == nil or value == "" then
+      io.stderr:write("missing --evidence-dir value\n")
+      os.exit(2)
+    end
+    opts.evidence_dir = value
   else
-    io.stderr:write("unknown flag: " .. tostring(arg[i]) .. "\n")
+    io.stderr:write("unknown flag: " .. tostring(token) .. "\n")
     os.exit(2)
   end
+  i = i + 1
 end
 local result = _main(opts)
 os.exit(result.exit_code)

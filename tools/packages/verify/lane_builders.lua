@@ -7,13 +7,19 @@ local builders = {}
 -- spec-lane 车道默认后端 = 真实 busted 运行器
 -- (packages.test_runner.lua54.argv_prefix)。--busted-bin / BUSTED_BIN
 -- 逃生舱已删,verify_full 不注入任何覆写。
-local function _spec_lane_cmd(profile)
-  return shell_lib.build_command({
+local function _spec_lane_cmd(profile, evidence_dir)
+  local argv = {
     "lua",
     "tools/packages/spec_lane/spec_lane.lua",
     "--profile",
     profile,
-  })
+  }
+  -- #130:证据目录透传给 spec-lane,原始 TAP 与 COUNTS 逐 lane 落盘,事后可
+  -- `spec-lane --recount <dir>/<profile>` 仅凭目录重算。
+  if evidence_dir ~= nil then
+    argv[#argv + 1] = "--evidence-dir=" .. evidence_dir .. "/" .. profile
+  end
+  return shell_lib.build_command(argv)
 end
 
 -- lint 要 luacheck + lua5.4 两者俱在,缺任一就跳过而不是让车道变红。
@@ -40,10 +46,10 @@ end
 -- 层边界门禁住在 guards 车道(arch_policy_guard 执行 policy.json);旧外部
 -- 架构工具的独立 arch 车道随 #94 退场。CRAP / 变异不进 verify,走显式
 -- `lua tools/cli.lua uml crap|mutate`。
-function builders.default(env, include_tooling, serial)
+function builders.default(env, include_tooling, serial, evidence_dir)
   local lanes, skipped = {}, {}
-  lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract") }
-  lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards") }
+  lanes[#lanes + 1] = { label = "contract", cmd = _spec_lane_cmd("contract", evidence_dir) }
+  lanes[#lanes + 1] = { label = "guards", cmd = _spec_lane_cmd("guards", evidence_dir) }
   lanes[#lanes + 1] = { label = "behavior", cmd = "lua test/support/behavior_parallel.lua" }
   _add_lint_or_skip(lanes, skipped, env)
   lanes[#lanes + 1] = { label = "encoding", cmd = "lua tools/packages/encoding/encoding.lua check" }
@@ -58,7 +64,11 @@ function builders.default(env, include_tooling, serial)
   if serial then
     for _, lane in ipairs(lanes) do
       if lane.label == "behavior" or lane.label == "tooling" or lane.label == "contract" or lane.label == "guards" then
-        lane.cmd = shell_lib.build_command({ env.lua54_bin, "tools/packages/spec_lane/spec_lane.lua", "--profile", lane.label, "--serial" })
+        local argv = { env.lua54_bin, "tools/packages/spec_lane/spec_lane.lua", "--profile", lane.label, "--serial" }
+        if evidence_dir ~= nil then
+          argv[#argv + 1] = "--evidence-dir=" .. evidence_dir .. "/" .. lane.label
+        end
+        lane.cmd = shell_lib.build_command(argv)
       end
     end
   end

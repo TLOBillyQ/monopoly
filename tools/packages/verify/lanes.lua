@@ -13,7 +13,7 @@ local lanes_mod = {}
 function lanes_mod.resolve(opts)
   opts = opts or {}
   local env = opts.env or {}
-  local lanes, skipped = builders.default(env, opts.tooling == true, opts.serial == true)
+  local lanes, skipped = builders.default(env, opts.tooling == true, opts.serial == true, opts.evidence_dir)
   return { lanes = lanes, skipped = skipped, warnings = {} }
 end
 
