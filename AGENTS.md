@@ -54,5 +54,5 @@ uml-viewer companion 边界（ADR 0070 / #99）：
 ## 操作边界
 
 - 运行 `editor-cli` 的 `run_game`、`stop_game`、`clear-logs`，或改动部署目录前，先说明并等待用户明确同意。
-- 开发环境只支持原生 Windows（ADR 0066）：Lua 5.4、LuaRocks 5.4 tree 与 cmd.exe，不依赖 WSL、Git Bash、Node 或 PowerShell Start-Job。Eggy 宿主位于 Windows 端。部署入口是 `lua tools/cli.lua deploy`。
+- 开发环境只支持原生 Windows（ADR 0066）：Lua 5.4 与 LuaRocks 5.4 tree；`cmd.exe` 只约束 Lua 工具与原生子进程的表达口径，新自动化脚本形态与 hook 的 sh 转发边界见 ADR 0071。不依赖 WSL、Git Bash、Node 或 PowerShell Start-Job。Eggy 宿主位于 Windows 端。部署入口是 `lua tools/cli.lua deploy`。
 - `EggyAPI.lua` 与 `EggyEditorAPI.lua` 保持第三方边界，不把它们当作当前宿主契约。

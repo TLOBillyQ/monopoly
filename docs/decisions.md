@@ -107,6 +107,8 @@ Acceptance fixture 只造初始状态，规则结论由真实 `src` 计算；ste
 
 代价必须写明：这是平台收窄而非双轨化，将来若回到 macOS 须重新引入平台分派层。后台并行执行（`parallel_lanes`）没有现成模板，实现形态在落地时单独取证。
 
+本条中的 `cmd.exe` 不是对新自动化脚本形态的要求；脚本形态、hook 里 sh 的转发边界与 CI 取舍见 ADR 0071。
+
 ## ADR 0067 — 本仓退场本地 swarm-forge 编排
 
 `swarmforge/` 的 pack 资产（conf / roles / constitution 共 12 个文件）整套下架，`.swarmforge/` 运行时状态不再由本仓定义；随之删除 AGENTS.md 的 swarm 路由行与 pack 同步纪律、`.gitignore` 的 swarm 段、`root_whitelist_guard` 的 `swarmforge` 白名单与 launcher 退役钉、`repo_hygiene` 的 `.swarmforge/` 违规项、`features/manifest.lua` 的 `features/swarmforge/*` 三条、`clean`/`distclean` 的 `.swarmforge/` 条目。启停、编排与角色供给不再由本仓承接。
@@ -139,3 +141,13 @@ CRAP、变异与架构图的生成整体移出本仓，交由 `qinyuanj/uml-view
 2. **companion 继承钉死的环境**。图窗只经 `lua tools/cli.lua uml view` 启动，它在调用上游启动器前钉死 `LUA_PATH` / `LUA_CPATH`；Herdr 由上游从继承的 PATH 中选取（>= 0.9.3、protocol 22 的最高版），本仓不钉版本、不改 PATH 次序。上游每次全新启动都为本项目新建 Herdr server，环境沿启动链原样下传到 companion 及其子 shell，`--restart` 与崩溃恢复复用同一 server；因此仓根 `./uml` 在该 companion 内可用，在其他场合仍按 ADR 0068 不作入口。
 
 理由：上游 policy 是单个 EDN 文件、不支持引用，companion 的系统提示要求它「写或更新 policy」——照做即生成与 `docs/architecture.md` 并行漂移的第二真源；而每次重生又会冲掉 `:proposals`，所以只把推演拆出。上游提示词硬编码 `./uml crap|mutate|ir`，仅靠 AGENTS.md 让 companion 改用 `lua tools/cli.lua uml` 会与系统提示冲突、遵从不可预期；在入口处钉环境让上游命令本身变对。上游 `c714f83` 起 Herdr 由精确 0.9.3 放宽为 PATH 上 >= 0.9.3 的最高版，此前「0.9.3 局部置前」的做法会与用户已装的新版并存而让上游选取失败，故撤除；预检只按同口径确认 PATH 上至少有一个达标版本，不改全局 Herdr，也不改只读的上游检出。companion 以 `--dangerously-skip-permissions` 运行，维护者接受，并以 AGENTS.md 限定其边界：只改覆盖文件与 `src/`，不动 git 远端、不关单。
+
+## ADR 0071 — 原生 Windows 自动化脚本形态与 CI 车道口径
+
+仓库内新增或改写的自动化脚本与 CI 步骤默认用 `pwsh` / `.ps1`（GitHub Actions 走 `shell: pwsh`），不使用 PowerShell `Start-Job`；后台或并行执行按原生进程语义表达。ADR 0066 的 `cmd.exe` 约束指 Lua 工具与原生子进程的**表达口径**（foundation 不保留 POSIX 路径，子进程按 `cmd.exe`／原生可执行调用），不要求新自动化脚本继续写 `.cmd`。
+
+Git for Windows 用自带 `sh` 唤起 hook，这是宿主强制的启动边界，不是业务实现：hook 中的 sh 只允许定位仓根（定位失败可立即退出）并以 `exec lua tools/cli.lua verify` 形态转交原生 Lua 解释器；对工具结果的退出码分支、提示与业务逻辑一律归原生侧。当前 `.githooks/pre-push` 即此形态，因此 hook 存在 sh 文件不违反 ADR 0066 的「Git for Windows POSIX 层不是受支持运行前提」：sh 不承载业务逻辑，也不被当作可复用的运行时。
+
+CI 只跑硬地板 slim `verify`；`verify --tooling` 是改 `tools/**` 时的本地叠加车道，不进 CI。退 3（工具自举网络不可用）保持失败结论、仍为红灯，同时在 annotation 与 step summary 标 `UNAVAILABLE`，语义是「网络不可用，应重跑」而非「测试回归，应排查」。
+
+理由：`cmd.exe` 是 Lua 工具与子进程的语义约束，不是脚本形态约束；Git for Windows 起 hook 必须经过 sh，但这一层不承载逻辑；CI 取舍与退 3 语义若无登记，只能从工单评论或 PR 叙述里反推。
