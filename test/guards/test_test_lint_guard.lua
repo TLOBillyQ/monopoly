@@ -4,6 +4,7 @@ require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local guard = require("test.guards.lib.test_lint.guard")
+local fs_lib = require("foundation.fs")
 
 -- 每条 fixture 都是合成 spec 源码,过真实 luacheck parser 验证 guard:
 -- 对「断言只躲在条件分支里」真的会红,对合规写法放行——门禁的价值全在能变红。
@@ -328,5 +329,255 @@ it("bare")
   it("test_violation_report_carries_guard_rule_path_line_and_test_name", function()
     local line = table.concat(_check({ ["test/behavior/x/test_env.lua"] = _VACUOUS_IF }), "\n")
     luassert.truthy(line:find("test_lint_guard: vacuous%-branch: test/behavior/x/test_env%.lua:%d+ %["))
+  end)
+end)
+
+-- cb44141 之前 tools/foundation/test/test_bootstrap.lua 的两条 where_luarocks
+-- 计数器写法(原型 fixture):stub 里自增,测试体断言内部调用次数。
+local _PRE_CB44141_BOOTSTRAP = [=[
+local check = require("luassert")
+it("luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing", function()
+  local override = "D:/native/LuaRocks/bin/luarocks.exe"
+  local where_luarocks = 0
+  local captured_command
+  _with_stubs({
+    { target = proc_lib, key = "run_command", value = function(command)
+      if command[1] == "where.exe" and command[2] == "luarocks.exe" then
+        where_luarocks = where_luarocks + 1
+      end
+      captured_command = command
+      return { ok = true, output = "" }
+    end },
+  }, function()
+    bootstrap.ensure_luacheck_tree("/repo")
+  end)
+  check.equal(0, where_luarocks)
+  check.equal(override, captured_command[1])
+end)
+
+it("missing MONOPOLY_LUAROCKS_EXE override falls back to probing", function()
+  local where_luarocks = 0
+  local captured_command
+  _with_stubs({
+    { target = proc_lib, key = "run_command", value = function(command)
+      if command[1] == "where.exe" and command[2] == "luarocks.exe" then
+        where_luarocks = where_luarocks + 1
+        return { ok = false, output = "" }
+      end
+      captured_command = command
+      return { ok = true, output = "" }
+    end },
+  }, function()
+    bootstrap.ensure_luacheck_tree("/repo")
+  end)
+  check.equal(1, where_luarocks)
+  check.truthy(captured_command[1]:match("luarocks%.exe$") ~= nil)
+end)
+]=]
+
+-- cb44141 修复后的写法:断言解析出的路径(可见结果),不再数 where.exe 调用。
+local _POST_CB44141_BOOTSTRAP = [=[
+local check = require("luassert")
+it("missing MONOPOLY_LUAROCKS_EXE override falls back to probing", function()
+  local captured_command
+  _with_stubs({
+    { target = proc_lib, key = "run_command", value = function(command)
+      if command[1] == "where.exe" and command[2] == "luarocks.exe" then
+        return { ok = false, output = "" }
+      end
+      captured_command = command
+      return { ok = true, output = "" }
+    end },
+  }, function()
+    bootstrap.ensure_luacheck_tree("/repo")
+  end)
+  check.truthy(captured_command[1]:match("luarocks%.exe$") ~= nil)
+end)
+]=]
+
+local function _call_count_hits(violations)
+  local hits = {}
+  for _, line in ipairs(violations) do
+    if line:find("call%-count") then
+      hits[#hits + 1] = line
+    end
+  end
+  return hits
+end
+
+describe("TestLintGuard call-count", function()
+  it("test_flags_pre_cb44141_bootstrap_counters_as_red", function()
+    local violations = _check({ ["tools/foundation/test/test_bootstrap.lua"] = _PRE_CB44141_BOOTSTRAP })
+    luassert.is.equal(2, #violations)
+    local joined = table.concat(violations, "\n")
+    luassert.truthy(joined:find(
+      "test_lint_guard: call-count: tools/foundation/test/test_bootstrap.lua:17 "
+        .. "[luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing]", 1, true))
+    luassert.truthy(joined:find(
+      "test_lint_guard: call-count: tools/foundation/test/test_bootstrap.lua:36 "
+        .. "[missing MONOPOLY_LUAROCKS_EXE override falls back to probing]", 1, true))
+    luassert.truthy(joined:find("where_luarocks", 1, true))
+  end)
+
+  it("test_accepts_post_cb44141_bootstrap_rewrite", function()
+    luassert.is.equal(0, #_check({ ["tools/foundation/test/test_bootstrap.lua"] = _POST_CB44141_BOOTSTRAP }))
+  end)
+
+  it("test_flags_assert_and_luassert_spellings_in_either_argument_order", function()
+    local violations = _check({
+      ["test/behavior/x/test_calls.lua"] = [=[
+local luassert = require("luassert")
+it("spellings", function()
+  local calls = 0
+  local stub = function() calls = 1 + calls end
+  run(stub)
+  assert.equal(1, calls)
+  luassert.are.equal(calls, 1)
+  assert.is_true(calls == 1)
+end)
+]=],
+    })
+    local hits = _call_count_hits(violations)
+    luassert.is.equal(3, #hits)
+    luassert.truthy(hits[1]:find(":6 ", 1, true))
+    luassert.truthy(hits[2]:find(":7 ", 1, true))
+    luassert.truthy(hits[3]:find(":8 ", 1, true))
+  end)
+
+  it("test_flags_the_real_pre_cb44141_test_bootstrap_and_accepts_the_current_one", function()
+    -- 工单验收:对 cb44141 之前的 test_bootstrap.lua 原文判红,对当前仓库判绿。
+    -- 原文存成 .txt fixture,避免被 lint 自己当 spec 扫描。
+    local fixture = "test/guards/fixtures/call_count_pre_cb44141_bootstrap.lua.txt"
+    local historical = fs_lib.read_file(fixture)
+    luassert.truthy(historical, "missing historical fixture: " .. fixture)
+    local path = "tools/foundation/test/test_bootstrap.lua"
+    local violations = guard.check({ path }, function() return historical end)
+    luassert.is.equal(7, #violations)
+    local joined = table.concat(violations, "\n")
+    for _, expected in ipairs({
+      "call-count: " .. path .. ":316 [bootstrap luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing]",
+      "call-count: " .. path .. ":350 [bootstrap missing MONOPOLY_LUAROCKS_EXE override falls back to probing]",
+    }) do
+      luassert.truthy(joined:find(expected, 1, true), "missing historical hit: " .. expected .. "\n" .. joined)
+    end
+    luassert.truthy(joined:find("where_luarocks", 1, true))
+    luassert.is.equal(0, #guard.check({ path }, fs_lib.read_file))
+  end)
+
+  it("test_flags_counter_asserted_inside_the_run_callback", function()
+    -- _with_stubs(stubs, run) 的 run 回调也是嵌套函数;断言写在里面同样钉调用次数。
+    local violations = _check({
+      ["tools/foundation/test/test_inside.lua"] = [=[
+local check = require("luassert")
+it("inside_run", function()
+  local calls = 0
+  _with_stubs({
+    { target = proc_lib, key = "run_command", value = function()
+      calls = calls + 1
+      return { ok = true }
+    end },
+  }, function()
+    bootstrap.ensure_busted_tree("/repo")
+    check.equal(1, calls)
+  end)
+end)
+]=],
+    })
+    luassert.is.equal(1, #violations)
+    luassert.truthy(violations[1]:find("test_inside.lua:11 [inside_run]", 1, true))
+  end)
+
+  it("test_flags_old_style_test_table_counter", function()
+    local violations = _check({
+      ["test/behavior/legacy/test_old.lua"] = [=[
+local luassert = assert(require("test.support.luassert_loader").load())
+TestOld = {}
+function TestOld.test_pins_calls()
+  local n = 0
+  host.on_tick = function() n = n + 1 end
+  luassert.is.equal(2, n)
+end
+]=],
+    })
+    luassert.is.equal(1, #violations)
+    luassert.truthy(violations[1]:find("[TestOld.test_pins_calls]", 1, true))
+  end)
+
+  it("test_accepts_counting_observable_results_in_the_test_body_itself", function()
+    -- 测试体自己的循环里数可见产物不是钉内部调用次数,放行。
+    luassert.is.equal(0, #_check({
+      ["test/behavior/x/test_tally.lua"] = [=[
+local check = require("luassert")
+it("tally", function()
+  local result = run()
+  local owned = 0
+  for _, cell in ipairs(result.cells) do
+    if cell.owner == "p1" then
+      owned = owned + 1
+    end
+  end
+  check.equal(3, owned)
+end)
+]=],
+    }))
+  end)
+
+  it("test_accepts_counter_used_only_to_script_stub_responses", function()
+    -- 计数只用来让 stub 第 N 次返回不同结果、从未被断言:不算钉调用次数。
+    luassert.is.equal(0, #_check({
+      ["test/behavior/x/test_retry.lua"] = [=[
+local check = require("luassert")
+it("retry", function()
+  local attempts = 0
+  local result = run(function()
+    attempts = attempts + 1
+    return attempts > 1
+  end)
+  check.is_true(result.ok)
+end)
+]=],
+    }))
+  end)
+
+  it("test_accepts_exemption_with_reason_and_flags_one_without", function()
+    local source = [=[
+local check = require("luassert")
+it("public_contract", function()
+  local fired = 0
+  bus.subscribe(function() fired = fired + 1 end)
+  bus.publish()
+  -- lint-allow: call-count 订阅回调恰好通知一次是 bus 的公共契约
+  check.equal(1, fired)
+end)
+it("bare_allow", function()
+  local fired = 0
+  bus.subscribe(function() fired = fired + 1 end)
+  bus.publish()
+  -- lint-allow: call-count
+  check.equal(1, fired)
+end)
+]=]
+    local violations = _check({ ["test/behavior/x/test_bus.lua"] = source })
+    luassert.is.equal(2, #violations)
+    local joined = table.concat(violations, "\n")
+    luassert.truthy(joined:find("lint-allow: call-count 缺豁免理由", 1, true))
+    luassert.truthy(joined:find("call-count: test/behavior/x/test_bus.lua:14 [bare_allow]", 1, true))
+    luassert.falsy(joined:find("[public_contract]", 1, true))
+  end)
+
+  it("test_vacuous_branch_exemption_does_not_cover_call_count", function()
+    local violations = _check({
+      ["test/behavior/x/test_cross.lua"] = [=[
+local check = require("luassert")
+it("cross", function()
+  local calls = 0
+  run(function() calls = calls + 1 end)
+  -- lint-allow: vacuous-branch 规则名不匹配
+  check.equal(1, calls)
+end)
+]=],
+    })
+    luassert.is.equal(1, #violations)
+    luassert.truthy(violations[1]:find("call-count", 1, true))
   end)
 end)

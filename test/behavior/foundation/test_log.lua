@@ -336,6 +336,7 @@ describe("TestLoggerTimeRuntime", function()
       logger.info("y")
       logger.info("z")
     end))
+    -- lint-allow: call-count timestamp_provider 是公共配置钩子,每条日志调用一次即其契约
     luassert.truthy(calls >= 3, "timestamp_provider must be called per entry; got " .. calls)
     luassert.truthy(text:find("T7"), "expected time_formatter output T7 in formatted line")
   end)

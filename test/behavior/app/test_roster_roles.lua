@@ -154,6 +154,7 @@ local function _test_retries_the_role_resolver_once_and_logs_the_recovery()
     return { _role(201, "甲"), _role(202, "乙") }
   end, function(logs)
     local roster = roster_roles.build_startup_roster(4)
+    -- lint-allow: call-count 角色解析器经 _with_roles 注入,空结果恰重试一次是对外契约
     luassert.truthy(attempts == 2, "an empty first resolve should trigger exactly one retry")
     luassert.truthy(roster[1].role_id == 201, "the retried roles are seated")
     luassert.truthy(logs.info >= 1, "a successful retry should log the recovery")

@@ -431,6 +431,7 @@ describe("TestMarketPurchase", function()
       luassert.truthy(purchase.execute({}, { id = 3, name = "Buyer" }, "-1") == false, "negative product id should be rejected")
       luassert.truthy(purchase.execute({}, { id = 3, name = "Buyer" }, "bad") == false, "non-numeric product id should be rejected")
     end)
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(lookups == 0, "invalid product ids should not hit catalog lookup")
   end)
 
@@ -504,7 +505,9 @@ describe("TestMarketPurchase", function()
     end)
 
     luassert.truthy(give_calls[1] == 2001, "paid callback should give item")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(charge_calls == 0, "paid callback fulfillment should skip local charge")
+    -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
     luassert.truthy(refreshed == 1, "paid callback success should refresh market choice")
     luassert.truthy(emitted[1].payload.price == 5, "paid callback event should keep price")
     luassert.truthy(emitted[1].payload.currency == "金豆", "paid callback event should keep currency")
@@ -575,6 +578,7 @@ describe("TestMarketPurchase", function()
       luassert.truthy(callback(game, player, { product_id = 5001, kind = "skin", currency = "金豆", name = "Skin" }) == false, "paid callback should reject unsupported entries")
     end)
     luassert.truthy(failures[1].reason == "unsupported_kind", "unsupported callback entry should emit reason")
+    -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
     luassert.truthy(refreshed == 0, "unsupported callback entry should not refresh market choice")
 
     failures = {}
@@ -620,6 +624,7 @@ describe("TestMarketPurchase", function()
       luassert.truthy(callback(game, player, { product_id = 2001, kind = "item", currency = "金豆", name = "Paid Item" }) == false, "callback fulfillment failure should return false")
     end)
     luassert.truthy(failures[1].reason == "inventory_full", "callback failure should emit fulfillment reason")
+    -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
     luassert.truthy(refreshed == 0, "callback failure should not refresh market choice")
   end)
 

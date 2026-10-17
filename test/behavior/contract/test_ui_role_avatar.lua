@@ -27,6 +27,7 @@ local function test_sanitize_image_key_covers_nil_non_integer_non_positive_and_v
     _assert_eq(role_avatar.sanitize_image_key(0), nil, "zero key resolves to nil without warning")
     _assert_eq(role_avatar.sanitize_image_key(5), 5, "positive integer key passes through")
   end)
+  -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
   luassert.truthy(warns >= 2, "non-integer and negative keys should each warn (got " .. warns .. ")")
 end
 

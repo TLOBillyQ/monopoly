@@ -243,6 +243,7 @@ describe("TestRuntimePorts", function()
 
   local resolved_by_getter = runtime_ports.resolve_role(7)
   luassert.is.same(role_with_strict_getter, resolved_by_getter, "resolve_role should match get_roleid result")
+  -- lint-allow: call-count 引擎 Role.get_roleid 调用一次=按零参约定向宿主取角色 id
   luassert.is.equal(1, role_id_call_count, "get_roleid should be called exactly once for resolved role")
 
   local resolved_by_fallback = runtime_ports.resolve_role(8)

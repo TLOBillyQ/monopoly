@@ -127,6 +127,7 @@ it("test_open_refreshes_page_even_when_the_owner_role_cannot_be_resolved", funct
     item_atlas.open(s, 99)
   end)
 
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(refresh_count == 1, "open should refresh atlas page through the global fallback path")
 end)
 
@@ -285,6 +286,7 @@ it("test_select_and_reselect_refresh_enlarged_card_visibility", function()
     local hides_after_open = hide_count
     item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
     item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(hide_count == hides_after_open + 1, "reselecting the selected item should hide enlarged view")
   end)
 
@@ -578,6 +580,7 @@ it("test_refresh_page_queries_exactly_page_size_card_nodes_on_a_full_page", func
     set_node_texture_keep_size = function(_, _) end,
   }
   item_atlas_view.refresh_page(state, catalog, 1, { runtime = runtime })
+  -- lint-allow: call-count runtime 经参数注入(宿主节点边界),整页恰查询页容量个节点
   luassert.truthy(query_count == 8,
     "refresh_page should query exactly 8 card nodes for a full page, got " .. tostring(query_count))
 end)

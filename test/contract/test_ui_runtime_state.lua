@@ -216,6 +216,7 @@ describe("TestUiRuntimeState", function()
     _item_window(8, { "item_b" }, ""))
 
   local result = _click(game, 8, 1)
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.is.equal(0, calls, "blank phase should skip the availability recheck")
   luassert.is.equal("denied", result.status, "unofferable card is still denied")
   luassert.is.equal("unknown", result.reason, "blank phase yields the unclassified reason")

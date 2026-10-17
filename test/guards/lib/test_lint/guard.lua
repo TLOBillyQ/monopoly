@@ -1,7 +1,8 @@
 -- 测试 lint 门禁(#127):扫全仓测试 spec(test/** 与 tools/**/test/** 的
--- test_*.lua),用 luacheck parser 的 AST 跑可插拔规则;首条规则是
--- vacuous-branch(拦截断言只躲在条件分支里的空转测试)。骨架(枚举/AST/
--- 测试体识别/豁免解析/报告格式)供 #128 的 call-count 规则复用。
+-- test_*.lua),用 luacheck parser 的 AST 跑可插拔规则:vacuous-branch
+-- (拦截断言只躲在条件分支里的空转测试,#127)与 call-count(拦截钉内部
+-- 调用次数的计数器断言,#128)。骨架(枚举/AST/测试体识别/豁免解析/报告
+-- 格式)两条规则共用。
 require("test.bootstrap").install_package_paths()
 
 local fs_lib = require("foundation.fs")
@@ -12,13 +13,15 @@ local bodies_mod = require("test.guards.lib.test_lint.bodies")
 local allow_mod = require("test.guards.lib.test_lint.allow")
 local report = require("test.guards.lib.test_lint.report")
 local vacuous_branch = require("test.guards.lib.test_lint.rules.vacuous_branch")
+local call_count = require("test.guards.lib.test_lint.rules.call_count")
 
 local M = {}
 
 local _GUARD = "test_lint_guard"
 
--- 规则注册表:#128 的 call-count 往这里加一条即可,骨架不动。
-local RULES = { vacuous_branch }
+-- 规则注册表:新规则往这里加一条即可,骨架不动。
+-- check_body 返回违规记录列表或 nil。
+local RULES = { vacuous_branch, call_count }
 
 -- 纯策略核:tracked 路径表 + read(path) -> content|nil,返回统一格式的违规
 -- 字符串列表。opts.parse 可注入替代 parser;缺省走项目工具缓存的 luacheck。
@@ -50,8 +53,7 @@ function M.check(paths, read, opts)
         for _, rule in ipairs(RULES) do
           local ctx = rule.build_ctx ~= nil and rule.build_ctx({ locals = locals }) or nil
           for _, body in ipairs(bodies) do
-            local violation = rule.check_body(body, ctx)
-            if violation ~= nil then
+            for _, violation in ipairs(rule.check_body(body, ctx) or {}) do
               violation.path = path
               if not allow_mod.exempted(allows, violation.rule, violation.line) then
                 violations[#violations + 1] = violation

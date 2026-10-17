@@ -646,6 +646,7 @@ it("test_29_role_control_lock_sync_applies_and_tracks_owned_lock", function()
   if not ok then
     error(err)
   end
+  -- lint-allow: call-count 引擎单位 add_state 调用一次=禁控 buff 实际加到单位上
   luassert.truthy(add_calls == 1, "should add control-forbid buff when unit is unlocked")
   luassert.truthy(state.role_control_lock.by_role.p1.owned == true, "lock state should track owned buff")
 end)
@@ -683,6 +684,7 @@ it("test_30_role_control_lock_sync_cleans_stale_role_entries", function()
   if not ok then
     error(err)
   end
+  -- lint-allow: call-count 引擎单位 remove_state 调用一次=过期禁控 buff 被移除
   luassert.truthy(removed == 1, "stale owned entry should be released")
   luassert.truthy(state.role_control_lock.by_role.stale == nil, "stale role entry should be pruned")
 end)

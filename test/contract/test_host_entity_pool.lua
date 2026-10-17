@@ -345,6 +345,7 @@ describe("TestHostEntityPool", function()
 
   real_logger.warn = real_warn
   luassert.is_nil(handle, "acquire must return nil when create_unit_with_scale returns nil")
+  -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
   luassert.is.equal(1, warn_count, "acquire must warn once on create failure")
   end)
 

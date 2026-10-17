@@ -1265,7 +1265,9 @@ it("test_modal_presenter_close_choice_modal_resets_choice_and_market", function(
 
   luassert.truthy(state.ui.choice_active == false, "close_choice_modal should deactivate choice screen")
   luassert.truthy(state.ui.market_active == false, "close_choice_modal should deactivate market")
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(market_closed == 1, "close_choice_modal should close market once")
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(modal_closed == 1, "close_choice_modal should close modal state once")
 end)
 

@@ -434,6 +434,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "unbound cue should still play")
     end)
 
+    -- lint-allow: call-count host_sfx.bind_sfx_to_unit 是宿主音效 port,零调用=音效未挂接到玩家单位
     luassert.truthy(bind_calls == 0, "cue without bind_to_player should not bind to the player unit")
   end)
 
@@ -470,6 +471,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == false, "nil runtime sfx id on effect-only cue should return false")
     end)
 
+    -- lint-allow: call-count host_sfx.play_sfx_by_key 是宿主音效 port,调用次数=引擎播放特效音次数
     luassert.truthy(play_calls == 1, "missing effect id should skip engine call before nil sfx handle case")
   end)
 
@@ -690,6 +692,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "followup sound scheduling may still keep cue successful")
     end)
 
+    -- lint-allow: call-count host_sfx.play_sfx_by_key 是宿主音效 port,零调用=未向引擎播放音效
     luassert.truthy(play_calls == 0, "missing effect ref should not call engine")
   end)
 
@@ -941,6 +944,7 @@ describe("TestBoardFeedback", function()
       _assert_eq(cue.rate, nil, "vector-like field is rejected")
       _assert_eq(cue.duration, nil, "non-numeric string field is rejected")
     end)
+    -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.truthy(warns >= 3, "vector, non-numeric, and nested non-numeric fields should warn (got " .. warns .. ")")
   end)
 
@@ -984,6 +988,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "player cue should play with unit resolved from state.player_units")
     end)
 
+    -- lint-allow: call-count host_sfx.bind_sfx_to_unit 是宿主音效 port,调用一次=音效挂接到玩家单位一次
     luassert.truthy(bind_calls == 1, "cash_burst should bind to the unit resolved from player_units")
   end)
 
@@ -1027,6 +1032,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "tile cue with payload player_id should play")
     end)
 
+    -- lint-allow: call-count host_sfx.bind_sfx_to_unit 是宿主音效 port,调用一次=音效挂接到玩家单位一次
     luassert.truthy(bind_calls == 1, "tile cue with payload player_id should bind to the player unit")
   end)
 
@@ -1213,6 +1219,7 @@ describe("TestBoardFeedback", function()
       local played = board_feedback.play_tile_cue(state, "", 1, {})
       luassert.truthy(played == false, "empty cue name should not play anything")
     end)
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(lookups == 0, "empty cue name must not reach the catalog")
   end)
 

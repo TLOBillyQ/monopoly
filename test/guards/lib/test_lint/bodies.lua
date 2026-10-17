@@ -3,17 +3,14 @@
 --   旧式:TestX = {} 函数表里的 test_* 成员(表构造器与 TestX.test_* = function 两种形态)。
 -- 返回 bodies(每个 { name, fn, line },fn 是 luacheck AST 的 Function 节点)
 -- 与 locals(文件级 local 函数表 name -> Function,供规则做单层 helper 展开)。
+local ast_mod = require("test.guards.lib.test_lint.ast")
+
 local M = {}
+
+local _id_name = ast_mod.id_name
 
 local function _is_id(node, name)
   return type(node) == "table" and node.tag == "Id" and node[1] == name
-end
-
-local function _id_name(node)
-  if type(node) == "table" and node.tag == "Id" then
-    return node[1]
-  end
-  return nil
 end
 
 local function _string_value(node)

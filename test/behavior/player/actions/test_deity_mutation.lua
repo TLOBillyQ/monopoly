@@ -12,10 +12,6 @@ local luassert = assert
 --   L31  return d.type ~= nil and d.type ~= "" and (d.remaining or 0) > 0
 
 local deity_ops = require("src.player.actions.deity")
-local common = require("src.player.actions.state_common")
-local support = require("test.support.shared_support")
-
-local _with_patches = support.with_patches
 
 describe("TestDeityMutation", function()
 
@@ -32,20 +28,15 @@ describe("TestDeityMutation", function()
   end)
 
   it("test_seeds_a_fresh_deity_with_remaining_0_so_tick_is_a_noop_with_no_mark", function()
-    -- Observable via side effect: with default remaining 0, tick returns before
-    -- any common.mark_players call. With the mutant default remaining 1, tick
-    -- decrements 1 -> 0, triggers clear_player_deity, which DOES mark players.
-    local marks = 0
-    _with_patches({
-      { target = common, key = "mark_players", value = function() marks = marks + 1 end },
-    }, function()
-      local player = {}
-      deity_ops.tick_player_deity({ dirty = {} }, player)
-    end)
-    -- Original: remaining default 0 -> `if 0 <= 0 then return end` -> 0 marks.
+    -- Observable via the game's dirty flags: with default remaining 0, tick
+    -- returns before marking players dirty. With the mutant default remaining 1,
+    -- tick decrements 1 -> 0, triggers clear_player_deity, which DOES mark players.
+    local game = { dirty = {} }
+    deity_ops.tick_player_deity(game, {})
+    -- Original: remaining default 0 -> `if 0 <= 0 then return end` -> clean.
     -- Mutant '0'->'1': remaining default 1 -> 1<=0 false -> remaining=1-1=0 ->
-    --   0<=0 -> clear_player_deity -> common.mark_players -> >=1 marks.
-    luassert.truthy(marks == 0, "fresh deity with remaining 0 must not mark players on tick; got " .. marks .. " marks")
+    --   0<=0 -> clear_player_deity -> common.mark_players -> dirty.players.
+    luassert.is_nil(game.dirty.players, "fresh deity with remaining 0 must not mark players dirty on tick")
   end)
 
   it("test_reports_no_deity_when_type_is_empty_string_even_if_remaining_is_positive", function()

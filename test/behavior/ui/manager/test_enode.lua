@@ -460,6 +460,7 @@ it("test_ignores_host_events_for_nodes_without_handlers", function()
 
   registered[1].handler(nil, nil, { eui_node_id = 999, role = {} })
 
+  -- lint-allow: call-count listen 回调是公共订阅接口,未派发即零次触发
   luassert.truthy(fired == 0, "a host event for an unregistered node should not fire callbacks")
   luassert.truthy(context.client_role == nil, "client_role should stay unset for unhandled events")
 end)
@@ -473,6 +474,7 @@ it("test_skips_dispatch_when_the_node_is_flagged_disabled", function()
 
   registered[1].handler(nil, nil, { eui_node_id = 236, role = {} })
 
+  -- lint-allow: call-count listen 回调是公共订阅接口,未派发即零次触发
   luassert.truthy(fired == 0, "a disabled node should not receive event callbacks")
 end)
 

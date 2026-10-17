@@ -52,6 +52,7 @@ it("test_every_click_emits_share_task_event_without_latching", function()
     "first click must report handled")
   luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "second click must report handled")
+  -- lint-allow: call-count emit_event 经 runtime_ports.configure 注入,每次点击发一次是无闩锁契约
   luassert.is.equal(2, calls, "every click must emit the event (no latch)")
 end)
 
@@ -68,6 +69,7 @@ it("test_emit_failure_does_not_break_dispatch_and_next_click_retries", function(
     "failed emit must not break the view command")
   luassert.is.equal(true, ports.dispatch({}, { type = "open_share_panel", actor_role_id = 1 }),
     "the retry click must also report handled")
+  -- lint-allow: call-count emit_event 经 runtime_ports.configure 注入,每次点击发一次是无闩锁契约
   luassert.is.equal(2, attempts, "failure must not latch: next click retries the emit")
 end)
 

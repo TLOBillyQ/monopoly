@@ -168,6 +168,7 @@ it("test_roadblock_hit_no_longer_drives_visual_feedback", function()
     handler(nil, nil, { tile_id = 12 })
   end)
 
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(cleared == 0, "roadblock_hit should no longer clear overlay directly")
   luassert.truthy(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
 end)
@@ -262,7 +263,9 @@ it("test_mine_hit_no_longer_drives_visual_feedback", function()
     })
   end)
 
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(cleared == 0, "mine_hit should no longer clear overlay directly")
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(cues == 0, "mine_hit should no longer emit direct cue playback")
   luassert.truthy(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
 end)
@@ -532,6 +535,7 @@ it("test_status_applied_feedback_prefers_tile_cue", function()
   luassert.truthy(#tile_calls == 1, "status_applied should prefer tile cue when tile_index exists")
   luassert.truthy(tile_calls[1].cue_name == "hospital_shock", "status_applied cue mismatch")
   luassert.truthy(tile_calls[1].tile_index == 7, "status_applied tile index mismatch")
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(player_calls == 0, "status_applied should not fallback to player cue when tile cue is used")
 end)
 
@@ -954,6 +958,7 @@ it("test_game_result_without_players_skips_panels", function()
     handler(nil, nil, { winner_ids = { [1] = true } })
   end)
 
+  -- lint-allow: call-count runtime_ports.resolve_role 是宿主角色解析 port,零调用=未向宿主解析角色
   luassert.truthy(role_calls == 0, "no players should mean no role resolution")
 end)
 
@@ -1000,6 +1005,7 @@ it("test_game_result_with_players_but_no_roles_skips_panels_and_warns", function
     luassert.truthy(ok, "missing role should not raise while routing result panels")
   end)
 
+  -- lint-allow: call-count runtime_ports.resolve_role 是宿主角色解析 port,调用次数=向宿主解析角色的次数
   luassert.truthy(resolve_calls == 2, "both players should attempt role resolution")
   luassert.truthy(#warns == 2, "each unresolved role should leave one warn (#327)")
   luassert.truthy(warns[1]:find("player 1", 1, true) ~= nil and warns[2]:find("player 2", 1, true) ~= nil,

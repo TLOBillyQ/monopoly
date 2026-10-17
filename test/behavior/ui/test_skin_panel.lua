@@ -173,6 +173,7 @@ it("test_falls_back_to_ensured_panel_when_transaction_returns_nil", function()
     luassert.truthy(unequip_panel == s.ui.skin_panel, "nil unequip result should return ensured panel")
   end)
 
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(tips == 0, "nil transaction result should not enqueue notifications")
 end)
 
@@ -665,6 +666,7 @@ it("test_ignores_non_table_and_failed_query_nodes_results_when_setting_card_text
       texture_calls = texture_calls + 1
     end,
   } })
+  -- lint-allow: call-count runtime 经参数注入(宿主节点边界),不设贴图即可见副作用
   luassert.truthy(texture_calls == 0, "non-table query_nodes result should not set textures")
 
   local failed_state, _ = _make_render_state()
@@ -911,6 +913,7 @@ it("test_asynchronous_purchase_success_refreshes_the_slot_view", function()
     local before_success = refresh_count
     luassert.is_not_nil(captured_entry, "locked equip should reach the paid gateway")
     captured_entry.on_purchase()
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(refresh_count > before_success,
       "asynchronous purchase success must refresh slots so the price button becomes 穿上")
   end)
@@ -1108,6 +1111,7 @@ it("test_coord_equip_calls_refresh_slots_to_update_buttons", function()
   local before_equip = refresh_count
   skin_panel.unlock(s, 1, "buy", 1)
   skin_panel.equip(s, 1, 1)
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(refresh_count > before_equip, "equip should trigger refresh_slots")
 
   skin_panel_view.refresh_slots = orig_refresh

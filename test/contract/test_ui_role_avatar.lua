@@ -24,6 +24,7 @@ describe("TestUiRoleAvatar", function()
     end
     local result = role_avatar.sanitize_image_key(0)
     luassert.is_nil(result, "sanitize_image_key(0) must return nil")
+    -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.is.equal(0, warn_calls, "sanitize_image_key(0) must not call logger.warn")
   end)
 
@@ -35,6 +36,7 @@ describe("TestUiRoleAvatar", function()
     end
     local result = role_avatar.sanitize_image_key(-1)
     luassert.is_nil(result, "sanitize_image_key(-1) must return nil")
+    -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.is_true(warn_calls >= 1, "sanitize_image_key(-1) must call logger.warn")
   end)
 

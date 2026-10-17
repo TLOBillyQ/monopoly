@@ -231,6 +231,7 @@ it("test_enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_b
     })
   end)
 
+  -- lint-allow: call-count runtime.query_nodes 封装 UIManager.query_nodes_by_name,≥1 次=回退路径向宿主查了动作日志节点
   luassert.truthy(query_calls >= 1, "fallback path should query action-log target nodes")
   _assert_eq(good_node.disabled, false, "fallback should enable nodes returned by runtime.query_nodes")
   _assert_eq(manager.client_role, nil, "fallback should restore client role to nil")

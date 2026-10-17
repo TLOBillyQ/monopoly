@@ -51,6 +51,7 @@ it("test_blocked_refreshed_ui_reapplies_input_lock", function()
 
   gameplay_loop.tick(game, state, 0)
 
+  -- lint-allow: call-count ui_sync/gameplay_loop_ports 是注入端口,同步次数即 tick 的对外输出
   check.same(lock_applications, 1)
 end)
 
@@ -139,6 +140,7 @@ it("test_release_pulse_marks_turn_dirty_and_syncs_status_during_visual_hold", fu
 
   check.is_true(refreshed_dirty.any)
   check.is_true(refreshed_dirty.turn)
+  -- lint-allow: call-count ui_sync/gameplay_loop_ports 是注入端口,同步次数即 tick 的对外输出
   check.same(status_syncs, 1)
 end)
 
@@ -156,7 +158,9 @@ it("test_visual_hold_skips_status_sync_but_keeps_event_log_flowing", function()
 
   gameplay_loop.tick(game, state, 0)
 
+  -- lint-allow: call-count ui_sync/gameplay_loop_ports 是注入端口,同步次数即 tick 的对外输出
   check.same(status_syncs, 0)
+  -- lint-allow: call-count ui_sync/gameplay_loop_ports 是注入端口,同步次数即 tick 的对外输出
   check.same(event_log_syncs, 1)
 end)
 

@@ -47,6 +47,7 @@ local function _test_skips_wiring_without_lazy_game_accessor()
     luassert.truthy(settlement.install({}) == false, "install without get_current_game must skip wiring")
     luassert.truthy(settlement.install(nil) == false, "install without opts must skip wiring")
   end)
+  -- lint-allow: call-count host_runtime.register_custom_event 封装 LuaAPI.global_register_custom_event,零调用=未向引擎注册事件
   luassert.truthy(register_calls == 0, "skipped install must not touch the host event port")
 end
 
@@ -217,6 +218,7 @@ local function _test_watch_game_skips_and_logs_when_role_unresolved()
     settlement.watch_game({ players = { { id = 7, name = "P7" } } })
   end, { skip_runtime_context_refresh = true })
 
+  -- lint-allow: call-count host_runtime.register_trigger_event 封装 LuaAPI.global_register_trigger_event,零调用=未向引擎注册退出监听
   luassert.truthy(register_calls == 0, "unresolved role must not register a quit listener")
   luassert.truthy(#warns == 1, "unresolved role must leave a warn trace (ADR 0046)")
 end
