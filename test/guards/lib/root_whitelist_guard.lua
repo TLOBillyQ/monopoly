@@ -55,6 +55,10 @@ local _WHITELIST = {
   [".metrics"] = true,
   -- crapper / mutator 以最近的 .busted 定模块根并读 busted 配置(#99),只认仓根。
   [".busted"] = true,
+  -- 原生 Windows CI 跑 slim verify(#126),位置由 GitHub Actions 约定决定。
+  [".github"] = true,
+  -- 可选 pre-push hook(#126),经 `git config core.hooksPath .githooks` 启用。
+  [".githooks"] = true,
   -- `uml ir` 生成的仓根 policy.edn(ADR 0070 / #99)走 .gitignore,不进白名单;
   -- 人手维护的推演在 docs/architecture.proposals.edn。
   -- #490 为 squad analyst 放行的 dependency-checker.edn / implementation-order.md
