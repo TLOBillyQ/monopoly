@@ -10,14 +10,35 @@ local board_feedback = require("src.ui.render.board_feedback.service")
 local timing = require("src.config.gameplay.timing")
 local logger = require("src.foundation.log")
 local host_runtime = require("src.host")
+local host_sfx = require("src.ui.seams.host_sfx")
 local tip_queue = require("src.foundation.tips")
 local runtime_ports_mod = require("src.foundation.ports.runtime_ports")
 local move_anim = require("src.ui.render.move_anim")
 local unit_position = require("src.ui.render.support.unit_position")
 local runtime_port = require("src.ui.render.support.runtime_ui")
+local shared_support = require("test.support.shared_support")
 local support = require("test.support.ui_action_anim_support")
 
 local _with_patches = support.with_patches
+
+local function _with_tip_presenter(presented, fn)
+  tip_queue.clear()
+  tip_queue.configure_runtime({
+    presenter = function(text, duration, tip)
+      presented[#presented + 1] = tip or { text = text, duration = duration }
+    end,
+    scheduler = function()
+      return true
+    end,
+    test_mode = false,
+  })
+  local ok, err = xpcall(fn, debug.traceback)
+  tip_queue.clear()
+  shared_support.restore_runtime_services()
+  if not ok then
+    error(err, 0)
+  end
+end
 
 local function _new_roll_nodes()
   local nodes = {}
@@ -195,15 +216,16 @@ describe("TestActionAnimEffectRoutes", function()
     local state = support.build_min_state()
     local scheduled_delay = nil
     local scheduled_fn = nil
-    local handler_calls = 0
+    local sfx_calls = {}
     local expected_delay = timing.demolish_effect_start_delay_seconds or 0.2
 
     _with_patches({
       {
-        target = handlers,
-        key = "play_missile",
-        value = function()
-          handler_calls = handler_calls + 1
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos)
+          sfx_calls[#sfx_calls + 1] = { sfx_key = sfx_key, pos = pos }
+          return nil
         end,
       },
       {
@@ -222,12 +244,11 @@ describe("TestActionAnimEffectRoutes", function()
       })
       luassert.truthy(duration == 0.6 + expected_delay, "missile should add startup delay to total duration")
       luassert.truthy(scheduled_delay == expected_delay, "missile should schedule handler after startup delay")
-      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-      luassert.truthy(handler_calls == 0, "missile handler should not run immediately before ui closes")
+      luassert.truthy(#sfx_calls == 0, "missile should not emit host effects before ui closes")
       luassert.truthy(type(scheduled_fn) == "function", "missile should enqueue delayed handler callback")
       scheduled_fn()
-      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-      luassert.truthy(handler_calls == 1, "missile handler should run after delayed callback")
+      luassert.truthy(#sfx_calls == 1, "missile should emit its host effect after delayed callback")
+      luassert.truthy(sfx_calls[1].sfx_key == 1288, "missile delayed callback should emit mine_blast")
     end)
   end)
 
@@ -235,15 +256,16 @@ describe("TestActionAnimEffectRoutes", function()
     local state = support.build_min_state()
     local scheduled_delay = nil
     local scheduled_fn = nil
-    local handler_calls = 0
+    local sfx_calls = {}
     local expected_delay = timing.demolish_effect_start_delay_seconds or 0.2
 
     _with_patches({
       {
-        target = handlers,
-        key = "play_monster",
-        value = function()
-          handler_calls = handler_calls + 1
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos)
+          sfx_calls[#sfx_calls + 1] = { sfx_key = sfx_key, pos = pos }
+          return nil
         end,
       },
       {
@@ -262,12 +284,11 @@ describe("TestActionAnimEffectRoutes", function()
       })
       luassert.truthy(duration == 0.6 + expected_delay, "monster should add startup delay to total duration")
       luassert.truthy(scheduled_delay == expected_delay, "monster should schedule handler after startup delay")
-      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-      luassert.truthy(handler_calls == 0, "monster handler should not run immediately before ui closes")
+      luassert.truthy(#sfx_calls == 0, "monster should not emit host effects before ui closes")
       luassert.truthy(type(scheduled_fn) == "function", "monster should enqueue delayed handler callback")
       scheduled_fn()
-      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-      luassert.truthy(handler_calls == 1, "monster handler should run after delayed callback")
+      luassert.truthy(#sfx_calls == 1, "monster should emit its host effect after delayed callback")
+      luassert.truthy(sfx_calls[1].sfx_key == 1288, "monster delayed callback should emit mine_blast")
     end)
   end)
 
@@ -304,16 +325,21 @@ describe("TestActionAnimEffectRoutes", function()
     end)
   end)
 
-  it("test_action_anim_upgrade_land_does_not_call_overlay_handler", function()
+  it("test_action_anim_upgrade_land_routes_sfx_without_overlay_units", function()
     local state = support.build_min_state()
-    local called = 0
+    state.board_scene.overlay_units = {
+      roadblocks = {},
+      mines = {},
+    }
+    local sfx_calls = {}
 
     _with_patches({
       {
-        target = handlers,
-        key = "play_overlay",
-        value = function()
-          called = called + 1
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key)
+          sfx_calls[#sfx_calls + 1] = sfx_key
+          return nil
         end,
       },
     }, function()
@@ -324,25 +350,19 @@ describe("TestActionAnimEffectRoutes", function()
         duration = 0.6,
       })
       luassert.truthy(out_duration == 0.6, "upgrade_land should keep configured duration")
-      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-      luassert.truthy(called == 0, "upgrade_land should not call overlay handler")
     end)
+
+    luassert.truthy(#sfx_calls == 1, "upgrade_land should emit its configured host effect")
+    luassert.truthy(sfx_calls[1] == 4286, "upgrade_land should emit upgrade_land_smoke")
+    luassert.truthy(next(state.board_scene.overlay_units.roadblocks) == nil, "upgrade_land should not create roadblock overlays")
+    luassert.truthy(next(state.board_scene.overlay_units.mines) == nil, "upgrade_land should not create mine overlays")
   end)
 
   it("test_action_anim_is_silent_by_default", function()
     local state = support.build_min_state()
-    local tip_calls = 0
+    local presented = {}
 
-    _with_patches({
-      {
-        target = tip_queue,
-        key = "enqueue",
-        value = function()
-          tip_calls = tip_calls + 1
-          return true
-        end,
-      },
-    }, function()
+    _with_tip_presenter(presented, function()
       local duration = action_anim.play(state, {
         kind = "item_use",
         player_id = 1,
@@ -352,8 +372,7 @@ describe("TestActionAnimEffectRoutes", function()
       luassert.truthy(duration == 0.6, "silent action anim should still return duration")
     end)
 
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(tip_calls == 0, "action anim should not emit user tips by default")
+    luassert.truthy(#presented == 0, "action anim should not present user tips by default")
   end)
 
   it("test_action_anim_user_tip_policy_forces_tip", function()
@@ -386,7 +405,7 @@ describe("TestActionAnimEffectRoutes", function()
 
   it("test_action_anim_debug_log_uses_info_without_tip", function()
     local state = support.build_min_state()
-    local tip_calls = 0
+    local presented = {}
     local info_calls = {}
 
     _with_patches({
@@ -394,14 +413,6 @@ describe("TestActionAnimEffectRoutes", function()
         target = logger,
         key = "anim_debug_enabled_provider",
         value = function()
-          return true
-        end,
-      },
-      {
-        target = tip_queue,
-        key = "enqueue",
-        value = function()
-          tip_calls = tip_calls + 1
           return true
         end,
       },
@@ -420,17 +431,18 @@ describe("TestActionAnimEffectRoutes", function()
         end,
       },
     }, function()
-      action_anim.play(state, {
-        kind = "move_effect",
-        player_id = 1,
-        from_index = 1,
-        to_index = 1,
-        duration = 0.6,
-      })
+      _with_tip_presenter(presented, function()
+        action_anim.play(state, {
+          kind = "move_effect",
+          player_id = 1,
+          from_index = 1,
+          to_index = 1,
+          duration = 0.6,
+        })
+      end)
     end)
 
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(tip_calls == 0, "debug action anim log should not consume tip channel")
+    luassert.truthy(#presented == 0, "debug action anim log should not present a tip")
     luassert.truthy(#info_calls == 1, "debug action anim log should emit one info log")
   end)
 
@@ -569,41 +581,31 @@ describe("TestActionAnimEffectRoutes", function()
 
   it("test_play_mine_trigger_prefers_player_cue_with_unit_position", function()
     local state = support.build_min_state()
-    local player_calls = {}
-    local tile_calls = 0
-    local cleared = {}
+    local expected_pos = { x = 1, y = 2, z = 3 }
+    local tile_pos = { x = 9, y = 9, z = 9 }
+    state.board_scene.units_by_player_id[1] = {
+      get_position = function()
+        return expected_pos
+      end,
+    }
+    state.board_scene.tiles[1].get_position = function()
+      return tile_pos
+    end
+    state.board_scene.overlay_units = {
+      roadblocks = {},
+      mines = {
+        [1] = { kind = "unit", handle = {}, pooled = false },
+      },
+    }
+    local sfx_calls = {}
 
     _with_patches({
       {
-        target = unit_position,
-        key = "read_unit_position",
-        value = function()
-          return { x = 1, y = 2, z = 3 }
-        end,
-      },
-      {
-        target = unit_position,
-        key = "read_scene_tile_position",
-        value = function()
-          return { x = 9, y = 9, z = 9 }
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_player_cue",
-        value = function(_, cue_name, player_id, payload)
-          player_calls[#player_calls + 1] = {
-            cue_name = cue_name,
-            player_id = player_id,
-            payload = payload,
-          }
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_tile_cue",
-        value = function()
-          tile_calls = tile_calls + 1
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos)
+          sfx_calls[#sfx_calls + 1] = { sfx_key = sfx_key, pos = pos }
+          return nil
         end,
       },
       {
@@ -625,53 +627,37 @@ describe("TestActionAnimEffectRoutes", function()
         to_index = 2,
         cue_name = "mine_blast",
       }, 0.1, {
-        clear_overlay = function(_, kind, tile_index)
-          cleared[#cleared + 1] = kind .. ":" .. tostring(tile_index)
-        end,
+        clear_overlay = anim_units.clear_overlay,
       })
 
       luassert.truthy(duration == 0.4, "play_mine_trigger should keep positive snap delay when above minimum duration")
     end)
 
-    luassert.truthy(#player_calls == 1, "play_mine_trigger should route one player cue when unit position exists")
-    luassert.truthy(player_calls[1].payload.pos.x == 1, "play_mine_trigger should prefer unit position over tile position")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(tile_calls == 0, "play_mine_trigger should not emit tile cue when player cue is available")
-    luassert.truthy(cleared[1] == "mine:1", "play_mine_trigger should clear mine overlay after feedback")
+    luassert.truthy(#sfx_calls == 1, "play_mine_trigger should emit exactly one host cue")
+    luassert.truthy(sfx_calls[1].sfx_key == 1288, "play_mine_trigger should emit mine_blast")
+    luassert.truthy(sfx_calls[1].pos == expected_pos, "play_mine_trigger should prefer unit position over tile position")
+    luassert.truthy(state.board_scene.overlay_units.mines[1] == nil, "play_mine_trigger should remove the mine from the public overlay runtime")
   end)
 
   it("test_play_mine_trigger_falls_back_to_tile_position_for_player_cue", function()
     local state = support.build_min_state()
-    local player_calls = {}
-    local tile_calls = 0
+    local expected_pos = { x = 4, y = 5, z = 6 }
+    local tile_cue_pos = { x = 9, y = 9, z = 9 }
+    local current_tile_pos = expected_pos
+    state.board_scene.tiles[1].get_position = function()
+      local resolved = current_tile_pos
+      current_tile_pos = tile_cue_pos
+      return resolved
+    end
+    local sfx_calls = {}
 
     _with_patches({
       {
-        target = unit_position,
-        key = "read_unit_position",
-        value = function()
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos)
+          sfx_calls[#sfx_calls + 1] = { sfx_key = sfx_key, pos = pos }
           return nil
-        end,
-      },
-      {
-        target = unit_position,
-        key = "read_scene_tile_position",
-        value = function()
-          return { x = 4, y = 5, z = 6 }
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_player_cue",
-        value = function(_, _, _, payload)
-          player_calls[#player_calls + 1] = payload
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_tile_cue",
-        value = function()
-          tile_calls = tile_calls + 1
         end,
       },
       {
@@ -696,44 +682,31 @@ describe("TestActionAnimEffectRoutes", function()
       })
     end)
 
-    luassert.truthy(#player_calls == 1, "play_mine_trigger should keep player cue when tile position exists")
-    luassert.truthy(player_calls[1].pos.x == 4, "play_mine_trigger should fall back to tile position")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(tile_calls == 0, "play_mine_trigger should avoid tile cue when tile position fallback exists")
+    luassert.truthy(#sfx_calls == 1, "play_mine_trigger should emit exactly one host cue")
+    luassert.truthy(sfx_calls[1].sfx_key == 1288, "play_mine_trigger should emit mine_blast")
+    luassert.truthy(sfx_calls[1].pos == expected_pos, "player cue should reuse the hit position instead of resolving a tile cue position")
   end)
 
-  it("test_play_mine_trigger_uses_tile_cue_without_any_position_and_normalizes_minimum_delay", function()
+  it("test_play_mine_trigger_uses_tile_cue_after_hit_position_miss_and_normalizes_minimum_delay", function()
     local state = support.build_min_state()
-    local player_calls = 0
-    local tile_calls = {}
+    local expected_pos = { x = 4, y = 5, z = 6 }
+    local current_tile_pos = nil
+    state.board_scene.tiles[3] = {
+      get_position = function()
+        local resolved = current_tile_pos
+        current_tile_pos = expected_pos
+        return resolved
+      end,
+    }
+    local sfx_calls = {}
 
     _with_patches({
       {
-        target = unit_position,
-        key = "read_unit_position",
-        value = function()
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos)
+          sfx_calls[#sfx_calls + 1] = { sfx_key = sfx_key, pos = pos }
           return nil
-        end,
-      },
-      {
-        target = unit_position,
-        key = "read_scene_tile_position",
-        value = function()
-          return nil
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_player_cue",
-        value = function()
-          player_calls = player_calls + 1
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_tile_cue",
-        value = function(_, cue_name, tile_index)
-          tile_calls[#tile_calls + 1] = cue_name .. ":" .. tostring(tile_index)
         end,
       },
       {
@@ -760,9 +733,9 @@ describe("TestActionAnimEffectRoutes", function()
       luassert.truthy(duration == 0.2, "play_mine_trigger should clamp negative snap delay to minimum duration")
     end)
 
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(player_calls == 0, "play_mine_trigger should skip player cue when no hit position exists")
-    luassert.truthy(tile_calls[1] == "mine_blast:3", "play_mine_trigger should fall back to tile cue when position lookup fails")
+    luassert.truthy(#sfx_calls == 1, "tile fallback should emit exactly one host cue")
+    luassert.truthy(sfx_calls[1].sfx_key == 1288, "tile fallback should emit mine_blast")
+    luassert.truthy(sfx_calls[1].pos == expected_pos, "tile fallback should resolve its own public tile position")
   end)
 
   it("test_play_mine_trigger_clears_mine_before_snap_without_scheduler", function()

@@ -189,32 +189,18 @@ local function _test_item_phase_passive_ai_path_remains_auto()
   local player = g:current_player()
   control.initialize(player)
   player.inventory:add({ id = item_ids.mine })
+  local mine_before = support.count_item(player, item_ids.mine)
 
-  local item_strategy = require("src.rules.items.strategy")
-  local auto_calls = 0
+  local phase_res = item_phase.run({ game = g }, "pre_action", {
+    player = player,
+    next_state = "roll",
+    next_args = { player = player },
+  })
 
-  support.with_patches({
-    {
-      target = item_strategy,
-      key = "auto_pre_action",
-      value = function(_, p, phase)
-        auto_calls = auto_calls + 1
-        _assert_equal(p, player, "auto strategy should receive current AI player")
-        _assert_equal(phase, "pre_action", "auto strategy should run in pre_action phase")
-        return nil
-      end,
-    },
-  }, function()
-    local phase_res = item_phase.run({ game = g }, "pre_action", {
-      player = player,
-      next_state = "roll",
-      next_args = { player = player },
-    })
-    luassert.is_nil(phase_res, "AI auto path should complete without opening passive choice")
-  end)
-
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(auto_calls >= 1, "AI path should invoke auto strategy")
+  luassert.is_nil(phase_res, "AI auto path should complete without opening passive choice")
+  _assert_equal(support.count_item(player, item_ids.mine), mine_before - 1,
+    "AI auto path should consume the usable mine through the real item flow")
+  luassert.is_true(g.board:has_mine(player.position), "AI auto path should place the mine on the current tile")
   luassert.is_nil(g.turn.pending_choice, "AI path should not present item_phase_passive choice")
 end
 

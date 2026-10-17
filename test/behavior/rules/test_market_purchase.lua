@@ -412,14 +412,9 @@ describe("TestMarketPurchase", function()
     luassert.truthy(#asserted == 1 and asserted[1] == "贝壳", "local purchase should validate entry currency before touching cash balance")
   end)
 
-  it("test_purchase_execute_rejects_invalid_product_ids_before_lookup", function()
-    local lookups = 0
+  it("test_purchase_execute_rejects_invalid_product_ids_with_public_result", function()
     _reload_module("src.rules.market.purchase", {
       ["src.rules.market.query"] = _make_query_mock({
-        entry_by_id = function(product_id)
-          lookups = lookups + 1
-          return { product_id = product_id, kind = "item", currency = "金币", price = 1, name = "Item" }
-        end,
         is_paid_currency = function()
           return false
         end,
@@ -431,15 +426,12 @@ describe("TestMarketPurchase", function()
       luassert.truthy(purchase.execute({}, { id = 3, name = "Buyer" }, "-1") == false, "negative product id should be rejected")
       luassert.truthy(purchase.execute({}, { id = 3, name = "Buyer" }, "bad") == false, "non-numeric product id should be rejected")
     end)
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(lookups == 0, "invalid product ids should not hit catalog lookup")
   end)
 
   it("test_paid_purchase_callback_clears_in_flight_and_fulfills_item", function()
     local entry = { product_id = 2001, kind = "item", currency = "金豆", price = 5, name = "Paid Item" }
     local callback = nil
     local give_calls = {}
-    local charge_calls = 0
     local refreshed = 0
     local emitted = {}
     local published = {}
@@ -449,8 +441,8 @@ describe("TestMarketPurchase", function()
         entry_by_id = function()
           return entry
         end,
-        try_charge_player = function()
-          charge_calls = charge_calls + 1
+        try_charge_player = function(game, player, price)
+          game:deduct_player_cash(player, price)
           return true
         end,
       }),
@@ -495,18 +487,20 @@ describe("TestMarketPurchase", function()
         },
       },
     }, function(purchase)
-      local game = {}
+      local game = { cash = 100 }
       local player = { id = 3, name = "Buyer" }
+      function game:deduct_player_cash(_, price)
+        self.cash = self.cash - price
+      end
       local started = purchase.execute(game, player, "2001")
       luassert.truthy(started.ok == true, "paid purchase should start")
       luassert.truthy(game._market_paid_in_flight["3:2001"] == true, "paid purchase should mark in-flight")
       luassert.truthy(callback(game, player, entry) == true, "paid callback should fulfill item")
       luassert.truthy(game._market_paid_in_flight["3:2001"] == nil, "paid callback should clear in-flight")
+      luassert.truthy(game.cash == 100, "paid callback fulfillment should leave local currency unchanged")
     end)
 
     luassert.truthy(give_calls[1] == 2001, "paid callback should give item")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(charge_calls == 0, "paid callback fulfillment should skip local charge")
     -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
     luassert.truthy(refreshed == 1, "paid callback success should refresh market choice")
     luassert.truthy(emitted[1].payload.price == 5, "paid callback event should keep price")

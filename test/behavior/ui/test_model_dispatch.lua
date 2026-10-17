@@ -1225,50 +1225,60 @@ it("test_modal_state_select_choice_option_invalidates_ui_model_without_choice_ca
 end)
 
 it("test_modal_presenter_close_choice_modal_resets_choice_and_market", function()
-  local state = {
-    ui = {
-      choice_active = true,
-      market_active = true,
-      popup_active = false,
-      active_choice_screen_key = "secondary_confirm",
-      choice_screens = {
-        secondary_confirm = {
-          confirm = "confirm",
-          cancel = "cancel",
-          body = "body",
-        },
-      },
-    },
-  }
-  _bind_ui_runtime(state)
-  local market_closed = 0
-  local modal_closed = 0
+  local choice_state, choice_nodes, choice_query = _build_choice_modal_state()
+  choice_state.ui.choice_active = true
+  choice_state.ui.market_active = false
+  choice_state.ui.active_choice_screen_key = "secondary_confirm"
+  choice_nodes["通用二次确认屏"].visible = true
+  _ui_runtime(choice_state).choice_visible_option_ids = { "stale-choice" }
+  _ui_runtime(choice_state).pending_choice_selected_option_id = "stale-choice"
 
   _with_patches({
-    {
-      target = require("src.ui.screens.market"),
-      key = "close",
-      value = function()
-        market_closed = market_closed + 1
-      end,
-    },
-    {
-      target = require("src.ui.state.modal"),
-      key = "close_choice",
-      value = function()
-        modal_closed = modal_closed + 1
-      end,
-    },
+    { key = "UIManager", value = { query_nodes_by_name = choice_query } },
+    { key = "all_roles", value = nil },
   }, function()
-    modal_presenter.close_choice_modal(state)
+    modal_presenter.close_choice_modal(choice_state)
   end)
 
-  luassert.truthy(state.ui.choice_active == false, "close_choice_modal should deactivate choice screen")
-  luassert.truthy(state.ui.market_active == false, "close_choice_modal should deactivate market")
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(market_closed == 1, "close_choice_modal should close market once")
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(modal_closed == 1, "close_choice_modal should close modal state once")
+  luassert.truthy(choice_state.ui.choice_active == false, "choice-only close should deactivate the choice screen")
+  luassert.is_nil(choice_state.ui.active_choice_screen_key, "choice-only close should clear the active screen key")
+  luassert.truthy(choice_nodes["通用二次确认屏"].visible == false,
+    "choice-only close should hide the active choice canvas")
+  luassert.is_nil(_ui_runtime(choice_state).choice_visible_option_ids,
+    "choice-only close should clear visible option ids through public modal state")
+  luassert.is_nil(_ui_runtime(choice_state).pending_choice_selected_option_id,
+    "choice-only close should clear the selected option through public modal state")
+
+  local market_state, market_nodes, market_query = _build_choice_modal_state()
+  market_state.ui.choice_active = true
+  market_state.ui.market_active = true
+  market_state.ui.active_choice_screen_key = "secondary_confirm"
+  market_nodes["通用二次确认屏"].visible = true
+  market_nodes["黑市屏"].visible = true
+  _ui_runtime(market_state).choice_visible_option_ids = { "stale-market" }
+  _ui_runtime(market_state).pending_choice_selected_option_id = "stale-market"
+
+  _with_patches({
+    { key = "UIManager", value = { query_nodes_by_name = market_query } },
+    { key = "all_roles", value = nil },
+  }, function()
+    modal_presenter.close_choice_modal(market_state)
+  end)
+
+  luassert.truthy(market_state.ui.choice_active == false,
+    "simultaneous choice and market close should deactivate the choice screen")
+  luassert.is_nil(market_state.ui.active_choice_screen_key,
+    "simultaneous choice and market close should clear the active screen key")
+  luassert.truthy(market_nodes["通用二次确认屏"].visible == false,
+    "simultaneous choice and market close should hide the choice canvas")
+  luassert.truthy(market_state.ui.market_active == false,
+    "simultaneous choice and market close should deactivate the market")
+  luassert.truthy(market_nodes["黑市屏"].visible == false,
+    "simultaneous choice and market close should hide the market canvas")
+  luassert.is_nil(_ui_runtime(market_state).choice_visible_option_ids,
+    "simultaneous choice and market close should clear visible option ids")
+  luassert.is_nil(_ui_runtime(market_state).pending_choice_selected_option_id,
+    "simultaneous choice and market close should clear the selected option")
 end)
 
 

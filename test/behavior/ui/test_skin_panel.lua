@@ -91,6 +91,17 @@ local function _find_call(calls, method, name)
   return nil
 end
 
+local function _with_clean_tip_runtime(fn)
+  tip_queue.clear()
+  local handler = debug and debug.traceback or function(err) return err end
+  local ok, err = xpcall(fn, handler)
+  tip_queue.clear()
+  support.restore_runtime_services()
+  if not ok then
+    error(err)
+  end
+end
+
 -- In-memory stand-in for the host skin archive port. Records mark/save calls so
 -- tests can assert what was persisted, and serves load_* back for seeding.
 local function _make_fake_archive()
@@ -151,30 +162,38 @@ end)
 -- skin_panel_intent_canvas_spec（经 view_command.dispatch 全路径验证
 -- 仅点击者 canvas 切换、他人不被牵动）二处承载，此处不再双测（#237）。
 it("test_falls_back_to_ensured_panel_when_transaction_returns_nil", function()
-  local s = _make_state()
-  local tips = 0
+  local presented_text = nil
 
-  _with_patches({
-    { target = transaction, key = "handle_skin_transaction", value = function()
-      return nil
-    end },
-    { target = tip_queue, key = "enqueue", value = function()
-      tips = tips + 1
-    end },
-  }, function()
-    local unlock_panel = skin_panel.unlock(s, 1, "buy", 1)
-    local next_panel = skin_panel.handle_action(s, "next", 1)
-    local prev_panel = skin_panel.handle_action(s, "prev", 1)
-    local unequip_panel = skin_panel.handle_action(s, "unequip", 1)
+  _with_clean_tip_runtime(function()
+    local s = _make_state()
+    _with_patches({
+      { target = transaction, key = "handle_skin_transaction", value = function()
+        return nil
+      end },
+    }, function()
+      tip_queue.configure_runtime({
+        presenter = function(text)
+          presented_text = text
+        end,
+        scheduler = function()
+          return true
+        end,
+        test_mode = false,
+      })
 
-    luassert.truthy(unlock_panel == s.ui.skin_panel, "nil transaction result should return ensured panel")
-    luassert.truthy(next_panel == s.ui.skin_panel, "nil next result should return ensured panel")
-    luassert.truthy(prev_panel == s.ui.skin_panel, "nil prev result should return ensured panel")
-    luassert.truthy(unequip_panel == s.ui.skin_panel, "nil unequip result should return ensured panel")
+      local unlock_panel = skin_panel.unlock(s, 1, "buy", 1)
+      local next_panel = skin_panel.handle_action(s, "next", 1)
+      local prev_panel = skin_panel.handle_action(s, "prev", 1)
+      local unequip_panel = skin_panel.handle_action(s, "unequip", 1)
+
+      luassert.truthy(unlock_panel == s.ui.skin_panel, "nil transaction result should return ensured panel")
+      luassert.truthy(next_panel == s.ui.skin_panel, "nil next result should return ensured panel")
+      luassert.truthy(prev_panel == s.ui.skin_panel, "nil prev result should return ensured panel")
+      luassert.truthy(unequip_panel == s.ui.skin_panel, "nil unequip result should return ensured panel")
+    end)
+
+    luassert.is_nil(presented_text, "nil transaction result should not present notifications")
   end)
-
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(tips == 0, "nil transaction result should not enqueue notifications")
 end)
 
 it("test_uses_stable_notification_keys_and_honors_silent_close", function()
@@ -892,30 +911,28 @@ it("test_asynchronous_purchase_success_refreshes_the_slot_view", function()
   local catalog = _make_rich_catalog()
   skin_panel.configure_catalog_for_tests(catalog)
   local captured_entry = nil
+  local s, calls = _make_render_state()
+  s.game = _make_paid_state().game
+  s.runtime_asset_context = { refs = { images = {} } }
 
-  local refresh_count = 0
   _with_patches({
     { target = paid_purchase_port, key = "start", value = function(_, _, entry)
       captured_entry = entry
       return true
     end },
-    {
-      target = skin_panel_view,
-      key = "refresh_slots",
-      value = function(state, cat, opts)
-        refresh_count = refresh_count + 1
-      end,
-    },
   }, function()
-    local s = _make_paid_state()
     skin_panel.open(s, 1)
     skin_panel.equip(s, 1, 1)
-    local before_success = refresh_count
     luassert.is_not_nil(captured_entry, "locked equip should reach the paid gateway")
+    luassert.truthy(_find_call(calls, "set_button", skin_nodes.action_buttons[1]) == "198",
+      "locked purchase should render its price before the asynchronous callback")
+
     captured_entry.on_purchase()
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(refresh_count > before_success,
-      "asynchronous purchase success must refresh slots so the price button becomes 穿上")
+
+    luassert.truthy(_find_call(calls, "set_button", skin_nodes.action_buttons[1]) == "脱下",
+      "asynchronous purchase success must refresh the slot to the equipped state")
+    luassert.truthy(_find_call(calls, "set_visible", skin_nodes.price_icons[1]) == false,
+      "asynchronous purchase success must hide the equipped slot price icon")
   end)
 end)
 
@@ -1099,22 +1116,20 @@ end)
 it("test_coord_equip_calls_refresh_slots_to_update_buttons", function()
   local catalog = _make_rich_catalog()
   skin_panel.configure_catalog_for_tests(catalog)
-  local refresh_count = 0
-  local orig_refresh = skin_panel_view.refresh_slots
-  skin_panel_view.refresh_slots = function(...)
-    refresh_count = refresh_count + 1
-    return orig_refresh(...)
-  end
+  local s, calls = _make_render_state()
+  s.runtime_asset_context = { refs = { images = {} } }
 
-  local s = _make_state()
   skin_panel.open(s, 1)
-  local before_equip = refresh_count
   skin_panel.unlock(s, 1, "buy", 1)
-  skin_panel.equip(s, 1, 1)
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(refresh_count > before_equip, "equip should trigger refresh_slots")
+  luassert.truthy(_find_call(calls, "set_button", skin_nodes.action_buttons[1]) == "穿上",
+    "owned skin should render its equip action before selection")
 
-  skin_panel_view.refresh_slots = orig_refresh
+  skin_panel.equip(s, 1, 1)
+
+  luassert.truthy(_find_call(calls, "set_button", skin_nodes.action_buttons[1]) == "脱下",
+    "equip should refresh the slot button to the equipped state")
+  luassert.truthy(s.ui.skin_panel.selected_by_role["1"] == 5001,
+    "equip should publish the selected skin in panel state")
 end)
 
 -- T16 mutation-pinning addendum.

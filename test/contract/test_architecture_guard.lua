@@ -213,27 +213,16 @@ it("test_turn_dispatch_next_only_marks_ui_dirty", function()
     },
   }
   local ui_writes = _record_ui_writes(state)
-  local stepped = 0
 
-  support.with_patches({
-    {
-      target = turn_dispatch,
-      key = "step_turn",
-      value = function()
-        stepped = stepped + 1
-      end,
-    },
-  }, function()
-    local result = turn_dispatch.dispatch_action(game, state, {
-      type = "ui_button",
-      id = "next",
-      actor_role_id = current_player.id,
-    })
-    luassert.is.equal("applied", result.status, "next should apply for current player")
-  end)
+  local result = turn_dispatch.dispatch_action(game, state, {
+    type = "ui_button",
+    id = "next",
+    actor_role_id = current_player.id,
+  })
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.is.equal(1, stepped, "dispatch should step turn once")
+  luassert.is.equal("applied", result.status, "next should apply for current player")
+  luassert.is.equal("wait_action", game.turn.phase, "next should advance the public turn state to the action wait")
+  luassert.is_true(game.dirty.any, "next should mark the advanced turn state dirty")
   luassert.is.equal(0, #ui_writes, "next action should not directly write state.ui_*")
   luassert.is.equal(1, #output_log, "next action should emit one output invalidate signal")
   luassert.is.equal("invalidate_ui_model", output_log[1].kind, "next action should invalidate ui_model through output port")

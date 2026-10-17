@@ -129,8 +129,28 @@ end)
 
 it("test_roadblock_hit_no_longer_drives_visual_feedback", function()
   local handlers = {}
-  local cleared = 0
   local looked_up_tile_id = nil
+  local overlay_entry = { kind = "unit", handle = {}, pooled = false }
+  local state = {
+    game = {
+      board = {
+        index_of_tile_id = function(_, tile_id)
+          looked_up_tile_id = tile_id
+          if tile_id == 12 then
+            return 7
+          end
+          return nil
+        end,
+      },
+    },
+    board_scene = {
+      overlay_units = {
+        roadblocks = { [7] = overlay_entry },
+        mines = {},
+      },
+    },
+  }
+  local resolved = nil
 
   _with_patches({
     {
@@ -141,35 +161,16 @@ it("test_roadblock_hit_no_longer_drives_visual_feedback", function()
         return true
       end,
     },
-    {
-      target = require("src.ui.render.anim"),
-      key = "clear_overlay",
-      value = function()
-        cleared = cleared + 1
-      end,
-    },
   }, function()
     local event_handlers = _load_fresh_handlers()
-    event_handlers.install(nil, nil, {
-      game = {
-        board = {
-          index_of_tile_id = function(_, tile_id)
-            looked_up_tile_id = tile_id
-            if tile_id == 12 then
-              return 7
-            end
-            return nil
-          end,
-        },
-      },
-    })
+    event_handlers.install(nil, nil, state)
     local handler = handlers[monopoly_event.movement.roadblock_hit]
     luassert.truthy(type(handler) == "function", "roadblock_hit handler should be registered")
-    handler(nil, nil, { tile_id = 12 })
+    resolved = handler(nil, nil, { tile_id = 12 })
   end)
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(cleared == 0, "roadblock_hit should no longer clear overlay directly")
+  luassert.truthy(resolved == 7, "roadblock_hit should expose the resolved tile index")
+  luassert.truthy(state.board_scene.overlay_units.roadblocks[7] == overlay_entry, "roadblock_hit should leave the public overlay runtime unchanged")
   luassert.truthy(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
 end)
 
@@ -212,9 +213,36 @@ end)
 
 it("test_mine_hit_no_longer_drives_visual_feedback", function()
   local handlers = {}
-  local cleared = 0
-  local cues = 0
+  local host_effects = {}
   local looked_up_tile_id = nil
+  local overlay_entry = { kind = "unit", handle = {}, pooled = false }
+  local state = {
+    game = {
+      board = {
+        index_of_tile_id = function(_, tile_id)
+          looked_up_tile_id = tile_id
+          if tile_id == 20 then
+            return 11
+          end
+          return nil
+        end,
+      },
+    },
+    board_scene = {
+      units_by_player_id = {
+        [3] = {
+          get_position = function()
+            return math.Vector3(1.0, 2.0, 3.0)
+          end,
+        },
+      },
+      overlay_units = {
+        roadblocks = {},
+        mines = { [11] = overlay_entry },
+      },
+    },
+  }
+  local resolved = nil
 
   _with_patches({
     {
@@ -226,47 +254,35 @@ it("test_mine_hit_no_longer_drives_visual_feedback", function()
       end,
     },
     {
-      target = require("src.ui.render.anim"),
-      key = "clear_overlay",
+      target = host_sfx,
+      key = "play_sfx_by_key",
       value = function()
-        cleared = cleared + 1
+        host_effects[#host_effects + 1] = "sfx"
+        return nil
       end,
     },
     {
-      target = board_feedback,
-      key = "play_player_cue",
+      target = host_sfx,
+      key = "play_3d_sound",
       value = function()
-        cues = cues + 1
-        return true
+        host_effects[#host_effects + 1] = "sound"
+        return nil
       end,
     },
   }, function()
     local event_handlers = _load_fresh_handlers()
-    event_handlers.install(nil, nil, {
-      game = {
-        board = {
-          index_of_tile_id = function(_, tile_id)
-            looked_up_tile_id = tile_id
-            if tile_id == 20 then
-              return 11
-            end
-            return nil
-          end,
-        },
-      },
-    })
+    event_handlers.install(nil, nil, state)
     local handler = handlers[monopoly_event.land.mine_hit]
     luassert.truthy(type(handler) == "function", "mine_hit handler should be registered")
-    handler(nil, nil, {
+    resolved = handler(nil, nil, {
       tile = { id = 20 },
       player = { id = 3 },
     })
   end)
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(cleared == 0, "mine_hit should no longer clear overlay directly")
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(cues == 0, "mine_hit should no longer emit direct cue playback")
+  luassert.truthy(resolved == 11, "mine_hit should expose the resolved tile index")
+  luassert.truthy(state.board_scene.overlay_units.mines[11] == overlay_entry, "mine_hit should leave the public overlay runtime unchanged")
+  luassert.truthy(#host_effects == 0, "mine_hit should not emit host audio or effects")
   luassert.truthy(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
 end)
 
@@ -489,8 +505,28 @@ end)
 
 it("test_status_applied_feedback_prefers_tile_cue", function()
   local handlers = {}
-  local tile_calls = {}
-  local player_calls = 0
+  local sfx_calls = {}
+  local tile_pos = math.Vector3(7.0, 0.0, 0.0)
+  local player_pos = math.Vector3(1.0, 2.0, 3.0)
+  local state = {
+    game = {},
+    board_scene = {
+      tiles = {
+        [7] = {
+          get_position = function()
+            return tile_pos
+          end,
+        },
+      },
+      units_by_player_id = {
+        [1] = {
+          get_position = function()
+            return player_pos
+          end,
+        },
+      },
+    },
+  }
 
   _with_patches({
     {
@@ -502,27 +538,23 @@ it("test_status_applied_feedback_prefers_tile_cue", function()
       end,
     },
     {
-      target = board_feedback,
-      key = "play_tile_cue",
-      value = function(_, cue_name, tile_index, payload)
-        tile_calls[#tile_calls + 1] = {
-          cue_name = cue_name,
-          tile_index = tile_index,
-        }
-        return true
+      target = host_sfx,
+      key = "play_sfx_by_key",
+      value = function(sfx_key, pos)
+        sfx_calls[#sfx_calls + 1] = { sfx_key = sfx_key, pos = pos }
+        return nil
       end,
     },
     {
-      target = board_feedback,
-      key = "play_player_cue",
+      target = host_sfx,
+      key = "play_3d_sound",
       value = function()
-        player_calls = player_calls + 1
-        return true
+        return nil
       end,
     },
   }, function()
     local event_handlers = _load_fresh_handlers()
-    event_handlers.install(nil, nil, { game = {} })
+    event_handlers.install(nil, nil, state)
     local handler = handlers[monopoly_event.feedback.status_applied]
     luassert.truthy(type(handler) == "function", "status_applied handler should be registered")
     handler(nil, nil, {
@@ -532,11 +564,9 @@ it("test_status_applied_feedback_prefers_tile_cue", function()
     })
   end)
 
-  luassert.truthy(#tile_calls == 1, "status_applied should prefer tile cue when tile_index exists")
-  luassert.truthy(tile_calls[1].cue_name == "hospital_shock", "status_applied cue mismatch")
-  luassert.truthy(tile_calls[1].tile_index == 7, "status_applied tile index mismatch")
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(player_calls == 0, "status_applied should not fallback to player cue when tile cue is used")
+  luassert.truthy(#sfx_calls == 1, "status_applied should emit exactly one host cue without player fallback")
+  luassert.truthy(sfx_calls[1].sfx_key == 4185, "status_applied should resolve hospital_shock")
+  luassert.truthy(sfx_calls[1].pos == tile_pos, "status_applied should use the tile position instead of the player position")
 end)
 
 it("test_deity_applied_feedback_routes_specific_cue", function()
