@@ -130,4 +130,14 @@ function availability.message(record, tag)
   return availability.verdict(record, tag).message
 end
 
+-- 入口进程认领子进程的不可用(#131:test_runner 自举 busted 断网退 3)。退 3 与
+-- 状态词俱在才算,返回子进程原样输出作诊断;缺一按真实失败(宁红勿假)。
+function availability.child_diagnostic(code, output)
+  local text = tostring(output or "")
+  if code == availability.EXIT_CODE and text:find("status=" .. boundary.UNAVAILABLE, 1, true) ~= nil then
+    return text
+  end
+  return nil
+end
+
 return availability
