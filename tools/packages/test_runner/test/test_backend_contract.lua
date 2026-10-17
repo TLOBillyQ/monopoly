@@ -25,6 +25,16 @@ describe("real busted execution", function()
     local _, count = result.output:gsub("# COUNTS:", "")
     check.equal(1, count, result.output)
   end)
+  it("keeps every TAP line intact when stderr shares stdout", function()
+    local result = run({ "merged_stderr" })
+    check.equal(0, result.code, result.output)
+    local output = "\n" .. result.output:gsub("\r\n", "\n")
+    for i = 1, 200 do
+      local expected = string.format("ok %d - merged stderr case %d %s", i, i, string.rep("x", 40))
+      check.matches("\n" .. expected .. "\n", output, 1, true)
+    end
+    check.matches("\n# COUNTS: files=1 cases=200 passed=200 failed=0 errors=0\n", output, 1, true)
+  end)
   -- #107:--durations-out 落每文件实测秒数(spec_lane 实测时长缓存的数据源),
   -- 一行一个文件(格式归 spec_sharding.parse_durations);TAP 与计数不受影响。
   it("durations out records one measured line per spec file", function()

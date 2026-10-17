@@ -6,6 +6,9 @@ for _, value in ipairs(arg) do
   local verdict = boundary.test_verdict and boundary.test_verdict(value)
   if verdict then os.exit(boundary.emit(verdict)) end
 end
+-- #139: lanes merge stderr into stdout. Redirected Windows stdout can still
+-- flush a "line" buffer in chunks, so finish every write before later stderr.
+io.stdout:setvbuf("no")
 local bootstrap = dofile(root .. "/tools/foundation/bootstrap.lua")
 local env = bootstrap.install(source)
 root = env.repo_root
