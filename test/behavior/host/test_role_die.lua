@@ -212,10 +212,10 @@ local function _test_synthetic_adapter_die_keeps_the_truthy_contract()
   }
   local result, warns = _call(adapter, game_api)
   luassert.truthy(result == true, "a succeeding adapter die yields true")
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count 合成适配器作参数注入,die 调用一次=该角色被击杀一次
   luassert.truthy(calls == 1, "the adapter die must be called exactly once")
   luassert.truthy(#warns == 0, "the adapter happy path must not warn")
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count 合成适配器作参数注入,get_ctrl_unit 零读取=未退回引擎单位死亡路径
   luassert.truthy(ctrl_unit_reads == 0, "an adapter with die must not fall through to the unit path")
   luassert.truthy(#destroyed == 0, "the adapter retires its own unit; role_die must not double destroy")
 end
@@ -233,7 +233,7 @@ local function _test_a_host_role_that_grows_a_die_method_still_takes_the_unit_pa
   local destroyed, game_api = _destroy_recorder()
   local result = _call(role, game_api)
   luassert.truthy(result == true, "the unit path still reports success")
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count 引擎 Role 自带 die 零调用=未经角色 die 结算(改走控制单位路径)
   luassert.truthy(role_die_calls == 0, "a role with a ctrl unit must not use its own die")
   luassert.truthy(unit.die_calls == 1, "the ctrl unit must be the one that dies")
   luassert.truthy(destroyed[1] == unit, "the ctrl unit must still be removed")

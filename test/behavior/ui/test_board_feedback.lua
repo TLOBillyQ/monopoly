@@ -434,7 +434,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "unbound cue should still play")
     end)
 
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count host_sfx.bind_sfx_to_unit 是宿主音效 port,零调用=音效未挂接到玩家单位
     luassert.truthy(bind_calls == 0, "cue without bind_to_player should not bind to the player unit")
   end)
 
@@ -471,7 +471,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == false, "nil runtime sfx id on effect-only cue should return false")
     end)
 
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count host_sfx.play_sfx_by_key 是宿主音效 port,调用次数=引擎播放特效音次数
     luassert.truthy(play_calls == 1, "missing effect id should skip engine call before nil sfx handle case")
   end)
 
@@ -692,7 +692,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "followup sound scheduling may still keep cue successful")
     end)
 
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count host_sfx.play_sfx_by_key 是宿主音效 port,零调用=未向引擎播放音效
     luassert.truthy(play_calls == 0, "missing effect ref should not call engine")
   end)
 
@@ -988,7 +988,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "player cue should play with unit resolved from state.player_units")
     end)
 
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count host_sfx.bind_sfx_to_unit 是宿主音效 port,调用一次=音效挂接到玩家单位一次
     luassert.truthy(bind_calls == 1, "cash_burst should bind to the unit resolved from player_units")
   end)
 
@@ -1032,7 +1032,7 @@ describe("TestBoardFeedback", function()
       luassert.truthy(played == true, "tile cue with payload player_id should play")
     end)
 
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count host_sfx.bind_sfx_to_unit 是宿主音效 port,调用一次=音效挂接到玩家单位一次
     luassert.truthy(bind_calls == 1, "tile cue with payload player_id should bind to the player unit")
   end)
 

@@ -53,4 +53,22 @@ function M.parse(source)
   return { ast = ast, comments = comments or {} }
 end
 
+-- 规则共用的节点小工具(bodies/规则不再各自复制一份)。
+-- Id 节点 -> 变量名;其他节点 -> nil。
+function M.id_name(node)
+  if type(node) == "table" and node.tag == "Id" then
+    return node[1]
+  end
+  return nil
+end
+
+-- 调用节点 -> 调用链根名(剥掉多级 Index,含 luassert.is.equal 与 a:b 方法调用)。
+function M.callee_root_name(call_node)
+  local base = call_node[1]
+  while type(base) == "table" and base.tag == "Index" do
+    base = base[1]
+  end
+  return M.id_name(base)
+end
+
 return M

@@ -397,7 +397,7 @@ it("test_register_node_click_caches_nodes", function()
   }, function()
     -- First call should query nodes
     event_bindings.register_node_click(cache, "test_node", function() end, registered, listeners)
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count runtime.query_nodes 封装 UIManager.query_nodes_by_name,首次点击向宿主查节点一次
     luassert.truthy(query_count == 1, "first call should query nodes")
 
     -- Reset registered to allow second registration
@@ -405,7 +405,7 @@ it("test_register_node_click_caches_nodes", function()
 
     -- Second call should use cache
     event_bindings.register_node_click(cache, "test_node", function() end, registered, listeners)
-    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+    -- lint-allow: call-count runtime.query_nodes 封装 UIManager.query_nodes_by_name,缓存命中不再向宿主查节点
     luassert.truthy(query_count == 1, "second call should use cached nodes")
   end)
 end)

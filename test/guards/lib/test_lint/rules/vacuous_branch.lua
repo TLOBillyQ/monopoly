@@ -15,22 +15,15 @@
 -- 提前 return 产生的无断言路径暂不追究,跨文件/多层 helper 不展开。
 -- 条件表达式(含 and/or 短路左侧)里的断言计入该分支覆盖——不区分求值
 -- 是否短路,偏宽容方向。
+local ast_mod = require("test.guards.lib.test_lint.ast")
+
 local M = {}
 
 M.name = "vacuous-branch"
 
 local ASSERT_ROOTS = { assert = true, luassert = true, check = true }
 
-local function _callee_root_name(call_node)
-  local base = call_node[1]
-  while type(base) == "table" and base.tag == "Index" do
-    base = base[1]
-  end
-  if type(base) == "table" and base.tag == "Id" then
-    return base[1]
-  end
-  return nil
-end
+local _callee_root_name = ast_mod.callee_root_name
 
 -- is_assert_call(call_node) -> bool 由调用方给出(直接断言 / 含 helper 展开两档)。
 local function _scan(node, is_assert_call)
@@ -155,7 +148,7 @@ local function _find_vacuous_if(node, helpers)
 end
 
 -- body: { name, fn, line };ctx.helpers 由 build_helpers 预算。
--- 命中返回违规记录 { rule, line, test, message },否则 nil。
+-- 命中返回违规记录列表(与 call-count 同一契约),否则 nil。
 function M.check_body(body, ctx)
   local helpers = (ctx or {}).helpers or {}
   local block = body.fn[2]
@@ -167,13 +160,13 @@ function M.check_body(body, ctx)
   if vacuous == nil then
     return nil
   end
-  return {
+  return { {
     rule = M.name,
     line = vacuous.line,
     test = body.name,
     message = "断言被条件分支挡住:这条 if 存在不经断言的穿越路径,条件不满足时这部分检查空转;"
       .. "每条路径至少断言一次,确需豁免在判红行或上一行写 -- lint-allow: vacuous-branch <理由>",
-  }
+  } }
 end
 
 return M

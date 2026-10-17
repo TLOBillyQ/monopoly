@@ -12,32 +12,19 @@
 -- 计数只用来编排 stub 第 N 次的返回、从未被断言也不算;同文件 helper 里的
 -- 断言与跨文件计数器不追究。计数本身即公共契约(如订阅通知次数)时,在断言
 -- 行或上一行写 `-- lint-allow: call-count <理由>`。
+local ast_mod = require("test.guards.lib.test_lint.ast")
+
 local M = {}
 
 M.name = "call-count"
 
 local ASSERT_ROOTS = { assert = true, luassert = true, check = true }
 
-local function _callee_root_name(call_node)
-  local base = call_node[1]
-  while type(base) == "table" and base.tag == "Index" do
-    base = base[1]
-  end
-  if type(base) == "table" and base.tag == "Id" then
-    return base[1]
-  end
-  return nil
-end
+local _callee_root_name = ast_mod.callee_root_name
+local _id_name = ast_mod.id_name
 
 local function _is_number(node)
   return type(node) == "table" and node.tag == "Number"
-end
-
-local function _id_name(node)
-  if type(node) == "table" and node.tag == "Id" then
-    return node[1]
-  end
-  return nil
 end
 
 -- `x = x + k` / `x = k + x` -> "x";否则 nil。

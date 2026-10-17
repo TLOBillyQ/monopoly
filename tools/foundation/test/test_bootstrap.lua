@@ -223,23 +223,24 @@ it("ensure busted tree skips install when marker exists", function()
   }, function()
     check.is_true(bootstrap.ensure_busted_tree("/repo"))
   end)
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count fs_lib.ensure_dir 是文件系统边界,零调用=marker 已在时不建目录
   check.equal(0, ensure_calls)
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count proc_lib.run_command 是子进程边界,零调用=marker 已在时不启动 luarocks 安装
   check.equal(0, command_calls)
 end)
 
 it("ensure busted tree installs pinned rock and checks marker", function()
-  local marker_checks = 0
+  -- marker 是否已落地由安装命令决定:安装前 path_exists  false,安装后 true。
+  -- 用可见的安装结果建模,而不是数 path_exists 被调了几次。
+  local installed = false
   local captured_command
   _with_stubs({
     { target = fs_lib, key = "path_exists", value = function(path)
       if path:match("luarocks%.exe$") then return true end
-      -- 解释器候选路径(/opt/homebrew/bin/lua5.4 之类)不参与 marker 计数。
+      -- 解释器候选路径(/opt/homebrew/bin/lua5.4 之类)不是 marker。
       if path:match("%.lua$") == nil then return false end
-      marker_checks = marker_checks + 1
       check.equal("/repo/.toolcache/luarocks/share/lua/5.4/busted/runner.lua", path)
-      return marker_checks > 1
+      return installed
     end },
     { target = fs_lib, key = "ensure_dir", value = function(path)
       check.equal("/repo/.toolcache/luarocks", path)
@@ -250,6 +251,7 @@ it("ensure busted tree installs pinned rock and checks marker", function()
       local probe = _native_probe(command)
       if probe then return probe end
       captured_command = command
+      installed = true
       return { ok = true, output = "" }
     end },
   }, function()
@@ -263,6 +265,24 @@ it("ensure busted tree installs pinned rock and checks marker", function()
   -- --lua-dir 取真实解释器(lua.exe)所在前缀,而不是 where.exe 首行的
   -- lua.cmd / lua.bat 垫片目录。
   check.equal(_LUAROCKS_PREFIX, captured_command[7])
+end)
+
+it("ensure busted tree reports missing post install marker", function()
+  -- 安装命令成功但 marker 仍不存在:可见行为是返回 nil + 明确错误。
+  _with_stubs({
+    { target = fs_lib, key = "path_exists", value = function(path)
+      return path:match("luarocks%.exe$") ~= nil
+    end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      return _native_probe(command) or { ok = true, output = "" }
+    end },
+  }, function()
+    local ok, err = bootstrap.ensure_busted_tree("/repo")
+    check.is_nil(ok)
+    check.equal("busted not found in luarocks tree after install", err)
+  end)
 end)
 
 it("tool discovery env exports resolved interpreter path and luarocks exe", function()
@@ -362,7 +382,7 @@ it("ensure busted tree propagates tree creation failure", function()
     check.is_nil(ok)
     check.equal("mkdir failed", err)
   end)
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count proc_lib.run_command 是子进程边界,零调用=建树失败后不启动安装进程
   check.equal(0, command_calls)
 end)
 
@@ -422,7 +442,7 @@ it("ensure luacov lcov reporter tree stops when luacov dependency fails", functi
     check.is_nil(ok)
     check.equal("luacov failed", err)
   end)
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count proc_lib.run_command 是子进程边界,零调用=luacov 依赖失败后不启动 lcov 安装
   check.equal(0, command_calls)
 end)
 

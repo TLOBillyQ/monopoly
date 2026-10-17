@@ -20,7 +20,7 @@ local M = {}
 local _GUARD = "test_lint_guard"
 
 -- 规则注册表:新规则往这里加一条即可,骨架不动。
--- check_body 返回单条违规记录、违规记录列表或 nil。
+-- check_body 返回违规记录列表或 nil。
 local RULES = { vacuous_branch, call_count }
 
 -- 纯策略核:tracked 路径表 + read(path) -> content|nil,返回统一格式的违规
@@ -53,11 +53,7 @@ function M.check(paths, read, opts)
         for _, rule in ipairs(RULES) do
           local ctx = rule.build_ctx ~= nil and rule.build_ctx({ locals = locals }) or nil
           for _, body in ipairs(bodies) do
-            local found = rule.check_body(body, ctx)
-            if found ~= nil and found.rule ~= nil then
-              found = { found }
-            end
-            for _, violation in ipairs(found or {}) do
+            for _, violation in ipairs(rule.check_body(body, ctx) or {}) do
               violation.path = path
               if not allow_mod.exempted(allows, violation.rule, violation.line) then
                 violations[#violations + 1] = violation

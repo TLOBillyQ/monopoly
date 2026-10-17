@@ -4,6 +4,7 @@ require("test.bootstrap").install_package_paths()
 -- luacheck: ignore 143 (genuine busted injects luassert)
 local luassert = assert
 local guard = require("test.guards.lib.test_lint.guard")
+local fs_lib = require("foundation.fs")
 
 -- 每条 fixture 都是合成 spec 源码,过真实 luacheck parser 验证 guard:
 -- 对「断言只躲在条件分支里」真的会红,对合规写法放行——门禁的价值全在能变红。
@@ -441,6 +442,26 @@ end)
     luassert.truthy(hits[1]:find(":6 ", 1, true))
     luassert.truthy(hits[2]:find(":7 ", 1, true))
     luassert.truthy(hits[3]:find(":8 ", 1, true))
+  end)
+
+  it("test_flags_the_real_pre_cb44141_test_bootstrap_and_accepts_the_current_one", function()
+    -- 工单验收:对 cb44141 之前的 test_bootstrap.lua 原文判红,对当前仓库判绿。
+    -- 原文存成 .txt fixture,避免被 lint 自己当 spec 扫描。
+    local fixture = "test/guards/fixtures/call_count_pre_cb44141_bootstrap.lua.txt"
+    local historical = fs_lib.read_file(fixture)
+    luassert.truthy(historical, "missing historical fixture: " .. fixture)
+    local path = "tools/foundation/test/test_bootstrap.lua"
+    local violations = guard.check({ path }, function() return historical end)
+    luassert.is.equal(7, #violations)
+    local joined = table.concat(violations, "\n")
+    for _, expected in ipairs({
+      "call-count: " .. path .. ":316 [bootstrap luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing]",
+      "call-count: " .. path .. ":350 [bootstrap missing MONOPOLY_LUAROCKS_EXE override falls back to probing]",
+    }) do
+      luassert.truthy(joined:find(expected, 1, true), "missing historical hit: " .. expected .. "\n" .. joined)
+    end
+    luassert.truthy(joined:find("where_luarocks", 1, true))
+    luassert.is.equal(0, #guard.check({ path }, fs_lib.read_file))
   end)
 
   it("test_flags_counter_asserted_inside_the_run_callback", function()

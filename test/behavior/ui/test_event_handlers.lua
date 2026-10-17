@@ -958,7 +958,7 @@ it("test_game_result_without_players_skips_panels", function()
     handler(nil, nil, { winner_ids = { [1] = true } })
   end)
 
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count runtime_ports.resolve_role 是宿主角色解析 port,零调用=未向宿主解析角色
   luassert.truthy(role_calls == 0, "no players should mean no role resolution")
 end)
 
@@ -1005,7 +1005,7 @@ it("test_game_result_with_players_but_no_roles_skips_panels_and_warns", function
     luassert.truthy(ok, "missing role should not raise while routing result panels")
   end)
 
-  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
+  -- lint-allow: call-count runtime_ports.resolve_role 是宿主角色解析 port,调用次数=向宿主解析角色的次数
   luassert.truthy(resolve_calls == 2, "both players should attempt role resolution")
   luassert.truthy(#warns == 2, "each unresolved role should leave one warn (#327)")
   luassert.truthy(warns[1]:find("player 1", 1, true) ~= nil and warns[2]:find("player 2", 1, true) ~= nil,
