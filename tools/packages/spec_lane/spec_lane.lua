@@ -172,6 +172,12 @@ local function _merge_durations(profile, files, measured_paths)
   end
 end
 
+-- runner 子进程自举不可用(#131):诊断原样转 stderr,一个测试都没跑,不报 failed。
+local function _unavailable_result(diagnostic)
+  return { stdout = "", stderr = diagnostic, code = tool_availability.EXIT_CODE,
+    status = "unavailable", passed = 0, failed = 0 }
+end
+
 -- 时长缓存让 lane 分配随运行变化;失败时打印本次 lane → 文件清单(执行顺序)。
 local function _lane_listing(lane_specs)
   local lines = { "# lane 分配(执行顺序);复现请用 --serial 或按清单点跑:" }
@@ -206,20 +212,31 @@ local function _run_sharded(options, profile, files, spawn_env)
   local _, results = run_lanes(lane_specs, { stream = false, env = spawn_env })
   _merge_durations(profile, files, measured_paths)
 
+  -- 自举不可用的 lane 不并入 TAP、不算失败;其余 lane 全过时整体按不可用报
+  -- (各 lane 断网诊断相同,只转一份)。混有真实失败仍退 1(#131)。
   local raw_parts = {}
   local code = 0
+  local diagnostic
   for _, r in ipairs(results) do
-    if not r.ok then
-      code = 1
-    end
-    local out = tostring(r.output or ""):gsub("%s+$", "")
-    if out ~= "" then
-      raw_parts[#raw_parts + 1] = out
+    local lane_diagnostic = tool_availability.child_diagnostic(r.exit_code, r.output)
+    if lane_diagnostic ~= nil then
+      diagnostic = diagnostic or lane_diagnostic
+    else
+      if not r.ok then
+        code = 1
+      end
+      local out = tostring(r.output or ""):gsub("%s+$", "")
+      if out ~= "" then
+        raw_parts[#raw_parts + 1] = out
+      end
     end
   end
   local compressed, passed, failed = M.compress_tap(table.concat(raw_parts, "\n"))
   if failed > 0 and code == 0 then
     code = 1
+  end
+  if diagnostic ~= nil and code == 0 then
+    return _unavailable_result(diagnostic)
   end
   if code ~= 0 then
     compressed = compressed .. _lane_listing(lane_specs)
@@ -284,12 +301,21 @@ function M.run(options)
     local result = run_command(command, spawn_env ~= nil and { env = spawn_env } or nil)
     local raw = tostring(result.output or "")
 
-    local compressed, passed, failed = M.compress_tap(raw)
     local code = result.code or (result.ok and 0 or 1)
+    local diagnostic = tool_availability.child_diagnostic(code, raw)
+    if diagnostic ~= nil then
+      return _unavailable_result(diagnostic)
+    end
+    local compressed, passed, failed = M.compress_tap(raw)
     if (failed > 0 or passed == 0) and code == 0 then code = 1 end
     local counts = raw:match("# COUNTS: [^\r\n]+")
-    return { stdout = options.verbose and raw or (compressed .. (counts and counts .. "\n" or "")),
-      code = code, passed = passed, failed = failed, discovered = #files }
+    local stdout = options.verbose and raw or (compressed .. (counts and counts .. "\n" or ""))
+    -- 一个用例都没解析出来就失败(典型:自举构建错误),摘要只剩「0 passed」,
+    -- 原样附上子进程输出交代原因(#131)。
+    if code ~= 0 and passed + failed == 0 and not options.verbose then
+      stdout = stdout .. raw .. (raw:sub(-1) == "\n" and "" or "\n")
+    end
+    return { stdout = stdout, code = code, passed = passed, failed = failed, discovered = #files }
   end
 
   return _run_sharded(options, options.profile, files, spawn_env)

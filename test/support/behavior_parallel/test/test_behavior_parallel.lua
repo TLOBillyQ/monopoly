@@ -76,5 +76,52 @@ it("crash excerpt caps long output to the tail", function()
   check.equal("row 40", excerpt[15])
 end)
 
+-- #131:worker 自举 busted 断网退 3 + 状态词 → 整体不可用(退 3,诊断只带一份),
+-- 不记 failed;混有真实失败时仍退 1。
+local _WORKER_UNAVAILABLE = "[test_runner] status=unavailable tool=busted step=install\n"
+  .. "[test_runner] 详情: luarocks install failed for busted: Failed downloading https://luarocks.org/manifest-5.4\n"
+
+local function _run_with_workers(worker_result)
+  return behavior_parallel.run({
+    run_lanes = function(lanes)
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = worker_result(i)
+        results[i].label = lane.label
+      end
+      return false, results
+    end,
+  })
+end
+
+it("reports unavailable when every failing worker could not bootstrap", function()
+  local result = _run_with_workers(function()
+    return { ok = false, exit_code = 3, output = _WORKER_UNAVAILABLE }
+  end)
+
+  check.equal(3, result.exit_code)
+  check.equal(0, result.failed)
+  check.equal(_WORKER_UNAVAILABLE, result.diagnostic)
+end)
+
+it("keeps a real worker failure failed alongside unavailable workers", function()
+  local result = _run_with_workers(function(i)
+    if i == 1 then return { ok = false, exit_code = 1, output = "not ok 1 - broke\n" } end
+    return { ok = false, exit_code = 3, output = _WORKER_UNAVAILABLE }
+  end)
+
+  check.equal(1, result.exit_code)
+  check.equal(1, result.failed)
+end)
+
+-- CLI 以 result.exit_code 退出:每个返回路径都要有退出码,早返回也一样。
+it("keeps an exit code on the early-return paths", function()
+  check.equal(1, behavior_parallel.run({ profile = "no-such-profile" }).exit_code)
+  local root = env_lib.make_temp_path("behavior_parallel_empty", "")
+  local no_specs = behavior_parallel.run({ roots = { root } })
+  check.equal(0, no_specs.exit_code)
+  check.equal(0, no_specs.failed)
+end)
+
 
 end)

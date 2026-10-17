@@ -276,6 +276,101 @@ bootstrap_repo_defect_stays_a_real_failure()
   check.matches("tool bootstrap failed: tool missing from lockfile: acceptance4lua", result.stdout, 1, true)
 end
 
+-- #131:runner 子进程自举 busted 断网时退 3 并打状态词;spec-lane 原样认领为
+-- 不可用(退 3、诊断转 stderr),不能压缩成「0 passed」记失败。
+local _RUNNER_UNAVAILABLE = "[test_runner] status=unavailable tool=busted step=install\n"
+  .. "[test_runner] 详情: luarocks install failed for busted: Warning: Failed searching manifest: "
+  .. "Failed downloading https://luarocks.org/manifest-5.4\n"
+
+local function
+serial_runner_bootstrap_unavailable_reports_unavailable_not_failed()
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function() return { ok = false, code = 3, output = _RUNNER_UNAVAILABLE } end,
+  })
+
+  check.equal(3, result.code)
+  check.equal("unavailable", result.status)
+  check.equal(0, result.passed)
+  check.equal(0, result.failed)
+  check.equal("", result.stdout)
+  check.equal(_RUNNER_UNAVAILABLE, result.stderr)
+end
+
+-- 构建错误不是网络问题:照旧退 1,且车道输出要带上原因,不能只剩「0 passed」。
+local function
+serial_runner_bootstrap_build_error_stays_failed_with_reason()
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function()
+      return { ok = false, code = 1, output = "test_runner: luarocks install failed for busted: "
+        .. "Error: Build error: Failed compiling object src/term/core.obj\n" }
+    end,
+  })
+
+  check.equal(1, result.code)
+  check.is_nil(result.status)
+  check.matches("Failed compiling object src/term/core.obj", result.stdout, 1, true)
+end
+
+local function
+serial_real_spec_failure_stays_failed()
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function()
+      return { ok = false, code = 1, output = "ok 1 - fine\nnot ok 2 - broke\n1..2\n" }
+    end,
+  })
+
+  check.equal(1, result.code)
+  check.is_nil(result.status)
+  check.equal(1, result.passed)
+  check.equal(1, result.failed)
+end
+
+local function _sharded_run(lane_result)
+  return spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        results[i] = lane_result(i, lane)
+        results[i].label = lane.label
+      end
+      return false, results
+    end,
+  })
+end
+
+local function
+sharded_all_lanes_unavailable_reports_unavailable_once()
+  local result = _sharded_run(function()
+    return { ok = false, exit_code = 3, output = _RUNNER_UNAVAILABLE }
+  end)
+
+  check.equal(3, result.code)
+  check.equal("unavailable", result.status)
+  check.equal(0, result.failed)
+  check.equal("", result.stdout)
+  check.equal(_RUNNER_UNAVAILABLE, result.stderr)
+end
+
+local function
+sharded_unavailable_with_real_failure_stays_failed()
+  local result = _sharded_run(function(i)
+    if i == 1 then return { ok = false, exit_code = 3, output = _RUNNER_UNAVAILABLE } end
+    return { ok = false, exit_code = 1, output = "not ok 1 - broke\n1..1\n" }
+  end)
+
+  check.equal(1, result.code)
+  check.is_nil(result.status)
+  check.matches("not ok 1 - broke", result.stdout, 1, true)
+end
+
 -- #298 的发现式包结构：tooling 车道 33 行手维护 ROOT 清单
 -- 废除,塌缩为 tools/**/test/ + test/support/**/test/ 双口径自动收养。
 local function
@@ -338,6 +433,13 @@ describe("spec lane public contracts", function()
   it("bootstrap_network_failure_reports_unavailable_not_failed",
     bootstrap_network_failure_reports_unavailable_not_failed)
   it("bootstrap_repo_defect_stays_a_real_failure", bootstrap_repo_defect_stays_a_real_failure)
+  it("serial_runner_bootstrap_unavailable_reports_unavailable_not_failed",
+    serial_runner_bootstrap_unavailable_reports_unavailable_not_failed)
+  it("serial_runner_bootstrap_build_error_stays_failed_with_reason",
+    serial_runner_bootstrap_build_error_stays_failed_with_reason)
+  it("serial_real_spec_failure_stays_failed", serial_real_spec_failure_stays_failed)
+  it("sharded_all_lanes_unavailable_reports_unavailable_once", sharded_all_lanes_unavailable_reports_unavailable_once)
+  it("sharded_unavailable_with_real_failure_stays_failed", sharded_unavailable_with_real_failure_stays_failed)
   it("discover_test_roots_covers_both_scopes", discover_test_roots_covers_both_scopes)
   it("discover_test_roots_returns_sorted_unique_test_dirs", discover_test_roots_returns_sorted_unique_test_dirs)
   it("discover_test_roots_adopts_both_layout_shapes", discover_test_roots_adopts_both_layout_shapes)
