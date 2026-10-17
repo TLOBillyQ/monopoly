@@ -213,6 +213,13 @@ local function _luarocks_make(tree, name, src_dir)
   return _rocks_run(tree, { "make", "--deps-mode", "one" }, { cwd = src_dir })
 end
 
+-- 所有写同一 LuaRocks tree 的自举路径共用这一把锁;调用方不得在回调里再次
+-- 进入带锁 ensure(before_install 等嵌套依赖必须留在锁外)。
+local function _with_luarocks_write_lock(tree, fn)
+  local lock_path = require("foundation.path").join_path(tree, ".bootstrap-write.lock")
+  return require("foundation.process_lock").with_lock(lock_path, fn)
+end
+
 -- 用 luarocks 往 tree 里装一个工具/库,装好(或已装)返回 true。marker 判据
 -- 各不相同,由调用方给出 marker 相对子路径;name/version 是 `luarocks install`
 -- 的实参。依赖 luacov 的 rock(如 luacov-reporter-lcov)用 before_install 钩子
@@ -233,12 +240,10 @@ local function _ensure_rock_installed(repo_root, name, version, marker_rel, befo
     end
   end
 
-  -- #140:冷缓存下多条 busted 车道会同时写同一 LuaRocks tree。用跨进程目录锁
-  -- 串行化实际安装;获锁后重查 marker,等待者直接复用先完成进程的结果。
+  -- #140:冷缓存下多条车道会同时写同一 LuaRocks tree。串行化实际安装;
+  -- 获锁后重查 marker,等待者直接复用先完成进程的结果。
   -- 锁只包安装段,before_install 在锁外完成,避免嵌套依赖自举自死锁。
-  local process_lock = require("foundation.process_lock")
-  local lock_path = path_lib.join_path(tree, ".bootstrap-write.lock")
-  return process_lock.with_lock(lock_path, function()
+  return _with_luarocks_write_lock(tree, function()
     if fs_lib.path_exists(marker) == true then
       return true
     end
@@ -322,10 +327,6 @@ function bootstrap.ensure_tool(name, env_or_opts)
   local fs_lib = require("foundation.fs")
   local resolver = require("foundation.tool_resolver")
   local tree = _luarocks_tree_dir(env.repo_root)
-  local ok, ensure_err = fs_lib.ensure_dir(tree)
-  if not ok then
-    return nil, ensure_err
-  end
 
   -- 新鲜度 = 上游 HEAD commit。解析失败(网络不通且无缓存)时,
   -- tree 里已装任意版本则降级继续用,否则报错。#112:网络/下载类失败带第三
@@ -343,28 +344,45 @@ function bootstrap.ensure_tool(name, env_or_opts)
     return { name = name, root = tree, commit = resolved.commit, version = _installed_version(tree, name) }
   end
 
-  local src_dir = _tool_source_dir(env.repo_root, name)
-  local sha, fetch_err = _fetch_tool_source(entry.url, src_dir)
-  if sha == nil then
-    if _is_tool_present(tree, name) then
-      return { name = name, root = tree, commit = resolved.installed,
-        version = _installed_version(tree, name), stale = true }
+  -- #140:acceptance4lua / dry4lua 的 remove/make 与 busted、lint 写同一 tree,
+  -- 必须使用同一把跨进程锁。获锁后重读 installed 标记,同工具等待者不重复构建;
+  -- 源码刷新也放入锁内,避免同名工具并发 remove/clone 同一 src_dir。
+  return _with_luarocks_write_lock(tree, function()
+    local cached = resolver.read_cache(env)[name]
+    if cached ~= nil and cached.commit == resolved.commit and cached.installed == resolved.commit
+        and _is_tool_present(tree, name) then
+      return { name = name, root = tree, commit = resolved.commit,
+        version = _installed_version(tree, name) }
     end
-    return nil, fetch_err, availability.classify(name, "fetch", fetch_err)
-  end
 
-  local result = _luarocks_make(tree, name, src_dir)
-  if result.ok ~= true then
-    local make_err = "luarocks make failed for " .. tostring(name) .. ": " .. tostring(result.output)
-    return nil, make_err, availability.classify(name, "build", make_err)
-  end
-  local installed_version = _installed_version(tree, name)
-  if installed_version == nil then
-    return nil, tostring(name) .. " not found in luarocks tree after make"
-  end
+    local ok, ensure_err = fs_lib.ensure_dir(tree)
+    if not ok then
+      return nil, ensure_err
+    end
 
-  resolver.mark_installed(env, name, sha)
-  return { name = name, root = tree, commit = sha, version = installed_version }
+    local src_dir = _tool_source_dir(env.repo_root, name)
+    local sha, fetch_err = _fetch_tool_source(entry.url, src_dir)
+    if sha == nil then
+      if _is_tool_present(tree, name) then
+        return { name = name, root = tree, commit = resolved.installed,
+          version = _installed_version(tree, name), stale = true }
+      end
+      return nil, fetch_err, availability.classify(name, "fetch", fetch_err)
+    end
+
+    local result = _luarocks_make(tree, name, src_dir)
+    if result.ok ~= true then
+      local make_err = "luarocks make failed for " .. tostring(name) .. ": " .. tostring(result.output)
+      return nil, make_err, availability.classify(name, "build", make_err)
+    end
+    local installed_version = _installed_version(tree, name)
+    if installed_version == nil then
+      return nil, tostring(name) .. " not found in luarocks tree after make"
+    end
+
+    resolver.mark_installed(env, name, sha)
+    return { name = name, root = tree, commit = sha, version = installed_version }
+  end)
 end
 
 return bootstrap
