@@ -11,9 +11,9 @@ runner.PHASE_TIMEOUT = 600
 -- 串行跑一步。输出回收、stdout/stderr 合流、退出码归一都由 foundation.proc 负责
 -- (原生 Windows 单平台,ADR 0066:不再手拼 `> file 2>&1` 重定向);
 -- 这里只把 ok/code 两路折成 verify 的 success 判据。
-function runner.run_step(label, cmd)
+function runner.run_step(label, cmd, opts)
   local started = os.time()
-  local result = require("foundation.proc").run_command(cmd)
+  local result = require("foundation.proc").run_command(cmd, opts ~= nil and { env = opts.env } or nil)
   local ok, code = result.ok, result.code
   local elapsed = math.max(0, os.time() - started)
   local success = ok == true and (code == nil or code == 0)
@@ -26,11 +26,13 @@ end
 -- 启动 + 调度 + 输出聚合委托给 foundation.parallel_lanes（曾经在这里复制粘贴一份）。
 -- stream=false 维持 architect 的"收集后选择性 emit"模型：success 路径压缩、
 -- failure/verbose 路径全量打印，由下游 build_output 处理。
-function runner.run_parallel(lanes)
+function runner.run_parallel(lanes, opts)
+  opts = opts or {}
   local started = os.time()
   local all_ok, lane_results = parallel_lanes.run(lanes, {
     stream = false,
     timeout = runner.PHASE_TIMEOUT,
+    env = opts.env,
   })
   local elapsed = math.max(0, os.time() - started)
 

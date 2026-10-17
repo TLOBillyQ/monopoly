@@ -36,17 +36,23 @@ local function _main(opts)
   end
   io.flush()
 
+  -- #124:工具发现结果随车道命令导出(串行 proc / 并行 command.cmd 同一语义),
+  -- 车道及其测试子进程继承 LUA54_BIN / MONOPOLY_LUAROCKS_EXE,不再逐进程探测。
+  -- 直跑(非经 cli.lua 转发)时这里自行解析一次;经转发时读到的就是导出值,
+  -- 解析只是复核,几乎零成本。
+  local spawn_env = require("foundation.bootstrap").tool_discovery_env()
+
   local parallel_results, parallel_elapsed
   if opts.serial then
     parallel_results = {}
     local lane_started = os.time()
     for _, lane in ipairs(plan.lanes) do
-      parallel_results[#parallel_results + 1] = runner.run_step(lane.label, lane.cmd)
+      parallel_results[#parallel_results + 1] = runner.run_step(lane.label, lane.cmd, { env = spawn_env })
     end
     parallel_elapsed = os.time() - lane_started
   else
     local all_ok
-    all_ok, parallel_results, parallel_elapsed = runner.run_parallel(plan.lanes)
+    all_ok, parallel_results, parallel_elapsed = runner.run_parallel(plan.lanes, { env = spawn_env })
     if all_ok == nil then error("verify runner returned no result") end
   end
   local all_results = {}

@@ -87,6 +87,32 @@ run_defaults_to_explicit_real_busted_runner()
   check.equal("3 passed\n", result.stdout)
 end
 
+-- #124:runner spawn 带上一次解析的工具发现环境(LUA54_BIN 全路径 +
+-- MONOPOLY_LUAROCKS_EXE),子进程树继承后不再逐进程 where 探测;本机解析不出
+-- luarocks 时导出为 nil,不传 options(行为与旧版一致),测试两种形态都接受。
+local function
+runner_spawn_carries_tool_discovery_env()
+  local captured_options
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function(command, options)
+      captured_options = options
+      return { ok = true, code = 0, output = _all_pass_tap() }
+    end,
+  })
+
+  check.equal(0, result.code)
+  -- 两种形态都必须与本机解析结果一致,不允许“没传就算过”。
+  local expected = dofile("tools/foundation/bootstrap.lua").tool_discovery_env()
+  if expected == nil then
+    check.is_nil(captured_options)
+  else
+    check.truthy(tostring(captured_options.env.LUA54_BIN):find("[/\\]") ~= nil)
+    check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks%.exe$") ~= nil)
+  end
+end
+
 -- #107:分片固定开销(每 lane 一个 PowerShell 收容进程)实测约 3s,contract
 -- (22 文件)串行 4.0s / 分片 7.0s——小 profile 低于阈值(30)保持单进程。
 local function
@@ -303,6 +329,7 @@ describe("spec lane public contracts", function()
   it("parse_args_rejects_removed_busted_bin_escape_hatch", parse_args_rejects_removed_busted_bin_escape_hatch)
   it("compress_tap_collapses_all_pass_tap_to_single_passed_line", compress_tap_collapses_all_pass_tap_to_single_passed_line)
   it("run_defaults_to_explicit_real_busted_runner", run_defaults_to_explicit_real_busted_runner)
+  it("runner_spawn_carries_tool_discovery_env", runner_spawn_carries_tool_discovery_env)
   it("small_profile_below_threshold_stays_serial", small_profile_below_threshold_stays_serial)
   it("sharded_profile_runs_one_runner_lane_per_worker", sharded_profile_runs_one_runner_lane_per_worker)
   it("sharded_failure_aggregates_into_failed_summary", sharded_failure_aggregates_into_failed_summary)

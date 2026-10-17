@@ -71,6 +71,21 @@ it("fails preflight loudly and clears a stale quality result", function()
   check.truthy(output:find("crap was not started", 1, true))
 end)
 
+it("rejects missing mutation evidence even when upstream reports success", function()
+  local root = env_lib.make_temp_path("uml_mutation_missing", "")
+  fs.ensure_dir(root)
+  local code, output = _quiet(function()
+    return cli.main({ "mutate", "src/demo.lua" }, {
+      repo_root = root,
+      preflight = function() return { ok = true, scripts = root, env_list = {} } end,
+      launch = function() return 0 end,
+    })
+  end)
+  fs.remove_path(root)
+  check.equal(1, code)
+  check.truthy(output:find("mutation", 1, true))
+end)
+
 -- ir / view(#99 / ADR 0070):上游启动器用替身 launch 记录 argv 与子进程环境;
 -- ir 的生成面从临时仓根读 policy.json 与覆盖文件,写出 policy.edn。
 local POLICY_JSON = "tools/packages/arch_policy/policy.json"

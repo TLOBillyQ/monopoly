@@ -74,9 +74,8 @@ it("native selection and exclusion partition complete manifest", function()
   for _, entry in ipairs(registry.entries) do
     check.equal(entry.generated, seen[entry.feature])
   end
-  check.equal(1, #excluded)
-  check.equal("features/tooling/acceptance_mutator_status.feature", excluded[1].feature)
-  check.equal("acceptance-mutate", excluded[1].capability)
+  check.equal(0, #excluded)
+  check.equal(#registry.entries, #selected)
 end)
 
 it("points every entry at readable feature file", function()

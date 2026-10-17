@@ -45,6 +45,14 @@ it("native files round trip discover copy and remove", function()
   check.is_true(ok, err)
 end)
 
+it("run_command env option exports variables to the child", function()
+  local result = proc.run_command(
+    { "lua", "-e", 'io.write(os.getenv("MONOPOLY_TEST_ENV_124") or "missing")' },
+    { env = { MONOPOLY_TEST_ENV_124 = "value with space 100%" } })
+  check.is_true(result.ok)
+  check.same("value with space 100%", result.output)
+end)
+
 it("real process arguments output exit and stdin", function()
   local root = env.make_temp_path("process_中文 space", "")
   local ok, err = xpcall(function()

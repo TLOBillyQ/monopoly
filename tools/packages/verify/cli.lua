@@ -11,6 +11,8 @@ local M = {}
 local ENTRY = "tools/packages/verify/main.lua"
 
 -- 原生 argv 转发，与 foundation 的 cmd quoting 保持单一真源。
+-- #124:工具发现(解释器全路径 + luarocks.exe)在这里解析一次,经 options.env
+-- 导出给编排子进程;车道与测试子进程树继承后不再各自重复 where 探测。
 local function _forward(args)
   require("test.bootstrap").install_package_paths()
   local proc = require("foundation.proc")
@@ -19,7 +21,8 @@ local function _forward(args)
   for _, value in ipairs(args or {}) do
     command[#command + 1] = value
   end
-  local result = proc.run_command(command)
+  local discovery = require("foundation.bootstrap").tool_discovery_env()
+  local result = proc.run_command(command, discovery ~= nil and { env = discovery } or nil)
   io.write(result.output or "")
   return result.code or (result.ok and 0 or 1)
 end
@@ -52,8 +55,7 @@ function M.usage()
     "",
     "pipeline 不包含(按需走单工具):uml crap / uml mutate / dry / acceptance;",
     "acceptance 需单独 `lua tools/cli.lua acceptance`,dry 与 acceptance-mutate 是软车道,",
-    "且当前按 POSIX 专用能力声明:原生 Windows 上请求退 3(status=unavailable),",
-    "不在 slim / --tooling / acceptance 这些最低保证面内(#96 / ADR 0066)。",
+    "两条软车道均支持原生 Windows;tooling/acceptance 中相关探针实际执行。",
     "真源:tools/packages/verify/(main.lua / lane_builders.lua / lanes.lua)。",
     "",
   }, "\n") .. "\n"

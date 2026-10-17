@@ -8,14 +8,15 @@ for _, value in ipairs(args) do
 end
 if help or #args == 0 then
   io.write(usage)
-  io.write("原生 Windows: actual mutation status=unavailable (exit 3), before install/spawn.\n")
+  io.write("原生 Windows 支持;工具自举不可用退 3。\n")
   os.exit(help and 0 or 2)
 end
-local boundary = require("foundation.platform_boundary")
-local verdict = boundary.evaluate("acceptance-mutate", args)
-if verdict.status then os.exit(boundary.emit(verdict)) end
-args = verdict.args
-assert(bootstrap.ensure_tool("acceptance4lua", env))
+args = require("foundation.platform_boundary").strip_skip_flag(args)
+local ensured = require("packages.acceptance.cli.ensure").acceptance4lua(env, { tag = "acceptance-mutator" })
+if ensured ~= true then
+  io.stderr:write(ensured.stderr or "")
+  os.exit(ensured.code)
+end
 
 -- acceptance4lua 的 mutator 生成 entrypoint 时 step 模块默认是中性的 "steps";
 -- 本项目的 step handlers 在 packages.acceptance.steps,调用方未显式指定时由
@@ -35,4 +36,7 @@ if not has_steps_module then
   args = merged
 end
 
-os.exit(require("acceptance4lua.cli.mutator").main(args))
+-- 经正式适配接口复用项目的原生 Windows Job 车道。
+os.exit(require("acceptance4lua.cli.mutator").main(args, {
+  parallel_run = require("foundation.parallel_lanes").run,
+}))

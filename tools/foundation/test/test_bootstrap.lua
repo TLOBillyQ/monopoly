@@ -18,14 +18,27 @@ local bootstrap = require("foundation.bootstrap")
 local function _with_stubs(stubs, fn)
   local saved_lua54 = package.loaded["foundation.lua54"]
   package.loaded["foundation.lua54"] = nil
+  -- #124:verify / spec-lane 现在把工具发现结果(LUA54_BIN / MONOPOLY_LUAROCKS_EXE)
+  -- 导出进测试进程;本文件的替身语义基于「无导出」编写,统一先屏蔽,测试需要
+  -- 覆写时在 stubs 列表里再放一个 os.getenv 替身即可(靠后的生效)。
+  local real_getenv = os.getenv
+  local effective = {
+    { target = os, key = "getenv", value = function(name)
+      if name == "LUA54_BIN" or name == "MONOPOLY_LUAROCKS_EXE" then return nil end
+      return real_getenv(name)
+    end },
+  }
+  for _, stub in ipairs(stubs) do
+    effective[#effective + 1] = stub
+  end
   local originals = {}
-  for index, stub in ipairs(stubs) do
+  for index, stub in ipairs(effective) do
     originals[index] = stub.target[stub.key]
     stub.target[stub.key] = stub.value
   end
   local ok, err = pcall(fn)
-  for index = #stubs, 1, -1 do
-    local stub = stubs[index]
+  for index = #effective, 1, -1 do
+    local stub = effective[index]
     stub.target[stub.key] = originals[index]
   end
   package.loaded["foundation.lua54"] = saved_lua54
@@ -249,6 +262,87 @@ it("ensure busted tree installs pinned rock and checks marker", function()
   -- lua.cmd / lua.bat 垫片目录。
   check.equal(_LUAROCKS_PREFIX, captured_command[7])
   check.equal(2, marker_checks)
+end)
+
+it("tool discovery env exports resolved interpreter path and luarocks exe", function()
+  _with_stubs({
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      return _native_probe(command) or { ok = false, output = "" }
+    end },
+    { target = fs_lib, key = "path_exists", value = function(path)
+      return tostring(path):match("luarocks%.exe$") ~= nil
+    end },
+  }, function()
+    local exported = bootstrap.tool_discovery_env()
+    check.is_not_nil(exported)
+    -- 裸候选解析到真实 .exe(where.exe 首行的 lua.cmd 垫片被跳过),子进程拿到
+    -- 路径形态覆写后 path_exists 即过,不再逐个 where 探测。
+    check.equal(_LUAROCKS_PREFIX .. "/bin/lua.exe", exported.LUA54_BIN)
+    check.truthy(exported.MONOPOLY_LUAROCKS_EXE:match("luarocks%.exe$") ~= nil)
+  end)
+end)
+
+it("luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing", function()
+  -- 覆写路径故意避开 LOCALAPPDATA 默认回退位置,才能区分两条解析路径。
+  local override = "D:/native/LuaRocks/bin/luarocks.exe"
+  local real_getenv = os.getenv
+  local captured_command
+  _with_stubs({
+    { target = os, key = "getenv", value = function(name)
+      if name == "LUA54_BIN" then return nil end
+      if name == "MONOPOLY_LUAROCKS_EXE" then return override end
+      return real_getenv(name)
+    end },
+    { target = fs_lib, key = "path_exists", value = function(path)
+      if path == override then return true end
+      return false
+    end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      local probe = _native_probe(command)
+      if probe then return probe end
+      captured_command = command
+      return { ok = true, output = "" }
+    end },
+  }, function()
+    bootstrap.ensure_luacheck_tree("/repo")
+  end)
+  check.equal(override, captured_command[1])
+end)
+
+it("missing MONOPOLY_LUAROCKS_EXE override falls back to probing", function()
+  local override = "D:/native/LuaRocks/bin/luarocks.exe"
+  local real_getenv = os.getenv
+  local captured_command
+  _with_stubs({
+    { target = os, key = "getenv", value = function(name)
+      if name == "LUA54_BIN" then return nil end
+      if name == "MONOPOLY_LUAROCKS_EXE" then return override end
+      return real_getenv(name)
+    end },
+    { target = fs_lib, key = "path_exists", value = function(path)
+      if path == override then return false end
+      return tostring(path):match("luarocks%.exe$") ~= nil
+    end },
+    { target = fs_lib, key = "ensure_dir", value = function() return true end },
+    { target = proc_lib, key = "command_exists", value = function() return true end },
+    { target = proc_lib, key = "run_command", value = function(command)
+      if command[1] == "where.exe" and command[2] == "luarocks.exe" then
+        return { ok = false, output = "" }
+      end
+      local probe = _native_probe(command)
+      if probe then return probe end
+      captured_command = command
+      return { ok = true, output = "" }
+    end },
+  }, function()
+    bootstrap.ensure_luacheck_tree("/repo")
+  end)
+  -- 覆写失效时退回探测链(where 不命中 → LOCALAPPDATA 默认位置)。
+  check.truthy(captured_command[1]:match("luarocks%.exe$") ~= nil)
+  check.is_not.equal(override, captured_command[1])
 end)
 
 it("ensure busted tree propagates tree creation failure", function()

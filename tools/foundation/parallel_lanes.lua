@@ -77,7 +77,10 @@ local function launch(entry, executable, timeout)
     command = shell.build_command({ command[1], argv })
   end
   local command_path = entry.dir .. "/command.cmd"
-  local ok, err = fs.write_file(command_path, "@echo off\r\nchcp 65001 >nul\r\n" .. command .. "\r\nexit /b %errorlevel%\r\n")
+  -- entry.env_lines(#124):调用方导出的工具发现环境变量,先 set 再跑 lane 命令,
+  -- lane 子进程树继承后不再各自重复 where/luarocks 探测。
+  local ok, err = fs.write_file(command_path, "@echo off\r\nchcp 65001 >nul\r\n"
+    .. (entry.env_lines ~= "" and (entry.env_lines .. "\r\n") or "") .. command .. "\r\nexit /b %errorlevel%\r\n")
   if not ok then return nil, err end
   local launcher = entry.dir .. "/launcher.cmd"
   ok, err = fs.write_file(launcher, "@echo off\r\nchcp 65001 >nul\r\n" .. shell.build_command({
@@ -95,12 +98,13 @@ function M.run(lanes, opts)
   opts = opts or {}
   local timeout = opts.timeout or 600
   local executable, helper_err = helper("lane_process.ps1")
+  local env_lines = shell.build_env_lines(opts.env)
   local entries = {}
   local started = os.time()
   for _, lane in ipairs(lanes or {}) do
     local unique = env.make_temp_path("parallel_lane", "")
     local dir = opts.lane_dir and path.join_path(opts.lane_dir, unique:match("[^/]+$")) or unique
-    local entry = { label = lane.label, cmd = lane.cmd, dir = dir }
+    local entry = { label = lane.label, cmd = lane.cmd, dir = dir, env_lines = env_lines }
     entry.output, entry.status = dir .. "/output.log", dir .. "/status.txt"
     entries[#entries + 1] = entry
     local prepared, prepare_err = fs.ensure_dir(dir)

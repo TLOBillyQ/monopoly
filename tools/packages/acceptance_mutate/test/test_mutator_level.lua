@@ -4,8 +4,7 @@ local env_lib = require("foundation.env")
 local fs_lib = require("foundation.fs")
 local mutator = require("acceptance4lua.mutator")
 
--- 12 个实际引擎用例静态迁入显式 busted DSL；Windows capability 分区排除本入口。
--- 纯 level 参数验证仍在 selected test_mutator_status_format.lua。
+-- 12 个真实引擎用例在原生 Windows tooling 中执行。
 
 local function _with_tmp_feature(body, fn)
   local tmp_root = env_lib.make_temp_path("acceptance_mutator_level_", "")
@@ -47,7 +46,7 @@ local function _two_scenario_body()
   }, "\n")
 end
 
--- POSIX-only engine examples remain explicitly excluded on native Windows.
+-- 引擎行为在原生 Windows 上实际执行。
 
 -- -------------------------------------------------- level validation
 
@@ -273,7 +272,7 @@ preserves_a_leading_language_zh_cn_line_across_stamp_and_manifest_writes()
     check.is_not_nil(first)
 
     local content = assert(fs_lib.read_file(feature_path))
-    check.truthy(content:find("^# language: zh%-CN\n"))
+    check.truthy(content:find("^# language: zh%-CN\r?\n"))
     check.truthy(content:find("# mutation%-stamp: sha256="))
     check.truthy(content:find("# acceptance%-mutation%-manifest%-begin"))
 

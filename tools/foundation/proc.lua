@@ -41,6 +41,14 @@ function proc.run_command(command, options)
   local stdin_path = options and options.stdin_path and path_lib.normalize_path(options.stdin_path) or nil
 
   local setup = ""
+  -- options.env(#124):调用方解析一次的工具发现结果(如钉定的 Lua 5.4 路径)
+  -- 以环境变量导出给子进程,子进程树自动继承,免去每个子进程重复探测。
+  if options and type(options.env) == "table" then
+    local env_lines = shell_lib.build_env_lines(options.env)
+    if env_lines ~= "" then
+      setup = env_lines .. "\r\n"
+    end
+  end
   local command_text = command
   if type(command) == "table" then
     local variables = {}
@@ -62,7 +70,8 @@ function proc.run_command(command, options)
   end
   redirected = redirected .. " > " .. shell_lib.shell_quote(output_path) .. " 2>&1"
   local batch_path = env_lib.make_temp_path("command", ".cmd")
-  fs_lib.write_file(batch_path, "@echo off\r\nchcp 65001 >nul\r\n" .. setup .. redirected .. "\r\nexit /b %errorlevel%\r\n")
+  -- chcp.com 会读取继承来的 stdin;worker 的 JSONL job 输入必须留给父进程。
+  fs_lib.write_file(batch_path, "@echo off\r\nchcp 65001 <nul >nul\r\n" .. setup .. redirected .. "\r\nexit /b %errorlevel%\r\n")
   local ok, kind, code = os.execute('cmd.exe /d /v:off /c ""' .. batch_path:gsub("/", "\\") .. '""')
   fs_lib.remove_path(batch_path)
   local success, exit_code = shell_lib.exit_status(ok, kind, code)

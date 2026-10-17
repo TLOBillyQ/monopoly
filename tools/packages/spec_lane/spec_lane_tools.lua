@@ -4,7 +4,7 @@ local spec_lane_tools = {}
 
 local _PROFILE_TOOLS = {
   acceptance = { "acceptance4lua" },
-  -- dry 的 Windows 边界用例无需加载上游 POSIX 扫描器(#96)。
+  -- dry 集成用例按需自行 ensure dry4lua。
   tooling = { "acceptance4lua" },
 }
 
