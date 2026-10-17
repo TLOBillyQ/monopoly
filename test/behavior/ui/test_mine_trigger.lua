@@ -21,12 +21,12 @@ describe("TestMineTrigger", function()
     local steps = {}
     state.board_scene.units_by_player_id[1] = {
       get_position = function()
-        return math.Vector3(1, 2, 3)
+        return math.Vector3(1.0, 2.0, 3.0)
       end,
     }
     state.board_scene.tiles[3] = {
       get_position = function()
-        return math.Vector3(9, 9, 9)
+        return math.Vector3(9.0, 9.0, 9.0)
       end,
     }
 
@@ -123,7 +123,7 @@ describe("TestMineTrigger", function()
     state.board_scene.units_by_player_id[1] = player_unit
     state.board_scene.tiles[3] = {
       get_position = function()
-        return math.Vector3(4, 5, 6)
+        return math.Vector3(4.0, 5.0, 6.0)
       end,
     }
 

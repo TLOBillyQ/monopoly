@@ -10,7 +10,7 @@ local view_model = require("src.ui.view")
 local modal = require("src.ui.coord.modal")
 local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
 local support = require("test.support.shared_support")
-local _with_host_patches = support.with_patches
+local _with_shared_patches = support.with_patches
 local _build_choice_modal_state = support.build_choice_modal_state
 
 local function _with_patches(patches, fn)
@@ -192,7 +192,7 @@ end)
 it("test_opens_inline_choices_only_outside_input_blocked_phases", function()
   local state, _, query_nodes = _build_choice_modal_state()
 
-  _with_host_patches({
+  _with_shared_patches({
     { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
     { target = landing_visual_hold, key = "should_defer", value = function() return false end },
     { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
@@ -232,7 +232,7 @@ it("test_opens_passive_item_choices_as_inline_choices", function()
   nodes["黑市屏"].visible = true
   _seed_choice_selection(state, "stale-market")
 
-  _with_host_patches({
+  _with_shared_patches({
     { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
     { target = landing_visual_hold, key = "should_defer", value = function() return false end },
     { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
@@ -289,7 +289,7 @@ it("test_opens_non_inline_choices_when_reconcile_requires_it", function()
   local state, nodes, query_nodes = _build_choice_modal_state()
   _seed_choice_selection(state, "stale-target")
 
-  _with_host_patches({
+  _with_shared_patches({
     { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
     { target = landing_visual_hold, key = "should_defer", value = function() return false end },
     { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
@@ -356,7 +356,7 @@ it("test_closes_stale_choice_modal_when_the_refreshed_model_has_no_choice", func
   nodes["位置选择屏"].visible = true
   _seed_choice_selection(state, "stale-choice")
 
-  _with_host_patches({
+  _with_shared_patches({
     { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
     { target = landing_visual_hold, key = "should_defer", value = function() return false end },
     { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
@@ -390,7 +390,7 @@ it("test_reopens_a_pending_choice_from_the_cached_model_without_rebuilding", fun
   local cached_model = { choice = pending, market = { id = "market" } }
   runtime_state.set_ui_model(state, cached_model)
 
-  _with_host_patches({
+  _with_shared_patches({
     { target = choice_ui_state, key = "should_reconcile", value = function()
       return true
     end },
