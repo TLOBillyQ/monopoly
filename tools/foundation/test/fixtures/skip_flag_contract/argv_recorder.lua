@@ -25,7 +25,7 @@ local script = tostring(arg and arg[0] or ""):gsub("\\", "/")
 _record("process:" .. script, arg)
 
 -- 进程内上游:模块名 → 被包装的入口函数名。
-local MODULE_HOOKS = {
+local module_hooks = {
   ["dry4lua.cli"] = "run",
   ["acceptance4lua.cli.mutator"] = "main",
 }
@@ -34,7 +34,7 @@ local wrapped = {}
 local original_require = require
 require = function(name, ...)
   local module, extra = original_require(name, ...)
-  local field = MODULE_HOOKS[name]
+  local field = module_hooks[name]
   if field ~= nil and type(module) == "table" and not wrapped[module] then
     wrapped[module] = true
     local inner = module[field]
