@@ -157,15 +157,15 @@ describe("TestConfigSanity", function()
     local by_id = {}
     for _, card in ipairs(chance_cfg) do
       by_id[card.id] = card
-      if card.effect == "forced_move" then
-        luassert.truthy(card.destination_tile_id ~= nil, "forced_move card missing destination_tile_id: " .. tostring(card.id))
-        luassert.truthy(card.destination == nil, "forced_move card should not use legacy destination field: " .. tostring(card.id))
-        luassert.truthy(tile_exists_by_id[card.destination_tile_id] == true, "forced_move card destination_tile_id not found in tiles: "
-            .. tostring(card.destination_tile_id)
-            .. " (card_id="
-            .. tostring(card.id)
-            .. ")")
-      end
+      -- 断言不走条件分支(vacuous-branch):非 forced_move 时条件折进断言表达式。
+      local is_forced_move = card.effect == "forced_move"
+      luassert.truthy(not is_forced_move or card.destination_tile_id ~= nil, "forced_move card missing destination_tile_id: " .. tostring(card.id))
+      luassert.truthy(not is_forced_move or card.destination == nil, "forced_move card should not use legacy destination field: " .. tostring(card.id))
+      luassert.truthy(not is_forced_move or tile_exists_by_id[card.destination_tile_id] == true, "forced_move card destination_tile_id not found in tiles: "
+          .. tostring(card.destination_tile_id)
+          .. " (card_id="
+          .. tostring(card.id)
+          .. ")")
     end
 
     luassert.truthy(by_id[3031] and by_id[3031].destination_tile_id == 36, "card 3031 should point to hospital tile 36")
@@ -180,22 +180,15 @@ describe("TestConfigSanity", function()
     local effect_refs = runtime_refs.effects or {}
 
     for cue_name, cue in pairs(cues) do
+      -- 可选引用:缺省合法,存在则必须能解析;条件折进断言表达式,不走条件分支。
       local effect_id_ref = cue and cue.effect_id_ref or nil
-      if effect_id_ref ~= nil then
-        luassert.truthy(effect_refs[effect_id_ref] ~= nil, "missing effect ref for cue: " .. tostring(cue_name))
-      end
+      luassert.truthy(effect_id_ref == nil or effect_refs[effect_id_ref] ~= nil, "missing effect ref for cue: " .. tostring(cue_name))
       local sound_id_ref = cue and cue.sound_id_ref or nil
-      if sound_id_ref ~= nil then
-        luassert.truthy(audio_refs[sound_id_ref] ~= nil, "missing audio ref for cue: " .. tostring(cue_name))
-      end
+      luassert.truthy(sound_id_ref == nil or audio_refs[sound_id_ref] ~= nil, "missing audio ref for cue: " .. tostring(cue_name))
       local followup_sounds = cue and cue.followup_sounds or nil
-      if type(followup_sounds) == "table" then
-        for index, entry in ipairs(followup_sounds) do
-          local followup_ref = entry and entry.sound_id_ref or nil
-          if followup_ref ~= nil then
-            luassert.truthy(audio_refs[followup_ref] ~= nil, "missing followup audio ref for cue: " .. tostring(cue_name) .. " index=" .. tostring(index))
-          end
-        end
+      for index, entry in ipairs(type(followup_sounds) == "table" and followup_sounds or {}) do
+        local followup_ref = entry and entry.sound_id_ref or nil
+        luassert.truthy(followup_ref == nil or audio_refs[followup_ref] ~= nil, "missing followup audio ref for cue: " .. tostring(cue_name) .. " index=" .. tostring(index))
       end
     end
   end)
@@ -269,9 +262,8 @@ describe("TestConfigSanity", function()
     for _, item in ipairs(items) do
       for _, field in ipairs({ "name", "usage", "description" }) do
         local text = item[field]
-        if type(text) == "string" then
-          luassert.truthy(text:find("座驾", 1, true) == nil, "item " .. tostring(item.id) .. " " .. field .. " must not reference the removed vehicle subsystem: " .. text)
-        end
+        -- 字段缺省合法;是 string 时必须不含已拆除的座驾文案(条件折进断言表达式)。
+        luassert.truthy(type(text) ~= "string" or text:find("座驾", 1, true) == nil, "item " .. tostring(item.id) .. " " .. field .. " must not reference the removed vehicle subsystem: " .. tostring(text))
       end
     end
   end)

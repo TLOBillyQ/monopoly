@@ -26,23 +26,13 @@ describe("TestLandTaxDetention", function()
     g:set_player_status(p, "pending_tax_free", true)
 
     local before_cash = g:player_cash(p)
-    -- Find tax tile
-    local tax_idx = nil
-    for i = 1, g.board:length() do
-      local tile = g.board:get_tile(i)
-      if tile and tile.type == "tax" then
-        tax_idx = i
-        break
-      end
-    end
-
-    if tax_idx then
-      g:update_player_position(p, tax_idx)
-      local tile = g.board:get_tile(tax_idx)
-      land.executors.tax.apply({ game = g, player = p, tile = tile })
-      luassert.truthy(g:player_cash(p) == before_cash, "_apply_tax should skip payment when pending_tax_free is set")
-      luassert.truthy(g:has_pending_tax_free(p) == false, "_apply_tax should clear pending_tax_free after use")
-    end
+    -- 地图必有税格(同文件 L83 同一 idiom):找不到当场红,不空转。
+    local tax_idx = assert(g.board:find_first_by_type("tax"), "missing tax tile")
+    g:update_player_position(p, tax_idx)
+    local tile = g.board:get_tile(tax_idx)
+    land.executors.tax.apply({ game = g, player = p, tile = tile })
+    luassert.truthy(g:player_cash(p) == before_cash, "_apply_tax should skip payment when pending_tax_free is set")
+    luassert.truthy(g:has_pending_tax_free(p) == false, "_apply_tax should clear pending_tax_free after use")
   end)
 
   it("test_apply_tax_without_tax_free_card_prompts_choice", function()
@@ -53,24 +43,14 @@ describe("TestLandTaxDetention", function()
     g:set_player_status(p, "pending_tax_free", false)
     inventory.clear(p)
 
-    -- Find tax tile
-    local tax_idx = nil
-    for i = 1, g.board:length() do
-      local tile = g.board:get_tile(i)
-      if tile and tile.type == "tax" then
-        tax_idx = i
-        break
-      end
-    end
-
-    if tax_idx then
-      g:update_player_position(p, tax_idx)
-      local tile = g.board:get_tile(tax_idx)
-      local res = land.executors.tax.apply({ game = g, player = p, tile = tile })
-      -- Should return waiting intent for tax choice when player has tax_free card
-      -- or pay tax directly if no card
-      luassert.truthy(res == nil or (type(res) == "table" and res.waiting), "_apply_tax should either pay tax or prompt choice")
-    end
+    -- 地图必有税格(同文件 L83 同一 idiom):找不到当场红,不空转。
+    local tax_idx = assert(g.board:find_first_by_type("tax"), "missing tax tile")
+    g:update_player_position(p, tax_idx)
+    local tile = g.board:get_tile(tax_idx)
+    local res = land.executors.tax.apply({ game = g, player = p, tile = tile })
+    -- Should return waiting intent for tax choice when player has tax_free card
+    -- or pay tax directly if no card
+    luassert.truthy(res == nil or (type(res) == "table" and res.waiting), "_apply_tax should either pay tax or prompt choice")
   end)
 
   it("test_apply_tax_charges_player_even_with_angel", function()

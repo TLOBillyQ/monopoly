@@ -117,14 +117,14 @@ it("test_恰有一块地时清算触发：事件/重置/反馈一次不多不少
   local game, calls = _make_game({ tiles = { t1 = tile } })
   local player = _make_player({ properties = { t1 = true, t2 = false } })
   local events, feedback = _run_eliminate(game, player)
-  local liquidations = 0
+  local liquidation_events = {}
   for _, event in ipairs(events) do
     if event.kind == event_kinds.bankruptcy_liquidation then
-      liquidations = liquidations + 1
-      luassert.truthy(event.text:find("一号地", 1, true) ~= nil, "liquidation text should name the tile")
+      liquidation_events[#liquidation_events + 1] = event
     end
   end
-  _assert_eq(liquidations, 1, "exactly one liquidation event")
+  _assert_eq(#liquidation_events, 1, "exactly one liquidation event")
+  luassert.truthy(liquidation_events[1].text:find("一号地", 1, true) ~= nil, "liquidation text should name the tile")
   _assert_eq(#calls.reset_tiles, 1, "exactly the owned tile is reset")
   _assert_eq(calls.reset_tiles[1], tile, "reset should target the owned tile")
   _assert_eq(#calls.property_sets, 1, "one ownership clear")

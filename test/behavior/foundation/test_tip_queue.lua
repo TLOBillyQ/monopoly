@@ -638,16 +638,16 @@ describe("TestTipQueue", function()
     local _, _, captured = log_capture.capture(function()
       tip_queue.enqueue({ text = "will_error", duration = 1.0 })
     end)
-    local found_warn = false
+    local warn_lines = {}
     for _, line in ipairs(captured.lines) do
       if line:find("[tip_queue]", 1, true) then
-        found_warn = true
-        luassert.truthy(line:find("presenter raised error", 1, true) ~= nil, "warn should carry presenter raised error caption")
-        luassert.truthy(line:find("BOOM_12345", 1, true) ~= nil, "warn should include the original error message")
-        luassert.truthy(line:find("will_error", 1, true) ~= nil, "warn should include the tip text that caused the error")
+        warn_lines[#warn_lines + 1] = line
       end
     end
-    luassert.truthy(found_warn, "presenter error should trigger a warn with [tip_queue] prefix")
+    _assert_eq(#warn_lines, 1, "presenter error should trigger exactly one warn with [tip_queue] prefix")
+    luassert.truthy(warn_lines[1]:find("presenter raised error", 1, true) ~= nil, "warn should carry presenter raised error caption")
+    luassert.truthy(warn_lines[1]:find("BOOM_12345", 1, true) ~= nil, "warn should include the original error message")
+    luassert.truthy(warn_lines[1]:find("will_error", 1, true) ~= nil, "warn should include the tip text that caused the error")
     _reset()
   end)
 

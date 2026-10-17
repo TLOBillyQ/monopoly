@@ -335,11 +335,11 @@ it("test_mid_registration_failure_rolls_back_and_rethrows", function()
   _assert_empty_compat_fields(state, "after failed bind")
 
   -- 前两次注册可能已写入 node_map;回滚后这些 listener 不得再存活。
+  -- 条件调用、无条件断言:没有 fire 的节点按 0 处理(vacuous-branch)。
   for _, node in pairs(node_map) do
-    if node.fire then
-      _assert_eq(node:fire(_click_data(3)), 0,
-        "rolled-back listeners must not receive events")
-    end
+    local notified = node.fire and node:fire(_click_data(3)) or 0
+    _assert_eq(notified, 0,
+      "rolled-back listeners must not receive events")
   end
 end)
 

@@ -87,14 +87,14 @@ describe("TestItem", function()
     g:set_tile_level(tile_ref, 2)
     p.inventory:add({ id = 2008 })
     local res = executor.use_item(g, p, 2008, {})
-    if type(res) == "table" and res.intent then
-      if res.intent.kind == "need_choice" then
-        _open_choice(g, res.intent.choice_spec)
-      end
-      local pending = _get_choice(g)
-      luassert.truthy(pending and pending.kind == "demolish_target", "monster should open choice")
-      res = choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
+    -- 巨兽卡必定返回选择意图;先无条件钉住前提,再走选择流程(vacuous-branch)。
+    luassert.truthy(type(res) == "table" and res.intent ~= nil, "monster should return a choice intent")
+    if res.intent.kind == "need_choice" then
+      _open_choice(g, res.intent.choice_spec)
     end
+    local pending = _get_choice(g)
+    luassert.truthy(pending and pending.kind == "demolish_target", "monster should open choice")
+    res = choice_resolver.resolve(g, pending, { option_id = pending.options[1].id })
     _assert_eq(res.status, "resolved", "monster choice should resolve")
     _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed")
     luassert.truthy(g.turn.action_anim and g.turn.action_anim.kind == "monster", "monster should queue monster action anim")
@@ -113,14 +113,14 @@ describe("TestItem", function()
     g.board:place_mine(idx)
     p.inventory:add({ id = 2013 })
     local res = executor.use_item(g, p, 2013, {})
-    if type(res) == "table" and res.intent then
-      if res.intent.kind == "need_choice" then
-        _open_choice(g, res.intent.choice_spec)
-      end
-      local pending = _get_choice(g)
-      luassert.truthy(pending and pending.kind == "item_target_player", "missile should open player target choice")
-      res = choice_resolver.resolve(g, pending, { option_id = g.players[2].id })
+    -- 导弹卡必定返回选择意图;先无条件钉住前提,再走选择流程(vacuous-branch)。
+    luassert.truthy(type(res) == "table" and res.intent ~= nil, "missile should return a choice intent")
+    if res.intent.kind == "need_choice" then
+      _open_choice(g, res.intent.choice_spec)
     end
+    local pending = _get_choice(g)
+    luassert.truthy(pending and pending.kind == "item_target_player", "missile should open player target choice")
+    res = choice_resolver.resolve(g, pending, { option_id = g.players[2].id })
     _assert_eq(res.status, "resolved", "missile choice should resolve")
     _assert_eq(_tile_state(g, tile_ref).level, 0, "building destroyed by missile")
     _assert_eq(g.board:has_roadblock(idx), false, "roadblock cleared")
@@ -483,6 +483,7 @@ describe("TestItem", function()
     g:set_player_cash(target, 9000)
     user.inventory:add({ id = 2011 })
     local res = executor.use_item(g, user, 2011, { is_computer_controlled = true })
+    -- lint-allow: vacuous-branch 托管均富卡可能直接结算或返回选择意图,两种返回形态均合法;末尾现金断言无条件覆盖两条路径
     if type(res) == "table" and res.intent then
       if res.intent.kind == "need_choice" then
         _open_choice(g, res.intent.choice_spec)

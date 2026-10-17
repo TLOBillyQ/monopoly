@@ -100,6 +100,10 @@ local guards = {
     name = "cli_shape_guard",
     module = "test.guards.lib.cli_shape_guard",
   },
+  {
+    name = "test_lint_guard",
+    module = "test.guards.lib.test_lint.guard",
+  },
 }
 
 describe("TestGuardRunner", function()

@@ -171,10 +171,8 @@ describe("TestItemPostEffects", function()
     local result = post_effects.apply_target(game, user, item_ids.exile, target, {})
     luassert.is.same(true, result, "should return true")
     -- Target should be moved to mountain tile
-    local mountain_idx = game.board:find_first_by_type("mountain")
-    if mountain_idx then
-      luassert.is.same(mountain_idx, target.position, "target should be moved to mountain")
-    end
+    local mountain_idx = assert(game.board:find_first_by_type("mountain"), "map must have a mountain tile")
+    luassert.is.same(mountain_idx, target.position, "target should be moved to mountain")
   end)
 
   it("test_apply_target_send_poor", function()

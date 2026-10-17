@@ -89,6 +89,7 @@ it("keeps absolute path and trims trailing slashes", function()
   check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice/"))
   check.equal("/home/alice", deploy.resolve_normalized_path("/home/alice"))
   -- Windows 盘符绝对路径语义仅在真实 Windows 上成立(POSIX 上 IsPathRooted 只认 "/")。
+  -- lint-allow: vacuous-branch 平台特定分支:Windows 盘符语义仅在真实 Windows 上成立,POSIX 无对应行为可断言
   if package.config:sub(1, 1) == "\\" then
     check.equal("C:/Users/foo", deploy.resolve_normalized_path("C:/Users/foo/"))
   end
@@ -115,6 +116,7 @@ end)
 
 it("Windows drive path folds on Windows", function()
   -- Windows 盘符绝对路径语义仅在真实 Windows 上成立(POSIX 上 IsPathRooted 只认 "/")。
+  -- lint-allow: vacuous-branch 平台特定分支:Windows 盘符语义仅在真实 Windows 上成立,POSIX 无对应行为可断言
   if package.config:sub(1, 1) == "\\" then
     check.equal("C:/Users/bar", deploy.resolve_normalized_path("C:/Users/foo/../bar/"))
   end
