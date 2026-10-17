@@ -239,6 +239,53 @@ slim_plan_has_exactly_the_retained_lanes()
   check.same({}, plan.skipped)
 end
 
+-- #130:证据目录透传给 spec-lane 车道,目录按 lane 名分开;不带参数时命令逐字节不变。
+local function
+evidence_dir_is_forwarded_to_spec_lane_lanes()
+  local plan = verify_full._resolve_lanes({
+    env = { lua54_bin = "lua5.4" },
+    tooling = true,
+    serial = true,
+    evidence_dir = "tmp/evidence",
+  })
+  local seen = {}
+  for _, lane in ipairs(plan.lanes) do
+    seen[lane.label] = lane.cmd
+  end
+  for _, label in ipairs({ "contract", "guards", "behavior", "tooling" }) do
+    check.matches("--evidence-dir=tmp/evidence/" .. label, seen[label], 1, true)
+  end
+  check.is_nil(seen["encoding"]:find("evidence%-dir"))
+
+  local plain = verify_full._resolve_lanes({ env = { lua54_bin = "lua5.4" }, serial = true })
+  for _, lane in ipairs(plain.lanes) do
+    check.is_nil(lane.cmd:find("evidence%-dir"), "no flag without --evidence-dir: " .. lane.cmd)
+  end
+end
+
+-- verify 视角的证据:每条 lane 的完整输出与整体报告都落盘,非 spec-lane 车道也在。
+local function
+evidence_write_preserves_lane_output_and_report()
+  local dir = require("foundation.env").make_temp_path("verify_evidence_spec", "")
+  local fs = require("foundation.fs")
+  fs.remove_path(dir)
+  local ok, err = xpcall(function()
+    local results = {
+      { label = "contract", ok = true, exit_code = 0, output = "159 passed\n# COUNTS: files=1 cases=159 passed=159 failed=0 errors=0\n" },
+      { label = "encoding", ok = true, exit_code = 0, output = "encoding ok\n" },
+    }
+    check.is_true(require("packages.verify.evidence").write(dir, results, "[verify] PASS  passed=2 failed=0\n"))
+    check.matches("cases=159", fs.read_raw(dir .. "/contract.out"), 1, true)
+    check.equal("encoding ok\n", fs.read_raw(dir .. "/encoding.out"))
+    local summary = fs.read_raw(dir .. "/summary.txt")
+    check.matches("lane=contract exit_code=0 ok=true", summary, 1, true)
+    check.matches("lane=encoding exit_code=0 ok=true", summary, 1, true)
+    check.matches("passed=2", summary, 1, true)
+  end, debug.traceback)
+  fs.remove_path(dir)
+  if not ok then error(err) end
+end
+
 describe("verify public output and lane plan", function()
   it("happy_path_emits_at_most_3_lines", happy_path_emits_at_most_3_lines)
   it("happy_path_includes_aggregate_summary_with_passed_failed_skipped_counts", happy_path_includes_aggregate_summary_with_passed_failed_skipped_counts)
@@ -256,4 +303,6 @@ describe("verify public output and lane plan", function()
   it("slim_plan_splits_lint_into_three_directory_lanes", slim_plan_splits_lint_into_three_directory_lanes)
   it("missing_global_luacheck_keeps_project_install_lanes", missing_global_luacheck_keeps_project_install_lanes)
   it("slim_plan_has_exactly_the_retained_lanes", slim_plan_has_exactly_the_retained_lanes)
+  it("evidence_dir_is_forwarded_to_spec_lane_lanes", evidence_dir_is_forwarded_to_spec_lane_lanes)
+  it("evidence_write_preserves_lane_output_and_report", evidence_write_preserves_lane_output_and_report)
 end)

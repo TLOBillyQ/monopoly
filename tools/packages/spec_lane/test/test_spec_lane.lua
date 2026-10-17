@@ -5,6 +5,7 @@ require("test.bootstrap").install_package_paths()
 local check = require("luassert")
 local spec_lane = require("packages.spec_lane.spec_lane")
 local lane_tools = require("packages.spec_lane.spec_lane_tools")
+local spec_evidence = require("packages.spec_lane.spec_evidence")
 
 local function _all_pass_tap()
   return table.concat({
@@ -84,7 +85,7 @@ run_defaults_to_explicit_real_busted_runner()
   check.equal("--run", captured[4])
   check.equal("contract", captured[5])
   check.equal(0, result.code)
-  check.equal("3 passed\n", result.stdout)
+  check.equal("3 passed\n[spec-lane] COUNTS missing(这些 lane 没有可重算的计数): contract\n", result.stdout)
 end
 
 -- #124:runner spawn 带上一次解析的工具发现环境(LUA54_BIN 全路径 +
@@ -172,7 +173,11 @@ sharded_profile_runs_one_runner_lane_per_worker()
   check.equal(0, result.code)
   check.equal(#captured_lanes * 3, result.passed)
   check.equal(0, result.failed)
-  check.equal(tostring(#captured_lanes * 3) .. " passed\n", result.stdout)
+  local labels = {}
+  for _, lane in ipairs(captured_lanes) do labels[#labels + 1] = lane.label end
+  check.equal(tostring(#captured_lanes * 3) .. " passed\n"
+    .. "[spec-lane] COUNTS missing(这些 lane 没有可重算的计数): "
+    .. table.concat(labels, ", ") .. "\n", result.stdout)
 end
 
 -- 分片失败聚合:任一 lane 输出带 not ok → failed 计数进摘要、exit code 1。
@@ -371,6 +376,209 @@ sharded_unavailable_with_real_failure_stays_failed()
   check.matches("not ok 1 - broke", result.stdout, 1, true)
 end
 
+-- #130:两条入口曾经各报一个数——分片路径数 TAP 的 ok 行,串行/verify 打印
+-- runner 进程内的 COUNTS。stdout/stderr 合流会把 ok 行从中间切开,ok 行口径
+-- 因此会漏计;COUNTS 才是权威。这里用「被切开的 ok 行」钉住:分片摘要取
+-- COUNTS 合计、补上聚合 COUNTS 行、并对不一致点名。
+local function
+sharded_summary_uses_counts_when_tap_lines_are_corrupted()
+  local captured
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      captured = lanes
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        -- 第一条 lane 丢了一条 ok 行(变成 k 2),COUNTS 仍记录真实通过数。
+        results[i] = { label = lane.label, ok = true, exit_code = 0,
+          output = "ok 1 - a\nk 2 - b\n1..2\n# COUNTS: files=2 cases=2 passed=2 failed=0 errors=0\n" }
+      end
+      return true, results
+    end,
+  })
+
+  check.equal(0, result.code)
+  check.equal(#captured * 2, result.passed)
+  check.equal(0, result.failed)
+  check.matches("COUNT MISMATCH", result.stdout, 1, true)
+  check.matches("# COUNTS: files=" .. #captured * 2
+    .. " cases=" .. #captured * 2 .. " passed=" .. #captured * 2
+    .. " failed=0 errors=0", result.stdout, 1, true)
+  check.matches(tostring(#captured * 2) .. " passed", result.stdout, 1, true)
+end
+
+-- 串行路径同样以 COUNTS 为准:只丢 ok 行、退出码仍为 0 时不得少报通过数。
+local function
+serial_summary_uses_counts_when_tap_lines_are_corrupted()
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function()
+      return { ok = true, code = 0,
+        output = "ok 1 - a\nk 2 - b\n1..2\n# COUNTS: files=1 cases=2 passed=2 failed=0 errors=0\n" }
+    end,
+  })
+  check.equal(0, result.code)
+  check.equal(2, result.passed)
+  check.matches("2 passed", result.stdout, 1, true)
+  check.matches("COUNT MISMATCH", result.stdout, 1, true)
+  check.matches("# COUNTS: files=1 cases=2 passed=2 failed=0 errors=0", result.stdout, 1, true)
+end
+
+-- COUNTS 里的失败必须变成真实失败,即便对应 not ok 行已被串流吃掉。
+local function
+counts_failures_fail_the_lane_even_without_not_ok_lines()
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function()
+      return { ok = true, code = 0,
+        output = "ok 1 - a\n1..2\n# COUNTS: files=1 cases=2 passed=1 failed=1 errors=0\n" }
+    end,
+  })
+  check.equal(1, result.code)
+  check.equal(1, result.passed)
+  check.equal(1, result.failed)
+end
+
+-- 失败判定同样取并集:COUNTS 全绿但 TAP 有 not ok、子进程还退 0 时,
+-- 不得因为相信 COUNTS 就把失败行滤掉并假绿。
+local function
+tap_failure_with_all_green_counts_still_fails()
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    run_command = function()
+      return { ok = true, code = 0,
+        output = "ok 1 - a\nnot ok 2 - b\n1..2\n# COUNTS: files=1 cases=2 passed=2 failed=0 errors=0\n" }
+    end,
+  })
+  check.equal(1, result.code)
+  check.equal(2, result.passed)
+  check.equal(1, result.failed)
+  check.matches("not ok 2 - b", result.stdout, 1, true)
+  check.matches("2 passed, 1 failed", result.stdout, 1, true)
+  check.matches("COUNT MISMATCH", result.stdout, 1, true)
+end
+
+-- verbose 保留原文,也不能因此丢掉计数交叉核对的告警。
+local function
+verbose_still_reports_count_mismatch()
+  local raw = "ok 1 - a\nk 2 - b\n1..2\n# COUNTS: files=1 cases=2 passed=2 failed=0 errors=0\n"
+  local result = spec_lane.run({
+    profile = "contract",
+    workers = 1,
+    verbose = true,
+    run_command = function() return { ok = true, code = 0, output = raw } end,
+  })
+  check.equal(0, result.code)
+  check.matches("k 2 - b", result.stdout, 1, true)
+  check.matches("COUNT MISMATCH", result.stdout, 1, true)
+end
+
+-- #131 + #130:混有真实失败时不可用 lane 仍然只退出失败优先级,不进入
+-- COUNTS 合计;总账只覆盖真正执行过的 lane,不因不可用输出缺 COUNTS 而退回 TAP。
+local function
+sharded_real_failure_excludes_unavailable_lane_from_counts()
+  local captured
+  local result = spec_lane.run({
+    profile = "behavior",
+    workers = 3,
+    run_lanes = function(lanes)
+      captured = lanes
+      local results = {}
+      for i, lane in ipairs(lanes) do
+        if i == 1 then
+          results[i] = { label = lane.label, ok = false, exit_code = 3, output = _RUNNER_UNAVAILABLE }
+        elseif i == 2 then
+          results[i] = { label = lane.label, ok = false, exit_code = 1,
+            output = "1..1\n# COUNTS: files=1 cases=1 passed=0 failed=1 errors=0\n" }
+        else
+          results[i] = { label = lane.label, ok = true, exit_code = 0,
+            output = "ok 1 - a\n1..1\n# COUNTS: files=1 cases=1 passed=1 failed=0 errors=0\n" }
+        end
+      end
+      return false, results
+    end,
+  })
+  check.equal(1, result.code)
+  check.is_nil(result.status)
+  check.equal(#captured - 2, result.passed)
+  check.equal(1, result.failed)
+  check.matches("# COUNTS: files=" .. #captured - 1
+    .. " cases=" .. #captured - 1 .. " passed=" .. #captured - 2
+    .. " failed=1 errors=0", result.stdout, 1, true)
+end
+
+local function
+parse_args_reads_evidence_dir_and_recount()
+  local opts = spec_lane.parse_args({ "--profile", "tooling", "--evidence-dir=tmp/evidence" })
+  check.equal("tmp/evidence", opts.evidence_dir)
+  local recount = spec_lane.parse_args({ "--recount", "tmp/evidence" })
+  check.equal("tmp/evidence", recount.recount)
+  local missing, err = spec_lane.parse_args({ "--recount" })
+  check.is_nil(missing)
+  check.matches("missing --recount", tostring(err), 1, true)
+end
+
+-- 证据落盘走的是真实文件系统:跑完后仅凭目录就能重算出同一个汇总值。
+local function
+run_writes_recomputable_evidence()
+  local dir = require("foundation.env").make_temp_path("spec_lane_evidence_spec", "")
+  require("foundation.fs").remove_path(dir)
+  local ok, err = xpcall(function()
+    local lane_count
+    local result = spec_lane.run({
+      profile = "behavior",
+      workers = 3,
+      evidence_dir = dir,
+      run_lanes = function(lanes)
+        lane_count = #lanes
+        local results = {}
+        for i, lane in ipairs(lanes) do
+          results[i] = { label = lane.label, ok = true, exit_code = 0,
+            output = _all_pass_tap() .. "# COUNTS: files=1 cases=3 passed=3 failed=0 errors=0\n" }
+        end
+        return true, results
+      end,
+    })
+    check.equal(0, result.code)
+    local recount = spec_lane.recount(dir)
+    check.equal(0, recount.code, recount.stdout)
+    check.matches("status=match", recount.stdout, 1, true)
+    check.matches("cases=" .. lane_count * 3, recount.stdout, 1, true)
+  end, debug.traceback)
+  require("foundation.fs").remove_path(dir)
+  if not ok then error(err) end
+end
+
+local function
+recount_reports_a_mismatch_as_a_real_failure()
+  local result = spec_lane.recount("tmp/does-not-exist-evidence")
+  check.equal(1, result.code)
+  check.matches("status=mismatch", result.stdout, 1, true)
+end
+
+-- 缺 COUNTS 时 nil == nil 也不能算 match:没有原始计数就无从重算,退 1。
+local function
+recount_missing_counts_is_a_real_failure()
+  local dir = require("foundation.env").make_temp_path("spec_lane_recount_missing_counts", "")
+  require("foundation.fs").remove_path(dir)
+  local ok, err = xpcall(function()
+    check.is_true(spec_evidence.write(dir, {
+      profile = "contract", mode = "serial", exit_code = 0,
+      lanes = { { label = "contract", raw = "ok 1 - a\n1..1\n" } },
+    }))
+    local result = spec_lane.recount(dir)
+    check.equal(1, result.code)
+    check.matches("status=mismatch", result.stdout, 1, true)
+    check.matches("missing COUNTS", result.stdout, 1, true)
+  end, debug.traceback)
+  require("foundation.fs").remove_path(dir)
+  if not ok then error(err) end
+end
+
 -- #298 的发现式包结构：tooling 车道 33 行手维护 ROOT 清单
 -- 废除,塌缩为 tools/**/test/ + test/support/**/test/ 双口径自动收养。
 local function
@@ -440,6 +648,20 @@ describe("spec lane public contracts", function()
   it("serial_real_spec_failure_stays_failed", serial_real_spec_failure_stays_failed)
   it("sharded_all_lanes_unavailable_reports_unavailable_once", sharded_all_lanes_unavailable_reports_unavailable_once)
   it("sharded_unavailable_with_real_failure_stays_failed", sharded_unavailable_with_real_failure_stays_failed)
+  it("sharded_summary_uses_counts_when_tap_lines_are_corrupted",
+    sharded_summary_uses_counts_when_tap_lines_are_corrupted)
+  it("serial_summary_uses_counts_when_tap_lines_are_corrupted",
+    serial_summary_uses_counts_when_tap_lines_are_corrupted)
+  it("counts_failures_fail_the_lane_even_without_not_ok_lines",
+    counts_failures_fail_the_lane_even_without_not_ok_lines)
+  it("tap_failure_with_all_green_counts_still_fails", tap_failure_with_all_green_counts_still_fails)
+  it("verbose_still_reports_count_mismatch", verbose_still_reports_count_mismatch)
+  it("sharded_real_failure_excludes_unavailable_lane_from_counts",
+    sharded_real_failure_excludes_unavailable_lane_from_counts)
+  it("parse_args_reads_evidence_dir_and_recount", parse_args_reads_evidence_dir_and_recount)
+  it("run_writes_recomputable_evidence", run_writes_recomputable_evidence)
+  it("recount_reports_a_mismatch_as_a_real_failure", recount_reports_a_mismatch_as_a_real_failure)
+  it("recount_missing_counts_is_a_real_failure", recount_missing_counts_is_a_real_failure)
   it("discover_test_roots_covers_both_scopes", discover_test_roots_covers_both_scopes)
   it("discover_test_roots_returns_sorted_unique_test_dirs", discover_test_roots_returns_sorted_unique_test_dirs)
   it("discover_test_roots_adopts_both_layout_shapes", discover_test_roots_adopts_both_layout_shapes)

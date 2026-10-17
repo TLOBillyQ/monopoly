@@ -19,6 +19,7 @@ local parallel_lanes = require("foundation.parallel_lanes")
 local sharding = require("foundation.spec_sharding")
 local lane_args = require("packages.spec_lane.spec_lane_args")
 local lane_tools = require("packages.spec_lane.spec_lane_tools")
+local evidence = require("packages.spec_lane.spec_evidence")
 local runner_bin = require("packages.test_runner.lua54")
 
 local M = {}
@@ -188,11 +189,48 @@ local function _lane_listing(lane_specs)
   return table.concat(lines, "\n") .. "\n"
 end
 
+-- #130:计数真源是 runner 进程内的 COUNTS,不是 TAP 的 ok 行数。lane 把
+-- stdout/stderr 合到同一句柄,stderr 会插进 stdout 两次冲刷之间把 TAP 行切开,
+-- ok 行口径会漏计;COUNTS 由计数器直接生成,不受串流影响。这里把两种口径都算出来:
+-- 摘要与退出码用 COUNTS,TAP 计数只做交叉核对,不一致就点名(不再静默差 1)。
+local function _authoritative(aggregated)
+  if aggregated.counts == nil then return nil end
+  return {
+    passed = aggregated.counts.passed,
+    failed = aggregated.counts.failed + aggregated.counts.errors,
+  }
+end
+
+local function _count_diagnostics(aggregated, include_counts)
+  local lines = {}
+  if include_counts and aggregated.counts ~= nil then
+    lines[#lines + 1] = evidence.format_counts(aggregated.counts)
+  end
+  if #aggregated.missing > 0 then
+    lines[#lines + 1] = "[spec-lane] COUNTS missing(这些 lane 没有可重算的计数): "
+      .. table.concat(aggregated.missing, ", ")
+  end
+  local mismatch = evidence.mismatch_line(aggregated.counts, aggregated.tally)
+  if mismatch ~= nil then lines[#lines + 1] = mismatch end
+  if #lines == 0 then return "" end
+  return table.concat(lines, "\n") .. "\n"
+end
+
+-- 测量证据(#130):原始输出逐 lane 落盘 + 汇总值,事后 `spec-lane --recount <dir>`
+-- 只凭目录重算并核对。写失败只告警,不把测试结论改成证据目录的结论。
+local function _write_evidence(options, spec)
+  if options.evidence_dir == nil then return end
+  local ok, err = evidence.write(options.evidence_dir, spec)
+  if not ok then
+    io.stderr:write("[spec-lane] warning: evidence write failed: " .. tostring(err) .. "\n")
+  end
+end
+
 -- 分片路径:每 lane 一条 runner 子进程(run_lanes 注入替身,默认 parallel_lanes,
 -- stream=false 收集),按 lane 顺序聚合各 worker 的 TAP 后整段交给
--- tap_summary.compress —— 计数(ok N / not ok N)与失败明细口径和串行路径
--- 一致,ok 编号跨 worker 重排不影响计数。任何 lane 非零退出都算失败
--- (与串行 result.code 语义对齐)。
+-- tap_summary.compress —— 失败明细与串行路径一致,计数与退出码以各 lane 的
+-- COUNTS 合计为准(#130),ok 编号跨 worker 重排不影响计数。任何 lane 非零退出
+-- 都算失败(与串行 result.code 语义对齐)。
 local function _run_sharded(options, profile, files, spawn_env)
   local run_lanes = options.run_lanes or parallel_lanes.run
   local worker_count = _resolve_workers(#files, options)
@@ -215,9 +253,10 @@ local function _run_sharded(options, profile, files, spawn_env)
   -- 自举不可用的 lane 不并入 TAP、不算失败;其余 lane 全过时整体按不可用报
   -- (各 lane 断网诊断相同,只转一份)。混有真实失败仍退 1(#131)。
   local raw_parts = {}
+  local entries = {}
   local code = 0
   local diagnostic
-  for _, r in ipairs(results) do
+  for i, r in ipairs(results) do
     local lane_diagnostic = tool_availability.child_diagnostic(r.exit_code, r.output)
     if lane_diagnostic ~= nil then
       diagnostic = diagnostic or lane_diagnostic
@@ -229,9 +268,16 @@ local function _run_sharded(options, profile, files, spawn_env)
       if out ~= "" then
         raw_parts[#raw_parts + 1] = out
       end
+      -- 与 TAP 同口径:不可用 lane 也不进 COUNTS 聚合与证据汇总(#131/#130)。
+      entries[#entries + 1] = { label = r.label or lane_specs[i].label, raw = r.output,
+        files = lane_specs[i].files }
     end
   end
-  local compressed, passed, failed = M.compress_tap(table.concat(raw_parts, "\n"))
+  local aggregated = evidence.aggregate(entries)
+  local authoritative = _authoritative(aggregated)
+  local compressed, tap_passed, tap_failed = M.compress_tap(table.concat(raw_parts, "\n"), authoritative)
+  local passed = authoritative and authoritative.passed or tap_passed
+  local failed = authoritative and math.max(authoritative.failed, tap_failed) or tap_failed
   if failed > 0 and code == 0 then
     code = 1
   end
@@ -241,15 +287,17 @@ local function _run_sharded(options, profile, files, spawn_env)
   if code ~= 0 then
     compressed = compressed .. _lane_listing(lane_specs)
   end
-  return { stdout = compressed, code = code, passed = passed, failed = failed }
+  _write_evidence(options, { profile = profile, mode = "sharded", exit_code = code, lanes = entries })
+  return { stdout = compressed .. _count_diagnostics(aggregated, true),
+    code = code, passed = passed, failed = failed }
 end
 
 function M.parse_args(args)
   return lane_args.parse(args)
 end
 
-function M.compress_tap(output)
-  return tap_summary.compress(output)
+function M.compress_tap(output, authoritative)
+  return tap_summary.compress(output, authoritative)
 end
 
 function M.run(options)
@@ -306,10 +354,27 @@ function M.run(options)
     if diagnostic ~= nil then
       return _unavailable_result(diagnostic)
     end
-    local compressed, passed, failed = M.compress_tap(raw)
+    local entries = { { label = options.profile, raw = raw } }
+    local aggregated = evidence.aggregate(entries)
+    local authoritative = _authoritative(aggregated)
+    local compressed, tap_passed, tap_failed = M.compress_tap(raw, authoritative)
+    local passed = authoritative and authoritative.passed or tap_passed
+    local failed = authoritative and math.max(authoritative.failed, tap_failed) or tap_failed
     if (failed > 0 or passed == 0) and code == 0 then code = 1 end
-    local counts = raw:match("# COUNTS: [^\r\n]+")
-    local stdout = options.verbose and raw or (compressed .. (counts and counts .. "\n" or ""))
+    _write_evidence(options, { profile = options.profile, mode = "serial", exit_code = code, lanes = entries })
+    local counts = aggregated.counts and evidence.format_counts(aggregated.counts)
+      or raw:match("# COUNTS: [^\r\n]+")
+    local stdout
+    if options.verbose then
+      stdout = raw
+      local diagnostics = _count_diagnostics(aggregated, false)
+      if diagnostics ~= "" then
+        if stdout ~= "" and stdout:sub(-1) ~= "\n" then stdout = stdout .. "\n" end
+        stdout = stdout .. diagnostics
+      end
+    else
+      stdout = compressed .. (counts and counts .. "\n" or "") .. _count_diagnostics(aggregated, false)
+    end
     -- 一个用例都没解析出来就失败(典型:自举构建错误),摘要只剩「0 passed」,
     -- 原样附上子进程输出交代原因(#131)。
     if code ~= 0 and passed + failed == 0 and not options.verbose then
@@ -319,6 +384,23 @@ function M.run(options)
   end
 
   return _run_sharded(options, options.profile, files, spawn_env)
+end
+
+-- 仅凭证据目录重算(#130):原始 .tap → COUNTS 合计 + TAP 交叉核对,与当时写下的
+-- 汇总值逐项比对;对不上就是证据被改过或当时汇总不可信,退 1。
+function M.recount(dir)
+  local result, err = evidence.recount(dir)
+  if result == nil then
+    return { stdout = "[spec-lane] recount status=mismatch " .. tostring(err) .. "\n", code = 1 }
+  end
+  local lines = {
+    "[spec-lane] recount dir=" .. tostring(dir)
+      .. " profile=" .. tostring(result.profile) .. " mode=" .. tostring(result.mode),
+    result.counts and evidence.format_counts(result.counts) or "# COUNTS: unavailable",
+    string.format("tap passed=%d failed=%d", result.tally.passed, result.tally.failed),
+    result.match and "status=match" or ("status=mismatch " .. tostring(result.detail)),
+  }
+  return { stdout = table.concat(lines, "\n") .. "\n", code = result.match and 0 or 1 }
 end
 
 function M.main(args)
@@ -331,6 +413,11 @@ function M.main(args)
   if options.help then
     io.write(lane_args.usage())
     return 0
+  end
+  if options.recount ~= nil then
+    local recount = M.recount(options.recount)
+    io.write(recount.stdout)
+    return recount.code
   end
   local result = M.run(options)
   io.write(result.stdout)
