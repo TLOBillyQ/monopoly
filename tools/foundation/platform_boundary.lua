@@ -58,7 +58,9 @@ function boundary.declared_ids()
   return ids
 end
 
-local function _strip_skip_flag(args)
+-- 剥掉跳过开关,返回 (剩余 argv, 是否带了开关)。撤出边界的工具(#122/#123)
+-- 仍兼容接受该开关,入口统一经此消费,不漏给上游。
+function boundary.strip_skip_flag(args)
   local argv, skip = {}, false
   for _, value in ipairs(args or {}) do
     if value == boundary.SKIP_FLAG then
@@ -126,7 +128,7 @@ function boundary.evaluate(id, args, platform, declarations)
     "platform_boundary: 未登记的能力 id " .. tostring(id)
       .. "(已登记: " .. table.concat(boundary.declared_ids(), ", ") .. ")")
 
-  local argv, skip = _strip_skip_flag(args)
+  local argv, skip = boundary.strip_skip_flag(args)
   local host = platform or boundary.host_platform()
   if host ~= boundary.WINDOWS then
     return { args = argv }

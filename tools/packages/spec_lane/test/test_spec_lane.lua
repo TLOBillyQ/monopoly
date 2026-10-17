@@ -103,7 +103,11 @@ runner_spawn_carries_tool_discovery_env()
   })
 
   check.equal(0, result.code)
-  if captured_options ~= nil then
+  -- 两种形态都必须与本机解析结果一致,不允许“没传就算过”。
+  local expected = dofile("tools/foundation/bootstrap.lua").tool_discovery_env()
+  if expected == nil then
+    check.is_nil(captured_options)
+  else
     check.truthy(tostring(captured_options.env.LUA54_BIN):find("[/\\]") ~= nil)
     check.truthy(tostring(captured_options.env.MONOPOLY_LUAROCKS_EXE):match("luarocks%.exe$") ~= nil)
   end

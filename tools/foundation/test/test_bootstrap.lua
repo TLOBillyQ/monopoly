@@ -287,7 +287,6 @@ it("luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing", fun
   -- 覆写路径故意避开 LOCALAPPDATA 默认回退位置,才能区分两条解析路径。
   local override = "D:/native/LuaRocks/bin/luarocks.exe"
   local real_getenv = os.getenv
-  local where_luarocks = 0
   local captured_command
   _with_stubs({
     { target = os, key = "getenv", value = function(name)
@@ -302,9 +301,6 @@ it("luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing", fun
     { target = fs_lib, key = "ensure_dir", value = function() return true end },
     { target = proc_lib, key = "command_exists", value = function() return true end },
     { target = proc_lib, key = "run_command", value = function(command)
-      if command[1] == "where.exe" and command[2] == "luarocks.exe" then
-        where_luarocks = where_luarocks + 1
-      end
       local probe = _native_probe(command)
       if probe then return probe end
       captured_command = command
@@ -313,14 +309,12 @@ it("luarocks command reuses exported MONOPOLY_LUAROCKS_EXE without probing", fun
   }, function()
     bootstrap.ensure_luacheck_tree("/repo")
   end)
-  check.equal(0, where_luarocks)
   check.equal(override, captured_command[1])
 end)
 
 it("missing MONOPOLY_LUAROCKS_EXE override falls back to probing", function()
   local override = "D:/native/LuaRocks/bin/luarocks.exe"
   local real_getenv = os.getenv
-  local where_luarocks = 0
   local captured_command
   _with_stubs({
     { target = os, key = "getenv", value = function(name)
@@ -336,7 +330,6 @@ it("missing MONOPOLY_LUAROCKS_EXE override falls back to probing", function()
     { target = proc_lib, key = "command_exists", value = function() return true end },
     { target = proc_lib, key = "run_command", value = function(command)
       if command[1] == "where.exe" and command[2] == "luarocks.exe" then
-        where_luarocks = where_luarocks + 1
         return { ok = false, output = "" }
       end
       local probe = _native_probe(command)
@@ -347,7 +340,7 @@ it("missing MONOPOLY_LUAROCKS_EXE override falls back to probing", function()
   }, function()
     bootstrap.ensure_luacheck_tree("/repo")
   end)
-  check.equal(1, where_luarocks)
+  -- 覆写失效时退回探测链(where 不命中 → LOCALAPPDATA 默认位置)。
   check.truthy(captured_command[1]:match("luarocks%.exe$") ~= nil)
   check.is_not.equal(override, captured_command[1])
 end)

@@ -11,12 +11,7 @@ if help or #args == 0 then
   io.write("原生 Windows 支持;工具自举不可用退 3。\n")
   os.exit(help and 0 or 2)
 end
-local boundary = require("foundation.platform_boundary")
-local forwarded = {}
-for _, value in ipairs(args) do
-  if value ~= boundary.SKIP_FLAG then forwarded[#forwarded + 1] = value end
-end
-args = forwarded
+args = require("foundation.platform_boundary").strip_skip_flag(args)
 local ensured = require("packages.acceptance.cli.ensure").acceptance4lua(env, { tag = "acceptance-mutator" })
 if ensured ~= true then
   io.stderr:write(ensured.stderr or "")

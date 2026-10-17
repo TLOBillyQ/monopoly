@@ -101,6 +101,16 @@ it("a target without lua files fails instead of reporting no duplicates", functi
   end)
 end)
 
+-- #122 保留兼容开关:--skip-if-unavailable 由本仓消费、不漏给上游(漏了会被当成
+-- 未知选项退 2),受支持平台上照常真实扫描。
+it("skip flag is consumed and the scan still runs", function()
+  local result = _run({ "--skip-if-unavailable", DUPLICATE_PAIR })
+
+  check.same(0, result.code, result.output)
+  check.same(2, _candidate_files(result.output), result.output)
+  check.truthy(result.output:find(UPSTREAM_HIT_ROW, 1, true) ~= nil, result.output)
+end)
+
 -- 脚本形态入口与 CLI 同口径。
 it("the runner script form scans the same way", function()
   local result = proc_lib.run_command({ "lua", RUNNER, DUPLICATE_PAIR })

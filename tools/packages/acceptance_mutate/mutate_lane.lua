@@ -23,10 +23,7 @@ for _, value in ipairs(arg or {}) do
     os.exit(0)
   end
 end
-local args = {}
-for _, value in ipairs(arg or {}) do
-  if value ~= platform_boundary.SKIP_FLAG then args[#args + 1] = value end
-end
+local args = platform_boundary.strip_skip_flag(arg)
 local ensured = require("packages.acceptance.cli.ensure").acceptance4lua(env, { tag = "acceptance-mutate" })
 if ensured ~= true then
   io.stderr:write(ensured.stderr or "")

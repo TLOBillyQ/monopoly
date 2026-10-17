@@ -27,6 +27,8 @@ local function _ensure_dry4lua()
 end
 
 local function run(args)
+  -- #122:兼容开关在本仓消费,漏给上游会被当成未知选项退 2。
+  args = require("foundation.platform_boundary").strip_skip_flag(args)
   local failed = _ensure_dry4lua()
   if failed ~= nil then
     return failed
