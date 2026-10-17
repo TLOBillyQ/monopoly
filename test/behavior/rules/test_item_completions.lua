@@ -53,6 +53,7 @@ describe("TestItemCompletions", function()
     local reopened = { reopened = true }
     local reopened_result = complete.settle_choice_window(game, reopened)
     luassert.is.equal(reopened, reopened_result)
+    -- lint-allow: call-count finish_choice 经 build 注入,零调用即窗口保持不变的对外结果
     luassert.is.same(0, calls, "stay/reopened completions must not finish the choice window")
   end)
 

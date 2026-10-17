@@ -41,6 +41,7 @@ describe("TestActionAnimDefaults", function()
       require("src.ui.render.anim.defaults").register()
     end)
 
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.equal(0, register_count)
   end)
 

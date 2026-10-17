@@ -206,6 +206,7 @@ it("test_sync_follow_unchanged_target_syncs_camera_position", function()
   camera_policy.sync_follow(game, state, ports, true)
   camera_policy.sync_follow(game, state, ports, true)
 
+  -- lint-allow: call-count ui_sync 是注入端口,follow_camera 下发次数即对宿主的出站命令
   luassert.truthy(follow_calls == 1, "跟随目标未变时不应重复下发 follow_camera")
   luassert.truthy(synced_state == state, "跟随目标未变时应改为同步相机位置")
 end)
@@ -223,6 +224,7 @@ it("test_sync_follow_unchanged_target_without_sync_camera_position", function()
   camera_policy.sync_follow(game, state, ports, true)
   camera_policy.sync_follow(game, state, ports, true)
 
+  -- lint-allow: call-count ui_sync 是注入端口,follow_camera 下发次数即对宿主的出站命令
   luassert.truthy(follow_calls == 1, "宿主未提供 sync_camera_position 时目标未变仍不应重复跟随")
 end)
 
@@ -247,6 +249,7 @@ it("test_sync_follow_without_refresh_keeps_existing_target", function()
 
   camera_policy.sync_follow(game, nil, ports, false)
 
+  -- lint-allow: call-count ui_sync 是注入端口,follow_camera 下发次数即对宿主的出站命令
   luassert.truthy(follow_calls == 0,
     "未刷新且无运行时状态时不应切换跟随目标")
 end)
@@ -327,6 +330,7 @@ it("test_sync_follow_skips_while_target_pan_active", function()
 
   camera_policy.sync_follow(game, state, ports, true)
 
+  -- lint-allow: call-count ui_sync 是注入端口,follow_camera 下发次数即对宿主的出站命令
   luassert.truthy(follow_calls == 0, "pan 存活期内不得重放 follow_camera")
 end)
 

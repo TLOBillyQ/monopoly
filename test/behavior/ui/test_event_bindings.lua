@@ -231,6 +231,7 @@ it("test_enable_action_log_toggle_touch_fallback_queries_targets_and_tolerates_b
     })
   end)
 
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(query_calls >= 1, "fallback path should query action-log target nodes")
   _assert_eq(good_node.disabled, false, "fallback should enable nodes returned by runtime.query_nodes")
   _assert_eq(manager.client_role, nil, "fallback should restore client role to nil")

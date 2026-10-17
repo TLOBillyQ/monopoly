@@ -84,6 +84,7 @@ it("test_market_auto_skipped_is_persisted_in_the_action_log_without_tip", functi
   local entries = event_log.get_entries(game.state.event_log)
   luassert.is.equal(1, #entries, "a delegated seat must be able to read that the market was skipped")
   luassert.is.equal("P1 (AI) 到达黑市，选择不购买", entries[1].text)
+  -- lint-allow: call-count tip_output_port 经 game 注入,enqueue 次数即提示策略的对外输出
   luassert.is.equal(0, enqueued, "the skip is a log line, not a tip")
 end)
 
@@ -163,6 +164,7 @@ it("test_tip_false_skips_enqueue", function()
   })
 
   luassert.is.equal(true, ok)
+  -- lint-allow: call-count tip_output_port 经 game 注入,enqueue 次数即提示策略的对外输出
   luassert.is.equal(0, enqueue_calls)
 end)
 
@@ -181,6 +183,7 @@ it("test_tip_policy_tip_false_suppresses_tip_even_when_event_tip_absent", functi
 
   adapter:publish(game, { kind = "dice_roll", text = "掷骰子" })
 
+  -- lint-allow: call-count tip_output_port 经 game 注入,enqueue 次数即提示策略的对外输出
   luassert.is.equal(0, enqueue_calls)
   local entries = event_log.get_entries(game.state.event_log)
   luassert.is.equal(1, #entries, "policy tip=false should still log")
@@ -201,6 +204,7 @@ it("test_tip_policy_tip_true_overrides_event_tip_false", function()
 
   adapter:publish(game, { kind = "rent_multiplier_breakdown", text = "南山广场 租金 ×3", tip = false })
 
+  -- lint-allow: call-count tip_output_port 经 game 注入,enqueue 次数即提示策略的对外输出
   luassert.is.equal(1, enqueue_calls, "policy tip=true should enqueue regardless of event.tip")
 end)
 

@@ -50,6 +50,7 @@ it("test_no_time_limit_never_checks_victory", function()
   _with_time_limit(nil, function()
     gameplay_loop.tick(game, state, 1.0)
   end)
+  -- lint-allow: call-count game 经参数注入,check_victory 的触发帧即时钟的对外契约
   check.same(check_victory_calls, 0)
 end)
 
@@ -72,6 +73,7 @@ it("test_tick_checks_victory_on_the_frame_the_limit_is_reached", function()
   _with_time_limit(900, function()
     gameplay_loop.tick(game, state, 0.5)
   end)
+  -- lint-allow: call-count game 经参数注入,check_victory 的触发帧即时钟的对外契约
   check.same(check_victory_calls, 1)
 end)
 

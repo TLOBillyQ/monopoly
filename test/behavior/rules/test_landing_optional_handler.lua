@@ -196,6 +196,7 @@ describe("TestLandingOptionalHandler", function()
       handler.execute(_game(), { kind = "landing_optional_effect" }, { option_id = "confirm" })
     end)
 
+    -- lint-allow: call-count finish 回调经构造注入,调用一次即完成选择的对外输出
     luassert.truthy(finish_calls == 1, "a nil settlement still finishes the choice")
   end)
 
@@ -215,6 +216,7 @@ describe("TestLandingOptionalHandler", function()
 
     luassert.truthy(#warnings == 1, "a blocked settlement warns exactly once")
     luassert.truthy(warnings[1]:find("insufficient_cash"), "the warning carries the block reason: " .. warnings[1])
+    -- lint-allow: call-count finish 回调经构造注入,调用一次即完成选择的对外输出
     luassert.truthy(finish_calls == 1, "a blocked settlement still finishes the choice")
   end)
 

@@ -90,6 +90,7 @@ local function _test_repeated_install_does_not_register_duplicate_events()
 
   runtime_context.set_current(saved_ctx)
 
+  -- lint-allow: call-count lua_api 经参数注入,重复 install 不重复注册是幂等契约
   luassert.is.equal(2, register_count)
 end
 

@@ -239,7 +239,9 @@ describe("TestActionAnimOverlayUnits", function()
       action_anim.play(state, { kind = "roadblock", tile_index = 1, duration = 0.2 })
     end)
 
+    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
     luassert.truthy(unit_calls == 1, "roadblock should spawn via unit path")
+    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
     luassert.truthy(group_calls == 0, "roadblock should not spawn via group path")
     luassert.truthy(captured_scale ~= nil, "roadblock should pass explicit scale")
     luassert.truthy(captured_scale.x == 4.0 and captured_scale.y == 4.0 and captured_scale.z == 4.0, "roadblock should use 4x scale")
@@ -312,7 +314,9 @@ describe("TestActionAnimOverlayUnits", function()
     prefab.group["地雷A"] = original_group
     prefab.unit["地雷A"] = original_unit
 
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(spawn_calls == 0, "missing mine prefab should skip the spawn")
+    -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.truthy(warns == 1, "missing mine prefab should warn exactly once")
   end)
 
@@ -444,7 +448,9 @@ describe("TestActionAnimOverlayUnits", function()
 
     prefab.unit["清障机器人"] = original_robot
 
+    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
     luassert.truthy(acquire_calls == 0, "missing robot prefab should skip spawning")
+    -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.truthy(warns == 1, "missing robot prefab should warn exactly once")
   end)
 
@@ -1761,6 +1767,7 @@ describe("TestActionAnimOverlayUnits", function()
     overlay.play_clear_obstacles(state, { player_id = 1, branches = {} }, 0.1, {
       clear_overlay = function() end,
     })
+    -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
     luassert.truthy(created >= 1, "presentation runtime host_runtime must own the robot spawn")
   end)
 

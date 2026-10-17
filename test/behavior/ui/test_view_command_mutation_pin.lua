@@ -53,6 +53,7 @@ it("test_returns_true_short_circuit_when_block_entry_blocks_without_touching_por
     result = view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 1 })
   end)
   luassert.truthy(result == true, "blocked panel entry must return true short-circuit; got " .. tostring(result))
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(port_calls == 0, "blocked entry must not reach ports dispatch; got " .. port_calls)
   luassert.truthy(blocked_calls[1].panel_id == "skin",
     "expected 'skin' panel id passed to block_entry; got " .. tostring(blocked_calls[1].panel_id))
@@ -68,6 +69,7 @@ it("test_proceeds_to_ports_when_block_entry_returns_false", function()
     result = view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 1 })
   end)
   luassert.truthy(result == true, "unblocked entry must delegate to ports; got " .. tostring(result))
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(port_calls == 1, "ports dispatch must run when entry is not blocked; got " .. port_calls)
 end)
 
@@ -77,6 +79,7 @@ it("test_treats_truthy_but_not_true_block_entry_result_as_not_blocked('== true' 
   _with_block_entry(function() return 1 end, function()
     view_command.dispatch(state, { type = "open_skin_panel", actor_role_id = 1 })
   end)
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(port_calls == 1, "block_entry returning non-true must not block; got " .. port_calls .. " port call(s)")
 end)
 
@@ -88,8 +91,10 @@ it("test_never_consults_block_entry_for_intents_without_a_panel_id", function()
   _with_block_entry(function() block_calls = block_calls + 1; return true end, function()
     result = view_command.dispatch(state, { type = "market_select", option_id = 3 })
   end)
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(block_calls == 0, "market_select has no panel id → gate must be skipped; got " .. block_calls)
   luassert.truthy(result == true, "gate skip must still delegate to ports; got " .. tostring(result))
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(port_calls == 1, "ports dispatch must run for panel-less intents; got " .. port_calls)
 end)
 
@@ -238,6 +243,7 @@ it("test_stays_terminal_even_when_the_port_dispatch_returns_false_no_second_disp
       intent_dispatcher.dispatch(state, {}, { type = "open_skin_panel", actor_role_id = 1 })
     end)
   end)
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(port_calls == 1, "port dispatch must run exactly once; got " .. port_calls)
   luassert.truthy(game_action_calls == 0,
     "port returning false must not re-enter the game/view fallthrough path; got " .. game_action_calls)
@@ -252,6 +258,7 @@ it("test_still_routes_non_before_game_view_commands_through_the_game_first_path"
     end)
   end)
   luassert.truthy(game_action_calls == 1, "market_select must hit the game action path first; got " .. game_action_calls)
+  -- lint-allow: call-count 变异钉测:注入端口/闸门的调用次数是被钉 mutant 的唯一可见差异
   luassert.truthy(port_calls == 0, "game action consuming the intent must skip the trailing view dispatch; got " .. port_calls)
 end)
 

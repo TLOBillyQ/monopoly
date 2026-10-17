@@ -47,6 +47,7 @@ local function _test_skips_wiring_without_lazy_game_accessor()
     luassert.truthy(settlement.install({}) == false, "install without get_current_game must skip wiring")
     luassert.truthy(settlement.install(nil) == false, "install without opts must skip wiring")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(register_calls == 0, "skipped install must not touch the host event port")
 end
 
@@ -217,6 +218,7 @@ local function _test_watch_game_skips_and_logs_when_role_unresolved()
     settlement.watch_game({ players = { { id = 7, name = "P7" } } })
   end, { skip_runtime_context_refresh = true })
 
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(register_calls == 0, "unresolved role must not register a quit listener")
   luassert.truthy(#warns == 1, "unresolved role must leave a warn trace (ADR 0046)")
 end

@@ -751,6 +751,7 @@ it("test_upgrade_land_prefers_direct_ui_notify_before_event_bridge", function()
     choice_resolver.resolve(g, pending, { option_id = "upgrade_land" })
   end)
 
+  -- lint-allow: call-count ui 端口经 _set_ui_port 注入,直接通知一次即对外输出
   check.is_truthy(direct_calls == 1, "upgrade should notify ui runtime directly once")
   check.is_truthy(emitted == false, "direct ui notify should skip event bridge fallback")
 end)

@@ -285,6 +285,7 @@ local function _test_does_nothing_for_invalid_counts_or_a_nil_key()
     entity_pool.prewarm("zk", -3)
     entity_pool.prewarm(nil, 3)
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(created == 0, "invalid prewarm arguments should create nothing")
   luassert.truthy(entity_pool.stats()["zk"] == nil, "a zero/negative prewarm should not build a bucket")
 end

@@ -19,6 +19,7 @@ it("test_active_role_truthy_skips_for_each_role_or_global_immediate_branch_only"
   }, function()
     node_ops.set_text(nil, "node-name", "after-immediate")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(for_each_calls == 0,
     "L23 active_role truthy must NOT call for_each_role_or_global; got " .. tostring(for_each_calls))
   luassert.truthy(node.text == "after-immediate",
@@ -42,9 +43,11 @@ it("test_active_role_nil_get_client_role_returns_nil_runs_deferred_branch_only",
   }, function()
     node_ops.set_text(nil, "node-name-deferred", "after-deferred")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(for_each_calls == 1,
     "L23 active_role nil must call for_each_role_or_global exactly once; got " .. tostring(for_each_calls))
   luassert.truthy(node.text == "after-deferred", "deferred branch must still apply mutator via callback")
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(query_node_calls == 1, "exactly one query_nodes lookup inside deferred callback")
 end)
 
@@ -61,6 +64,7 @@ it("test_get_client_role_missing_entirely_deferred_branch_skip_or_nil_fallback",
   }, function()
     node_ops.set_text(nil, "node-no-helper", "after-no-helper")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(for_each_calls == 1,
     "L23 with get_client_role==nil must short-circuit via `and` to nil → deferred; got " .. tostring(for_each_calls))
 end)
@@ -80,6 +84,7 @@ it("test_active_role_truthy_skips_for_each_role_or_global_immediate_apply_item_s
   }, function()
     node_ops.set_item_slot_image("slot_X", "IMG_X")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(for_each_calls == 0,
     "L107 active_role truthy must NOT call for_each_role_or_global; got " .. tostring(for_each_calls))
   luassert.truthy(#texture_calls == 1 and texture_calls[1] == "IMG_X",
@@ -102,6 +107,7 @@ it("test_active_role_nil_deferred_via_for_each_role_or_global_called_per_iterati
   }, function()
     node_ops.set_item_slot_image("slot_Y", "IMG_Y")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(for_each_calls == 1,
     "L107 active_role nil must call for_each_role_or_global once; got " .. tostring(for_each_calls))
   luassert.truthy(#texture_calls == 1 and texture_calls[1] == "IMG_Y",
@@ -120,6 +126,7 @@ it("test_get_client_role_missing_entirely_deferred_branch_via_short_circuit_and_
   }, function()
     node_ops.set_item_slot_image("slot_Z", "IMG_Z")
   end)
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(for_each_calls == 1,
     "L107 with get_client_role==nil must short-circuit via `and` to nil → deferred; got " .. tostring(for_each_calls))
 end)

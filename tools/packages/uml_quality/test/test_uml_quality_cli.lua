@@ -211,6 +211,7 @@ it("view fails before launching when no herdr >= 0.9.3 is on PATH or the upstrea
   end)
   fs.remove_path(root)
   check.equal(1, code)
+  -- lint-allow: call-count launch 经 opts 注入,预检失败不拉起是对外契约
   check.equal(0, launched)
   check.truthy(output:find("FAIL herdr >= 0.9.3: none on PATH", 1, true))
   check.truthy(output:find("uml-command.ps1 missing", 1, true))

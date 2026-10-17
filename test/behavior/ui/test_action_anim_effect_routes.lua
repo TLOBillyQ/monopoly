@@ -222,9 +222,11 @@ describe("TestActionAnimEffectRoutes", function()
       })
       luassert.truthy(duration == 0.6 + expected_delay, "missile should add startup delay to total duration")
       luassert.truthy(scheduled_delay == expected_delay, "missile should schedule handler after startup delay")
+      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
       luassert.truthy(handler_calls == 0, "missile handler should not run immediately before ui closes")
       luassert.truthy(type(scheduled_fn) == "function", "missile should enqueue delayed handler callback")
       scheduled_fn()
+      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
       luassert.truthy(handler_calls == 1, "missile handler should run after delayed callback")
     end)
   end)
@@ -260,9 +262,11 @@ describe("TestActionAnimEffectRoutes", function()
       })
       luassert.truthy(duration == 0.6 + expected_delay, "monster should add startup delay to total duration")
       luassert.truthy(scheduled_delay == expected_delay, "monster should schedule handler after startup delay")
+      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
       luassert.truthy(handler_calls == 0, "monster handler should not run immediately before ui closes")
       luassert.truthy(type(scheduled_fn) == "function", "monster should enqueue delayed handler callback")
       scheduled_fn()
+      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
       luassert.truthy(handler_calls == 1, "monster handler should run after delayed callback")
     end)
   end)
@@ -320,6 +324,7 @@ describe("TestActionAnimEffectRoutes", function()
         duration = 0.6,
       })
       luassert.truthy(out_duration == 0.6, "upgrade_land should keep configured duration")
+      -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
       luassert.truthy(called == 0, "upgrade_land should not call overlay handler")
     end)
   end)
@@ -347,6 +352,7 @@ describe("TestActionAnimEffectRoutes", function()
       luassert.truthy(duration == 0.6, "silent action anim should still return duration")
     end)
 
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(tip_calls == 0, "action anim should not emit user tips by default")
   end)
 
@@ -423,6 +429,7 @@ describe("TestActionAnimEffectRoutes", function()
       })
     end)
 
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(tip_calls == 0, "debug action anim log should not consume tip channel")
     luassert.truthy(#info_calls == 1, "debug action anim log should emit one info log")
   end)
@@ -628,6 +635,7 @@ describe("TestActionAnimEffectRoutes", function()
 
     luassert.truthy(#player_calls == 1, "play_mine_trigger should route one player cue when unit position exists")
     luassert.truthy(player_calls[1].payload.pos.x == 1, "play_mine_trigger should prefer unit position over tile position")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(tile_calls == 0, "play_mine_trigger should not emit tile cue when player cue is available")
     luassert.truthy(cleared[1] == "mine:1", "play_mine_trigger should clear mine overlay after feedback")
   end)
@@ -690,6 +698,7 @@ describe("TestActionAnimEffectRoutes", function()
 
     luassert.truthy(#player_calls == 1, "play_mine_trigger should keep player cue when tile position exists")
     luassert.truthy(player_calls[1].pos.x == 4, "play_mine_trigger should fall back to tile position")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(tile_calls == 0, "play_mine_trigger should avoid tile cue when tile position fallback exists")
   end)
 
@@ -751,6 +760,7 @@ describe("TestActionAnimEffectRoutes", function()
       luassert.truthy(duration == 0.2, "play_mine_trigger should clamp negative snap delay to minimum duration")
     end)
 
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(player_calls == 0, "play_mine_trigger should skip player cue when no hit position exists")
     luassert.truthy(tile_calls[1] == "mine_blast:3", "play_mine_trigger should fall back to tile cue when position lookup fails")
   end)

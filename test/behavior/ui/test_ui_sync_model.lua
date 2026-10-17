@@ -201,8 +201,10 @@ it("test_opens_inline_choices_only_outside_input_blocked_phases", function()
     end },
   }, function()
     luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common()))
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.same( 1,opened, "inline choice should open when input is allowed")
     luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_move_anim"), state, { any = true }, _common()))
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.same( 1,opened, "input-blocked phase should not open inline choice")
   end)
 end)
@@ -229,6 +231,7 @@ it("test_opens_passive_item_choices_as_inline_choices", function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
     luassert.is.same( true,result, "passive choice refresh should render")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.same( 1,opened, "item_phase_passive should open through inline modal handler")
   end)
 end)
@@ -281,6 +284,7 @@ it("test_opens_non_inline_choices_when_reconcile_requires_it", function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
     luassert.is.same( true,result, "target choice refresh should render")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.same( 1,opened, "reconciled target choice should open")
   end)
 end)
@@ -329,6 +333,7 @@ it("test_closes_stale_choice_modal_when_the_refreshed_model_has_no_choice", func
     local result = model_sync.refresh_from_dirty(_game(), state, { any = true }, _common())
 
     luassert.is.same( true,result, "full refresh should still report a render")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.same( 1,closed, "stale active choice should be closed")
   end)
 end)
@@ -355,6 +360,7 @@ it("test_reopens_a_pending_choice_from_the_cached_model_without_rebuilding", fun
     local result = model_sync.reopen_choice_modal_if_needed(_game(), state, pending)
 
     luassert.is.same( true,result, "reconciled pending choice should reopen")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.is.same( 1,opened, "modal should open once")
   end)
 end)

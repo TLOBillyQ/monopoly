@@ -31,6 +31,7 @@ it("test_publish_normalizes_the_port_result_to_boolean", function()
   }
   luassert.truthy(event_feed.publish(game, { kind = "k", text = "t" }) == true,
     "truthy port result should normalize to true")
+  -- lint-allow: call-count event_feed_port 经 game 注入,发布次数即被测单元的对外输出
   luassert.truthy(calls == 1, "port should be called once")
 end)
 

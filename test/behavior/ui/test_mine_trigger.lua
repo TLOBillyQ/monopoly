@@ -107,6 +107,7 @@ describe("TestMineTrigger", function()
     luassert.truthy(player_calls[1].cue_name == "mine_blast", "scheduled mine trigger should preserve cue name")
     luassert.truthy(player_calls[1].player_id == 1, "scheduled mine trigger should preserve player id in cue")
     luassert.truthy(player_calls[1].payload.pos.x == 1, "scheduled mine trigger should prefer unit position over tile position")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(tile_calls == 0, "scheduled mine trigger should not fall back to tile cue when unit position exists")
   end)
 
@@ -174,6 +175,7 @@ describe("TestMineTrigger", function()
     luassert.truthy(player_calls[1].cue_name == "mine_blast", "mine trigger should use default cue name")
     luassert.truthy(player_calls[1].player_id == 1, "mine trigger should preserve player id for fallback cue")
     luassert.truthy(player_calls[1].payload.pos.x == 4, "mine trigger should fall back to tile position when unit position is missing")
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(tile_calls == 0, "mine trigger should avoid tile cue when tile position fallback exists")
   end)
 

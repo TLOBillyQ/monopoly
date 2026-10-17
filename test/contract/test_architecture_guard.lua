@@ -232,6 +232,7 @@ it("test_turn_dispatch_next_only_marks_ui_dirty", function()
     luassert.is.equal("applied", result.status, "next should apply for current player")
   end)
 
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
   luassert.is.equal(1, stepped, "dispatch should step turn once")
   luassert.is.equal(0, #ui_writes, "next action should not directly write state.ui_*")
   luassert.is.equal(1, #output_log, "next action should emit one output invalidate signal")

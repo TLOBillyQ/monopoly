@@ -67,6 +67,7 @@ describe("TestMarketEffectExecutor", function()
       luassert.truthy(result == nil, "auto player path yields no pending intent")
     end)
 
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
     luassert.truthy(auto_calls == 1, "auto purchase ran exactly once")
     luassert.truthy(choice_built == false, "auto player path never builds a choice spec")
   end)

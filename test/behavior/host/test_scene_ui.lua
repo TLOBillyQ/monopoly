@@ -82,6 +82,7 @@ local function _test_get_eui_node_skips_lookup_when_args_are_incomplete()
   local result = scene_ui.get_eui_node_at_scene_ui(nil, "node")
   _G.GameAPI = saved
   luassert.truthy(result == nil, "incomplete args should short-circuit before lookup")
+  -- lint-allow: call-count 宿主/系统边界桩(CODING_STANDARDS 允许的 mock 位置),出站调用次数即可见副作用
   luassert.truthy(calls == 0, "lookup must not run with incomplete args")
 end
 
