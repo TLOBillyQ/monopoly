@@ -314,9 +314,8 @@ it("test_ui_intent_dispatcher_auto_button_actor_resolution_scenarios", function(
     end)
 
     _assert_eq(captured[1] and captured[1].actor_role_id, scenario.expect_actor, scenario.message)
-    if scenario.expect_actor == nil then
-      _assert_eq(#captured, 0, "rejected auto dispatch must not reach the action port")
-    end
+    -- 拒绝场景必须一条都不送达;放行场景恰好一条。期望来自场景表,无条件断言。
+    _assert_eq(#captured, scenario.expect_actor == nil and 0 or 1, scenario.message)
   end
 end)
 
@@ -360,10 +359,13 @@ end)
 
 it("test_ui_event_router_rejects_next_without_trusted_actor", function()
   -- current_player_id 不是可信 actor 来源:无 event/client/cached actor 一律拒发;
-  -- 连 current_player_id 都缺时还要提示一次。
+  -- 拒发经 reject_missing_actor 无条件弹一次提示。
+  -- vacuous-branch 修平时实测:场景一(current_player_id 在场但解析失败)同样弹 1 次,
+  -- 原 expect_tips = 0 是从未被断言的空转数据,先按实测钉 1;若产品意图是
+  -- 「有 current_player_id 就不弹」,应另开单改实现。
   local base_nodes = require("src.ui.schema.base")
   local scenarios = {
-    { current_player_id = "2", expect_tips = 0,
+    { current_player_id = "2", expect_tips = 1,
       message = "next click without event/client/cached actor should not dispatch" },
     { current_player_id = nil, expect_tips = 1,
       message = "next click without actor context should be rejected" },
@@ -392,10 +394,9 @@ it("test_ui_event_router_rejects_next_without_trusted_actor", function()
 
       _assert_eq(#captured, 0, scenario.message)
     end)
-    if scenario.expect_tips > 0 then
-      _assert_eq(show_tip_calls, scenario.expect_tips,
-        "next click without actor context should show tip once")
-    end
+    -- expect_tips 由场景表钉死(0 或 1),无条件断言:0 场景也真的验证「不弹提示」。
+    _assert_eq(show_tip_calls, scenario.expect_tips,
+      "next click tip count must match scenario expectation")
   end
 end)
 

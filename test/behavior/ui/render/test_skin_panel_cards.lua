@@ -33,6 +33,17 @@ local function _refresh(slot, view)
   return spy.calls
 end
 
+-- 收集匹配模式的 touch 调用;断言条数与内容由调用方无条件给出。
+local function _touch_calls_for(calls, pattern)
+  local matched = {}
+  for _, call in ipairs(calls) do
+    if call[1] == "touch" and string.match(call[2], pattern) then
+      matched[#matched + 1] = call
+    end
+  end
+  return matched
+end
+
 describe("TestSkinPanelCards", function()
 
   it("test_card_frame_control_state_keeps_touch_disabled", function()
@@ -56,27 +67,17 @@ describe("TestSkinPanelCards", function()
   it("test_card_outline_container_touch_stays_disabled", function()
     -- 杀 L24 false->true:描边容器的 set_touch_enabled 必须收到 false。
     local calls = _refresh(1, { has_skin = true, skin = { product_id = "p1" }, price_icon_visible = false })
-    local found = false
-    for _, call in ipairs(calls) do
-      if call[1] == "touch" and string.match(call[2], "描边") then
-        found = true
-        _assert_eq(call[3], false, "outline container touch must stay disabled")
-      end
-    end
-    _assert_eq(found, true, "outline container touch call should be observed")
+    local outline_calls = _touch_calls_for(calls, "描边")
+    _assert_eq(#outline_calls, 1, "outline container touch call should be observed exactly once")
+    _assert_eq(outline_calls[1][3], false, "outline container touch must stay disabled")
   end)
 
   it("test_price_icon_touch_stays_disabled", function()
     -- 杀 L87 false->true:金额图标的 set_touch_enabled 必须收到 false。
     local calls = _refresh(1, { has_skin = true, skin = { product_id = "p1" }, price_icon_visible = false })
-    local found = false
-    for _, call in ipairs(calls) do
-      if call[1] == "touch" and string.match(call[2], "金额图标") then
-        found = true
-        _assert_eq(call[3], false, "price icon touch must stay disabled")
-      end
-    end
-    _assert_eq(found, true, "price icon touch call should be observed")
+    local price_icon_calls = _touch_calls_for(calls, "金额图标")
+    _assert_eq(#price_icon_calls, 1, "price icon touch call should be observed exactly once")
+    _assert_eq(price_icon_calls[1][3], false, "price icon touch must stay disabled")
   end)
 
 end)

@@ -87,14 +87,15 @@ describe("TestDepRules", function()
     it("test_" .. string.format("rule %02d: %s", index, rule.description), function()
       local hit, err = _scan_rule(rule)
 
-      if err and not tostring(err):find("no lua files found under", 1, true) then
-        luassert.is_true(false, _build_error_report(rule, err))
-        return
+      if err then
+        -- 两侧都断言(vacuous-branch):「目录下没有 lua 文件」是唯一容忍的扫描错误。
+        luassert.is_true(tostring(err):find("no lua files found under", 1, true) ~= nil,
+          _build_error_report(rule, err))
+      else
+        local ok = hit == nil
+        local full_report = ok and "dep_rules ok" or _build_violation_report(hit)
+        luassert.is_true(ok, full_report)
       end
-
-      local ok = hit == nil
-      local full_report = ok and "dep_rules ok" or _build_violation_report(hit)
-      luassert.is_true(ok, full_report)
     end)
   end
 end)

@@ -79,6 +79,16 @@ local function _visible_for(env, node_name)
   return "unset"
 end
 
+-- 与 _visible_for 同型:没摸到对应 touch 调用返回 "unset",断言直接红,不空转。
+local function _touch_enabled_for(env, node_name)
+  for _, call in ipairs(env.touch) do
+    if call.node_name == node_name then
+      return call.enabled
+    end
+  end
+  return "unset"
+end
+
 describe("TestItemAtlas", function()
 
   it("test_refresh_page_applies_textures_and_visibility_for_first_page", function()
@@ -97,14 +107,7 @@ describe("TestItemAtlas", function()
       _assert_eq(_visible_for(env, nodes.card_images[slot]), true, "present card " .. slot .. " must be visible")
     end
     for slot = 1, 2 do
-      local found = false
-      for _, call in ipairs(env.touch) do
-        if call.node_name == nodes.card_images[slot] then
-          _assert_eq(call.enabled, true, "present card touch must be enabled")
-          found = true
-        end
-      end
-      _assert_eq(found, true, "present card touch must be set")
+      _assert_eq(_touch_enabled_for(env, nodes.card_images[slot]), true, "present card " .. slot .. " touch must be enabled")
     end
     _assert_eq(_visible_for(env, nodes.page_prev), false, "first page must hide the prev arrow")
     _assert_eq(_visible_for(env, nodes.page_next), true, "first page must show the next arrow")
@@ -118,14 +121,7 @@ describe("TestItemAtlas", function()
     item_atlas_view.refresh_page(_state(env, images), catalog, 1, env.deps)
     for slot = 6, _PAGE_SIZE do
       _assert_eq(_visible_for(env, nodes.card_images[slot]), false, "empty slot " .. slot .. " must be hidden")
-      local found = false
-      for _, call in ipairs(env.touch) do
-        if call.node_name == nodes.card_images[slot] then
-          _assert_eq(call.enabled, false, "empty slot touch must be disabled")
-          found = true
-        end
-      end
-      _assert_eq(found, true, "empty slot touch must be set")
+      _assert_eq(_touch_enabled_for(env, nodes.card_images[slot]), false, "empty slot " .. slot .. " touch must be disabled")
     end
   end)
 

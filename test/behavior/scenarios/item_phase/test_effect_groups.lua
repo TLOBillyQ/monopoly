@@ -45,6 +45,7 @@ local function _test_remote_dice_locks_only_after_success_and_keeps_the_pending_
   for _, mode in ipairs({ "direct", "replacement", "manual", "afk" }) do
     local g, p = new_game(mode, item_ids.remote_dice)
     run_phase(g, p)
+    -- lint-allow: vacuous-branch 控制模式矩阵:仅 direct 模式需手动选卡并断言中间态,其余模式托管自动结算,循环尾部公共断言无条件覆盖
     if mode == "direct" then
       select_item(g, item_ids.remote_dice)
       luassert.is_nil(g.turn.used_effect_groups.dice_control)
@@ -107,11 +108,13 @@ local function _test_different_groups_can_succeed_in_the_same_turn()
     local g, p = new_game(mode, item_ids.remote_dice)
     p.inventory:add({ id = item_ids.dice_multiplier })
     run_phase(g, p)
+    -- lint-allow: vacuous-branch 控制模式矩阵:仅 direct 模式需手动选卡(select_item 内含 pending_choice 断言),其余模式自动结算、循环尾部断言无条件覆盖
     if mode == "direct" then
       select_item(g, item_ids.remote_dice)
       select_item(g, 2)
     end
     run_phase(g, p, "pre_move")
+    -- lint-allow: vacuous-branch 控制模式矩阵:仅 direct 模式需手动选卡(select_item 内含 pending_choice 断言),其余模式自动结算、循环尾部断言无条件覆盖
     if mode == "direct" then select_item(g, item_ids.dice_multiplier) end
     _assert_equal(inventory.count(p), 1, mode)
     _assert_equal(p.inventory.items[2].id, item_ids.remote_dice, mode)
@@ -151,6 +154,7 @@ local function _test_all_control_modes_keep_the_second_multiplier_in_its_slot()
   for _, mode in ipairs({ "direct", "replacement", "manual", "afk" }) do
     local g, p = new_game(mode, item_ids.dice_multiplier)
     run_phase(g, p, "pre_move")
+    -- lint-allow: vacuous-branch 控制模式矩阵:仅 direct 模式需手动选卡(select_item 内含 pending_choice 断言),其余模式自动结算、循环尾部断言无条件覆盖
     if mode == "direct" then select_item(g, item_ids.dice_multiplier) end
     _assert_equal(inventory.count(p), 1, mode)
     _assert_equal(p.inventory.items[1], false, mode)
