@@ -226,11 +226,6 @@ local function _ensure_rock_installed(repo_root, name, version, marker_rel, befo
     return true
   end
 
-  local ok, err = fs_lib.ensure_dir(tree)
-  if not ok then
-    return nil, err
-  end
-
   if before_install ~= nil then
     local dep_ok, dep_err, dep_unavailable = before_install()
     if dep_ok ~= true then
@@ -238,17 +233,33 @@ local function _ensure_rock_installed(repo_root, name, version, marker_rel, befo
     end
   end
 
-  local result = _rocks_run(tree, { "install", name, version, "--deps-mode", "one" })
-  if result.ok ~= true then
-    local install_err = "luarocks install failed for " .. name .. ": " .. tostring(result.output)
-    return nil, install_err, availability.classify(name, "install", install_err)
-  end
+  -- #140:冷缓存下多条 busted 车道会同时写同一 LuaRocks tree。用跨进程目录锁
+  -- 串行化实际安装;获锁后重查 marker,等待者直接复用先完成进程的结果。
+  -- 锁只包安装段,before_install 在锁外完成,避免嵌套依赖自举自死锁。
+  local process_lock = require("foundation.process_lock")
+  local lock_path = path_lib.join_path(tree, ".bootstrap-write.lock")
+  return process_lock.with_lock(lock_path, function()
+    if fs_lib.path_exists(marker) == true then
+      return true
+    end
 
-  if fs_lib.path_exists(marker) ~= true then
-    return nil, name .. " not found in luarocks tree after install"
-  end
+    local ok, err = fs_lib.ensure_dir(tree)
+    if not ok then
+      return nil, err
+    end
 
-  return true
+    local result = _rocks_run(tree, { "install", name, version, "--deps-mode", "one" })
+    if result.ok ~= true then
+      local install_err = "luarocks install failed for " .. name .. ": " .. tostring(result.output)
+      return nil, install_err, availability.classify(name, "install", install_err)
+    end
+
+    if fs_lib.path_exists(marker) ~= true then
+      return nil, name .. " not found in luarocks tree after install"
+    end
+
+    return true
+  end)
 end
 
 function bootstrap.ensure_luacheck_tree(repo_root)

@@ -14,6 +14,8 @@ local test_dir = test_source:match("^(.*)/[^/]+$") or "tools/foundation/test"
 local runtime_paths = dofile(test_dir .. "/../runtime_paths.lua")
 local bootstrap_path = test_dir .. "/../bootstrap.lua"
 local bootstrap = require("foundation.bootstrap")
+local process_lock = require("foundation.process_lock")
+local native_lua = assert(arg[-1], "native Lua interpreter identity required")
 
 local function _with_stubs(stubs, fn)
   local saved_lua54 = package.loaded["foundation.lua54"]
@@ -27,6 +29,9 @@ local function _with_stubs(stubs, fn)
       if name == "LUA54_BIN" or name == "MONOPOLY_LUAROCKS_EXE" then return nil end
       return real_getenv(name)
     end },
+    -- 单元用例聚焦安装结果与错误分类,直接执行锁回调;真实目录锁由上面的
+    -- 跨进程假 luarocks 用例经公共 ensure_busted_tree 完整覆盖。
+    { target = process_lock, key = "with_lock", value = function(_, fn) return fn() end },
   }
   for _, stub in ipairs(stubs) do
     effective[#effective + 1] = stub
@@ -265,6 +270,99 @@ it("ensure busted tree installs pinned rock and checks marker", function()
   -- --lua-dir 取真实解释器(lua.exe)所在前缀,而不是 where.exe 首行的
   -- lua.cmd / lua.bat 垫片目录。
   check.equal(_LUAROCKS_PREFIX, captured_command[7])
+end)
+
+it("serializes concurrent cold busted installs across processes", function()
+  local root = env_lib.make_temp_path("bootstrap lock 中文 space", "")
+  fs_lib.remove_path(root)
+  check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, ".toolcache/luarocks")))
+  local worker = path_lib.join_path(root, "worker.lua")
+  local fake_script = path_lib.join_path(root, "fake_luarocks.lua")
+  local fake_exe = path_lib.join_path(root, "fake_luarocks.cmd")
+
+  -- 两个 worker 都到齐后才进入公共 ensure_busted_tree；假 luarocks 自己再用
+  -- 独立目录锁模拟真实树锁，确保持锁期间另一个进程会收到原始竞争错误。
+  check.is_true(fs_lib.write_file(worker, [[
+local function exists(path)
+  local file = io.open(path, "rb")
+  if file then file:close() end
+  return file ~= nil
+end
+local root, lane = arg[1], arg[2]
+local ready = root .. "/ready-" .. lane
+local file = assert(io.open(ready, "wb"))
+file:write("ready")
+file:close()
+local deadline = os.time() + 10
+while not exists(root .. "/ready-1") or not exists(root .. "/ready-2") do
+  if os.time() >= deadline then io.stderr:write("worker barrier timeout\n"); os.exit(9) end
+end
+require("test.bootstrap").install_package_paths()
+local ok, err, unavailable = require("foundation.bootstrap").ensure_busted_tree(root)
+if unavailable ~= nil then io.stderr:write(tostring(err) .. "\n"); os.exit(3) end
+if not ok then io.stderr:write(tostring(err) .. "\n"); os.exit(1) end
+io.write("BOOTSTRAP_OK\n")
+]]))
+  check.is_true(fs_lib.write_file(fake_script, [[
+local tree
+local install = false
+for index = 1, #arg do
+  if arg[index] == "--tree" then tree = arg[index + 1] end
+  if arg[index] == "install" then install = true end
+end
+assert(tree and install, "fake luarocks only models install --tree")
+local lock = tree .. "/.controlled-fake-tree-lock"
+local native_lock = lock:gsub("/", "\\")
+local created = os.execute('mkdir "' .. native_lock .. '" 2>nul')
+if created ~= true then
+  io.stderr:write("Error: another process requires exclusive write access to the tree\n")
+  os.exit(1)
+end
+local deadline = os.time() + 2
+while os.time() < deadline do end
+local marker = tree .. "/share/lua/5.4/busted/runner.lua"
+local parent = marker:match("^(.*)/[^/]+$"):gsub("/", "\\")
+assert(os.execute('mkdir "' .. parent .. '" 2>nul'))
+local file = assert(io.open(marker, "wb"))
+file:write("-- controlled fake busted\n")
+file:close()
+assert(os.execute('rmdir "' .. native_lock .. '" 2>nul'))
+io.write("FAKE_INSTALL_OK\n")
+]]))
+  local shell_lib = require("foundation.shell")
+  check.is_true(fs_lib.write_file(fake_exe, "@echo off\r\n"
+    .. shell_lib.build_command({ native_lua, fake_script }) .. " %*\r\n"))
+
+  local run_ok, run_err = xpcall(function()
+    local lanes = {}
+    for lane = 1, 2 do
+      lanes[lane] = {
+        label = "cold-" .. lane,
+        cmd = { native_lua, worker, root, tostring(lane) },
+      }
+    end
+    local ok, results = require("foundation.parallel_lanes").run(lanes, {
+      stream = false,
+      timeout = 30,
+      env = {
+        LUA54_BIN = native_lua,
+        MONOPOLY_LUAROCKS_EXE = fake_exe,
+      },
+    })
+    local diagnostics = {}
+    for _, result in ipairs(results) do
+      diagnostics[#diagnostics + 1] = result.label .. ": " .. tostring(result.output)
+      check.is_true(result.ok, result.output)
+      check.equal(0, result.exit_code)
+      check.matches("BOOTSTRAP_OK", result.output, 1, true)
+      check.is_nil(result.output:find("requires exclusive write access", 1, true))
+    end
+    check.is_true(ok, table.concat(diagnostics, "\n"))
+    check.is_true(fs_lib.path_exists(path_lib.join_path(root,
+      ".toolcache/luarocks/share/lua/5.4/busted/runner.lua")))
+  end, debug.traceback)
+  fs_lib.remove_path(root)
+  assert(run_ok, run_err)
 end)
 
 it("ensure busted tree reports missing post install marker", function()
