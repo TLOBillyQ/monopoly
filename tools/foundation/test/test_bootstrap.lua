@@ -14,6 +14,8 @@ local test_dir = test_source:match("^(.*)/[^/]+$") or "tools/foundation/test"
 local runtime_paths = dofile(test_dir .. "/../runtime_paths.lua")
 local bootstrap_path = test_dir .. "/../bootstrap.lua"
 local bootstrap = require("foundation.bootstrap")
+local process_lock = require("foundation.process_lock")
+local native_lua = assert(arg[-1], "native Lua interpreter identity required")
 
 local function _with_stubs(stubs, fn)
   local saved_lua54 = package.loaded["foundation.lua54"]
@@ -27,6 +29,9 @@ local function _with_stubs(stubs, fn)
       if name == "LUA54_BIN" or name == "MONOPOLY_LUAROCKS_EXE" then return nil end
       return real_getenv(name)
     end },
+    -- 单元用例聚焦安装结果与错误分类,直接执行锁回调;真实目录锁由上面的
+    -- 跨进程假 luarocks 用例经公共 ensure_busted_tree 完整覆盖。
+    { target = process_lock, key = "with_lock", value = function(_, fn) return fn() end },
   }
   for _, stub in ipairs(stubs) do
     effective[#effective + 1] = stub
@@ -265,6 +270,221 @@ it("ensure busted tree installs pinned rock and checks marker", function()
   -- --lua-dir 取真实解释器(lua.exe)所在前缀,而不是 where.exe 首行的
   -- lua.cmd / lua.bat 垫片目录。
   check.equal(_LUAROCKS_PREFIX, captured_command[7])
+end)
+
+it("process lock preserves parent creation errors", function()
+  local real_ensure_parent = fs_lib.ensure_parent_dir
+  local real_run_command = proc_lib.run_command
+  local run_ok, run_err = xpcall(function()
+    fs_lib.ensure_parent_dir = function() return nil, "controlled parent creation failure" end
+    proc_lib.run_command = function()
+      error("mkdir must not run when parent creation failed")
+    end
+
+    local acquired, err = process_lock.with_lock("Z:/controlled-parent-failure/.lock", function()
+      error("lock callback must not run after parent creation failure")
+    end)
+    check.is_nil(acquired)
+    check.equal("controlled parent creation failure", err)
+  end, debug.traceback)
+  fs_lib.ensure_parent_dir = real_ensure_parent
+  proc_lib.run_command = real_run_command
+  assert(run_ok, run_err)
+end)
+
+it("process lock preserves non contention mkdir errors instead of waiting", function()
+  local real_run_command = proc_lib.run_command
+  local real_path_exists = fs_lib.path_exists
+  local real_ensure_parent = fs_lib.ensure_parent_dir
+  local run_ok, run_err = xpcall(function()
+    fs_lib.ensure_parent_dir = function() return true end
+    proc_lib.run_command = function(command)
+      if type(command) == "string" and command:find("mkdir ", 1, true) == 1 then
+        return { ok = false, code = 5, output = "controlled mkdir access denied" }
+      end
+      error("non-contention mkdir failure must not enter the wait path")
+    end
+    fs_lib.path_exists = function() return false end
+
+    local acquired, err = process_lock.with_lock("Z:/controlled-mkdir-failure/.lock", function()
+      error("lock callback must not run after mkdir failure")
+    end)
+    check.is_nil(acquired)
+    check.is_not_nil(err)
+    check.matches("exit code 5", err, 1, true)
+    check.matches("controlled mkdir access denied", err, 1, true)
+  end, debug.traceback)
+  proc_lib.run_command = real_run_command
+  fs_lib.path_exists = real_path_exists
+  fs_lib.ensure_parent_dir = real_ensure_parent
+  assert(run_ok, run_err)
+end)
+
+local function _assert_concurrent_cold_bootstrap(kinds)
+  local root = env_lib.make_temp_path("bootstrap lock 中文 space", "")
+  fs_lib.remove_path(root)
+  check.is_true(fs_lib.ensure_dir(path_lib.join_path(root, "fake-bin")))
+  local worker = path_lib.join_path(root, "worker.lua")
+  local fake_script = path_lib.join_path(root, "fake_luarocks.lua")
+  local fake_exe = path_lib.join_path(root, "fake_luarocks.cmd")
+  local fake_git_script = path_lib.join_path(root, "fake_git.lua")
+  local fake_git_exe = path_lib.join_path(root, "fake-bin/git.cmd")
+  local sha = string.rep("a", 40)
+  local needs_acceptance = kinds[1] == "acceptance4lua" or kinds[2] == "acceptance4lua"
+
+  if needs_acceptance then
+    -- resolved cache 只创建 .toolcache,不预建其下的 luarocks tree。
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, "tools/tools.lock"),
+      "acceptance4lua https://example.invalid/eggy/acceptance4lua.git\n"))
+    check.is_true(fs_lib.write_file(path_lib.join_path(root, ".toolcache/resolved-tools.tsv"),
+      "acceptance4lua\t" .. sha .. "\t-\t" .. tostring(os.time()) .. "\n"))
+  end
+
+  -- 两个 worker 都到齐后才进入公共 ensure 接口。假 git 与假 luarocks 不起网络;
+  -- 假 install/remove/make 用独立目录锁模拟真实树锁,未串行化时必报竞争错误。
+  check.is_true(fs_lib.write_file(worker, [[
+local function exists(path)
+  local file = io.open(path, "rb")
+  if file then file:close() end
+  return file ~= nil
+end
+local root, lane, kind = arg[1], arg[2], arg[3]
+local ready = root .. "/ready-" .. lane
+local file = assert(io.open(ready, "wb"))
+file:write("ready")
+file:close()
+local deadline = os.time() + 10
+while not exists(root .. "/ready-1") or not exists(root .. "/ready-2") do
+  if os.time() >= deadline then io.stderr:write("worker barrier timeout\n"); os.exit(9) end
+end
+require("test.bootstrap").install_package_paths()
+local bootstrap = require("foundation.bootstrap")
+local ok, err, unavailable
+if kind == "acceptance4lua" then
+  ok, err, unavailable = bootstrap.ensure_tool(kind, {
+    repo_root = root,
+    tool_cache_dir = root .. "/.toolcache",
+  })
+else
+  ok, err, unavailable = bootstrap.ensure_busted_tree(root)
+end
+if unavailable ~= nil then io.stderr:write(tostring(err) .. "\n"); os.exit(3) end
+if not ok then io.stderr:write(tostring(err) .. "\n"); os.exit(1) end
+io.write("BOOTSTRAP_OK " .. kind .. "\n")
+]]))
+  check.is_true(fs_lib.write_file(fake_git_script, [[
+local sha = string.rep("a", 40)
+if arg[1] == "clone" then
+  local destination = arg[#arg]
+  assert(os.execute('mkdir "' .. destination:gsub("/", "\\") .. '" 2>nul'))
+  local file = assert(io.open(destination .. "/controlled-source.txt", "wb"))
+  file:write("source")
+  file:close()
+elseif arg[1] == "-C" and arg[3] == "rev-parse" then
+  io.write(sha .. "\n")
+elseif arg[1] == "ls-remote" then
+  io.write(sha .. "\tHEAD\n")
+else
+  io.stderr:write("unexpected fake git argv\n")
+  os.exit(2)
+end
+]]))
+  check.is_true(fs_lib.write_file(fake_script, [[
+local tree, action
+for index = 1, #arg do
+  if arg[index] == "--tree" then tree = arg[index + 1] end
+  if arg[index] == "install" or arg[index] == "remove"
+      or arg[index] == "make" or arg[index] == "list" then
+    action = arg[index]
+  end
+end
+assert(tree and action, "fake luarocks requires a tree and action")
+local state = tree .. "/.controlled-acceptance4lua-installed"
+if action == "list" then
+  local installed = io.open(state, "rb")
+  if installed then
+    local version = installed:read("*a")
+    installed:close()
+    io.write("acceptance4lua " .. version .. " installed\n")
+  end
+  return
+end
+local lock = tree .. "/.controlled-fake-tree-lock"
+local native_lock = lock:gsub("/", "\\")
+local created = os.execute('mkdir "' .. native_lock .. '" 2>nul')
+if created ~= true then
+  io.stderr:write("Error: another process requires exclusive write access to the tree\n")
+  os.exit(1)
+end
+local deadline = os.time() + 2
+while os.time() < deadline do end
+if action == "remove" then
+  os.remove(state)
+elseif action == "install" then
+  local marker = tree .. "/share/lua/5.4/busted/runner.lua"
+  local parent = marker:match("^(.*)/[^/]+$"):gsub("/", "\\")
+  assert(os.execute('mkdir "' .. parent .. '" 2>nul'))
+  local file = assert(io.open(marker, "wb"))
+  file:write("-- controlled fake busted\n")
+  file:close()
+elseif action == "make" then
+  local file = assert(io.open(state, "wb"))
+  file:write("1.0.0-1")
+  file:close()
+end
+assert(os.execute('rmdir "' .. native_lock .. '" 2>nul'))
+io.write("FAKE_" .. action:upper() .. "_OK\n")
+]]))
+  local shell_lib = require("foundation.shell")
+  check.is_true(fs_lib.write_file(fake_exe, "@echo off\r\n"
+    .. shell_lib.build_command({ native_lua, fake_script }) .. " %*\r\n"))
+  check.is_true(fs_lib.write_file(fake_git_exe, "@echo off\r\n"
+    .. shell_lib.build_command({ native_lua, fake_git_script }) .. " %*\r\n"))
+
+  local run_ok, run_err = xpcall(function()
+    local lanes = {}
+    for lane = 1, 2 do
+      lanes[lane] = {
+        label = "cold-" .. kinds[lane],
+        cmd = { native_lua, worker, root, tostring(lane), kinds[lane] },
+      }
+    end
+    local ok, results = require("foundation.parallel_lanes").run(lanes, {
+      stream = false,
+      timeout = 45,
+      env = {
+        LUA54_BIN = native_lua,
+        MONOPOLY_LUAROCKS_EXE = fake_exe,
+        PATH = path_lib.join_path(root, "fake-bin") .. ";"
+          .. assert(os.getenv("SystemRoot")) .. "\\System32",
+      },
+    })
+    local diagnostics = {}
+    for _, result in ipairs(results) do
+      diagnostics[#diagnostics + 1] = result.label .. ": " .. tostring(result.output)
+      check.is_true(result.ok, result.output)
+      check.equal(0, result.exit_code)
+      check.matches("BOOTSTRAP_OK", result.output, 1, true)
+      check.is_nil(result.output:find("requires exclusive write access", 1, true))
+    end
+    check.is_true(ok, table.concat(diagnostics, "\n"))
+    check.is_true(fs_lib.path_exists(path_lib.join_path(root,
+      ".toolcache/luarocks/share/lua/5.4/busted/runner.lua")))
+    if needs_acceptance then
+      check.is_true(fs_lib.path_exists(path_lib.join_path(root,
+        ".toolcache/luarocks/.controlled-acceptance4lua-installed")))
+    end
+  end, debug.traceback)
+  fs_lib.remove_path(root)
+  assert(run_ok, run_err)
+end
+
+it("serializes concurrent busted installs when the cache tree is absent", function()
+  _assert_concurrent_cold_bootstrap({ "busted", "busted" })
+end)
+
+it("serializes acceptance4lua builds with busted installs on the shared tree", function()
+  _assert_concurrent_cold_bootstrap({ "busted", "acceptance4lua" })
 end)
 
 it("ensure busted tree reports missing post install marker", function()
