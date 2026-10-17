@@ -127,7 +127,7 @@ it("test_open_refreshes_page_even_when_the_owner_role_cannot_be_resolved", funct
     item_atlas.open(s, 99)
   end)
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(refresh_count == 1, "open should refresh atlas page through the global fallback path")
 end)
 
@@ -286,7 +286,7 @@ it("test_select_and_reselect_refresh_enlarged_card_visibility", function()
     local hides_after_open = hide_count
     item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
     item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(hide_count == hides_after_open + 1, "reselecting the selected item should hide enlarged view")
   end)
 

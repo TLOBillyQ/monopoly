@@ -431,7 +431,7 @@ describe("TestMarketPurchase", function()
       luassert.truthy(purchase.execute({}, { id = 3, name = "Buyer" }, "-1") == false, "negative product id should be rejected")
       luassert.truthy(purchase.execute({}, { id = 3, name = "Buyer" }, "bad") == false, "non-numeric product id should be rejected")
     end)
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(lookups == 0, "invalid product ids should not hit catalog lookup")
   end)
 
@@ -505,7 +505,7 @@ describe("TestMarketPurchase", function()
     end)
 
     luassert.truthy(give_calls[1] == 2001, "paid callback should give item")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
     luassert.truthy(charge_calls == 0, "paid callback fulfillment should skip local charge")
     -- lint-allow: call-count session 端口经依赖注入,刷新次数即回调结果的对外输出
     luassert.truthy(refreshed == 1, "paid callback success should refresh market choice")

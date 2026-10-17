@@ -168,7 +168,7 @@ it("test_roadblock_hit_no_longer_drives_visual_feedback", function()
     handler(nil, nil, { tile_id = 12 })
   end)
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(cleared == 0, "roadblock_hit should no longer clear overlay directly")
   luassert.truthy(looked_up_tile_id == 12, "roadblock_hit should still resolve payload tile ids through board lookup")
 end)
@@ -263,9 +263,9 @@ it("test_mine_hit_no_longer_drives_visual_feedback", function()
     })
   end)
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(cleared == 0, "mine_hit should no longer clear overlay directly")
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(cues == 0, "mine_hit should no longer emit direct cue playback")
   luassert.truthy(looked_up_tile_id == 20, "mine_hit should still resolve nested payload tile ids through board lookup")
 end)
@@ -535,7 +535,7 @@ it("test_status_applied_feedback_prefers_tile_cue", function()
   luassert.truthy(#tile_calls == 1, "status_applied should prefer tile cue when tile_index exists")
   luassert.truthy(tile_calls[1].cue_name == "hospital_shock", "status_applied cue mismatch")
   luassert.truthy(tile_calls[1].tile_index == 7, "status_applied tile index mismatch")
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;迁到宿主边界观察待另开单
+  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
   luassert.truthy(player_calls == 0, "status_applied should not fallback to player cue when tile cue is used")
 end)
 
