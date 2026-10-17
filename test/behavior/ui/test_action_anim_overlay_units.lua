@@ -210,38 +210,28 @@ describe("TestActionAnimOverlayUnits", function()
     local unit_calls = 0
     local group_calls = 0
     local captured_scale = nil
+    local unit_handle = { _unit_id = 1 }
 
-    local function _mock_unit(_, _, _, scale)
-      unit_calls = unit_calls + 1
-      captured_scale = scale
-      return { _unit_id = 1 }
-    end
-    _with_patches({
-      {
-        target = host_runtime,
-        key = "create_unit_with_scale",
-        value = _mock_unit,
-      },
-      {
-        target = host_runtime,
-        key = "acquire_unit",
-        value = _mock_unit,
-      },
-      {
-        target = host_runtime,
-        key = "create_unit_group",
-        value = function()
+    state.presentation_runtime = {
+      host_runtime = {
+        create_unit_with_scale = function(_, _, _, scale)
+          unit_calls = unit_calls + 1
+          captured_scale = scale
+          return unit_handle
+        end,
+        create_unit_group = function()
           group_calls = group_calls + 1
           return { _group_id = 1 }
         end,
       },
-    }, function()
-      action_anim.play(state, { kind = "roadblock", tile_index = 1, duration = 0.2 })
-    end)
+    }
+    action_anim.play(state, { kind = "roadblock", tile_index = 1, duration = 0.2 })
 
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
+    local entry = state.board_scene.overlay_units.roadblocks[1]
+    luassert.truthy(entry ~= nil and entry.handle == unit_handle, "roadblock should publish the spawned unit in overlay state")
+    -- lint-allow: call-count 注入的 host_runtime.create_unit_with_scale 是 GameAPI 创建封装边界,一次=引擎创建一个路障单位
     luassert.truthy(unit_calls == 1, "roadblock should spawn via unit path")
-    -- lint-allow: call-count host_runtime.create_unit_group 即 unit_lifecycle 的 GameAPI 封装,零调用=引擎未建单位组
+    -- lint-allow: call-count 注入的 host_runtime.create_unit_group 是 GameAPI 创建封装边界,零调用=引擎未建单位组
     luassert.truthy(group_calls == 0, "roadblock should not spawn via group path")
     luassert.truthy(captured_scale ~= nil, "roadblock should pass explicit scale")
     luassert.truthy(captured_scale.x == 4.0 and captured_scale.y == 4.0 and captured_scale.z == 4.0, "roadblock should use 4x scale")
@@ -285,21 +275,11 @@ describe("TestActionAnimOverlayUnits", function()
     local overlay = require("src.ui.render.anim.unit_overlay")
     local prefab = require("Data.Prefab")
     local state = support.build_min_state()
-    local spawn_calls = 0
     local warns = 0
-    local original_group = prefab.group["地雷A"]
-    local original_unit = prefab.unit["地雷A"]
-    prefab.group["地雷A"] = nil
-    prefab.unit["地雷A"] = nil
 
     _with_patches({
-      {
-        target = overlay_runtime,
-        key = "spawn_overlay",
-        value = function()
-          spawn_calls = spawn_calls + 1
-        end,
-      },
+      { target = prefab.group, key = "地雷A", value = nil },
+      { target = prefab.unit, key = "地雷A", value = nil },
       {
         target = logger,
         key = "warn",
@@ -311,11 +291,7 @@ describe("TestActionAnimOverlayUnits", function()
       overlay.play_overlay(state, { kind = "mine", tile_index = 1 }, 0.2, {})
     end)
 
-    prefab.group["地雷A"] = original_group
-    prefab.unit["地雷A"] = original_unit
-
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(spawn_calls == 0, "missing mine prefab should skip the spawn")
+    luassert.truthy(state.board_scene.overlay_units == nil, "missing mine prefab should leave overlay state without a generated mine")
     -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.truthy(warns == 1, "missing mine prefab should warn exactly once")
   end)
@@ -416,20 +392,21 @@ describe("TestActionAnimOverlayUnits", function()
     local overlay = require("src.ui.render.anim.unit_overlay")
     local prefab = require("Data.Prefab")
     local state = support.build_min_state()
-    local acquire_calls = 0
+    local create_calls = 0
     local warns = 0
-    local original_robot = prefab.unit["清障机器人"]
-    prefab.unit["清障机器人"] = nil
-
-    _with_patches({
-      {
-        target = host_runtime,
-        key = "acquire_unit",
-        value = function()
-          acquire_calls = acquire_calls + 1
+    state.presentation_runtime = {
+      host_runtime = {
+        create_unit_with_scale = function()
+          create_calls = create_calls + 1
           return { id = "robot" }
         end,
+        destroy_unit = function() end,
+        schedule = function() end,
       },
+    }
+
+    _with_patches({
+      { target = prefab.unit, key = "清障机器人", value = nil },
       {
         target = logger,
         key = "warn",
@@ -446,10 +423,8 @@ describe("TestActionAnimOverlayUnits", function()
       })
     end)
 
-    prefab.unit["清障机器人"] = original_robot
-
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(acquire_calls == 0, "missing robot prefab should skip spawning")
+    -- lint-allow: call-count 注入的 host_runtime.create_unit_with_scale 是 GameAPI 创建封装边界,零调用=引擎未生成机器人
+    luassert.truthy(create_calls == 0, "missing robot prefab should skip spawning")
     -- lint-allow: call-count logger.warn 即诊断输出,条数是被测行为的一部分
     luassert.truthy(warns == 1, "missing robot prefab should warn exactly once")
   end)

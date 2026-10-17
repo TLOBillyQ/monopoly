@@ -112,23 +112,24 @@ it("test_open_normalizes_a_nil_page_index_to_page_1", function()
 end)
 
 it("test_open_refreshes_page_even_when_the_owner_role_cannot_be_resolved", function()
-  local s = _make_state()
-  local refresh_count = 0
+  item_atlas.configure_catalog_for_tests(_make_catalog(3))
+  local s, calls = _make_render_state()
+  s.runtime_asset_context = { refs = { images = {} } }
 
   _with_patches({
     { target = runtime_ports, key = "resolve_role", value = function()
       return nil
     end },
-    { target = item_atlas_view, key = "refresh_page", value = function()
-      refresh_count = refresh_count + 1
-    end },
-    { target = item_atlas_view, key = "hide_enlarged", value = function() end },
   }, function()
     item_atlas.open(s, 99)
   end)
 
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.truthy(refresh_count == 1, "open should refresh atlas page through the global fallback path")
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.card_images[1]) == true,
+    "global fallback open should render the first catalog card")
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.card_images[4]) == false,
+    "global fallback open should hide the first empty card")
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.card_images[4]) == false,
+    "global fallback open should disable the first empty card")
 end)
 
 it("test_owner_refresh_uses_the_state_presentation_runtime", function()
@@ -270,27 +271,31 @@ end)
 
 it("test_select_and_reselect_refresh_enlarged_card_visibility", function()
   item_atlas.configure_catalog_for_tests(_make_catalog(8))
-  local s = _make_state()
-  local shown_item_id = nil
-  local hide_count = 0
+  local s, calls = _make_render_state()
+  local runtime = _stub_runtime()
+  s.runtime_asset_context = { refs = { images = { item_2 = "tex_item_2" } } }
+  s.presentation_runtime = { runtime = runtime }
 
-  _with_patches({
-    { target = item_atlas_view, key = "show_enlarged", value = function(_, item_id)
-      shown_item_id = item_id
-    end },
-    { target = item_atlas_view, key = "hide_enlarged", value = function()
-      hide_count = hide_count + 1
-    end },
-  }, function()
-    item_atlas.open(s, 1)
-    local hides_after_open = hide_count
-    item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
-    item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(hide_count == hides_after_open + 1, "reselecting the selected item should hide enlarged view")
-  end)
+  item_atlas.open(s, 1)
+  item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
+  luassert.truthy(s.ui.item_atlas.selected_item_id == "item_2",
+    "selecting a non-empty slot should record its public selection")
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.enlarged_card) == true,
+    "selecting a non-empty slot should show its enlarged card")
+  luassert.truthy(runtime.textures[item_atlas_nodes.enlarged_card] == "tex_item_2",
+    "selecting item_2 should show the item_2 texture")
 
-  luassert.truthy(shown_item_id == "item_2", "selecting a non-empty slot should show its enlarged card")
+  item_atlas.handle_action(s, { type = "select", slot_index = 2 }, 1)
+  luassert.is_nil(s.ui.item_atlas.selected_item_id,
+    "reselecting the selected item should clear its public selection")
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.enlarged_card) == false,
+    "reselecting the selected item should hide the enlarged card")
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.close_hint_label) == false,
+    "reselecting the selected item should hide the close hint")
+  luassert.truthy(_find_call(calls, "set_visible", item_atlas_nodes.close_blank) == false,
+    "reselecting the selected item should hide the close layer")
+  luassert.truthy(_find_call(calls, "set_touch_enabled", item_atlas_nodes.close_blank) == false,
+    "reselecting the selected item should disable the close layer")
 end)
 
 it("test_page_next_advances_page_when_multiple_pages_exist", function()

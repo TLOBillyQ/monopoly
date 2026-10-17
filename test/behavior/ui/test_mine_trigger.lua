@@ -3,6 +3,8 @@ require("test.bootstrap").install_package_paths()
 local luassert = assert
 local handlers = require("src.ui.render.anim.handlers")
 local board_feedback = require("src.ui.render.board_feedback.service")
+local host_sfx = require("src.ui.seams.host_sfx")
+local runtime_refs = require("src.config.content.runtime_refs")
 local move_anim = require("src.ui.render.move_anim")
 local unit_position = require("src.ui.render.support.unit_position")
 local support = require("test.support.ui_action_anim_support")
@@ -14,41 +16,39 @@ describe("TestMineTrigger", function()
   it("test_scheduled_mine_trigger_prefers_unit_position_and_defers_snap", function()
     local state = support.build_min_state()
     local scheduled = {}
-    local player_calls = {}
-    local tile_calls = 0
+    local effect_calls = {}
+    local sound_calls = {}
     local steps = {}
+    state.board_scene.units_by_player_id[1] = {
+      get_position = function()
+        return math.Vector3(1.0, 2.0, 3.0)
+      end,
+    }
+    state.board_scene.tiles[3] = {
+      get_position = function()
+        return math.Vector3(9.0, 9.0, 9.0)
+      end,
+    }
 
     _with_patches({
       {
-        target = unit_position,
-        key = "read_unit_position",
-        value = function()
-          return { x = 1, y = 2, z = 3 }
-        end,
-      },
-      {
-        target = unit_position,
-        key = "read_scene_tile_position",
-        value = function()
-          return { x = 9, y = 9, z = 9 }
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_player_cue",
-        value = function(_, cue_name, player_id, payload)
-          player_calls[#player_calls + 1] = {
-            cue_name = cue_name,
-            player_id = player_id,
-            payload = payload,
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos, _rot, _scale, _duration, _rate, _with_sound, opts)
+          effect_calls[#effect_calls + 1] = {
+            sfx_key = sfx_key,
+            pos = pos,
+            cue_name = opts and opts.cue_name or nil,
           }
+          return 901
         end,
       },
       {
-        target = board_feedback,
-        key = "play_tile_cue",
-        value = function()
-          tile_calls = tile_calls + 1
+        target = host_sfx,
+        key = "play_3d_sound",
+        value = function(pos, sound_id)
+          sound_calls[#sound_calls + 1] = { pos = pos, sound_id = sound_id }
+          return 902
         end,
       },
       {
@@ -103,50 +103,52 @@ describe("TestMineTrigger", function()
       luassert.truthy(steps[4] == nil, "scheduled callback should run clear+snap exactly once")
     end)
 
-    luassert.truthy(#player_calls == 1, "scheduled mine trigger should emit one player cue when unit position exists")
-    luassert.truthy(player_calls[1].cue_name == "mine_blast", "scheduled mine trigger should preserve cue name")
-    luassert.truthy(player_calls[1].player_id == 1, "scheduled mine trigger should preserve player id in cue")
-    luassert.truthy(player_calls[1].payload.pos.x == 1, "scheduled mine trigger should prefer unit position over tile position")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(tile_calls == 0, "scheduled mine trigger should not fall back to tile cue when unit position exists")
+    luassert.truthy(#effect_calls == 1, "scheduled mine trigger should emit exactly one host effect without a tile fallback")
+    luassert.truthy(effect_calls[1].sfx_key == runtime_refs.effects.mine_blast, "scheduled mine trigger should play the configured mine effect")
+    luassert.truthy(effect_calls[1].cue_name == "mine_blast", "scheduled mine trigger should preserve cue name at the host boundary")
+    luassert.truthy(effect_calls[1].pos.x == 1 and effect_calls[1].pos.y == 2 and effect_calls[1].pos.z == 3,
+      "scheduled mine trigger should play the host effect at the unit position")
+    luassert.truthy(#sound_calls == 1, "scheduled mine trigger should emit exactly one host sound without a tile fallback")
+    luassert.truthy(sound_calls[1].sound_id == runtime_refs.audio.mine_blast, "scheduled mine trigger should play the configured mine sound")
+    luassert.truthy(sound_calls[1].pos.x == 1 and sound_calls[1].pos.y == 2 and sound_calls[1].pos.z == 3,
+      "scheduled mine trigger should play the host sound at the unit position")
   end)
 
   it("test_mine_trigger_falls_back_to_tile_position_for_player_cue", function()
     local state = support.build_min_state()
-    local player_calls = {}
-    local tile_calls = 0
+    local effect_calls = {}
+    local sound_calls = {}
+    local bindings = {}
+    local player_unit = {}
+    state.board_scene.units_by_player_id[1] = player_unit
+    state.board_scene.tiles[3] = {
+      get_position = function()
+        return math.Vector3(4.0, 5.0, 6.0)
+      end,
+    }
 
     _with_patches({
       {
-        target = unit_position,
-        key = "read_unit_position",
-        value = function()
-          return nil
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key, pos)
+          effect_calls[#effect_calls + 1] = { sfx_key = sfx_key, pos = pos }
+          return 903
         end,
       },
       {
-        target = unit_position,
-        key = "read_scene_tile_position",
-        value = function()
-          return { x = 4, y = 5, z = 6 }
+        target = host_sfx,
+        key = "play_3d_sound",
+        value = function(pos, sound_id)
+          sound_calls[#sound_calls + 1] = { pos = pos, sound_id = sound_id }
+          return 904
         end,
       },
       {
-        target = board_feedback,
-        key = "play_player_cue",
-        value = function(_, cue_name, player_id, payload)
-          player_calls[#player_calls + 1] = {
-            cue_name = cue_name,
-            player_id = player_id,
-            payload = payload,
-          }
-        end,
-      },
-      {
-        target = board_feedback,
-        key = "play_tile_cue",
-        value = function()
-          tile_calls = tile_calls + 1
+        target = host_sfx,
+        key = "bind_sfx_to_unit",
+        value = function(sfx_id, unit)
+          bindings[#bindings + 1] = { sfx_id = sfx_id, unit = unit }
         end,
       },
       {
@@ -162,21 +164,27 @@ describe("TestMineTrigger", function()
         end,
       },
     }, function()
+      -- cash_burst 会绑定玩家单位:player cue 在宿主产生绑定,tile cue 的空 payload 不会。
       handlers.play_mine_trigger(state, {
         player_id = 1,
         tile_index = 3,
         to_index = 7,
+        cue_name = "cash_burst",
       }, 0, {
         clear_overlay = function() end,
       })
     end)
 
-    luassert.truthy(#player_calls == 1, "mine trigger should keep player cue when tile position fallback exists")
-    luassert.truthy(player_calls[1].cue_name == "mine_blast", "mine trigger should use default cue name")
-    luassert.truthy(player_calls[1].player_id == 1, "mine trigger should preserve player id for fallback cue")
-    luassert.truthy(player_calls[1].payload.pos.x == 4, "mine trigger should fall back to tile position when unit position is missing")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(tile_calls == 0, "mine trigger should avoid tile cue when tile position fallback exists")
+    luassert.truthy(#effect_calls == 1, "mine trigger should emit one player effect without an additional tile cue")
+    luassert.truthy(effect_calls[1].sfx_key == runtime_refs.effects.cash_burst, "mine trigger should preserve the selected player cue")
+    luassert.truthy(effect_calls[1].pos.x == 4 and effect_calls[1].pos.y == 5 and effect_calls[1].pos.z == 6,
+      "mine trigger should play the player effect at the tile-position fallback")
+    luassert.truthy(#sound_calls == 1 and sound_calls[1].sound_id == runtime_refs.audio.cash_receive,
+      "mine trigger should play the selected player cue sound once")
+    luassert.truthy(sound_calls[1].pos.x == 4 and sound_calls[1].pos.y == 5 and sound_calls[1].pos.z == 6,
+      "mine trigger should play the player sound at the tile-position fallback")
+    luassert.truthy(#bindings == 1 and bindings[1].sfx_id == 903 and bindings[1].unit == player_unit,
+      "player cue routing should bind the effect to player 1; tile cue routing cannot produce this host binding")
   end)
 
   it("test_mine_trigger_without_any_position_uses_tile_cue_and_normalizes_duration", function()

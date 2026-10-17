@@ -1200,14 +1200,24 @@ describe("TestBoardFeedback", function()
   end)
 
   it("test_empty_cue_name_skips_catalog_lookup", function()
-    -- 杀 L73 两个位点(and->or 与 ""->nil):空串 cue_name 不得进 catalog 查询。
-    local catalog = require("src.ui.render.board_feedback.catalog")
-    local lookups = 0
+    -- 空串若误进 catalog 会解析成可播 cue；正确短路必须公开返回 false 且无宿主特效。
+    local effect_calls = {}
     _with_patches({
-      { target = catalog, key = "get", value = function()
-        lookups = lookups + 1
-        return nil
-      end },
+      {
+        target = runtime_refs.board_feedback,
+        key = "",
+        value = {
+          effect_id_ref = "hospital_shock",
+        },
+      },
+      {
+        target = host_sfx,
+        key = "play_sfx_by_key",
+        value = function(sfx_key)
+          effect_calls[#effect_calls + 1] = sfx_key
+          return 9001
+        end,
+      },
     }, function()
       local state = {
         board_scene = {
@@ -1219,8 +1229,7 @@ describe("TestBoardFeedback", function()
       local played = board_feedback.play_tile_cue(state, "", 1, {})
       luassert.truthy(played == false, "empty cue name should not play anything")
     end)
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(lookups == 0, "empty cue name must not reach the catalog")
+    luassert.truthy(#effect_calls == 0, "empty cue name must not produce a host effect through catalog lookup")
   end)
 
 

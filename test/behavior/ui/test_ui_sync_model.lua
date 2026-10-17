@@ -9,6 +9,9 @@ local main_view = require("src.ui.coord.ui_runtime")
 local view_model = require("src.ui.view")
 local modal = require("src.ui.coord.modal")
 local choice_ui_state = require("src.ui.ports.ui_sync")._choice_state
+local support = require("test.support.shared_support")
+local _with_shared_patches = support.with_patches
+local _build_choice_modal_state = support.build_choice_modal_state
 
 local function _with_patches(patches, fn)
   local old = {}
@@ -37,6 +40,11 @@ local function _common()
     log_once = function() end,
     build_log_prefix = function() return "test" end,
   }
+end
+
+local function _seed_choice_selection(state, option_id)
+  state.ui_runtime.choice_visible_option_ids = { option_id }
+  state.ui_runtime.pending_choice_selected_option_id = option_id
 end
 
 describe("TestUiSyncModel", function()
@@ -182,57 +190,75 @@ it("test_defers_refresh_while_landing_visual_hold_is_active", function()
 end)
 
 it("test_opens_inline_choices_only_outside_input_blocked_phases", function()
-  local state = { ui = {} }
-  local opened = 0
+  local state, _, query_nodes = _build_choice_modal_state()
 
-  _with_patches({
-    { landing_visual_hold, "sync_state_from_game", function() end },
-    { landing_visual_hold, "should_defer", function() return false end },
-    { turn_ui_sync_shared, "is_only_turn_countdown", function() return false end },
-    { view_model, "update", function()
+  _with_shared_patches({
+    { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
+    { target = landing_visual_hold, key = "should_defer", value = function() return false end },
+    { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
+    { target = view_model, key = "update", value = function()
       return {
         panel = {},
         choice = { id = "inline", route_key = "base_inline" },
       }
     end },
-    { main_view, "render", function() end },
-    { modal, "open_choice_modal", function()
-      opened = opened + 1
-    end },
+    { target = main_view, key = "render", value = function() end },
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
   }, function()
-    luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common()))
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.same( 1,opened, "inline choice should open when input is allowed")
-    luassert.is.same( true,model_sync.refresh_from_dirty(_game("wait_move_anim"), state, { any = true }, _common()))
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.same( 1,opened, "input-blocked phase should not open inline choice")
+    _seed_choice_selection(state, "allowed-inline")
+    luassert.is.same(true, model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common()))
+    luassert.is_nil(state.ui_runtime.choice_visible_option_ids,
+      "allowed inline choice should reset stale public option ids")
+    luassert.is_nil(state.ui_runtime.pending_choice_selected_option_id,
+      "allowed inline choice should reset the stale public selection")
+    luassert.is.same(false, state.ui.choice_active, "inline choice should stay on the base screen")
+    luassert.is_nil(state.ui.active_choice_screen_key, "inline choice should not activate a modal screen")
+
+    _seed_choice_selection(state, "blocked-inline")
+    luassert.is.same(true, model_sync.refresh_from_dirty(_game("wait_move_anim"), state, { any = true }, _common()))
+    luassert.is.same({ "blocked-inline" }, state.ui_runtime.choice_visible_option_ids,
+      "input-blocked phase should leave public option ids untouched")
+    luassert.is.same("blocked-inline", state.ui_runtime.pending_choice_selected_option_id,
+      "input-blocked phase should leave the public selection untouched")
+    luassert.is.same(false, state.ui.choice_active, "input-blocked phase should not activate a choice screen")
+    luassert.is_nil(state.ui.active_choice_screen_key, "input-blocked phase should not activate a modal route")
   end)
 end)
 
 it("test_opens_passive_item_choices_as_inline_choices", function()
-  local state = { ui = {} }
-  local opened = 0
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  state.ui.market_active = true
+  nodes["黑市屏"].visible = true
+  _seed_choice_selection(state, "stale-market")
 
-  _with_patches({
-    { landing_visual_hold, "sync_state_from_game", function() end },
-    { landing_visual_hold, "should_defer", function() return false end },
-    { turn_ui_sync_shared, "is_only_turn_countdown", function() return false end },
-    { view_model, "update", function()
+  _with_shared_patches({
+    { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
+    { target = landing_visual_hold, key = "should_defer", value = function() return false end },
+    { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
+    { target = view_model, key = "update", value = function()
       return {
         panel = {},
         choice = { id = "passive", route_key = "item_phase_passive" },
       }
     end },
-    { main_view, "render", function() end },
-    { modal, "open_choice_modal", function()
-      opened = opened + 1
-    end },
+    { target = main_view, key = "render", value = function() end },
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
   }, function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
-    luassert.is.same( true,result, "passive choice refresh should render")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.same( 1,opened, "item_phase_passive should open through inline modal handler")
+    luassert.is.same(true, result, "passive choice refresh should render")
+    luassert.is.same(false, state.ui.market_active,
+      "item_phase_passive should take over from the market through its inline handler")
+    luassert.is.same(false, nodes["黑市屏"].visible,
+      "item_phase_passive should hide the previous market canvas")
+    luassert.is_nil(state.ui_runtime.choice_visible_option_ids,
+      "item_phase_passive takeover should clear stale market option ids")
+    luassert.is_nil(state.ui_runtime.pending_choice_selected_option_id,
+      "item_phase_passive takeover should clear the stale market selection")
+    luassert.is.same(false, state.ui.choice_active, "passive item choice should not open a modal choice screen")
+    luassert.is_nil(state.ui.active_choice_screen_key, "passive item choice should stay on the base screen")
   end)
 end)
 
@@ -260,32 +286,44 @@ it("test_does_not_open_market_choice_without_market_payload", function()
 end)
 
 it("test_opens_non_inline_choices_when_reconcile_requires_it", function()
-  local state = { ui = {} }
-  local opened = 0
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  _seed_choice_selection(state, "stale-target")
 
-  _with_patches({
-    { landing_visual_hold, "sync_state_from_game", function() end },
-    { landing_visual_hold, "should_defer", function() return false end },
-    { turn_ui_sync_shared, "is_only_turn_countdown", function() return false end },
-    { view_model, "update", function()
+  _with_shared_patches({
+    { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
+    { target = landing_visual_hold, key = "should_defer", value = function() return false end },
+    { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
+    { target = view_model, key = "update", value = function()
       return {
         panel = {},
-        choice = { id = "target", route_key = "target" },
+        choice = {
+          id = "target",
+          route_key = "target",
+          options = { { id = "target-option", label = "目标" } },
+        },
       }
     end },
-    { choice_ui_state, "should_reconcile", function()
+    { target = choice_ui_state, key = "should_reconcile", value = function()
       return true
     end },
-    { main_view, "render", function() end },
-    { modal, "open_choice_modal", function()
-      opened = opened + 1
-    end },
+    { target = main_view, key = "render", value = function() end },
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
   }, function()
     local result = model_sync.refresh_from_dirty(_game("wait_choice"), state, { any = true }, _common())
 
-    luassert.is.same( true,result, "target choice refresh should render")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.same( 1,opened, "reconciled target choice should open")
+    luassert.is.same(true, result, "target choice refresh should render")
+    luassert.is.same(true, state.ui.choice_active, "reconciled target choice should activate its public screen state")
+    luassert.is.same("target", state.ui.active_choice_screen_key,
+      "reconciled target choice should publish the target route")
+    luassert.is.same(true, nodes["位置选择屏"].visible, "reconciled target choice should show the target canvas")
+    luassert.is.same("target", state.ui_runtime.pending_choice_id,
+      "reconciled target choice should publish its pending choice id")
+    luassert.is.same({ "target-option" }, state.ui_runtime.choice_visible_option_ids,
+      "reconciled target choice should replace stale public option ids")
+    luassert.is.same("target-option", state.ui_runtime.pending_choice_selected_option_id,
+      "reconciled target choice should publish its default selection")
+    luassert.is.same(false, state.ui.market_active, "target choice should not activate the market")
   end)
 end)
 
@@ -312,56 +350,72 @@ it("test_build_model_forwards_the_ui_env_to_view_model_build", function()
 end)
 
 it("test_closes_stale_choice_modal_when_the_refreshed_model_has_no_choice", function()
-  local state = { ui = { choice_active = true } }
-  local closed = 0
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  state.ui.choice_active = true
+  state.ui.active_choice_screen_key = "target"
+  nodes["位置选择屏"].visible = true
+  _seed_choice_selection(state, "stale-choice")
 
-  _with_patches({
-    { landing_visual_hold, "sync_state_from_game", function() end },
-    { landing_visual_hold, "should_defer", function() return false end },
-    { turn_ui_sync_shared, "is_only_turn_countdown", function() return false end },
-    { view_model, "update", function()
+  _with_shared_patches({
+    { target = landing_visual_hold, key = "sync_state_from_game", value = function() end },
+    { target = landing_visual_hold, key = "should_defer", value = function() return false end },
+    { target = turn_ui_sync_shared, key = "is_only_turn_countdown", value = function() return false end },
+    { target = view_model, key = "update", value = function()
       return { panel = {} }
     end },
-    { main_view, "render", function() end },
-    { modal, "close_choice_modal", function()
-      closed = closed + 1
-    end },
-    { modal, "open_choice_modal", function()
-      error("missing choice should not open modal")
-    end },
+    { target = main_view, key = "render", value = function() end },
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
   }, function()
     local result = model_sync.refresh_from_dirty(_game(), state, { any = true }, _common())
 
-    luassert.is.same( true,result, "full refresh should still report a render")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.same( 1,closed, "stale active choice should be closed")
+    luassert.is.same(true, result, "full refresh should still report a render")
+    luassert.is.same(false, state.ui.choice_active, "stale active choice should be deactivated")
+    luassert.is_nil(state.ui.active_choice_screen_key, "stale active choice route should be cleared")
+    luassert.is.same(false, nodes["位置选择屏"].visible, "stale active choice canvas should be hidden")
+    luassert.is_nil(state.ui_runtime.choice_visible_option_ids,
+      "stale active choice should clear public option ids")
+    luassert.is_nil(state.ui_runtime.pending_choice_selected_option_id,
+      "stale active choice should clear the public selection")
   end)
 end)
 
 it("test_reopens_a_pending_choice_from_the_cached_model_without_rebuilding", function()
-  local state = { ui = {} }
-  local pending = { id = "pending", route_key = "target" }
-  local opened = 0
-  runtime_state.set_ui_model(state, { choice = pending, market = { id = "market" } })
+  local state, nodes, query_nodes = _build_choice_modal_state()
+  local pending = {
+    id = "pending",
+    route_key = "target",
+    options = { { id = "pending-option", label = "待选目标" } },
+  }
+  local cached_model = { choice = pending, market = { id = "market" } }
+  runtime_state.set_ui_model(state, cached_model)
 
-  _with_patches({
-    { choice_ui_state, "should_reconcile", function()
+  _with_shared_patches({
+    { target = choice_ui_state, key = "should_reconcile", value = function()
       return true
     end },
-    { view_model, "build", function()
+    { target = view_model, key = "build", value = function()
       error("matching cached pending choice should not rebuild")
     end },
-    { modal, "open_choice_modal", function(_, choice, market)
-      luassert.is.same( pending,choice, "cached choice should be reopened")
-      luassert.is.same( "market",market.id, "cached market payload should be reused")
-      opened = opened + 1
-    end },
+    { key = "UIManager", value = { query_nodes_by_name = query_nodes } },
+    { key = "all_roles", value = nil },
   }, function()
     local result = model_sync.reopen_choice_modal_if_needed(_game(), state, pending)
 
-    luassert.is.same( true,result, "reconciled pending choice should reopen")
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.same( 1,opened, "modal should open once")
+    luassert.is.same(true, result, "reconciled pending choice should reopen")
+    luassert.is.equal(cached_model, runtime_state.get_ui_model(state),
+      "reopen should retain the cached model instead of replacing it")
+    luassert.is.same(true, state.ui.choice_active, "cached pending choice should activate its public screen state")
+    luassert.is.same("target", state.ui.active_choice_screen_key,
+      "cached pending choice should reopen the target route")
+    luassert.is.same(true, nodes["位置选择屏"].visible, "cached pending choice should show the target canvas")
+    luassert.is.same("pending", state.ui_runtime.pending_choice_id,
+      "cached pending choice should publish its pending id")
+    luassert.is.same({ "pending-option" }, state.ui_runtime.choice_visible_option_ids,
+      "cached pending choice should publish its cached options")
+    luassert.is.same("pending-option", state.ui_runtime.pending_choice_selected_option_id,
+      "cached pending choice should publish its default selection")
+    luassert.is.same(false, state.ui.market_active, "cached target choice should not be rerouted to the market")
   end)
 end)
 

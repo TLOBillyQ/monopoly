@@ -46,30 +46,23 @@ describe("TestMarketEffectExecutor", function()
     luassert.truthy(executor.can_apply({ tile = { type = "land" } }) == false, "does not apply on other tiles")
   end)
 
-  it("test_auto_player_runs_auto_purchase_and_never_builds_a_choice", function()
-    local auto_calls = 0
-    local choice_built = false
+  it("test_auto_player_publishes_skip_event_without_building_a_choice", function()
+    local published = {}
+    local ctx = _ctx(true)
+    ctx.player.name = "P1"
+    ctx.game.event_feed_port = {
+      publish = function(_, _, event)
+        published[#published + 1] = event
+        return true
+      end,
+    }
 
-    _with_market_stubs({
-      auto_execute = function(game, player)
-        auto_calls = auto_calls + 1
-        luassert.truthy(game ~= nil and player ~= nil, "auto execute receives game and player")
-      end,
-      list_available = function()
-        error("auto player must not query buyable items", 0)
-      end,
-      choice_build = function()
-        choice_built = true
-        return { kind = "market_buy" }, nil
-      end,
-    }, function()
-      local result = executor.apply(_ctx(true))
-      luassert.truthy(result == nil, "auto player path yields no pending intent")
-    end)
+    local result = executor.apply(ctx)
 
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.truthy(auto_calls == 1, "auto purchase ran exactly once")
-    luassert.truthy(choice_built == false, "auto player path never builds a choice spec")
+    luassert.is_nil(result, "auto player path yields no pending intent")
+    luassert.is_not_nil(published[1], "auto player path publishes its public market result")
+    luassert.is.equal("market_auto_skipped", published[1].kind, "auto player path publishes the auto-skip event")
+    luassert.is.equal("P1 (AI) 到达黑市，选择不购买", published[1].text, "auto-skip event identifies the acting player")
   end)
 
   it("test_human_player_with_no_buyable_items_yields_nothing", function()

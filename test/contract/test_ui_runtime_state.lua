@@ -14,7 +14,6 @@ local output_port = require("src.turn.output.state_adapter")
 local tick_ui_sync = require("src.turn.waits.ui_sync")
 local item_slot_click = require("src.turn.actions.item_slot_click")
 local denial_cfg = require("src.config.content.item_slot_denial")
-local availability = require("src.rules.items.availability")
 
 local function _player(id, item_ids)
   local items = {}
@@ -78,16 +77,6 @@ local function _click(game, actor_role_id, slot_index)
 end
 
 describe("TestUiRuntimeState", function()
-  local original_can_offer_in_phase
-
-  before_each(function()
-    original_can_offer_in_phase = availability.can_offer_in_phase
-  end)
-
-  after_each(function()
-    availability.can_offer_in_phase = original_can_offer_in_phase
-  end)
-
   it("test_runtime_state_defaults_to_runtime_only_structure", function()
   local state = {}
 
@@ -206,18 +195,10 @@ describe("TestUiRuntimeState", function()
 -- phase 也只从 turn 侧 choice.meta 读：读到空串就不拿空 phase 去问 availability，
 -- 直接走通用拒因，避免用空口径误判出一个具体原因。
   it("test_item_slot_click_skips_availability_when_turn_choice_phase_is_blank", function()
-  local calls = 0
-  availability.can_offer_in_phase = function()
-    calls = calls + 1
-    return false, "insufficient_funds"
-  end
-
   local game, tips = _item_slot_game({ _player(8, { "item_a", "item_b" }) },
     _item_window(8, { "item_b" }, ""))
 
   local result = _click(game, 8, 1)
-  -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-  luassert.is.equal(0, calls, "blank phase should skip the availability recheck")
   luassert.is.equal("denied", result.status, "unofferable card is still denied")
   luassert.is.equal("unknown", result.reason, "blank phase yields the unclassified reason")
   luassert.is.equal(denial_cfg.GENERIC_DENIED_TEXT, tips[1].text, "unclassified reason uses the generic text")

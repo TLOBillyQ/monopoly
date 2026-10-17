@@ -4,14 +4,16 @@ local luassert = assert
 
 local function _with_loaded_modules(overrides, fn)
   local previous = {}
+  local names = {}
   for name, module in pairs(overrides) do
+    names[#names + 1] = name
     previous[name] = package.loaded[name]
     package.loaded[name] = module
   end
   package.loaded["src.ui.render.anim.defaults"] = nil
   local ok, err = pcall(fn)
-  for name, module in pairs(previous) do
-    package.loaded[name] = module
+  for _, name in ipairs(names) do
+    package.loaded[name] = previous[name]
   end
   package.loaded["src.ui.render.anim.defaults"] = nil
   if not ok then
@@ -22,16 +24,14 @@ end
 describe("TestActionAnimDefaults", function()
 
   it("test_does_not_re_register_defaults_when_roll_handler_already_exists", function()
-    local register_count = 0
+    local existing_roll = function() end
+    local resolved = { roll = existing_roll }
     local fake_registry = {
       resolve = function(kind)
-        if kind == "roll" then
-          return function() end
-        end
-        return nil
+        return resolved[kind]
       end,
-      register = function()
-        register_count = register_count + 1
+      register = function(kind, handler)
+        resolved[kind] = handler
       end,
     }
 
@@ -41,8 +41,24 @@ describe("TestActionAnimDefaults", function()
       require("src.ui.render.anim.defaults").register()
     end)
 
-    -- lint-allow: call-count 存量:桩在内部协作者上,只能经调用次数观察路由;存量迁移见 #138
-    luassert.is.equal(0, register_count)
+    luassert.is.equal(existing_roll, fake_registry.resolve("roll"))
+    local other_default_kinds = {
+      "roadblock",
+      "mine",
+      "move_effect",
+      "teleport_effect",
+      "forced_relocation",
+      "mine_trigger",
+      "roadblock_trigger",
+      "upgrade_land",
+      "cash_receive",
+      "missile",
+      "monster",
+      "clear_obstacles",
+    }
+    for _, kind in ipairs(other_default_kinds) do
+      luassert.is_nil(fake_registry.resolve(kind), "existing roll handler should stop registration of " .. kind)
+    end
   end)
 
   it("test_preserves_an_explicit_move_effect_direction_without_requiring_steps", function()
